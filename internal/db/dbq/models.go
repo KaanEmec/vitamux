@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // Personal access tokens `vmx_pat_<id>_<secret>`: the id is the lookup prefix, only the secret's SHA-256 is stored.
@@ -195,6 +194,8 @@ type Job struct {
 	CreatedAt      time.Time
 	StartedAt      *time.Time
 	FinishedAt     *time.Time
+	// Progress saved by the handler; a re-claimed job resumes from it. Never secrets or health values.
+	Checkpoint []byte
 }
 
 // One row per execution; outcome is null while running. Kept 90 days.
@@ -326,6 +327,8 @@ type RawPayload struct {
 	RequestMeta      json.RawMessage
 	ShapeFingerprint *string
 	Status           string
+	// Previous version of the same (connection, stream, external_key); null for version 1.
+	SupersedesID *int64
 }
 
 // Single-use TOTP recovery codes; only the SHA-256 of each 80-bit code is stored.
@@ -348,10 +351,12 @@ type Schedule struct {
 	ID           uuid.UUID
 	ConnectionID uuid.UUID
 	Stream       string
-	RunInterval  pgtype.Interval
-	Lookback     pgtype.Interval
+	RunInterval  time.Duration
+	Lookback     time.Duration
 	NextRunAt    time.Time
 	Enabled      bool
+	// incremental follows the cursor; correction re-fetches the lookback window ending at each slot.
+	Mode string
 }
 
 // Server-side UI sessions; the cookie holds the token, the row only its SHA-256.

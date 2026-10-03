@@ -52,8 +52,8 @@ erDiagram
 | --- | --- |
 | Identity | `users` (argon2id hash, encrypted TOTP secret) · `timezone_periods` (IANA tz, `valid_from`) · `settings` (key/value jsonb) · `sessions` · `api_keys` (id as token prefix, secret hash, scopes) · `audit_events` (append-only for the app role) |
 | Sources | `providers` (seeded) · `connections` (`account_key`, `mode`, `status`, `config`, `last_success_at`; unique `(user, provider, account_key)`) · `credentials` (sealed ciphertext per [ADR-0011](../adr/0011-secrets-vault.md), `key_id`, `access_expires_at`, `version`) · `clients` (collector, iOS device, or importer tokens; `metadata` jsonb) · `devices` (`fingerprint`, `device_type`, manufacturer, model, versions; unique `(user, provider, fingerprint)`) · `data_origins` (`origin_key` e.g. HealthKit bundle id, `relayed_provider_id`, `is_native`) · `known_relay_origins` (seeded, editable patterns) |
-| Sync | `schedules` (interval, lookback, `next_run_at`) · `jobs` ([reliability.md](reliability.md#job-queue)) · `job_runs` · `sync_cursors` (cursor, watermark, stream status) · `backfills`, `backfill_units` · `provider_rate_state` (`blocked_until`) |
-| Raw | `ingest_batches` (`source_kind`, `migration_source`, `idempotency_key`; unique `(client, key)`) · `raw_payloads` (stream, `external_key`, `version`, `content_sha256` (also the blob key), `fetched_at`, sanitized `request_meta`, `shape_fingerprint`, status `stored/normalized/normalize_failed/quarantined`; unique `(connection, stream, external_key, sha256)`) · `blobs` (sha256, sizes, compression, encryption key ref, refcount) |
+| Sync | `schedules` (mode, interval, lookback, `next_run_at`) · `jobs` ([reliability.md](reliability.md#job-queue)) · `job_runs` · `sync_cursors` (cursor, watermark, stream status) · `backfills`, `backfill_units` · `provider_rate_state` (`blocked_until`) |
+| Raw | `ingest_batches` (`source_kind`, `migration_source`, `idempotency_key`; unique `(client, key)`) · `raw_payloads` (stream, `external_key`, `version` + `supersedes_id`, `content_sha256` (also the blob key), `fetched_at`, sanitized `request_meta`, `shape_fingerprint`, status `stored/normalized/normalize_failed/quarantined`; unique `(connection, stream, external_key, version)`; same content as the latest version is a duplicate) · `blobs` (sha256, sizes, compression, encryption key ref, refcount; [ADR-0004](../adr/0004-blob-store.md)) |
 | Canonical | `metric_catalog` · `units` · `normalizer_versions` · `measurements` (below) · `measurement_groups` (`kind` bp_reading/body_composition, `measured_at`, `context` jsonb) · `sleep_sessions` (`sleep_date` = local wake date, `is_nap`, stage totals, `totals_basis`, `has_stages`) · `sleep_stages` (awake/light/deep/rem/asleep_unspecified/in_bed) · `workouts` (canonical and provider sport, distance, energy, HR, `file_blob_sha256`) · `workout_segments` (lap/set/interval, `data` jsonb) |
 | Resolution | `resolution_rules`, `active_rules`, `manual_overrides`, `resolution_dirty`, `resolved_cache`, `source_hourly_aggregates` ([resolution.md](resolution.md)) |
 | Documents | `documents`, `document_keys`, `extraction_runs`, `lab_extracted_rows`, `extraction_row_edits`, `lab_reports`, `lab_results`, `lab_result_revisions`, `analytes`, `analyte_aliases` ([lab-documents.md](lab-documents.md)) |
@@ -94,14 +94,14 @@ Every change writes a `resolution_dirty(user, metric, local_date)` mark.
 
 ## Metric catalogue
 
-The catalogue is owned by code (`internal/catalog`) and seeded into the DB. Metrics are combinable across sources **only if they share a code**. Codes, units, kinds, aggregation and provider mappings: [metric-catalog.md](metric-catalog.md). Lab analytes use their own catalogue: [analyte-catalog.md](analyte-catalog.md).
+The catalogue is owned by code (`internal/catalog`) and seeded into the DB. Metrics are combinable across sources **only if they share a code**. Implemented codes, units, kinds, aggregation and plausible ranges: [metrics.md](../metrics.md); rules and codes not yet implemented: [metric-catalog.md](metric-catalog.md). Lab analytes use their own catalogue: [analyte-catalog.md](analyte-catalog.md).
 
 ## Volume and partitioning
 
-- A high-frequency HR source (6 s step) produces ~5.3 M rows/yr, about 1.1–1.3 GB with indexes.
-- Other intraday series add ~1–3 M rows/yr. Events stay under 100 k.
-- Raw blobs (zstd) are ~0.3–0.6 GB/yr.
-- Total is about 1–3 GB/yr depending on sources. J04.4 validates these numbers.
+- A high-frequency HR source (6 s step) produces ~5.3 M rows/yr. Measured in J04.4: ~340 B per `measurements` row with indexes (heap 193, indexes 149), so ~1.8 GB for that source alone.
+- Other intraday series add ~1–3 M rows/yr. Events stay under 100 k and take only a few MB.
+- Raw blobs (zstd) are ~0.3–0.6 GB/yr (not measured).
+- Total is about 1–3 GB/yr depending on sources: the full synthetic year (6.2 M rows from overlapping sources) takes 2.1 GB. Numbers, queries and method: [benchmarks/baseline.md](../benchmarks/baseline.md).
 - No partitioning yet. Revisit at > 50 M measurement rows or if retention pruning becomes necessary. Options then: monthly range partitions, or dense per-source-hour array chunks.
 
 ## Retention

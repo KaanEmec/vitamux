@@ -1,17 +1,17 @@
-# Metric catalogue (draft)
+# Metric catalogue
 
-Default metrics and events for wearable, device and app data. This is the input for [J07.1](../plan/E07-normalization/J07.1-catalogue-units.md). Lab analytes live in [analyte-catalog.md](analyte-catalog.md), and the table shapes in [data-model.md](data-model.md).
+Rules for metric codes, and the codes not yet implemented. Implemented codes (the `v1` seed from [J07.1](../plan/E07-normalization/J07.1-catalogue-units.md)) with their units, kinds, aggregation, plausible ranges and windows live in the generated [metrics.md](../metrics.md); the source is [`internal/catalog`](../../internal/catalog). Lab analytes live in [analyte-catalog.md](analyte-catalog.md), and the table shapes in [data-model.md](data-model.md).
 
-Once `internal/catalog` exists, the generated `docs/metrics.md` is the source of truth for implemented codes. This file then keeps only the rules and the codes not yet implemented.
+Adding a code means adding it to `internal/catalog` in the job that needs it, together with a migration that seeds it, and then moving its row out of this file.
 
 ## Rules
 
-- **One code per quantity and method.** Sources combine only when they share a code. Measurements made with different methods get different codes and never share a rule, e.g. `hrv_sdnn` vs `hrv_rmssd`.
+- **One code per quantity and method.** Sources combine only when they share a code. Measurements made with different methods get different codes and never share a rule, e.g. `hrv_sdnn` vs `hrv_rmssd`, or `hrv_rmssd` (samples) vs `hrv_rmssd_nightly` (provider overnight average).
 - **Device, origin and context are selectors, not codes.** Fingerstick vs CGM glucose, or Watch vs iPhone steps, stay one code each. The difference lives in `device`, `origin` and `context`.
 - **Proprietary scores are provider-namespaced** (`<provider>_<name>`) and never pooled across providers. They land in the catalogue together with their connector.
 - **Calculated values are never stored as measurements.** BMI, MAP, pulse pressure, time-in-range, GMI and sleep debt come from resolution or views. A value the *provider* reports (e.g., BMI from a scale) is stored as-is with its origin.
 - **Canonical units** use SI-style units, kept readable: s for durations, m for distances, kg, kcal, °C, mmol/L, % (0–100). The source value and unit are kept whenever conversion changed the value ([data-model.md](data-model.md#measurements)).
-- **Phase:** `v1` = the J07.1 seed (MVP). It covers the Withings measures stream ([J08.3](../plan/E08-withings/J08.3-measures.md)), the fixturegen scenarios ([J04.1](../plan/E04-fixtures-harness/J04.1-fixturegen.md)), and push or file imports. `J08.6` = Withings activity and sleep (post-MVP) · `E15` = needed by the Apple bridge · `later` = backlog, added with the first connector that needs it. A connector that needs a code not yet in the seed adds it in its own job.
+- **Phase:** codes marked below are not implemented yet; the J07.1 seed (`v1`, MVP) is implemented and listed in [metrics.md](../metrics.md). `J08.6` = Withings activity and sleep (post-MVP) · `E15` = needed by the Apple bridge · `later` = backlog, added with the first connector that needs it. A connector that needs a code not yet in the catalogue adds it in its own job.
 - **Withings `meastype` codes** are verified against the official `getmeas` reference ([J08.1](../plan/E08-withings/J08.1-verify-api.md) re-checks them). Measures outside `bp_reading` and `body_composition` (SpO2, temperature, VO2max) are stored as plain samples.
 
 Kinds: `S` sample · `I` interval · `C` cumulative · `D` daily_value. Aggregation values are defined in [resolution.md](resolution.md#within-source-aggregation). HK ids omit the `HKQuantityTypeIdentifier` / `HKCategoryTypeIdentifier` prefix. W = Withings `meastype`.
@@ -20,15 +20,12 @@ Kinds: `S` sample · `I` interval · `C` cumulative · `D` daily_value. Aggregat
 
 | Code | Unit | Kinds | Aggregation | Apple HK | W | Phase |
 | --- | --- | --- | --- | --- | --- | --- |
-| `steps` | count | I D | additive | StepCount | | v1 |
-| `distance_walk_run` | m | I D | additive | DistanceWalkingRunning | | v1 |
 | `distance_cycling` | m | I D | additive | DistanceCycling | | E15 |
 | `distance_swimming` | m | I | additive | DistanceSwimming | | E15 |
 | `distance_wheelchair` | m | I | additive | DistanceWheelchair | | E15 |
 | `distance_rowing`, `distance_paddle`, `distance_skating`, `distance_xc_ski`, `distance_downhill_snow` | m | I | additive | DistanceRowing, DistancePaddleSports, DistanceSkatingSports, DistanceCrossCountrySkiing, DistanceDownhillSnowSports | | later |
 | `floors_climbed` | count | I D | additive | FlightsClimbed | | E15 |
 | `elevation_gain` | m | I D | additive | | | J08.6 |
-| `active_energy` | kcal | I D | additive | ActiveEnergyBurned | | v1 |
 | `basal_energy` | kcal | I D | additive | BasalEnergyBurned | | E15 |
 | `total_energy` | kcal | D | daily_summary | | | J08.6 |
 | `exercise_time` | s | I D | additive | AppleExerciseTime | | E15 |
@@ -54,37 +51,22 @@ Kinds: `S` sample · `I` interval · `C` cumulative · `D` daily_value. Aggregat
 
 | Code | Unit | Kinds | Aggregation | Apple HK | W | Phase |
 | --- | --- | --- | --- | --- | --- | --- |
-| `heart_rate` | bpm | S | intensive 5 min | HeartRate | 11 (outside BP) | v1 |
-| `resting_heart_rate` | bpm | S D | daily_summary | RestingHeartRate | | v1 |
 | `walking_heart_rate` | bpm | D | daily_summary | WalkingHeartRateAverage | | E15 |
 | `sleeping_heart_rate` | bpm | D | daily_summary | | | later |
 | `heart_rate_recovery_1min` | bpm | S | latest | HeartRateRecoveryOneMinute | | later |
-| `hrv_sdnn` | ms | S | intensive 5 min | HeartRateVariabilitySDNN | | v1 |
-| `hrv_rmssd` | ms | S D | daily_summary | | | v1 |
 | `rr_interval` | s | S | raw series, not resolved | HKHeartbeatSeriesSample | | later |
-| `vo2max` | mL/kg/min | S | latest | VO2Max | 123 | v1 |
 | `afib_burden` | % | D | daily_summary | AtrialFibrillationBurden | | later |
-| `pulse_wave_velocity` | m/s | S | latest | | 91 | v1 |
-| `vascular_age` | years | S | latest | | 155 | v1 |
 | `perfusion_index` | % | S | intensive 5 min | PeripheralPerfusionIndex | | later |
 | `ecg_qrs`, `ecg_pr`, `ecg_qt`, `ecg_qtc` | s | S (proposed group `ecg`) | latest | | 135, 136, 137, 138 | later |
 
 ## Blood pressure (group `bp_reading`)
 
-| Code | Unit | Kinds | Aggregation | Apple HK | W | Phase |
-| --- | --- | --- | --- | --- | --- | --- |
-| `bp_systolic` | mmHg | S | latest | BloodPressureSystolic | 10 | v1 |
-| `bp_diastolic` | mmHg | S | latest | BloodPressureDiastolic | 9 | v1 |
-| `bp_pulse` | bpm | S | latest | HeartRate in the correlation | 11 | v1 |
-
-Group context: position, arm, cuff, irregular-heartbeat flag, part of an averaged session. MAP and pulse pressure are calculated, never stored.
+The three codes are implemented (see [metrics.md](../metrics.md)). Group context: position, arm, cuff, irregular-heartbeat flag, part of an averaged session. MAP and pulse pressure are calculated, never stored.
 
 ## Respiration and oxygen
 
 | Code | Unit | Kinds | Aggregation | Apple HK | W | Phase |
 | --- | --- | --- | --- | --- | --- | --- |
-| `spo2` | % | S | intensive 5 min | OxygenSaturation | 54 | v1 |
-| `respiratory_rate` | breaths/min | S | intensive 5 min | RespiratoryRate | | v1 |
 | `breathing_disturbances` | events/h | D | daily_summary | AppleSleepingBreathingDisturbances | | E15 |
 | `apnea_hypopnea_index` | events/h | D | daily_summary | | | J08.6 |
 | `fev1`, `fvc` | L | S | latest | ForcedExpiratoryVolume1, ForcedVitalCapacity | | later |
@@ -95,8 +77,6 @@ Group context: position, arm, cuff, irregular-heartbeat flag, part of an average
 
 | Code | Unit | Kinds | Aggregation | Apple HK | W | Phase |
 | --- | --- | --- | --- | --- | --- | --- |
-| `body_temperature` | °C | S | latest | BodyTemperature | 71, 12 | v1 |
-| `skin_temperature` | °C | S | intensive 5 min | | 73 | v1 |
 | `sleep_temperature_deviation` | °C (delta from baseline) | D | daily_summary | | | later |
 | `wrist_temperature_sleeping` | °C | D | daily_summary | AppleSleepingWristTemperature | | E15 |
 | `basal_body_temperature` | °C | S | latest | BasalBodyTemperature | | E15 |
@@ -107,24 +87,13 @@ Group context: position, arm, cuff, irregular-heartbeat flag, part of an average
 
 | Code | Unit | Kinds | Aggregation | Apple HK | W | Phase |
 | --- | --- | --- | --- | --- | --- | --- |
-| `weight` | kg | S | latest | BodyMass | 1 | v1 |
-| `height` | m | S | latest | Height | 4 | v1 |
 | `bmi` | kg/m² | S | latest (provider-reported only) | BodyMassIndex | | E15 |
-| `body_fat_ratio` | % | S | latest | BodyFatPercentage | 6 | v1 |
-| `fat_mass` | kg | S | latest | | 8 | v1 |
-| `fat_free_mass` | kg | S | latest | | 5 | v1 |
 | `lean_body_mass` | kg | S | latest | LeanBodyMass | | E15 |
-| `muscle_mass` | kg | S | latest | | 76 | v1 |
-| `bone_mass` | kg | S | latest | | 88 | v1 |
-| `hydration` | kg | S | latest | | 77 | v1 |
-| `extracellular_water`, `intracellular_water` | kg | S | latest | | 168, 169 | v1 |
-| `visceral_fat_index` | index | S | latest | | 170 | v1 |
-| `segment_fat_free_mass`, `segment_fat_mass`, `segment_muscle_mass` | kg (per segment in context) | S | latest | | 173, 174, 175 | later |
-| `basal_metabolic_rate` | kcal/day | S | latest | | 226 | v1 |
+| `fat_free_mass_<segment>`, `fat_mass_<segment>`, `muscle_mass_<segment>` with segment in `trunk`, `left_arm`, `right_arm`, `left_leg`, `right_leg` | kg | S | latest | | 173, 174, 175 | later |
 | `waist_circumference` | m | S | latest | WaistCircumference | | E15 |
 | `hip_circumference`, `chest_circumference`, `arm_circumference`, `thigh_circumference` | m | S | latest | | | later |
 
-`lean_body_mass` and `fat_free_mass` stay separate codes until we confirm the providers define them the same way.
+`lean_body_mass` and `fat_free_mass` are separate codes (decision 2 below).
 
 ## Glucose and metabolism
 
@@ -199,9 +168,6 @@ Sleep is an episode with stages, not scalar rows. Derived codes use `sleep_deriv
 
 | Code | Unit | Source | Phase |
 | --- | --- | --- | --- |
-| `sleep_total`, `sleep_in_bed`, `sleep_awake`, `sleep_light`, `sleep_deep`, `sleep_rem`, `sleep_unspecified` | s | stage sums (HK SleepAnalysis values; Withings sleep summary from J08.6) | v1 |
-| `sleep_latency`, `sleep_waso` | s | provider summary or stage timeline | v1 |
-| `sleep_efficiency` | % | provider summary | v1 |
 | `sleep_awakenings`, `sleep_rem_episodes` | count | provider summary | J08.6 |
 | `sleep_snoring_time` | s | provider summary (Withings) | J08.6 |
 | `sleep_snoring_episodes` | count | provider summary | J08.6 |
@@ -220,7 +186,7 @@ A workout is an event. Its scalar fields are columns or segment `data`, not cata
 
 ## Provider-namespaced scores
 
-Each score is added together with its connector. They are never pooled across providers, and `mean` is rejected for them.
+Each score is added together with its connector. They are never pooled across providers, and `mean`, `min` and `max` are rejected for them (`ProviderScoped` in the catalogue).
 
 | Pattern | Examples | Aggregation |
 | --- | --- | --- |
@@ -250,11 +216,9 @@ These are typed events with a value or level, not numbers that can be resolved. 
 | Medication | `medication_dose` | HKMedicationDoseEvent; manual entry | later |
 | Clinical records | allergies, conditions, immunizations, procedures (FHIR resources kept raw) | HK clinical records | later |
 
-## Open questions
+## Open questions and decisions
 
-Questions 2–4 are decided in [J07.1](../plan/E07-normalization/J07.1-catalogue-units.md); question 1 in [J15.1](../plan/E15-apple-health/J15.1-platform-contract.md).
-
-1. Event storage shape (above).
-2. Do Withings `fat_free_mass` (5) and HK `LeanBodyMass` mean the same thing? This decides whether the two can share a code.
-3. Should `hrv_rmssd` stay `daily_summary`? Some sources send nightly averages, others 5-min samples. The alternative is splitting it into `hrv_rmssd` (samples) and `hrv_rmssd_nightly`.
-4. Segmental body composition: one code per segment, or segment in `context`?
+1. Event storage shape (above): open, decided in [J15.1](../plan/E15-apple-health/J15.1-platform-contract.md).
+2. **Decided (J07.1): `fat_free_mass` and `lean_body_mass` are separate codes.** Withings `fat_free_mass` (5) and HK `LeanBodyMass` are not known to share a definition, and a wrong merge cannot be undone in stored data. Withings maps to `fat_free_mass`, HealthKit to `lean_body_mass` (E15). Revisit only with evidence that a provider defines them identically.
+3. **Decided (J07.1): `hrv_rmssd` is split.** `hrv_rmssd` holds samples (`sample`, `intensive`); `hrv_rmssd_nightly` holds the provider's overnight average (`daily_value`, `daily_summary`). A 5-min sample series and a nightly mean are different methods, and averaging samples over a whole day would mix waking values into a sleep-time metric. Both are in the v1 seed and are not combinable. `hrv_sdnn` stays separate from both.
+4. **Decided (J07.1): one code per body segment.** A segment is a different quantity, not a context of one, and rules and windows see only codes. The codes are `<quantity>_<segment>` (the row above) and arrive with the first connector that reports segments.

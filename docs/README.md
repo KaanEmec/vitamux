@@ -15,7 +15,8 @@ Precedence when documents disagree: `CLAUDE.md` (product brief) > ADRs in `docs/
 | [overview.md](architecture/overview.md) | Goals, non-goals, key decisions, components, deployment, process modes, routes, repo layout, glossary | Anything structural; first read for newcomers |
 | [connectors.md](architecture/connectors.md) | Execution modes, connector and normalizer contracts, runtime duties, push ingest contract, Withings pattern | Ingestion, sync, connectors, normalizers |
 | [data-model.md](architecture/data-model.md) | Tables, IDs, dedupe keys, corrections, measurements, metric catalogue, volume, retention | Migrations, writers, queries |
-| [metric-catalog.md](architecture/metric-catalog.md) | Default metric codes, units, kinds, aggregation, HealthKit and Withings mappings, provider scores, events | Catalogue, normalizers, rules |
+| [metric-catalog.md](architecture/metric-catalog.md) | Metric code rules, decisions, and codes not yet implemented (HealthKit and Withings mappings, provider scores, events) | Adding catalogue codes |
+| [metrics.md](metrics.md) | Generated: implemented metric codes, units, conversions, windows, strategies | Catalogue, normalizers, rules |
 | [analyte-catalog.md](architecture/analyte-catalog.md) | Lab analyte codes, canonical units, conversion factors | Lab review, analyte seed |
 | [resolution.md](architecture/resolution.md) | Rule schema, windows, aggregation, strategies, sleep alignment, overrides, results, cache | Resolution engine, rule UI |
 | [api.md](architecture/api.md) | API conventions, endpoint surface, example payloads | Handlers, OpenAPI, frontend data use |
