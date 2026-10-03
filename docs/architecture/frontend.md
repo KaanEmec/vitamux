@@ -20,7 +20,7 @@ Alternatives rejected: htmx (the rule builder, charts, and PDF review need real 
 ## Navigation
 
 1. **Today**: key resolved metrics with source chips; connection health; alerts (reauth, drift, stale backup).
-2. **Connections**: list, then detail tabs Overview, Streams, History, Backfill, Settings. A single auth wizard handles OAuth redirect or credentials → MFA. Manual sync. Unofficial badge.
+2. **Connections**: list, then detail tabs (`?tab=`) Overview, Streams, Backfills, History, Settings. A single auth wizard handles the OAuth redirect (credentials → MFA once `AuthStep` carries a prompt); the callback's `?connected=`/`?auth_error=` show on the list. Manual sync, backfills with retry and cancel, pause, delete with keep/delete data. Unofficial badge from `Connection.official`.
 3. **Data**:
    - daily view with status icons (direct, fallback, calculated, overridden) and explanation popovers;
    - **All sources** drilldown: chart overlay, included/excluded table, provenance links, override actions;
