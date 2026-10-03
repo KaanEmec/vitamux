@@ -1,0 +1,13 @@
+{
+  "synthetic": true,
+  "normalizer": "example.heart_rate",
+  "version": 1,
+  "output": {
+    "warnings": [
+      {
+        "code": "sample_skipped",
+        "detail": "sample without bpm or time"
+      }
+    ]
+  }
+}
