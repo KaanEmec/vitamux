@@ -57,6 +57,19 @@
 //   - E5: Options.Leader (LeaderSelections of the leader's results) by window key.
 //   - E9: a compose rule's local_day sums its hours; WindowResult.Hours keeps them.
 //
+// Results and loading (J09.8):
+//   - BuildResult renders a Resolved window as Result, the documented result shape: value,
+//     every group as a ResultInput (selected groups present as StatusUsed with Selected),
+//     coverage, warnings, extension inputs, overrides and the explanation from the fixed
+//     templates in explain.go. BuildSources and SleepAlignment.Sources make the all-sources
+//     drilldown; SourcesUsed summarises a series.
+//   - SleepAlignment.ResolveEpisode feeds an episode's groups through Rule.Select, so the sleep
+//     family (and each sleep code) yields a WindowResult like any metric; Missing lists codes
+//     the selected source lacks. SleepAlignment.ForceGroup applies force_source to it.
+//   - Resolve and Run (load.go) are the only reads: rule (Store or Request.Rule), timezone
+//     periods, overrides, rows and wear series (queries/resolve.sql), sleep and workouts for
+//     night windows and contexts, and the follow leader's results. J09.9 caches them.
+//
 // Overrides (J09.7):
 //   - Overrides stores manual overrides (Create, Revoke, Active, History); each change is audited
 //     and marks resolution_dirty in its transaction. Rows are never deleted.

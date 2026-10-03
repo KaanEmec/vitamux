@@ -81,7 +81,7 @@ func mainSel(t *testing.T, a SleepAlignment) SleepSelection {
 	return a.Select(e)
 }
 
-func want(t *testing.T, sel SleepSelection, code string, status SleepStatus, value float64) {
+func want(t *testing.T, sel SleepSelection, code string, status GroupStatus, value float64) {
 	t.Helper()
 	v := sel.Value(code)
 	if v.Status != status || math.Abs(v.Value-value) > 1e-9 {
@@ -114,18 +114,18 @@ func TestMatchedNight(t *testing.T) {
 		t.Fatalf("selected %d warnings %v, want group a and none", sel.Selected, sel.Warnings)
 	}
 	for _, g := range sel.Groups {
-		if g.Status != SleepValid || g.Coverage < 0.9 {
+		if g.Status != StatusValid || g.Coverage < 0.9 {
 			t.Errorf("group %+v, want valid with high coverage", g)
 		}
 	}
 	// Every code comes from A's session.
-	want(t, sel, "sleep_deep", SleepValid, float64(*a0.Totals.Deep))
-	want(t, sel, "sleep_total", SleepValid, float64(*a0.Totals.Asleep))
-	want(t, sel, "sleep_in_bed", SleepValid, a0.End.Sub(a0.Start).Seconds())
-	want(t, sel, "sleep_latency", SleepValid, 600)
-	want(t, sel, "sleep_waso", SleepValid, 1200)
-	want(t, sel, "sleep_unspecified", SleepValid, 0)
-	want(t, sel, "sleep_efficiency", SleepValid, 100*float64(*a0.Totals.Asleep)/a0.End.Sub(a0.Start).Seconds())
+	want(t, sel, "sleep_deep", StatusValid, float64(*a0.Totals.Deep))
+	want(t, sel, "sleep_total", StatusValid, float64(*a0.Totals.Asleep))
+	want(t, sel, "sleep_in_bed", StatusValid, a0.End.Sub(a0.Start).Seconds())
+	want(t, sel, "sleep_latency", StatusValid, 600)
+	want(t, sel, "sleep_waso", StatusValid, 1200)
+	want(t, sel, "sleep_unspecified", StatusValid, 0)
+	want(t, sel, "sleep_efficiency", StatusValid, 100*float64(*a0.Totals.Asleep)/a0.End.Sub(a0.Start).Seconds())
 
 	// Pooling ops leave the choice to the strategy step; every group stays readable.
 	pooled := mainSel(t, align(t, sleepRule(OpMean, nil), "2026-06-15", a0, b0))
@@ -146,13 +146,13 @@ func TestPartialCaptureExcluded(t *testing.T) {
 	}
 	sel := mainSel(t, a)
 	g := sel.Groups[0]
-	if g.Status != SleepBelowQuality || g.Reason != SleepPartialEpisode || math.Abs(g.Coverage-240.0/445) > 1e-9 {
+	if g.Status != StatusBelowQuality || g.Reason != SleepPartialEpisode || math.Abs(g.Coverage-240.0/445) > 1e-9 {
 		t.Errorf("group a = %s %s %.3f, want below_quality partial_episode 0.539", g.Status, g.Reason, g.Coverage)
 	}
 	if sel.Selected != 1 || len(sel.Warnings) != 1 || sel.Warnings[0] != WarnPreferredUnavailable {
 		t.Fatalf("selected %d warnings %v, want b with preferred_source_unavailable", sel.Selected, sel.Warnings)
 	}
-	want(t, sel, "sleep_deep", SleepValid, float64(*b0.Totals.Deep))
+	want(t, sel, "sleep_deep", StatusValid, float64(*b0.Totals.Deep))
 
 	// A lower threshold admits A again.
 	low := 0.5
@@ -172,9 +172,9 @@ func TestSplitNight(t *testing.T) {
 		t.Fatalf("episodes = %+v, want one session of two fragments", a.Episodes)
 	}
 	sel := mainSel(t, a)
-	want(t, sel, "sleep_total", SleepValid, float64(*f1.Totals.Asleep+*f2.Totals.Asleep))
-	want(t, sel, "sleep_in_bed", SleepValid, (7*time.Hour + 20*time.Minute).Seconds()) // the gap is not in bed
-	want(t, sel, "sleep_latency", SleepValid, 600)                                     // first fragment only
+	want(t, sel, "sleep_total", StatusValid, float64(*f1.Totals.Asleep+*f2.Totals.Asleep))
+	want(t, sel, "sleep_in_bed", StatusValid, (7*time.Hour + 20*time.Minute).Seconds()) // the gap is not in bed
+	want(t, sel, "sleep_latency", StatusValid, 600)                                     // first fragment only
 
 	// 90 min apart and alone: two episodes, the longer one is main.
 	g1 := staged(slA, "2026-06-14T21:00:00Z", "2026-06-14T23:30:00Z")
@@ -183,7 +183,7 @@ func TestSplitNight(t *testing.T) {
 	if len(a.Episodes) != 2 || a.Episodes[0].Main || !a.Episodes[1].Main {
 		t.Fatalf("episodes = %+v, want two with the second main", a.Episodes)
 	}
-	want(t, mainSel(t, a), "sleep_total", SleepValid, float64(*g2.Totals.Asleep))
+	want(t, mainSel(t, a), "sleep_total", StatusValid, float64(*g2.Totals.Asleep))
 
 	// The same fragments bridged by another source form one episode; A sums both.
 	b0 := staged(slB, "2026-06-14T21:10:00Z", "2026-06-15T04:50:00Z")
@@ -195,7 +195,7 @@ func TestSplitNight(t *testing.T) {
 	if sel.Selected != 0 || math.Abs(sel.Groups[0].Coverage-6.5/8) > 1e-9 {
 		t.Errorf("selected %d coverage %.3f, want a with 0.8125", sel.Selected, sel.Groups[0].Coverage)
 	}
-	want(t, sel, "sleep_total", SleepValid, float64(*g1.Totals.Asleep+*g2.Totals.Asleep))
+	want(t, sel, "sleep_total", StatusValid, float64(*g1.Totals.Asleep+*g2.Totals.Asleep))
 }
 
 func TestNap(t *testing.T) {
@@ -220,10 +220,10 @@ func TestNap(t *testing.T) {
 		t.Errorf("nap window = %+v", w)
 	}
 	sel := a.Select(napEp)
-	if sel.Selected != 0 || sel.Groups[1].Status != SleepNoData {
+	if sel.Selected != 0 || sel.Groups[1].Status != StatusNoData {
 		t.Errorf("nap: selected %d, b %s", sel.Selected, sel.Groups[1].Status)
 	}
-	want(t, sel, "sleep_total", SleepValid, 25*60)
+	want(t, sel, "sleep_total", StatusValid, 25*60)
 
 	if n := align(t, sleepRule(OpEventPriority, &SleepQuality{IncludeNaps: true}), "2026-06-15", in...).NightEpisodes(); len(n) != 2 {
 		t.Errorf("include_naps: %d night episodes, want 2", len(n))
@@ -242,12 +242,12 @@ func TestSourceWithoutStages(t *testing.T) {
 		t.Fatalf("selected %d, want a", sel.Selected)
 	}
 	for _, code := range []string{"sleep_deep", "sleep_light", "sleep_rem", "sleep_awake", "sleep_unspecified", "sleep_waso"} {
-		want(t, sel, code, SleepNoStageData, 0) // never B's stages
+		want(t, sel, code, StatusNoStageData, 0) // never B's stages
 	}
-	want(t, sel, "sleep_latency", SleepNoData, 0)
-	want(t, sel, "sleep_total", SleepValid, float64(*a0.Totals.Asleep))
-	want(t, sel, "sleep_efficiency", SleepValid, 100*float64(*a0.Totals.Asleep)/a0.End.Sub(a0.Start).Seconds())
-	if v := sel.Groups[1].Value("sleep_deep"); v.Status != SleepValid {
+	want(t, sel, "sleep_latency", StatusNoData, 0)
+	want(t, sel, "sleep_total", StatusValid, float64(*a0.Totals.Asleep))
+	want(t, sel, "sleep_efficiency", StatusValid, 100*float64(*a0.Totals.Asleep)/a0.End.Sub(a0.Start).Seconds())
+	if v := sel.Groups[1].Value("sleep_deep"); v.Status != StatusValid {
 		t.Errorf("b deep = %+v, want valid (only not used)", v)
 	}
 
@@ -255,8 +255,8 @@ func TestSourceWithoutStages(t *testing.T) {
 	u := unstaged(slA, "2026-06-14T21:10:00Z", "2026-06-15T04:55:00Z")
 	u.HasStages = true
 	sel = mainSel(t, align(t, sleepRule(OpEventPriority, nil), "2026-06-15", u))
-	want(t, sel, "sleep_unspecified", SleepValid, float64(*u.Totals.Asleep))
-	want(t, sel, "sleep_deep", SleepNoStageData, 0)
+	want(t, sel, "sleep_unspecified", StatusValid, float64(*u.Totals.Asleep))
+	want(t, sel, "sleep_deep", StatusNoStageData, 0)
 }
 
 func TestAlignSleepNeedsTimezone(t *testing.T) {

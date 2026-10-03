@@ -6,6 +6,8 @@ import (
 	"slices"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/KaanEmec/vitamux/internal/catalog"
 )
 
@@ -44,14 +46,16 @@ type GroupValue struct {
 	Value      float64            // canonical unit; family rules use Components
 	Components map[string]float64 // family rules: component code -> value, all from one reading (or a per-component mean)
 	Basis      Basis
-	Coverage   float64   // covered / elapsed base buckets; 1 for unbucketed values
-	Count      int       // contributing inputs
-	Buckets    int       // covered base buckets (intensive and additive interval values)
-	First, At  time.Time // earliest and latest contributing instants (Input.At)
-	Prorated   bool      // an interval was cut at the window bounds
-	Refs       []int64   // contributing Input.ID values, for record_refs
-	Sources    []Source  // distinct contributing sources, in input order
-	Warnings   []Warning // per-group warnings, e.g. intra_group sum
+	Coverage   float64     // covered / elapsed base buckets; 1 for unbucketed values
+	Count      int         // contributing inputs
+	Readings   int         // latest-type metrics: contributing readings (one row, or one measurement group)
+	Buckets    int         // covered base buckets (intensive and additive interval values)
+	First, At  time.Time   // earliest and latest contributing instants (Input.At)
+	Prorated   bool        // an interval was cut at the window bounds
+	Refs       []int64     // contributing Input.ID values, for record_refs
+	Sessions   []uuid.UUID // sleep: the sleep_sessions.id values behind the value
+	Sources    []Source    // distinct contributing sources, in input order
+	Warnings   []Warning   // per-group warnings, e.g. intra_group sum
 	// E2: the bucket span [SpanStart, SpanEnd) a min or min_rolling_mean statistic picked.
 	SpanStart, SpanEnd time.Time
 	// E3 (quality.require_wear): no device of the group reports the wear metric, so it is not
@@ -498,7 +502,7 @@ func (gv *GroupValue) aggReadings(sp spec, s Series, w Window, stat Statistic) {
 		for code := range comps {
 			comps[code] /= float64(n[code])
 		}
-		gv.Basis = BasisMean
+		gv.Basis, gv.Readings = BasisMean, len(all)
 	} else {
 		last := all[len(all)-1]
 		for _, code := range sp.codes {
@@ -507,7 +511,7 @@ func (gv *GroupValue) aggReadings(sp spec, s Series, w Window, stat Statistic) {
 				gv.use(x)
 			}
 		}
-		gv.Basis = BasisLatest
+		gv.Basis, gv.Readings = BasisLatest, 1
 	}
 	gv.Coverage = 1
 	if sp.family {

@@ -1,0 +1,11 @@
+# synthetic: true
+local_day 2025-02-15 steps: direct 13,124 [garmin:used* apple_watch:no_data apple_health/com.apple.health.synthetic-phone/phone:not_in_rule apple_health/com.garmin.connect.mobile/watch:not_in_rule]
+  Used garmin: 13,124 (daily total). No data from apple_watch. Outside the rule: apple_health com.apple.health.synthetic-phone phone (37 rows); apple_health com.garmin.connect.mobile watch (16 rows).
+local_day 2025-02-16 steps: direct 8,086 [garmin:used* apple_watch:fallback_unused apple_health/com.apple.health.synthetic-phone/phone:not_in_rule apple_health/com.garmin.connect.mobile/watch:not_in_rule]
+  Used garmin: 8,086 (daily total). Not needed: apple_watch. Outside the rule: apple_health com.apple.health.synthetic-phone phone (31 rows); apple_health com.garmin.connect.mobile watch (16 rows).
+local_day 2025-02-17 steps: fallback 7,437 [garmin:no_data apple_watch:used* apple_health/com.apple.health.synthetic-phone/phone:not_in_rule]
+  Fell back to apple_watch: 7,437 (90 intervals). No data from garmin. Outside the rule: apple_health com.apple.health.synthetic-phone phone (16 rows).
+local_day 2025-02-18 steps: fallback 13,551 [garmin:no_data apple_watch:used* apple_health/com.apple.health.synthetic-phone/phone:not_in_rule]
+  Fell back to apple_watch: 13,551 (91 intervals). No data from garmin. Outside the rule: apple_health com.apple.health.synthetic-phone phone (15 rows).
+local_day 2025-02-19 steps: direct 7,185 [garmin:used* apple_watch:fallback_unused apple_health/com.apple.health.synthetic-phone/phone:not_in_rule apple_health/com.garmin.connect.mobile/watch:not_in_rule]
+  Used garmin: 7,185 (daily total). Not needed: apple_watch. Outside the rule: apple_health com.apple.health.synthetic-phone phone (20 rows); apple_health com.garmin.connect.mobile watch (16 rows).

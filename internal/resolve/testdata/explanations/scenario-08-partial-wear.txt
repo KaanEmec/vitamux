@@ -1,0 +1,9 @@
+# synthetic: true
+local_day 2025-06-02 heart_rate: direct 73.63 [garmin:used* apple_watch:fallback_unused apple_health/com.garmin.connect.mobile/watch:not_in_rule]
+  Used garmin: 73.63 bpm (1382 samples in 277 buckets). Not needed: apple_watch. Outside the rule: apple_health com.garmin.connect.mobile watch (1382 rows).
+local_day 2025-06-03 heart_rate: fallback 68.19 [garmin:below_quality apple_watch:used* apple_health/com.garmin.connect.mobile/watch:not_in_rule]
+  Fell back to apple_watch: 68.19 bpm (1654 samples in 276 buckets). garmin covered 67% of the window, below the minimum of 80%. Outside the rule: apple_health com.garmin.connect.mobile watch (960 rows).
+local_day 2025-06-04 heart_rate: fallback 71.16 [garmin:below_quality apple_watch:used* apple_health/com.garmin.connect.mobile/watch:not_in_rule]
+  Fell back to apple_watch: 71.16 bpm (2099 samples in 276 buckets). garmin covered 67% of the window, below the minimum of 80%. Outside the rule: apple_health com.garmin.connect.mobile watch (960 rows).
+local_day 2025-06-05 heart_rate: direct 66.91 [garmin:used* apple_watch:fallback_unused apple_health/com.garmin.connect.mobile/watch:not_in_rule]
+  Used garmin: 66.91 bpm (1390 samples in 279 buckets). Not needed: apple_watch. Outside the rule: apple_health com.garmin.connect.mobile watch (1390 rows).

@@ -291,7 +291,7 @@ func (r *Rule) coverageGated(sp spec, gv *GroupValue) bool {
 	switch gv.Basis {
 	case BasisBucketMeans, BasisMinRollingMean, BasisMin:
 		return true
-	case BasisIntervals, BasisDailyValue, BasisLatest, BasisMean:
+	case BasisIntervals, BasisDailyValue, BasisLatest, BasisMean, BasisSessions:
 	}
 	return sp.agg == catalog.Additive && r.Quality != nil && r.Quality.RequireWear != "" && !gv.WearExempt
 }

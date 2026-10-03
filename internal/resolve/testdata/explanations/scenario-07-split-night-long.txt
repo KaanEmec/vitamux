@@ -1,0 +1,5 @@
+# synthetic: true
+sleep_episode 2025-03-11T22:45:00Z sleep_total: direct 13,980 [garmin:used*]
+  Used garmin: 3h 53m (1 session, 100% of the episode).
+sleep_episode 2025-03-12T04:02:00Z sleep_total: direct 9,600 [garmin:used*]
+  Used garmin: 2h 40m (1 session, 100% of the episode).

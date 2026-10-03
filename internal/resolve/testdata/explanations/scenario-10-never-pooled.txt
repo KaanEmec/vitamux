@@ -1,0 +1,5 @@
+# synthetic: true
+local_day 2026-09-14 hrv_rmssd_nightly: direct 48 [ring:used* garmin:fallback_unused]
+  Used ring: 48 ms (daily total). Not needed: garmin.
+local_day 2026-09-15 hrv_rmssd_nightly: fallback 59 [ring:no_data garmin:used*]
+  Fell back to garmin: 59 ms (daily total). No data from ring. The selected group differs from the previous window's, so values may not be comparable (definition_changed).

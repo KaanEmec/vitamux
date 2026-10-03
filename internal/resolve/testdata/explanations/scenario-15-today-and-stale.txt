@@ -1,0 +1,5 @@
+# synthetic: true
+local_day 2025-02-19 steps: direct 7,185 partial [garmin:used* apple_watch:fallback_unused apple_health/com.apple.health.synthetic-phone/phone:not_in_rule apple_health/com.garmin.connect.mobile/watch:not_in_rule]
+  Used garmin: 7,185 (daily total). Not needed: apple_watch. Outside the rule: apple_health com.apple.health.synthetic-phone phone (20 rows); apple_health com.garmin.connect.mobile watch (16 rows). The window is still open; the value is partial.
+latest 2025-02-17T23:00:00Z heart_rate: fallback 52 [garmin:stale apple_watch:used* apple_health/com.garmin.connect.mobile/watch:not_in_rule manual:not_in_rule]
+  Fell back to apple_watch: 52 bpm (latest reading). garmin was stale: its latest value is from 2025-02-16 23:59, older than 1h. Outside the rule: apple_health com.garmin.connect.mobile watch (2798 rows); manual (1 row).

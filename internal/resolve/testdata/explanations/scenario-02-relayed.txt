@@ -1,0 +1,5 @@
+# synthetic: true
+hour 2025-02-16T09:00:00Z heart_rate: direct 80.4 [garmin:used* apple_watch:fallback_unused apple_health/com.garmin.connect.mobile/watch:excluded]
+  Used garmin: 80.4 bpm (60 samples in 12 buckets). Not needed: apple_watch. Excluded by the rule: apple_health com.garmin.connect.mobile watch (60 rows, exclude: provider=apple_health relayed=true).
+hour 2025-02-16T09:00:00Z heart_rate: fallback 81.02 [chest_strap:no_data arm_band:no_data apple_watch:used* garmin:fallback_unused garmin_apple:fallback_unused fitbit:no_data samsung:no_data whoop:no_data polar:no_data xiaomi:no_data amazfit:no_data oura:no_data oura_apple:no_data]
+  Fell back to apple_watch: 81.02 bpm (72 samples in 12 buckets). No data from chest_strap, arm_band, fitbit, samsung, whoop, polar, xiaomi, amazfit, oura, oura_apple. Not needed: garmin, garmin_apple.

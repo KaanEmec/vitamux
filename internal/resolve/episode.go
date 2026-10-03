@@ -223,23 +223,13 @@ func earlier(a, b time.Time) time.Time {
 	return a
 }
 
-// SleepStatus is a group's (or one code's) status within an episode.
-type SleepStatus string
-
-const (
-	SleepValid        SleepStatus = "valid"
-	SleepNoData       SleepStatus = "no_data"
-	SleepBelowQuality SleepStatus = "below_quality" // Reason SleepPartialEpisode
-	SleepNoStageData  SleepStatus = "no_stage_data" // the selected source has no stages for this code
-)
-
 // SleepPartialEpisode is the below_quality reason when the group covered less than min_episode_coverage of the episode.
 const SleepPartialEpisode = "partial_episode"
 
 // SleepGroup is one rule group's capture of an episode. When a group holds several sources
 // in the episode, the one covering most of it is used alone, so sub-sources are never added.
 type SleepGroup struct {
-	Status   SleepStatus // valid, no_data or below_quality
+	Status   GroupStatus // valid, no_data or below_quality
 	Reason   string
 	Coverage float64          // fraction of the episode span covered by Sessions
 	Sessions []EpisodeSession // the used source's sessions in the episode
@@ -288,7 +278,7 @@ func (a SleepAlignment) Select(e Episode) SleepSelection {
 	}
 	minCov := r.sleepQuality().minCoverage
 	for g, cs := range cands {
-		grp := SleepGroup{Status: SleepNoData}
+		grp := SleepGroup{Status: StatusNoData}
 		for _, c := range cs {
 			slices.SortStableFunc(c.frags, func(a, b SleepInput) int { return a.Start.Compare(b.Start) })
 			if cov := coverage(c.frags, e.Start, e.End); grp.Sessions == nil || cov > grp.Coverage {
@@ -298,9 +288,9 @@ func (a SleepAlignment) Select(e Episode) SleepSelection {
 		switch {
 		case grp.Sessions == nil:
 		case grp.Coverage < minCov:
-			grp.Status, grp.Reason = SleepBelowQuality, SleepPartialEpisode
+			grp.Status, grp.Reason = StatusBelowQuality, SleepPartialEpisode
 		default:
-			grp.Status = SleepValid
+			grp.Status = StatusValid
 		}
 		sel.Groups[g] = grp
 	}
@@ -312,7 +302,7 @@ func (a SleepAlignment) Select(e Episode) SleepSelection {
 	case OpLatest, OpEarliest:
 		for _, i := range order {
 			g := sel.Groups[i]
-			if g.Status != SleepValid {
+			if g.Status != StatusValid {
 				continue
 			}
 			if sel.Selected < 0 {
@@ -327,7 +317,7 @@ func (a SleepAlignment) Select(e Episode) SleepSelection {
 		}
 	default: // single_source, first_available, event_priority
 		for _, i := range order {
-			if sel.Groups[i].Status == SleepValid {
+			if sel.Groups[i].Status == StatusValid {
 				sel.Selected = i
 				break
 			}
@@ -361,14 +351,14 @@ func coverage(frags []SleepInput, start, end time.Time) float64 {
 // SleepValue is one sleep code's value in seconds (percent for sleep_efficiency).
 type SleepValue struct {
 	Value  float64
-	Status SleepStatus // valid, no_data, below_quality or no_stage_data
+	Status GroupStatus // valid, no_data, below_quality or no_stage_data
 }
 
 // Value reads code from the selected group. A code the selected source lacks is
 // no_stage_data (stage codes) or no_data, never another group's value.
 func (s SleepSelection) Value(code string) SleepValue {
 	if s.Selected < 0 {
-		return SleepValue{Status: SleepNoData}
+		return SleepValue{Status: StatusNoData}
 	}
 	return s.Groups[s.Selected].Value(code)
 }
@@ -377,19 +367,19 @@ func (s SleepSelection) Value(code string) SleepValue {
 // sleep_latency (the first fragment's) and sleep_efficiency (100 * sleep_total / sleep_in_bed).
 // One fragment lacking the code makes the whole value missing, so a gap never reads as 0.
 func (g SleepGroup) Value(code string) SleepValue {
-	if g.Status != SleepValid {
+	if g.Status != StatusValid {
 		return SleepValue{Status: g.Status}
 	}
 	switch code {
 	case "sleep_efficiency":
 		t, bed := g.Value("sleep_total"), g.Value("sleep_in_bed")
 		switch {
-		case t.Status != SleepValid:
+		case t.Status != StatusValid:
 			return t
 		case bed.Value <= 0:
-			return SleepValue{Status: SleepNoData}
+			return SleepValue{Status: StatusNoData}
 		}
-		return SleepValue{Value: 100 * t.Value / bed.Value, Status: SleepValid}
+		return SleepValue{Value: 100 * t.Value / bed.Value, Status: StatusValid}
 	case "sleep_latency":
 		v, st := fragValue(g.frags[0], code)
 		return SleepValue{Value: v, Status: st}
@@ -397,12 +387,12 @@ func (g SleepGroup) Value(code string) SleepValue {
 	var sum float64
 	for _, f := range g.frags {
 		v, st := fragValue(f, code)
-		if st != SleepValid {
+		if st != StatusValid {
 			return SleepValue{Status: st}
 		}
 		sum += v
 	}
-	return SleepValue{Value: sum, Status: SleepValid}
+	return SleepValue{Value: sum, Status: StatusValid}
 }
 
 // stageCodes need stage data; when missing they are no_stage_data rather than no_data.
@@ -412,23 +402,23 @@ var stageCodes = map[string]bool{
 }
 
 // fragValue is one session's value of a sleep code in seconds.
-func fragValue(f SleepInput, code string) (float64, SleepStatus) {
-	missing := SleepNoData
+func fragValue(f SleepInput, code string) (float64, GroupStatus) {
+	missing := StatusNoData
 	if stageCodes[code] {
-		missing = SleepNoStageData
+		missing = StatusNoStageData
 	}
-	ptr := func(v *int32) (float64, SleepStatus) {
+	ptr := func(v *int32) (float64, GroupStatus) {
 		if v == nil {
 			return 0, missing
 		}
-		return float64(*v), SleepValid
+		return float64(*v), StatusValid
 	}
 	t := f.Totals
 	switch code {
 	case "sleep_total":
 		return ptr(t.Asleep)
 	case "sleep_in_bed":
-		return f.End.Sub(f.Start).Seconds(), SleepValid
+		return f.End.Sub(f.Start).Seconds(), StatusValid
 	case "sleep_awake":
 		return ptr(t.Awake)
 	case "sleep_light":
@@ -442,7 +432,7 @@ func fragValue(f SleepInput, code string) (float64, SleepStatus) {
 			return ptr(t.Latency)
 		}
 		if first, _, ok := asleepSpan(f.Stages); ok {
-			return max(first.Sub(f.Start), 0).Seconds(), SleepValid
+			return max(first.Sub(f.Start), 0).Seconds(), StatusValid
 		}
 	case "sleep_unspecified":
 		if len(f.Stages) > 0 {
@@ -452,7 +442,7 @@ func fragValue(f SleepInput, code string) (float64, SleepStatus) {
 					d += s.End.Sub(s.Start)
 				}
 			}
-			return d.Seconds(), SleepValid
+			return d.Seconds(), StatusValid
 		}
 		// Without stage rows the remainder of the totals is unspecified sleep, when the
 		// session has stages or reports every staged total.
@@ -464,7 +454,7 @@ func fragValue(f SleepInput, code string) (float64, SleepStatus) {
 					rest -= *v
 				}
 			}
-			return float64(max(rest, 0)), SleepValid
+			return float64(max(rest, 0)), StatusValid
 		}
 	case "sleep_waso":
 		if first, last, ok := asleepSpan(f.Stages); ok {
@@ -474,7 +464,7 @@ func fragValue(f SleepInput, code string) (float64, SleepStatus) {
 					d += max(earlier(s.End, last).Sub(later(s.Start, first)), 0)
 				}
 			}
-			return d.Seconds(), SleepValid
+			return d.Seconds(), StatusValid
 		}
 	}
 	return 0, missing
@@ -495,4 +485,213 @@ func asleepSpan(stages []normalize.SleepStage) (first, last time.Time, ok bool) 
 		}
 	}
 	return first, last, ok
+}
+
+// BasisSessions marks a sleep group value read from its sessions in the episode.
+const BasisSessions Basis = "sessions"
+
+// ResolveEpisode is the window result of the sleep-family rule for episode e (w is its
+// local_night or sleep_episode window). The episode groups go through Rule.Select, so sleep
+// results carry the same statuses, ladder and warnings as any other metric. codes are the sleep
+// codes to read: one fills Value, several fill Components. A selecting op reads every code from
+// the selected group; a code it lacks goes to Missing (no_stage_data or no_data) instead of
+// being taken from another group, and with a single code the window has no value and the
+// group shows the code's status. Pooling ops pool each code over the groups that have it.
+// An empty episode (no sessions) gives no_data.
+func (a SleepAlignment) ResolveEpisode(w Window, e Episode, codes []string, opt Options) (WindowResult, error) {
+	r := a.rule
+	sel := a.Select(e)
+	gvs := make([]GroupValue, len(r.Groups))
+	for i, g := range sel.Groups {
+		gv := GroupValue{Group: i, ID: r.Groups[i].ID, Status: g.Status, Reason: g.Reason, Coverage: g.Coverage}
+		for _, f := range g.frags {
+			gv.Count++
+			gv.Sessions = append(gv.Sessions, f.ID)
+			if !slices.Contains(gv.Sources, f.Source) {
+				gv.Sources = append(gv.Sources, f.Source)
+			}
+			if gv.First.IsZero() || f.Start.Before(gv.First) {
+				gv.First = f.Start
+			}
+			gv.At = later(gv.At, f.End)
+		}
+		if gv.Count > 0 {
+			gv.Basis = BasisSessions
+		}
+		gvs[i] = gv
+	}
+	pooled := slices.Contains([]Op{OpMean, OpMin, OpMax, OpSum}, r.Strategy.Op)
+
+	var res WindowResult
+	var err error
+	if !pooled {
+		for i := range gvs {
+			gvs[i].setSleepValues(sel.Groups[i], codes)
+		}
+		if res, err = r.Select(w, gvs, opt); err != nil {
+			return WindowResult{}, err
+		}
+		if g := r.groupIndex(res.Selected); g >= 0 {
+			pos := slices.IndexFunc(res.Groups, func(x GroupValue) bool { return x.Group == g })
+			for _, code := range codes {
+				if v := sel.Groups[g].Value(code); v.Status != StatusValid {
+					if res.Missing == nil {
+						res.Missing = map[string]GroupStatus{}
+					}
+					res.Missing[code] = v.Status
+				}
+			}
+			if len(codes) == 1 && len(res.Missing) == 1 {
+				res.Status, res.Value = ResultNoData, 0
+				res.Groups[pos].Status, res.Groups[pos].Reason = res.Missing[codes[0]], ""
+			}
+		}
+	} else {
+		// Per code: groups lacking the code drop out of that code's pool.
+		values := map[string]float64{}
+		for _, code := range codes {
+			per := slices.Clone(gvs)
+			for i := range per {
+				v := sel.Groups[i].Value(code)
+				per[i].Value = v.Value
+				if per[i].Status == StatusValid && v.Status != StatusValid {
+					per[i].Status = v.Status
+				}
+			}
+			cr, err := r.Select(w, per, opt)
+			if err != nil {
+				return WindowResult{}, err
+			}
+			if len(codes) == 1 {
+				res = cr
+				break
+			}
+			if cr.Status == ResultNoData {
+				if res.Missing == nil {
+					res.Missing = map[string]GroupStatus{}
+				}
+				res.Missing[code] = StatusNoStageData
+				if !stageCodes[code] {
+					res.Missing[code] = StatusNoData
+				}
+				continue
+			}
+			values[code] = cr.Value
+		}
+		if len(codes) > 1 {
+			missing := res.Missing
+			for i := range gvs {
+				gvs[i].setSleepValues(sel.Groups[i], codes)
+			}
+			if res, err = r.Select(w, gvs, opt); err != nil {
+				return WindowResult{}, err
+			}
+			res.Missing = missing
+			if res.Status != ResultNoData {
+				res.Value, res.Components = 0, values
+			}
+		}
+	}
+	res.Groups = append(res.Groups, a.sessionEntries(a.Excluded, e, StatusExcluded)...)
+	res.Groups = append(res.Groups, a.sessionEntries(a.NotInRule, e, StatusNotInRule)...)
+	for _, g := range res.Groups {
+		switch g.Status {
+		case StatusExcluded:
+			res.Inputs.Excluded += g.Count
+		case StatusNotInRule:
+			res.Inputs.NotInRule += g.Count
+		default:
+			res.Inputs.Grouped += g.Count
+		}
+	}
+	res.Partial = !opt.Now.IsZero() && w.Partial(opt.Now)
+	return res, nil
+}
+
+// setSleepValues fills a group's value (one code) or components (several) from its sessions.
+func (gv *GroupValue) setSleepValues(g SleepGroup, codes []string) {
+	if len(codes) == 1 {
+		v := g.Value(codes[0])
+		gv.Value = v.Value
+		if g.Status == StatusValid && v.Status != StatusValid {
+			gv.Reason = string(v.Status) // the episode capture is valid, the code is missing
+		}
+		return
+	}
+	for _, code := range codes {
+		if v := g.Value(code); v.Status == StatusValid {
+			if gv.Components == nil {
+				gv.Components = map[string]float64{}
+			}
+			gv.Components[code] = v.Value
+		}
+	}
+}
+
+// sessionEntries lists excluded or unmatched sessions that overlap e, once per source.
+func (a SleepAlignment) sessionEntries(in []SleepInput, e Episode, st GroupStatus) []GroupValue {
+	var out []GroupValue
+	idx := map[Source]int{}
+	for _, s := range in {
+		if !s.End.After(e.Start) || !s.Start.Before(e.End) {
+			continue
+		}
+		i, ok := idx[s.Source]
+		if !ok {
+			i = len(out)
+			idx[s.Source] = i
+			out = append(out, GroupValue{Group: -1, Status: st, Basis: BasisSessions, Sources: []Source{s.Source}})
+		}
+		g := &out[i]
+		g.Count++
+		g.Sessions = append(g.Sessions, s.ID)
+		if g.First.IsZero() || s.Start.Before(g.First) {
+			g.First = s.Start
+		}
+		g.At = later(g.At, s.End)
+	}
+	return out
+}
+
+// ForceGroup applies a force_source override to an episode result made by ResolveEpisode:
+// the named group becomes the selected one if it captured the episode (a partial capture
+// included), and every code is read from it, so Missing then describes that group. It reports
+// false when the group has no sessions in the episode. The status becomes overridden, or
+// no_data when the forced group lacks the only code.
+func (a SleepAlignment) ForceGroup(res *WindowResult, e Episode, codes []string, id string) bool {
+	g := a.rule.groupIndex(id)
+	if g < 0 {
+		return false
+	}
+	sg := a.Select(e).Groups[g]
+	if sg.Sessions == nil || !forceGroup(res, id) {
+		return false
+	}
+	sg.Status = StatusValid // forced: the coverage gate no longer applies
+	pos := slices.IndexFunc(res.Groups, func(x GroupValue) bool { return x.Group == g })
+	res.Missing, res.Components, res.Value = nil, nil, 0
+	for _, code := range codes {
+		v := sg.Value(code)
+		switch {
+		case v.Status != StatusValid:
+			if res.Missing == nil {
+				res.Missing = map[string]GroupStatus{}
+			}
+			res.Missing[code] = v.Status
+		case len(codes) == 1:
+			res.Value = v.Value
+		default:
+			if res.Components == nil {
+				res.Components = map[string]float64{}
+			}
+			res.Components[code] = v.Value
+		}
+	}
+	res.Groups[pos].Value, res.Groups[pos].Components = res.Value, res.Components
+	res.Status = ResultOverridden
+	if len(codes) == 1 && len(res.Missing) == 1 {
+		res.Status = ResultNoData
+		res.Groups[pos].Status = res.Missing[codes[0]]
+	}
+	return true
 }

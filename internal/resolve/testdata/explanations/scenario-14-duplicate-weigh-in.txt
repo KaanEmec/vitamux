@@ -1,0 +1,5 @@
+# synthetic: true
+local_day 2025-02-16 weight: direct 79.3 [scale:used* manual:no_data apple_health/com.withings.wiScaleNG/scale:excluded]
+  Used scale: 79.3 kg (latest reading). No data from manual. Excluded by the rule: apple_health com.withings.wiScaleNG scale (1 row, exclude: relayed=true).
+local_day 2025-02-16 weight: direct 79.3 [scale:used* scale_apps:no_data manual:no_data]
+  Used scale: 79.3 kg (latest reading). No data from scale_apps, manual.

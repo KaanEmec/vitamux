@@ -1,0 +1,15 @@
+# synthetic: true
+bucket 2026-06-15T08:00:00Z heart_rate: direct 130 [chest_strap:used* garmin:fallback_unused apple_watch:fallback_unused ring:no_data]
+  Used chest_strap: 130 bpm (5 samples in 1 bucket). No data from ring. Not needed: garmin, apple_watch. Inside a workout, chest_strap, garmin came first.
+bucket 2026-06-15T08:30:00Z heart_rate: fallback 125 [chest_strap:no_data garmin:used* apple_watch:fallback_unused ring:no_data]
+  Fell back to garmin: 125 bpm (5 samples in 1 bucket). No data from chest_strap, ring. Not needed: apple_watch. Inside a workout, chest_strap, garmin came first.
+local_night 2026-06-15 resting_heart_rate_nocturnal: direct 49 [ring:used* apple_watch:no_data]
+  Used ring: 49 bpm (96 samples). No data from apple_watch. Inside the sleep episode, ring came first. ring: lowest 30m rolling mean, 03:00-03:30.
+local_day 2026-06-15 steps: calculated 8,100 [watch:used* ring:no_data phone:used*]
+  Sum of 16 hourly values: watch 13 h (5,400), phone 3 h (2,700), 8 h without a value = 8,100. No data from ring. Wear gate (heart_rate): watch worn in 156 buckets, phone exempt (no heart_rate rows). The hour-by-hour total is larger than any single source's day (composite_exceeds_any_source).
+hour 2026-06-15T11:00:00Z steps: fallback 900 [watch:no_data ring:no_data phone:used*]
+  Fell back to phone: 900 (1 interval). No data from watch, ring. Wear gate (heart_rate): phone exempt (no heart_rate rows).
+local_day 2026-06-15 distance_walk_run: direct 1,600 [ring:fallback_unused watch:used*]
+  Used watch, the group active_energy selected for this window: 1,600 m (daily total). Not needed: ring.
+local_day 2026-06-15 distance_walk_run: fallback 1,500 [ring:used* watch:no_data]
+  Fell back to ring: 1,500 m (daily total). No data from watch. active_energy selected watch for this window, which had no value here, so this rule's own order applied (follow_unavailable).

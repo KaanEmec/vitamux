@@ -1,0 +1,5 @@
+# synthetic: true
+local_day 2025-02-16 steps: direct 8,086 [garmin:used* apple_health/com.apple.health.synthetic-phone/phone:not_in_rule apple_health/com.garmin.connect.mobile/watch:not_in_rule apple_health/com.apple.health.synthetic-watch/watch:not_in_rule]
+  Used garmin: 8,086 (daily total). Outside the rule: apple_health com.apple.health.synthetic-phone phone (31 rows); apple_health com.garmin.connect.mobile watch (16 rows); apple_health com.apple.health.synthetic-watch watch (94 rows).
+hour 2025-02-16T09:00:00Z steps: direct 1,055 [garmin:used* apple_health/com.apple.health.synthetic-phone/phone:not_in_rule apple_health/com.apple.health.synthetic-watch/watch:not_in_rule apple_health/com.garmin.connect.mobile/watch:not_in_rule]
+  Used garmin: 1,055 (4 intervals). Outside the rule: apple_health com.apple.health.synthetic-phone phone (3 rows); apple_health com.apple.health.synthetic-watch watch (6 rows); apple_health com.garmin.connect.mobile watch (1 row).

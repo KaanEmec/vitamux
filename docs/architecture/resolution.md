@@ -72,7 +72,7 @@ Example for one 5-min bucket: source A has 50 samples averaging 62.1, source B h
 For each window, independently:
 
 1. Assign inputs to groups. Excluded inputs are reported as such.
-2. Compute each group's value and apply the quality gates: plausible range, flags, coverage, staleness, episode coverage, overrides. Group status becomes `valid | no_data | below_quality | excluded | stale | not_aligned | no_stage_data`. After the strategy, valid groups are `selected` or `fallback_unused`, and sources that match no group are listed as `not_in_rule`.
+2. Compute each group's value and apply the quality gates: plausible range, flags, coverage, staleness, episode coverage, overrides. Group status becomes `valid | no_data | below_quality | excluded | stale | not_aligned | no_stage_data`. After the strategy, valid groups are `used` (with `selected` when their value is the result: every pooled group for mean and sum, the extreme one for minimum and maximum) or `fallback_unused`, and sources that match no group are listed as `not_in_rule`. Sleep episodes use the same statuses.
 3. Apply the strategy:
 
 | Op | Result | When inputs are insufficient |
@@ -158,11 +158,11 @@ Overrides never touch source rows. They are revocable (soft: the row stays as hi
  "computed_at": "2026-09-15T06:00:03Z"}
 ```
 
-`status` ∈ `direct | fallback | calculated | overridden | no_data`. Explanations come from fixed templates.
+`status` ∈ `direct | fallback | calculated | overridden | no_data`. Every result lists every rule group, then each excluded or unmatched source. Explanations come from fixed templates (`internal/resolve/explain.go`, one per strategy, status and extension) that say what was computed from which source and never interpret it; snapshots live in `internal/resolve/testdata/explanations`. `resolve.Run` loads and resolves a (user, metric, window kind, date range); `resolve.BuildResult` renders one window.
 
 ## Edge cases
 
-Each case becomes a scenario test in J09.8.
+Each case is a scenario test (`internal/resolve/scenario_integration_test.go`, on `tools/fixturegen` slices; case 10 in memory, since the generator has no heart rate variability).
 
 1. A daily total and intraday intervals from one source are never summed together; hour windows ignore `daily_value`.
 2. A provider relayed through Apple Health while also connected directly: the origin is flagged `relayed`, and defaults exclude it.

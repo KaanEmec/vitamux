@@ -1,0 +1,21 @@
+# synthetic: true
+hour 2026-09-14T08:00:00Z heart_rate: direct 64 [watch:used* ring:fallback_unused garmin:below_quality]
+  Used watch: 64 bpm (60 samples in 12 buckets). garmin covered 8% of the window, below the minimum of 50%. Not needed: ring.
+hour 2026-09-14T08:00:00Z heart_rate: calculated 65 [watch:used* ring:used* garmin:below_quality]
+  Mean of 2 sources: watch 64 bpm (60 samples in 12 buckets), ring 66 bpm (12 samples in 12 buckets) = 65 bpm. garmin covered 8% of the window, below the minimum of 50%.
+hour 2026-09-14T08:00:00Z heart_rate: calculated 64 [watch:used* ring:used garmin:below_quality]
+  Minimum of 2 sources: watch 64 bpm (60 samples in 12 buckets), selected; ring 66 bpm (12 samples in 12 buckets). garmin covered 8% of the window, below the minimum of 50%.
+hour 2026-09-14T08:00:00Z heart_rate: calculated 66 [watch:used ring:used* garmin:below_quality]
+  Maximum of 2 sources: watch 64 bpm (60 samples in 12 buckets); ring 66 bpm (12 samples in 12 buckets), selected. garmin covered 8% of the window, below the minimum of 50%.
+hour 2026-09-14T08:00:00Z heart_rate: direct 64 [watch:used* ring:fallback_unused garmin:below_quality]
+  Latest of 2 eligible groups: watch at 10:59, 64 bpm (60 samples in 12 buckets). garmin covered 8% of the window, below the minimum of 50%. Not needed: ring.
+hour 2026-09-14T08:00:00Z heart_rate: fallback 66 [watch:below_quality ring:used* garmin:below_quality]
+  Fell back to ring: 66 bpm (12 samples in 12 buckets). watch had only rows with excluded flags (manual_entry). garmin covered 8% of the window, below the minimum of 50%.
+hour 2026-09-14T01:00:00Z heart_rate: no_data [watch:no_data ring:no_data garmin:no_data]
+  No value: no group had a valid value. No data from watch, ring, garmin.
+latest 2026-09-14T13:00:00Z heart_rate: fallback 71 [watch:stale ring:stale garmin:used*]
+  Fell back to garmin: 71 bpm (latest reading). watch was stale: its latest value is from 2026-09-14 10:59, older than 2h. ring was stale: its latest value is from 2026-09-14 10:55, older than 2h.
+hour 2026-09-14T08:00:00Z heart_rate: overridden 61 [watch:used ring:fallback_unused garmin:below_quality]
+  Set manually to 61 bpm; the rule computed 64 bpm (direct from watch). garmin covered 8% of the window, below the minimum of 50%. Not needed: ring.
+hour 2026-09-14T08:00:00Z heart_rate: overridden 66 [watch:fallback_unused ring:used* garmin:below_quality]
+  Source forced manually to ring; the rule computed 64 bpm (direct from watch). 1 input row excluded manually before resolving. 1 override did not change this window. Used ring: 66 bpm (12 samples in 12 buckets). watch was replaced by a manual override. garmin covered 8% of the window, below the minimum of 50%.

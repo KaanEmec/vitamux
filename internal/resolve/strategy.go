@@ -10,6 +10,7 @@ import (
 )
 
 // GroupStatus is a group's status in one window (docs/architecture/resolution.md#strategies).
+// Sleep episodes (SleepGroup, SleepValue) use the same vocabulary.
 type GroupStatus string
 
 const (
@@ -21,6 +22,7 @@ const (
 	StatusStale        GroupStatus = "stale"         // latest value older than quality.max_staleness
 	StatusExcluded     GroupStatus = "excluded"      // a source matched an exclude selector
 	StatusNotInRule    GroupStatus = "not_in_rule"   // a source matched no group
+	StatusNoStageData  GroupStatus = "no_stage_data" // sleep: the selected source has no stages for the code
 )
 
 // Reasons for no_data, below_quality and fallback_unused.
@@ -77,6 +79,9 @@ type WindowResult struct {
 	FollowGroup string
 	// Hours (E9) are the hourly results a composed local_day sums, in time order.
 	Hours []WindowResult
+	// Missing lists the family codes without a value although the window has one (sleep: the
+	// selected source has no stage data for them).
+	Missing map[string]GroupStatus
 }
 
 // Options are per-call inputs that are not part of the rule.
