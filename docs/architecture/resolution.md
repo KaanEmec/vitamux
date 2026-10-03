@@ -72,7 +72,7 @@ Example for one 5-min bucket: source A has 50 samples averaging 62.1, source B h
 For each window, independently:
 
 1. Assign inputs to groups. Excluded inputs are reported as such.
-2. Compute each group's value and apply the quality gates: plausible range, flags, coverage, staleness, episode coverage, overrides. Group status becomes `valid | no_data | below_quality | excluded | stale | not_aligned | no_stage_data`.
+2. Compute each group's value and apply the quality gates: plausible range, flags, coverage, staleness, episode coverage, overrides. Group status becomes `valid | no_data | below_quality | excluded | stale | not_aligned | no_stage_data`. After the strategy, valid groups are `selected` or `fallback_unused`, and sources that match no group are listed as `not_in_rule`.
 3. Apply the strategy:
 
 | Op | Result | When inputs are insufficient |
@@ -90,14 +90,15 @@ For each window, independently:
 
 ## Sleep episode alignment
 
-1. Gather candidate sessions for the night. Merge same-source fragments that are ≤ 60 min apart.
+1. Gather candidate sessions for the night from the rule's groups (excluded and unmatched sessions are only listed). Merge same-source fragments that are ≤ 60 min apart.
 2. Link sessions across sources when `overlap / min(duration_a, duration_b) ≥ match_overlap`. Connected components are episodes.
-3. The main episode is the one with the largest union span. Others are secondary (naps unless `include_naps`).
-4. A group whose sessions cover less than `min_episode_coverage` of the main episode is `below_quality: partial_episode`.
+3. The main episode is the one with the largest union span. Others are secondary: `sleep_episode` windows resolve them; `local_night` adds them only with `include_naps`.
+4. A group whose sessions cover less than `min_episode_coverage` of the episode is `below_quality: partial_episode`. When a group has several sources in the episode, the one covering most of it is used alone.
+5. Codes sum the selected source's sessions: stored totals, with `sleep_latency` from the first session, `sleep_waso` and `sleep_unspecified` from stages, `sleep_in_bed` as session time, and `sleep_efficiency` = total / in bed.
 
 Example: A 23:10–06:55 and B 23:40–07:05 overlap by 0.98, so they are matched and deep sleep is averaged. If A had only 03:00–07:00, its coverage would be 0.51 < 0.7, so A is excluded and B is used with warning `insufficient_sources`.
 
-Workouts cluster the same way: overlap ≥ 0.6 of the shorter and a compatible sport. Each cluster is listed once, with alternates.
+Workouts cluster the same way: overlap ≥ 0.6 of the shorter and a compatible sport (equal, or one is `other`; a cluster never holds two specific sports). Each cluster is listed once, with alternates; the picked workout keeps its own segments.
 
 ## Group-coherent selection
 

@@ -19,4 +19,24 @@
 //     EpisodeWindow, LatestWindow (with LatestInput) and ReadingWindows build the others.
 //   - NightOf gives a session's night date; Episode is what the J09.6 episode builder returns.
 //   - Window.Includes decides membership; Window.Partial detects open windows.
+//
+// Sleep and workout alignment (pure; callers load SleepInput and WorkoutInput rows):
+//   - Rule.AlignSleep builds a night's episodes (fragment merge within FragmentGap, overlap
+//     links, main episode); SleepAlignment.Main and NightEpisodes give what local_night reads.
+//   - SleepAlignment.Select applies the sleep-family rule to one episode: SleepGroup coverage,
+//     the min_episode_coverage gate (SleepPartialEpisode) and the selecting ops. Every sleep_*
+//     code reads from that selection through SleepSelection.Value (or SleepGroup.Value for
+//     pooling ops); a code the selected source lacks is SleepNoStageData or SleepNoData.
+//   - ClusterWorkouts groups overlapping workouts; Rule.PickWorkout picks one per cluster and
+//     keeps its segments, listing the others as alternates.
+//
+// Within-source values and strategies (pure; inputs by code in a Series):
+//   - Rule.Aggregate computes one group's GroupValue in a window: intensive bucket means,
+//     additive pro-rating with daily_value_policy (a daily total and intervals are never
+//     added), intra_group, latest readings (family components from one reading) and
+//     daily_summary.
+//   - Rule.ResolveWindow runs partition, row gates (exclude_flags, plausible range), Aggregate,
+//     group gates (coverage, staleness) and Rule.Select, the strategy step, into a WindowResult
+//     with every group's GroupStatus and the warnings. Rule.ResolveWindows does a series, so
+//     fallback stays per window. J09.10 parts return ErrNotImplemented.
 package resolve
