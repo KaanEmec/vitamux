@@ -112,6 +112,15 @@ The catalogue is owned by code (`internal/catalog`) and seeded into the DB. Metr
 
 ## Retention
 
-- Canonical rows, including superseded ones, are kept indefinitely. `retention.superseded_after_days` is optional.
-- Raw payloads are kept by default. `retention.raw.<provider>.days` prunes only raw whose rows came from the current normalizer version, and the UI warns that pruned raw cannot be reprocessed.
+Owner settings (`PATCH /settings`), applied by daily jobs (`internal/lifecycle`) that log and audit counts only:
+
+- Canonical rows, including superseded ones, are kept by default. `retention.superseded_after_days` (0 = keep) makes `prune_superseded` delete rows superseded longer ago, oldest end of each chain first: a row goes only when no older row points at it. `superseded_by` points from old to new, so the active head and the links between kept rows stay intact. Rows are deleted rather than kept with only their blobs dropped: canonical rows hold no blobs (except workout files), so that would save nothing. A group stays while a measurement names it; stages and segments go with their session or workout.
+- Raw payloads are kept by default. `retention.raw_days` (`{"<provider>": days}`) makes `prune_raw` delete raw stored longer ago, but only when all of these hold:
+  1. it is the oldest remaining version of its record, so an older version never becomes the newest (reprocess would revert to it);
+  2. a newer version exists (reprocess never reads this one), or it was normalized successfully by the newest version of its normalizer (failed, quarantined and unnormalized raw stay);
+  3. no active canonical row references it;
+  4. no canonical row from it came from an older normalizer version, so reprocessing stays possible. Such raw is counted as refused: reprocess it, and let `prune_superseded` remove the old rows.
+
+  Superseded or deleted rows, import items and the next version that referenced a pruned payload keep their values with a null reference (`supersedes_id` may then be null on a version > 1). Blob references are released. Pruned raw cannot be reprocessed; the UI must say so.
+- `retention.idempotency_key_days` (default 30, at least 7): `prune_idempotency_keys` deletes older stored ingest responses.
 - `job_runs` are kept 90 days; audit is kept forever; documents follow [lab-documents.md](lab-documents.md#privacy-controls).

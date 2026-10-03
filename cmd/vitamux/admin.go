@@ -27,6 +27,9 @@ Commands:
   init-secrets [--out PATH]   generate the master key file (default: VITAMUX_MASTER_KEY_FILE, else <data dir>/master.key)
   create-owner                create the owner account
   reset-password              set a new owner password and end every session
+  purge-user [--username NAME] [--yes]
+                              delete everything of the account (the only one by default);
+                              without --yes it only prints what would be deleted
 
 create-owner and reset-password prompt for the username and password on a terminal, or
 read them as two lines from piped stdin. They are never taken from flags or the environment.
@@ -38,6 +41,8 @@ func admin(args []string, stdout, stderr io.Writer) int {
 		return initSecrets(args[1:], stdout, stderr)
 	case len(args) == 1 && (args[0] == "create-owner" || args[0] == "reset-password"):
 		return owner(args[0], os.Stdin, stdout, stderr)
+	case len(args) > 0 && args[0] == "purge-user":
+		return purgeUserCmd(args[1:], stdout, stderr)
 	}
 	fmt.Fprint(stderr, adminUsage)
 	return 2

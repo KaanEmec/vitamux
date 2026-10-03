@@ -154,7 +154,7 @@ func serve(stderr io.Writer) int {
 		scheduler.Daily(backup.Kind)
 	}
 	runner.Register(normalize.KindRecomputeLocalDates, normalize.RecomputeJob(db.New(pool), log))
-	lifecycle.Register(runner, scheduler, db.New(pool), log) // daily retention jobs
+	lifecycle.Register(runner, scheduler, db.New(pool), log)
 	documents.Register(runner, scheduler, db.New(pool), blobs, keys, log) // no-op without blobs and key
 	// Extraction providers; nil without blobs and key.
 	extractSvc, err := extract.Setup(runner, db.New(pool), blobs, keys, log, cfg)

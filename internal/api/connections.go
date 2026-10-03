@@ -13,13 +13,12 @@ import (
 	"github.com/KaanEmec/vitamux/internal/api/oapi"
 	"github.com/KaanEmec/vitamux/internal/audit"
 	"github.com/KaanEmec/vitamux/internal/auth"
-	"github.com/KaanEmec/vitamux/internal/blob"
-	"github.com/KaanEmec/vitamux/internal/catalog"
 	"github.com/KaanEmec/vitamux/internal/connectors"
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/db/dbq"
 	"github.com/KaanEmec/vitamux/internal/ingest"
 	"github.com/KaanEmec/vitamux/internal/jobs"
+	"github.com/KaanEmec/vitamux/internal/lifecycle"
 )
 
 // Connections (J10.4; docs/architecture/connectors.md): list and health, push connections,
@@ -276,67 +275,24 @@ func lockIdle(ctx context.Context, q *dbq.Queries, id uuid.UUID) error {
 	return nil
 }
 
-// deleteConnectionData removes the connection, its raw payloads (releasing their blobs),
-// canonical rows, import records, clients, and through the cascade its credentials,
-// schedules, cursors, backfills and jobs, in one transaction. Days that lose rows are marked
-// for re-resolution. Devices and origins stay: other connections may share them.
+// deleteConnectionData removes the connection with everything it brought in, in one audited
+// transaction (lifecycle.DeleteConnection).
 func (o *owner) deleteConnectionData(ctx context.Context, c dbq.ListOwnerConnectionsRow) error {
-	var sleepCodes []string
-	for _, m := range catalog.Metrics() {
-		if m.Agg == catalog.SleepDerived {
-			sleepCodes = append(sleepCodes, m.Code)
-		}
-	}
 	p := auth.PrincipalFrom(ctx)
 	return o.opts.DB.Tx(ctx, func(q *dbq.Queries) error {
 		if err := lockIdle(ctx, q, c.ID); err != nil {
 			return err
 		}
-		if err := q.MarkConnectionDirty(ctx, dbq.MarkConnectionDirtyParams{ConnectionID: c.ID, SleepCodes: sleepCodes}); err != nil {
-			return err
-		}
-		counts := map[string]any{"data": "delete", "provider": c.Provider}
-		for _, del := range []struct {
-			name string
-			fn   func(context.Context, uuid.UUID) (int64, error)
-		}{
-			{"measurements", q.DeleteConnectionMeasurements}, {"groups", q.DeleteConnectionGroups},
-			{"sleep_sessions", q.DeleteConnectionSleep}, {"workouts", q.DeleteConnectionWorkouts},
-		} {
-			n, err := del.fn(ctx, c.ID)
-			if err != nil {
-				return err
-			}
-			counts[del.name] = n
-		}
-		if err := blob.LockShared(ctx, q); err != nil {
-			return err
-		}
-		if err := q.ReleaseConnectionRawBlobs(ctx, c.ID); err != nil {
-			return err
-		}
-		if err := q.DeleteConnectionImports(ctx, c.ID); err != nil {
-			return err
-		}
-		if err := q.DeleteConnectionImportRuns(ctx, &c.ID); err != nil {
-			return err
-		}
-		n, err := q.DeleteConnectionRaw(ctx, c.ID)
+		counts, err := lifecycle.DeleteConnection(ctx, q, p.UserID, c.ID)
 		if err != nil {
 			return err
 		}
-		counts["raw_payloads"] = n
-		if err := q.DeleteConnectionBatches(ctx, c.ID); err != nil {
-			return err
-		}
-		if err := q.DeleteConnectionClients(ctx, c.ID); err != nil {
-			return err
-		}
-		if n, err := q.DeleteOwnerConnection(ctx, dbq.DeleteOwnerConnectionParams{ID: c.ID, UserID: p.UserID}); err != nil || n == 0 {
-			return errors.Join(err, db.ErrNotFound)
+		detail := map[string]any{"data": "delete", "provider": c.Provider}
+		for k, n := range counts {
+			detail[k] = n
 		}
 		return audit.Record(ctx, q, audit.Event{UserID: &p.UserID, Actor: p.Actor(), Action: "connection.deleted",
-			TargetType: "connection", TargetID: c.ID.String(), Detail: counts})
+			TargetType: "connection", TargetID: c.ID.String(), Detail: detail})
 	})
 }
 

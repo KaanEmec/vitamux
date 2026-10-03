@@ -16,6 +16,7 @@
 | `make build` | `bin/vitamux` with the UI embedded (`-tags webui`) |
 | `vitamux admin init-secrets` | Creates the master key file (`VITAMUX_MASTER_KEY_FILE`, default `./data/master.key`); never overwrites |
 | `vitamux admin create-owner` | Creates the single owner account; username and password from the terminal or two lines on stdin (`reset-password` likewise) |
+| `vitamux admin purge-user` | Prints what deleting the owner and all their data would remove; `--yes` deletes it ([security.md](architecture/security.md#export-and-deletion)) |
 | `make image` | Release container image (distroless, non-root) |
 
 Without `-tags webui` the binary serves a placeholder page, so backend work never needs Node.

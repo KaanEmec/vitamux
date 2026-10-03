@@ -52,7 +52,8 @@ A machine-readable route × principal matrix (anonymous, owner session, each PAT
 ## Export and deletion
 
 - Full export: [api.md](api.md#exports).
-- `DELETE /connections/{id}?data=delete` removes canonical rows, raw rows and blobs, cursors, and credentials.
+- `DELETE /connections/{id}?data=delete` removes canonical rows, raw rows and blob references, import records, clients, cursors, schedules, jobs and credentials in one transaction (`lifecycle.DeleteConnection`). Devices and origins stay.
 - Document deletion uses crypto-shredding ([lab-documents.md](lab-documents.md#storage)).
-- `vitamux admin purge-user` removes everything.
-- Deletions run as batched jobs that report counts and leave audit records without health values.
+- `vitamux admin purge-user [--username NAME] --yes` removes everything of the owner in one transaction (`lifecycle.Purge`): canonical and raw rows, documents (keys first), exports, connections, devices, sessions, API keys, settings, rules, overrides and the user. Without `--yes` it only prints the counts. It refuses while one of the owner's jobs runs. Audit events stay, unlinked from the user.
+- Retention pruning runs as daily batched jobs ([data-model.md](data-model.md#retention)).
+- Every deletion releases its blob references; the blob sweep removes the files (purge-user sweeps right away when the master key is available). Deletions leave audit records with counts, never health values.

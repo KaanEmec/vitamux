@@ -594,7 +594,7 @@ type RawPayload struct {
 	RequestMeta      json.RawMessage
 	ShapeFingerprint *string
 	Status           string
-	// Previous version of the same (connection, stream, external_key); null for version 1.
+	// Previous version of the same (connection, stream, external_key); null for version 1, and for a later version whose predecessor prune_raw deleted.
 	SupersedesID *int64
 	// Normalizer version of the last normalization attempt, failed ones included; null until one ran.
 	NormalizerVersionID *int32
@@ -637,6 +637,25 @@ type ResolutionRule struct {
 	// Audit actor: owner, api_key:<id> or system.
 	CreatedBy string
 	CreatedAt time.Time
+}
+
+// The results of one local date's windows of a metric under one rule version and set of overrides. Never authoritative.
+type ResolvedCache struct {
+	UserID     uuid.UUID
+	Metric     string
+	WindowKind string
+	LocalDate  time.Time
+	RuleRef    string
+	// Hash of the active overrides of the date and its neighbours; empty without any.
+	OverridesFp string
+	Results     json.RawMessage
+	// Catalogue codes and rule metrics the results read (followed leaders, derived source codes, sleep, wear, "workouts"); a change to any of them inside dep_from..dep_to deletes the row.
+	Deps    []string
+	DepFrom time.Time
+	DepTo   time.Time
+	// When every window of the date had closed; a request whose now is earlier recomputes.
+	CompleteAt time.Time
+	ComputedAt time.Time
 }
 
 type Schedule struct {
@@ -709,6 +728,29 @@ type SleepStage struct {
 	Stage     string
 	StartAt   time.Time
 	EndAt     time.Time
+}
+
+// Per source and local hour of the owner's timeline: active sample and interval rows (daily values excluded). Rebuilt from resolution_dirty by the rebuild_aggregates job.
+type SourceHourlyAggregate struct {
+	UserID   uuid.UUID
+	MetricID int16
+	// connection_id/device_id/origin_id, with - for a missing device or origin.
+	SourceKey    string
+	HourStart    time.Time
+	LocalDate    time.Time
+	ConnectionID uuid.UUID
+	DeviceID     *uuid.UUID
+	OriginID     *uuid.UUID
+	Samples      int32
+	// UTC-aligned 5-minute buckets holding a sample or part of an interval; bucket_mean_sum adds the sample mean of each.
+	Buckets       int16
+	BucketMeanSum float64
+	MinValue      float64
+	MaxValue      float64
+	// Interval values pro-rated linearly to the hour (additive metrics).
+	IntervalSum float64
+	FirstAt     time.Time
+	LastAt      time.Time
 }
 
 type SyncCursor struct {
