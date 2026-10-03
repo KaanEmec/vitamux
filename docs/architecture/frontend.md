@@ -28,7 +28,7 @@ Alternatives rejected: htmx (the rule builder, charts, and PDF review need real 
    - sleep hypnogram comparison; workout clusters.
 4. **Rules**: metric catalogue with a 90-day per-source coverage heatmap; guided builder; version history, diff, activate.
 5. **Lab results**: upload, consent dialog naming provider and model, review (`lab/documents/[id]`: PDF page with the row outlined beside the row editor), confirmed results by analyte with history, delete keeping or deleting results ([lab-documents.md](lab-documents.md)).
-6. **Settings**: profile and timezone periods, devices (Apple pairing, origins), API keys, AI providers, retention, backups and export, security (password, TOTP, sessions), system status.
+6. **Settings**: profile and timezone periods, devices (Apple pairing, origins; E15), API keys, AI providers, retention, backups and export, security (password, TOTP, sessions), system status.
 
 ## Rule builder
 

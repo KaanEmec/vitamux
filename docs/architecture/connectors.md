@@ -181,8 +181,10 @@ Rules for both paths:
 
 ## Adding a connector
 
-1. Create `internal/connectors/<name>/` with the descriptor, `Plan`, `Fetch`, an optional `Authenticator`, a normalizer, and golden fixtures from `tools/fixturegen`.
-2. Register it with one line in the registry. No other package changes.
+Walkthrough with a toy example: [adapters.md](../adapters.md).
+
+1. Create `internal/connectors/<name>/` with the descriptor, `Plan`, `Fetch`, an optional `Authenticator` and `Interactive`, a normalizer, and synthetic golden fixtures.
+2. Wire it in: a migration seeding its `providers` row, one argument to `connectors.NewRegistry` in `cmd/vitamux` `serve()`, one to `normalizers()` (`cmd/vitamux/reprocess.go`), and its settings in `internal/config` and [configuration.md](../configuration.md). No other package changes.
 3. Required behaviour: raw-first, typed errors, drift reporting, no secret logging, synthetic fixtures only.
 4. Unofficial APIs: `Official=false`, disabled by default, documented warnings.
 5. In another language or from an existing project: see [third-party collectors](#third-party-collectors). Only the normalizer goes into the core.

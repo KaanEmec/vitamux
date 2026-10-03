@@ -43,6 +43,12 @@ func TestInitSecrets(t *testing.T) {
 	if after, _ := os.ReadFile(path); !bytes.Equal(raw, after) {
 		t.Fatal("existing key was modified")
 	}
+	if code := admin([]string{"init-secrets", "--if-missing", "--out", path}, &out, &errOut); code != 0 {
+		t.Fatalf("--if-missing on an existing key: code %d", code)
+	}
+	if after, _ := os.ReadFile(path); !bytes.Equal(raw, after) {
+		t.Fatal("--if-missing modified the existing key")
+	}
 }
 
 func TestInitSecretsDefaultPath(t *testing.T) {

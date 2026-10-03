@@ -33,6 +33,15 @@ Without `-tags webui` the binary serves a placeholder page, so backend work neve
 - After editing `api/openapi.yaml`, `make openapi` regenerates `internal/api/oapi` and `web/src/lib/api/schema.d.ts` (commit both; CI fails on drift and runs Spectral). See [api.md](architecture/api.md#implementing-owner-endpoints).
 - [`docs/schema/`](schema/README.md) is generated from the migrated schema; the integration tests fail when it drifts. After changing a migration, run `VITAMUX_UPDATE_SCHEMA_DOC=1 go test -tags integration -run TestSchemaDoc ./internal/db`.
 
+## Documentation checks
+
+Plain `go test ./...` also guards the docs:
+
+- `tools/doclinks`: every relative link and `#anchor` in `docs/` and the root `*.md` files resolves (offline; external URLs are not fetched).
+- `internal/config` `TestConfigurationReference`: [configuration.md](configuration.md) lists every `VITAMUX_*` variable with its default and secret flag. Add a row with the setting.
+- `tools/apiref`: [api-reference.md](api-reference.md) matches `api/openapi.yaml` and `api/authz.yaml`; regenerate with `go run ./tools/apiref`.
+- Other generated docs name their generator in their first lines (`docs/metrics.md`, `docs/analytes.md`, `docs/resolution-defaults.md`, `docs/schema/`).
+
 ## Writing integration tests
 
 - Put them in `*_integration_test.go` with `//go:build integration`; `make test-integration` and the CI `integration` job (PostgreSQL 17 and 18) run them. Keep plain unit tests tag-free so `make test` stays offline.

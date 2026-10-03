@@ -36,7 +36,7 @@ Backups contain health data, sealed provider tokens and `names.key`. Treat them 
 
 ## Restore
 
-Restore needs an **empty** target: a database with [`roles.sql`](../../deploy/sql/roles.sql) applied but no migrations, and an empty data directory. It also needs the master key the manifest names (plus previous keys if a rotation was unfinished, through `VITAMUX_PREVIOUS_MASTER_KEY_FILES`). On a fresh Compose stack, follow [compose.md#install](../deploy/compose.md#install) up to `./init-secrets.sh`, then put the old master key back instead of running the `init-secrets` service:
+Restore needs an **empty** target: a database with [`roles.sql`](../../deploy/sql/roles.sql) applied but no migrations, and an empty data directory. It also needs the master key the manifest names (plus previous keys if a rotation was unfinished, through `VITAMUX_PREVIOUS_MASTER_KEY_FILES`). On a fresh Compose stack, follow [install](../install.md#3-start-the-stack) up to `./init-secrets.sh`, then put the old master key back instead of running the `init-secrets` service:
 
 ```sh
 docker run --rm -v vitamux_vitamux-secrets:/secrets -v "$PWD/master.key:/in:ro" busybox \

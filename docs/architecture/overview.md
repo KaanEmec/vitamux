@@ -55,7 +55,7 @@ ADRs are written during implementation (J01.1 and the owning jobs).
 | ADR-015 | API | REST + OpenAPI 3.1 contract-first, problem+json, cursor pagination | [api.md](api.md) |
 | ADR-016 | Dedupe | Account-scoped dedupe keys; corrections supersede | [ADR-0016](../adr/0016-canonical-writer.md) |
 
-Libraries: `pgx` v5, `sqlc`, `goose`, `log/slog`, `oapi-codegen`, `openapi-typescript`, `klauspost/compress` (zstd), `x/crypto` (HKDF, argon2id), `pquerna/otp`, `uPlot`, `pdf.js`.
+Libraries: `pgx` v5, `sqlc`, `goose`, `log/slog`, `oapi-codegen`, `openapi-typescript`, `klauspost/compress` (zstd), `x/crypto` (argon2id; HKDF is stdlib `crypto/hkdf`), `pquerna/otp`, `uPlot`, `pdf.js`.
 
 ## Components
 
@@ -81,19 +81,22 @@ flowchart LR
 
 ## Deployment
 
-The minimal reliable topology is **`vitamux` + `postgres`**, with volumes `pgdata`, `vitamux-data` (blobs, documents) and `vitamux-secrets` (`master.key`), and generated secret files for the database roles ([compose.md](../deploy/compose.md)). Optional sidecars, such as third-party collectors, are Compose profiles on the internal network. **Install targets:** plain Docker Compose (reference) and Coolify (a Compose variant that uses Coolify's proxy, domains and secrets), both documented and validated for each release. The deployer's reverse proxy (Caddy, Traefik, or Nginx) terminates TLS. The product ships an example but does not depend on it. No container publishes a host port except `vitamux` on `127.0.0.1:8080` by default (reverse proxy in front); containers run read-only with all capabilities dropped.
+The minimal reliable topology is **`vitamux` + `postgres`**, with volumes `pgdata`, `vitamux-data` (blobs, documents) and `vitamux-secrets` (`master.key`), and generated secret files for the database roles ([compose.md](../deploy/compose.md)). Optional sidecars, such as third-party collectors, are Compose profiles on the internal network. **Install targets:** plain Docker Compose (reference) and Coolify (a Compose variant that uses Coolify's proxy, domains and generated secrets), both in [install.md](../install.md). The deployer's reverse proxy (Caddy, Traefik, or Nginx) terminates TLS. The product ships an example but does not depend on it. No container publishes a host port except `vitamux` on `127.0.0.1:8080` by default (reverse proxy in front); containers run read-only with all capabilities dropped.
 
 ## Process modes
 
 | Command | Purpose |
 | --- | --- |
-| `vitamux serve` | Default all-in-one: HTTP, scheduler leader, workers |
-| `vitamux serve --roles=api` / `--roles=worker,scheduler` | Optional split, same image; safe through leases |
-| `vitamux migrate up\|status` | One-shot migrations (DDL owner role), run before `serve` |
-| `vitamux import <apple-health-export\|ndjson>` | Restartable importers (also available as jobs) |
+| `vitamux serve` | All-in-one: HTTP, scheduler leader, workers (no role split yet) |
+| `vitamux migrate up\|status` | One-shot migrations (DDL owner role), run before `serve`; `down-to N` only in development |
+| `vitamux healthcheck` | Container healthcheck: GET the local `/readyz` |
+| `vitamux admin …` | `init-secrets [--if-missing]`, `create-owner`, `reset-password`, `purge-user` |
+| `vitamux keys rotate` | Re-seal under the current master key ([key rotation](../operations/key-rotation.md)) |
 | `vitamux reprocess` | Re-run normalizers over raw payloads |
-| `vitamux backup` / `vitamux restore` | Consistent backup bundle |
-| `vitamux admin …` | `init-secrets`, `create-owner`, `keys rotate`, `purge-user` |
+| `vitamux import ndjson [--merge]` | Load a Vitamux export ([exports](api.md#exports)); the Apple Health export importer is E15 |
+| `vitamux backup` / `vitamux restore` | Consistent backup bundle ([operations/backup.md](../operations/backup.md)) |
+| `vitamux resolve verify` | Compare the resolved cache with live resolution |
+| `vitamux version` | Version, commit, expected schema |
 
 ## Routes
 
@@ -104,7 +107,7 @@ The minimal reliable topology is **`vitamux` + `postgres`**, with volumes `pgdat
 | `/oauth/{provider}/callback` | Public; `HEAD` → 204 | Signed single-use, session-bound `state` + browser-binding cookie ([flow](connectors.md#oauth-connection-flow)) |
 | `/webhooks/{provider}/{hook_token}` | Public; `HEAD` → 204 | Unguessable token; payload is only a hint |
 | `/healthz`, `/readyz` | Public allowed (no data) | None |
-| `:9090/metrics` | Private listener only | Network isolation |
+| `/metrics` on `VITAMUX_METRICS_ADDR` (off by default) | Private listener only | Network isolation |
 | PostgreSQL, sidecars | Never public | DB roles; shared secret |
 
 All absolute URLs come from `VITAMUX_PUBLIC_URL`. No host-specific values are compiled in.
@@ -112,17 +115,18 @@ All absolute URLs come from `VITAMUX_PUBLIC_URL`. No host-specific values are co
 ## Repository layout
 
 ```text
-cmd/vitamux/                      main + subcommands
-internal/  api auth audit blob catalog config crypto db(sqlc, migrations) ingest jobs obs version
-           normalize resolve documents(extractors) imports
-           connectors/(runtime, ratelimit, withings, applehealth)
+cmd/vitamux/                  main + subcommands
+internal/  api audit auth backup blob catalog config crypto db(sqlc, migrations) documents(extract, analytes)
+           export httpx imports ingest jobs lifecycle metrics normalize obs provenance resolve version
+           connectors/(runtime, ratelimit, withings, example)   testutil/fakeprovider
 web/                          SvelteKit SPA (embedded at build)
-apple/HealthBridgeKit/        Swift package      apple/HealthBridgeApp/  SwiftUI app
-api/openapi.yaml              schemas/ (ingest, healthkit, rule, lab extraction JSON Schemas)
-prompts/lab-extraction/       tools/fixturegen/   fixtures/synthetic/
-deploy/compose/               docs/ (this tree, adr/)
+api/openapi.yaml, authz.yaml  schemas/ (ingest, rule, lab extraction JSON Schemas)
+prompts/lab-extraction/       fixtures/ (synthetic)   tools/ (fixturegen, fixtureguard, labeval, notices, apiref, doclinks, ...)
+deploy/compose/, coolify/, sql/   docs/ (this tree, adr/)
 LICENSE NOTICE THIRD_PARTY_NOTICES.md CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md
 ```
+
+The Swift package and app (`apple/`) and `internal/connectors/applehealth` arrive with [E15](../plan/E15-apple-health/README.md).
 
 ## Glossary
 

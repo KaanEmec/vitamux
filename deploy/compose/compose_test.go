@@ -1,5 +1,6 @@
-// Package compose holds the policy test for the release Compose file (J13.3). It parses
-// compose.yaml and .env.example statically, so it needs no Docker. See docs/deploy/compose.md.
+// Package compose holds the policy test for the release Compose file (J13.3) and its Coolify
+// variant (../coolify/compose.yaml, J14.2). It parses the files and .env.example statically, so
+// it needs no Docker. See docs/deploy/compose.md and docs/install.md#coolify.
 package compose
 
 import (
@@ -38,9 +39,24 @@ type file struct {
 	} `yaml:"networks"`
 }
 
-func load(t *testing.T) (file, []byte) {
+const (
+	release = "compose.yaml"
+	coolify = "../coolify/compose.yaml"
+)
+
+// each runs fn as a subtest for both Compose files.
+func each(t *testing.T, fn func(t *testing.T, path string, f file, raw []byte)) {
+	for _, path := range []string{release, coolify} {
+		t.Run(path, func(t *testing.T) {
+			f, raw := load(t, path)
+			fn(t, path, f, raw)
+		})
+	}
+}
+
+func load(t *testing.T, path string) (file, []byte) {
 	t.Helper()
-	raw, err := os.ReadFile("compose.yaml")
+	raw, err := os.ReadFile(path) //nolint:gosec // fixed repository paths
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +94,10 @@ func env(t *testing.T, s service) map[string]string {
 }
 
 func TestHardening(t *testing.T) {
-	f, _ := load(t)
+	each(t, func(t *testing.T, _ string, f file, _ []byte) { hardening(t, f) })
+}
+
+func hardening(t *testing.T, f file) {
 	for name, s := range f.Services {
 		if !s.ReadOnly {
 			t.Errorf("%s: read_only must be true", name)
@@ -108,7 +127,10 @@ func TestHardening(t *testing.T) {
 
 // Budgets from docs/architecture/project.md#resource-budget.
 func TestMemoryLimits(t *testing.T) {
-	f, _ := load(t)
+	each(t, func(t *testing.T, _ string, f file, _ []byte) { memoryLimits(t, f) })
+}
+
+func memoryLimits(t *testing.T, f file) {
 	for name, max := range map[string]int64{"vitamux": 512 << 20, "postgres": 1 << 30} {
 		got, err := parseBytes(f.Services[name].MemLimit)
 		if err != nil || got > max {
@@ -130,11 +152,17 @@ func parseBytes(s string) (int64, error) {
 }
 
 func TestNetworkExposure(t *testing.T) {
-	f, _ := load(t)
+	each(t, func(t *testing.T, path string, f file, _ []byte) { networkExposure(t, path, f) })
+}
+
+func networkExposure(t *testing.T, path string, f file) {
 	if len(f.Services["postgres"].Ports) > 0 {
 		t.Error("postgres must not publish ports")
 	}
 	for name, s := range f.Services {
+		if path == coolify && len(s.Ports) > 0 {
+			t.Errorf("%s: publishes a port; Coolify's proxy routes the domain instead", name)
+		}
 		if name != "vitamux" && len(s.Ports) > 0 {
 			t.Errorf("%s: only vitamux may publish a port", name)
 		}
@@ -166,17 +194,23 @@ var secretName = regexp.MustCompile(`(?i)(PASSWORD|SECRET|TOKEN|API_?KEY|MASTER_
 var credentialURL = regexp.MustCompile(`[a-z][a-z0-9+.-]*://[^/\s:@]+:[^/\s@]+@`)
 
 func TestNoPlaintextSecrets(t *testing.T) {
-	f, raw := load(t)
-	for name, s := range f.Services {
-		for k, v := range env(t, s) {
-			if secretName.MatchString(k) && !strings.HasSuffix(k, "_FILE") && v != "" {
-				t.Errorf("%s: %s must be passed as a *_FILE path, not a value", name, k)
+	each(t, func(t *testing.T, path string, f file, raw []byte) {
+		for name, s := range f.Services {
+			// Coolify keeps secrets in its environment store: only the offline `secrets` service may
+			// receive one, and it writes it to a file for the others.
+			if path == coolify && name == "secrets" && s.NetworkMode == "none" {
+				continue
+			}
+			for k, v := range env(t, s) {
+				if secretName.MatchString(k) && !strings.HasSuffix(k, "_FILE") && v != "" {
+					t.Errorf("%s: %s must be passed as a *_FILE path, not a value", name, k)
+				}
 			}
 		}
-	}
-	if credentialURL.Match(raw) {
-		t.Error("compose.yaml contains a URL with embedded credentials")
-	}
+		if credentialURL.Match(raw) {
+			t.Errorf("%s contains a URL with embedded credentials", path)
+		}
+	})
 	example, err := os.ReadFile(".env.example")
 	if err != nil {
 		t.Fatal(err)
@@ -194,22 +228,117 @@ func TestNoPlaintextSecrets(t *testing.T) {
 }
 
 func TestStartupOrder(t *testing.T) {
-	raw, err := os.ReadFile("compose.yaml")
-	if err != nil {
-		t.Fatal(err)
+	each(t, func(t *testing.T, path string, _ file, raw []byte) {
+		var f struct {
+			Services map[string]struct {
+				DependsOn map[string]struct {
+					Condition string `yaml:"condition"`
+				} `yaml:"depends_on"`
+			} `yaml:"services"`
+		}
+		if err := yaml.Unmarshal(raw, &f); err != nil {
+			t.Fatal(err)
+		}
+		d := f.Services["vitamux"].DependsOn
+		if d["migrate"].Condition != "service_completed_successfully" || d["postgres"].Condition != "service_healthy" {
+			t.Errorf("vitamux must wait for postgres healthy and migrate completed, got %+v", d)
+		}
+		if path == coolify && (d["master-key"].Condition != "service_completed_successfully" ||
+			f.Services["postgres"].DependsOn["secrets"].Condition != "service_completed_successfully") {
+			t.Error("vitamux must wait for master-key, and postgres for secrets")
+		}
+	})
+}
+
+// Each generated secret volume is mounted only where the release file mounts that secret.
+func TestCoolifySecretVolumes(t *testing.T) {
+	f, _ := load(t, coolify)
+	allowed := map[string][]string{
+		"pg-secrets":      {"secrets", "postgres"},
+		"migrate-secret":  {"secrets", "migrate", "restore"},
+		"app-secret":      {"secrets", "vitamux"},
+		"vitamux-secrets": {"master-key", "vitamux", "restore"},
 	}
+	for name, s := range f.Services {
+		for _, v := range s.Volumes {
+			spec, ok := v.(string)
+			if !ok {
+				continue
+			}
+			vol, _, _ := strings.Cut(spec, ":")
+			if users, ok := allowed[vol]; ok && !slices.Contains(users, name) {
+				t.Errorf("%s: must not mount %s", name, vol)
+			}
+		}
+	}
+	e := env(t, f.Services["vitamux"])
+	if _, ok := e["SERVICE_URL_VITAMUX_8080"]; !ok || e["VITAMUX_PUBLIC_URL"] != "${SERVICE_URL_VITAMUX_8080}" {
+		t.Error("vitamux must take VITAMUX_PUBLIC_URL from Coolify's SERVICE_URL_VITAMUX_8080")
+	}
+}
+
+// The Coolify init SQL (inlined with `content:`) must carry every statement of the release
+// stack's init files, and no `$`, which Compose or Coolify might interpolate.
+func TestCoolifyInitSQL(t *testing.T) {
 	var f struct {
 		Services map[string]struct {
-			DependsOn map[string]struct {
-				Condition string `yaml:"condition"`
-			} `yaml:"depends_on"`
+			Volumes []any `yaml:"volumes"`
 		} `yaml:"services"`
+	}
+	raw, err := os.ReadFile(coolify)
+	if err != nil {
+		t.Fatal(err)
 	}
 	if err := yaml.Unmarshal(raw, &f); err != nil {
 		t.Fatal(err)
 	}
-	d := f.Services["vitamux"].DependsOn
-	if d["migrate"].Condition != "service_completed_successfully" || d["postgres"].Condition != "service_healthy" {
-		t.Errorf("vitamux must wait for postgres healthy and migrate completed, got %+v", d)
+	var content string
+	for _, v := range f.Services["postgres"].Volumes {
+		if m, ok := v.(map[string]any); ok && m["target"] == "/docker-entrypoint-initdb.d/10-init.sql" {
+			content, _ = m["content"].(string)
+		}
 	}
+	if content == "" {
+		t.Fatal("postgres: no inline /docker-entrypoint-initdb.d/10-init.sql")
+	}
+	if strings.Contains(content, "$") {
+		t.Error("init SQL must not contain $")
+	}
+	got := " " + strings.Join(strings.Fields(content), " ") + " "
+	roles, err := os.ReadFile("../sql/roles.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	logins, err := os.ReadFile("initdb/20-role-logins.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"CREATE ROLE vitamux_owner NOLOGIN;", "CREATE ROLE vitamux_app NOLOGIN;"} // the DO block's effect
+	body := regexp.MustCompile(`(?s)DO \$\$.*?\$\$;`).ReplaceAllString(stripComments(string(roles)), "")
+	for stmt := range strings.SplitSeq(body, ";") {
+		if stmt = strings.Join(strings.Fields(stmt), " "); stmt != "" {
+			want = append(want, stmt+";")
+		}
+	}
+	for line := range strings.SplitSeq(stripComments(string(logins)), "\n") {
+		if line = strings.Join(strings.Fields(line), " "); line != "" {
+			want = append(want, line)
+		}
+	}
+	for _, w := range want {
+		if !strings.Contains(got, " "+w+" ") {
+			t.Errorf("init SQL lacks %q", w)
+		}
+	}
+}
+
+func stripComments(sql string) string {
+	var b strings.Builder
+	for line := range strings.SplitSeq(sql, "\n") {
+		if i := strings.Index(line, "--"); i >= 0 {
+			line = line[:i]
+		}
+		b.WriteString(line + "\n")
+	}
+	return b.String()
 }

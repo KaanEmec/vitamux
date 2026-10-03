@@ -158,7 +158,7 @@ HealthKit food correlations become a meal group (proposed group kind `meal`), wi
 
 ## Device-measured urine
 
-Home urine analysers such as the Withings U-Scan produce time series. These are metrics, not lab analytes. They are linked to [analyte-catalog.md](analyte-catalog.md#urine) only for display.
+Home urine analysers such as the Withings U-Scan produce time series. These are metrics, not lab analytes. They are linked to the [urine analytes](../analytes.md#urine) only for display.
 
 | Code | Unit | W | Phase |
 | --- | --- | --- | --- |

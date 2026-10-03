@@ -1,0 +1,239 @@
+# Vitamux on Coolify: the release stack of deploy/compose/compose.yaml, adapted to Coolify's
+# Compose conventions. Setup: docs/install.md#coolify. Coolify-only (`content:` and
+# `exclude_from_hc` are Coolify extensions); plain Docker Compose uses deploy/compose/.
+#
+# Differences from the release file:
+# - No published ports: Coolify's proxy routes the domain given to `vitamux` (SERVICE_URL_VITAMUX_8080)
+#   to container port 8080 and terminates TLS.
+# - Secrets are generated on the server by the one-shot `secrets` and `master-key` services into
+#   named volumes (Coolify has no file secrets next to the Compose file). The Withings client
+#   secret is a Coolify environment variable that only `secrets` sees; it writes it to a file.
+# - The database init SQL is inlined with `content:` (its statements are kept in sync with
+#   deploy/sql/roles.sql and deploy/compose/initdb/20-role-logins.sql by compose_test.go).
+# - No YAML anchors, so every service spells out its hardening.
+# Policy (compose_test.go): no published ports, read-only rootfs, cap_drop ALL, no-new-privileges,
+# healthchecks, memory limits, secrets only as *_FILE (except the input of `secrets`).
+name: vitamux
+
+services:
+  # Every deploy: create database passwords and URLs once, refresh the Withings secret file.
+  secrets:
+    image: postgres:18-alpine # for its shell; it never starts PostgreSQL
+    entrypoint: ["/bin/sh", "-euc"]
+    command:
+      - |
+        umask 022
+        rand() { od -An -tx1 -N24 /dev/urandom | tr -d ' \n'; }
+        url() { printf 'postgres://%s@postgres:5432/vitamux?sslmode=disable\n' "$$1"; }
+        if [ ! -s /out/pg/pg_app_password ]; then
+          app=$$(rand); own=$$(rand)
+          rand >/out/pg/pg_superuser_password
+          echo "$$own" >/out/pg/pg_owner_password
+          echo "$$app" >/out/pg/pg_app_password
+          url "vitamux_owner:$$own" >/out/migrate/migrate_database_url
+          url "vitamux_app:$$app" >/out/app/database_url
+          echo "database secrets created"
+        fi
+        printf '%s' "$$WITHINGS_CLIENT_SECRET" >/out/app/withings_client_secret
+    environment:
+      WITHINGS_CLIENT_SECRET: ${WITHINGS_CLIENT_SECRET:-}
+    volumes:
+      - pg-secrets:/out/pg
+      - migrate-secret:/out/migrate
+      - app-secret:/out/app
+    network_mode: none
+    restart: "no"
+    exclude_from_hc: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    mem_limit: 64m
+    healthcheck: {disable: true}
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "3"}}
+
+  # Every deploy: create the master key unless it exists. Back it up (docs/operations/backup.md).
+  master-key:
+    image: ${VITAMUX_IMAGE:-ghcr.io/kaanemec/vitamux:latest}
+    command: ["admin", "init-secrets", "--if-missing"]
+    environment:
+      VITAMUX_MASTER_KEY_FILE: /secrets/master.key
+    volumes:
+      - vitamux-secrets:/secrets
+    network_mode: none
+    restart: "no"
+    exclude_from_hc: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    mem_limit: 64m
+    healthcheck: {disable: true}
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "3"}}
+
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    user: postgres
+    command: ["postgres", "-c", "shared_buffers=128MB"]
+    environment:
+      POSTGRES_USER: vitamux_admin
+      POSTGRES_DB: vitamux
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg_superuser_password
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - pg-secrets:/run/secrets:ro
+      # First start only (empty pgdata): roles, schema and logins. No `$` anywhere, so no Compose
+      # or Coolify interpolation can alter it.
+      - type: bind
+        source: ./initdb/10-init.sql
+        target: /docker-entrypoint-initdb.d/10-init.sql
+        read_only: true
+        content: |
+          -- deploy/sql/roles.sql for an empty cluster (no idempotency guard), then the logins of
+          -- deploy/compose/initdb/20-role-logins.sql. compose_test.go keeps the statements in sync.
+          CREATE ROLE vitamux_owner NOLOGIN;
+          CREATE ROLE vitamux_app NOLOGIN;
+          CREATE SCHEMA IF NOT EXISTS vitamux AUTHORIZATION vitamux_owner;
+          REVOKE ALL ON SCHEMA vitamux FROM PUBLIC;
+          GRANT USAGE ON SCHEMA vitamux TO vitamux_app;
+          REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+          ALTER DEFAULT PRIVILEGES FOR ROLE vitamux_owner IN SCHEMA vitamux
+            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO vitamux_app;
+          ALTER DEFAULT PRIVILEGES FOR ROLE vitamux_owner IN SCHEMA vitamux
+            GRANT USAGE, SELECT ON SEQUENCES TO vitamux_app;
+          ALTER DEFAULT PRIVILEGES FOR ROLE vitamux_owner IN SCHEMA vitamux
+            GRANT EXECUTE ON FUNCTIONS TO vitamux_app;
+          \set owner_pw `cat /run/secrets/pg_owner_password`
+          \set app_pw `cat /run/secrets/pg_app_password`
+          ALTER ROLE vitamux_owner LOGIN PASSWORD :'owner_pw';
+          ALTER ROLE vitamux_app LOGIN PASSWORD :'app_pw';
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /run/postgresql:size=8m,mode=1777
+    networks: [backend]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 512
+    mem_limit: 1g
+    stop_grace_period: 30s
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "3"}}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vitamux_admin -d vitamux"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    depends_on:
+      secrets: {condition: service_completed_successfully}
+
+  # One-shot schema migration as the DDL owner role; vitamux starts only after it succeeds.
+  migrate:
+    image: ${VITAMUX_IMAGE:-ghcr.io/kaanemec/vitamux:latest}
+    command: ["migrate", "up"]
+    restart: "no"
+    exclude_from_hc: true
+    environment:
+      VITAMUX_ENV: production
+      VITAMUX_MIGRATE_DATABASE_URL_FILE: /run/secrets/migrate_database_url
+    volumes:
+      - migrate-secret:/run/secrets:ro
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    networks: [backend]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 512
+    mem_limit: 256m
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "3"}}
+    healthcheck: {disable: true}
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  vitamux:
+    image: ${VITAMUX_IMAGE:-ghcr.io/kaanemec/vitamux:latest}
+    restart: unless-stopped
+    environment:
+      - SERVICE_URL_VITAMUX_8080 # Coolify: the domain you give this service, routed to port 8080
+      - VITAMUX_PUBLIC_URL=${SERVICE_URL_VITAMUX_8080}
+      - VITAMUX_ENV=production
+      - VITAMUX_TRUSTED_PROXIES=${VITAMUX_TRUSTED_PROXIES:-}
+      - VITAMUX_LOG_LEVEL=${VITAMUX_LOG_LEVEL:-info}
+      - VITAMUX_DATABASE_URL_FILE=/run/secrets/database_url
+      - VITAMUX_MASTER_KEY_FILE=/secrets/master.key
+      - VITAMUX_BACKUP_DIR=/backups
+      - VITAMUX_BACKUP_KEEP=${VITAMUX_BACKUP_KEEP:-3}
+      - VITAMUX_WITHINGS_CLIENT_ID=${VITAMUX_WITHINGS_CLIENT_ID:-}
+      - VITAMUX_WITHINGS_CLIENT_SECRET_FILE=/run/secrets/withings_client_secret
+      - GOMEMLIMIT=400MiB
+    volumes:
+      - app-secret:/run/secrets:ro
+      - vitamux-data:/data
+      - vitamux-secrets:/secrets:ro
+      - vitamux-backups:/backups
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    networks: [backend, frontend]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 512
+    mem_limit: 512m
+    stop_grace_period: 60s # job drain on SIGTERM (reliability.md#upgrades)
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "3"}}
+    healthcheck:
+      test: ["CMD", "/vitamux", "healthcheck"]
+      interval: 15s
+      timeout: 6s
+      retries: 4
+      start_period: 30s
+    depends_on:
+      postgres: {condition: service_healthy}
+      migrate: {condition: service_completed_successfully}
+      master-key: {condition: service_completed_successfully}
+
+  # Disaster recovery from the server's shell (docs/operations/backup.md#restore).
+  restore:
+    image: ${VITAMUX_IMAGE:-ghcr.io/kaanemec/vitamux:latest}
+    profiles: [restore]
+    entrypoint: ["/vitamux", "restore"]
+    command: []
+    restart: "no"
+    exclude_from_hc: true
+    environment:
+      VITAMUX_ENV: production
+      VITAMUX_MIGRATE_DATABASE_URL_FILE: /run/secrets/migrate_database_url
+      VITAMUX_MASTER_KEY_FILE: /secrets/master.key
+    volumes:
+      - migrate-secret:/run/secrets:ro
+      - vitamux-data:/data
+      - vitamux-secrets:/secrets:ro
+      - vitamux-backups:/backups:ro
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    networks: [backend]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 512
+    mem_limit: 512m
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "3"}}
+    healthcheck: {disable: true}
+    depends_on:
+      postgres: {condition: service_healthy}
+
+networks:
+  backend:
+    internal: true # no route out: postgres and migrate cannot reach the internet
+  frontend: {}
+
+volumes:
+  pgdata:
+  vitamux-data:
+  vitamux-secrets:
+  vitamux-backups:
+  pg-secrets:      # postgres only
+  migrate-secret:  # migrate and restore only (DDL owner URL)
+  app-secret:      # vitamux only (DML app URL, Withings client secret)

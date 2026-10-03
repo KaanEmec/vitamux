@@ -24,7 +24,9 @@ import (
 const adminUsage = `usage: vitamux admin <command>
 
 Commands:
-  init-secrets [--out PATH]   generate the master key file (default: VITAMUX_MASTER_KEY_FILE, else <data dir>/master.key)
+  init-secrets [--out PATH] [--if-missing]
+                              generate the master key file (default: VITAMUX_MASTER_KEY_FILE, else
+                              <data dir>/master.key); never overwrites, --if-missing exits 0 if it exists
   create-owner                create the owner account
   reset-password              set a new owner password and end every session
   purge-user [--username NAME] [--yes]
@@ -137,6 +139,7 @@ func initSecrets(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("admin init-secrets", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	out := fs.String("out", defaultKeyPath(), "master key file to create")
+	ifMissing := fs.Bool("if-missing", false, "succeed without changes when the key file exists (one-shot deploy steps)")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -145,6 +148,10 @@ func initSecrets(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	id, err := crypto.WriteKeyFile(*out)
+	if errors.Is(err, os.ErrExist) && *ifMissing {
+		fmt.Fprintf(stdout, "master key %s already exists; unchanged\n", *out)
+		return 0
+	}
 	if errors.Is(err, os.ErrExist) {
 		fmt.Fprintf(stderr, "init-secrets: %s already exists; refusing to overwrite the master key\n", *out)
 		return 1

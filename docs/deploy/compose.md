@@ -4,22 +4,13 @@ The reference install: [`deploy/compose/compose.yaml`](../../deploy/compose/comp
 
 ## Install
 
-```sh
-cd deploy/compose
-cp .env.example .env && $EDITOR .env                   # set VITAMUX_PUBLIC_URL (https) and, if used, VITAMUX_IMAGE
-./init-secrets.sh                                      # random DB passwords and URLs into ./secrets
-docker compose --profile setup run --rm init-secrets   # master key, once, into the vitamux-secrets volume
-docker compose up -d --wait                            # postgres -> migrate -> vitamux
-docker compose run --rm vitamux admin create-owner     # first owner (reads the TTY)
-```
-
-Point your reverse proxy at `127.0.0.1:8080` (change with `VITAMUX_PORT`). It must terminate TLS for `VITAMUX_PUBLIC_URL`, which is also where OAuth callbacks (`/oauth/<provider>/callback`) and webhooks (`/webhooks/...`) arrive. Set `VITAMUX_TRUSTED_PROXIES` to the proxy's address as the container sees it (for a host proxy on Linux, the `frontend` network gateway: `docker network inspect vitamux_frontend`), otherwise `X-Forwarded-*` is ignored.
+Step by step, including the reverse proxy, the first owner and Withings: [install.md](../install.md). The short version, in `deploy/compose/`: `cp .env.example .env` (set `VITAMUX_PUBLIC_URL`), `./init-secrets.sh`, `docker compose --profile setup run --rm init-secrets`, `docker compose up -d --wait`, `docker compose run --rm vitamux admin create-owner`.
 
 Daily backups go to the `vitamux-backups` volume ([operations/backup.md](../operations/backup.md)). Back up `secrets/` and the master key separately from them. Losing the master key loses provider tokens and encrypted documents ([security#keys](../architecture/security.md)). `init-secrets` refuses to overwrite an existing key.
 
 ## What is locked down
 
-Enforced by the policy test `deploy/compose/compose_test.go` (runs in the `go` CI job):
+Enforced by the policy test `deploy/compose/compose_test.go` (runs in the `go` CI job) for this file and the Coolify variant:
 
 - PostgreSQL has no published port and sits on an `internal` network (no route out); `migrate` too. Only `vitamux` is also on a normal network, for provider API calls, and publishes only `127.0.0.1:<port>`.
 - Every container: `read_only` rootfs (tmpfs for `/tmp`, writable only `/data`, `/backups` and the pgdata volume), `cap_drop: [ALL]`, `no-new-privileges`, non-root user, `mem_limit` from [project#resource-budget](../architecture/project.md#resource-budget) (vitamux 512 MiB, postgres 1 GiB), a healthcheck, rotated JSON logs.
@@ -29,11 +20,7 @@ Enforced by the policy test `deploy/compose/compose_test.go` (runs in the `go` C
 
 ## Upgrade
 
-```sh
-docker compose pull && docker compose up -d --wait
-```
-
-`migrate` runs first and `vitamux` starts only if it succeeded. Read the changelog's upgrade notes before crossing a minor version.
+`docker compose pull && docker compose up -d --wait`: `migrate` runs first and `vitamux` starts only if it succeeded. Backup first, rollback rules and the drain: [operations/upgrade.md](../operations/upgrade.md).
 
 ## Files and permissions
 
@@ -41,4 +28,4 @@ Secret files are mode 0444 inside a 0700 `secrets/` directory: Compose cannot ch
 
 ## Coolify
 
-Coolify deploys the same file as a Compose application: give the `vitamux` service its domain (container port 8080) and let Coolify's proxy do TLS; the `127.0.0.1` publish is harmless there. The `secrets/*` files must exist next to the file at deploy time. A Coolify-specific section is verified on a fresh instance in [J14.2](../plan/E14-release-v0.1/J14.2-docs-set.md) and [J14.4](../plan/E14-release-v0.1/J14.4-release-engineering.md).
+[`deploy/coolify/compose.yaml`](../../deploy/coolify/compose.yaml) is the same stack for Coolify: no published ports, secrets generated into volumes by one-shot services, the public URL from Coolify's domain. The policy test covers it too (no published port at all; each secret volume mounted only where the release file mounts that secret). One exception to the list above: its `secrets` one-shot runs as root, with no capabilities, no network and a read-only rootfs, because it writes into freshly created root-owned volumes. Setup: [install#coolify](../install.md#coolify).
