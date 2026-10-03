@@ -71,13 +71,17 @@ func (rt *router) authBegin(w http.ResponseWriter, r *http.Request) {
 
 // oauthCallback completes the flow and sends the browser back to the UI with the outcome:
 // /connections?connected=<provider> or /connections?auth_error=<reason>. HEAD answers 204
-// and touches nothing, so a probe never uses up a state.
+// and touches nothing, so a probe never uses up a state. A provider without a connector is 404.
 func (rt *router) oauthCallback(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodHead {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 	provider := r.PathValue("provider")
+	if rt.opts.Connectors != nil && !rt.opts.Connectors.HasProvider(provider) {
+		writeProblem(w, r, CodeNotFound, "no such provider")
+		return
+	}
 	binding := ""
 	if c, err := r.Cookie(oauthCookie); err == nil {
 		binding = c.Value

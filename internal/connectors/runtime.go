@@ -44,6 +44,7 @@ type Runtime struct {
 	log     *slog.Logger
 
 	publicURL *url.URL
+	afterAuth func(ctx context.Context, connectionID uuid.UUID, provider string) // OnAuthorized
 
 	beforeCommit func() error // tests: fail a commit after its raw rows and cursor were written
 }

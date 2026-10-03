@@ -212,6 +212,9 @@ func (rt *Runtime) CompleteAuth(ctx context.Context, provider, state, binding st
 		return uuid.Nil, err
 	}
 	rt.log.Info("connection authorized", "connection_id", conn.ID, "provider", provider, "action", action)
+	if rt.afterAuth != nil {
+		rt.afterAuth(ctx, conn.ID, provider)
+	}
 	return conn.ID, nil
 }
 

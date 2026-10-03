@@ -1208,11 +1208,35 @@ export interface paths {
         };
         /**
          * OAuth redirect target; completes the authorization and redirects to the UI
-         * @description Authorized by the signed, single-use `state` and the browser-binding cookie, not by the session. Always answers 303 to /connections?connected=<provider> or /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable. HEAD answers 204 without side effects.
+         * @description Authorized by the signed, single-use `state` and the browser-binding cookie, not by the session. Always answers 303 to /connections?connected=<provider> or /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable. HEAD answers 204 without side effects. A provider without a connector is 404.
          */
         get: operations["oauthCallback"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webhooks/withings/{hook_token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Per-connection notification token (only its SHA-256 is stored). */
+                hook_token: string;
+            };
+            cookie?: never;
+        };
+        /** Withings callback validation; HEAD and GET answer 204 without side effects */
+        get: operations["withingsNotifyProbe"];
+        put?: never;
+        /**
+         * Withings notification; enqueues one deduplicated window sync
+         * @description Authorized by the unguessable token; the payload is only a hint to fetch. A measures notification (appli 1, 2 or 4) of the connection's Withings user enqueues one correction sync of [startdate, enddate], deduplicated while queued or running. Other notifications are acknowledged and ignored. An unknown token is 404 and enqueues nothing.
+         */
+        post: operations["withingsNotify"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4254,6 +4278,61 @@ export interface operations {
                 };
                 content?: never;
             };
+            404: components["responses"]["Problem"];
+        };
+    };
+    withingsNotifyProbe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Per-connection notification token (only its SHA-256 is stored). */
+                hook_token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Probe answered. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            413: components["responses"]["Problem"];
+        };
+    };
+    withingsNotify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Per-connection notification token (only its SHA-256 is stored). */
+                hook_token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/x-www-form-urlencoded": {
+                    userid?: string;
+                    appli?: number;
+                    startdate?: number;
+                    enddate?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Accepted (or ignored). */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["Problem"];
+            413: components["responses"]["Problem"];
         };
     };
 }

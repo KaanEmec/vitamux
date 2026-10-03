@@ -1751,7 +1751,7 @@ paths:
         Authorized by the signed, single-use `state` and the browser-binding cookie, not by the
         session. Always answers 303 to /connections?connected=<provider> or
         /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable.
-        HEAD answers 204 without side effects.
+        HEAD answers 204 without side effects. A provider without a connector is 404.
       security: []
       parameters:
         - {name: provider, in: path, required: true, schema: {type: string}}
@@ -1762,6 +1762,45 @@ paths:
           description: HEAD probe.
         '303':
           description: Back to the UI with the outcome.
+        '404': {$ref: '#/components/responses/Problem'}
+
+  /webhooks/withings/{hook_token}:
+    parameters:
+      - {name: hook_token, in: path, required: true, schema: {type: string}, description: Per-connection notification token (only its SHA-256 is stored).}
+    get:
+      tags: [connections]
+      operationId: withingsNotifyProbe
+      summary: Withings callback validation; HEAD and GET answer 204 without side effects
+      security: []
+      responses:
+        '204':
+          description: Probe answered.
+        '413': {$ref: '#/components/responses/Problem'}
+    post:
+      tags: [connections]
+      operationId: withingsNotify
+      summary: Withings notification; enqueues one deduplicated window sync
+      description: >
+        Authorized by the unguessable token; the payload is only a hint to fetch. A measures
+        notification (appli 1, 2 or 4) of the connection's Withings user enqueues one correction
+        sync of [startdate, enddate], deduplicated while queued or running. Other notifications
+        are acknowledged and ignored. An unknown token is 404 and enqueues nothing.
+      security: []
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                userid: {type: string}
+                appli: {type: integer}
+                startdate: {type: integer}
+                enddate: {type: integer}
+      responses:
+        '204':
+          description: Accepted (or ignored).
+        '404': {$ref: '#/components/responses/Problem'}
+        '413': {$ref: '#/components/responses/Problem'}
 
 components:
   securitySchemes:

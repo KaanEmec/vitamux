@@ -1800,6 +1800,14 @@ type OauthCallbackParams struct {
 	Code  *string `form:"code,omitempty" json:"code,omitempty"`
 }
 
+// WithingsNotifyFormdataBody defines parameters for WithingsNotify.
+type WithingsNotifyFormdataBody struct {
+	Appli     *int    `form:"appli,omitempty" json:"appli,omitempty"`
+	Enddate   *int    `form:"enddate,omitempty" json:"enddate,omitempty"`
+	Startdate *int    `form:"startdate,omitempty" json:"startdate,omitempty"`
+	Userid    *string `form:"userid,omitempty" json:"userid,omitempty"`
+}
+
 // CreateAnalyteAliasJSONRequestBody defines body for CreateAnalyteAlias for application/json ContentType.
 type CreateAnalyteAliasJSONRequestBody = AnalyteAlias
 
@@ -1859,6 +1867,9 @@ type UpdateSettingsJSONRequestBody = Settings
 
 // CreateTimezonePeriodJSONRequestBody defines body for CreateTimezonePeriod for application/json ContentType.
 type CreateTimezonePeriodJSONRequestBody = TimezonePeriod
+
+// WithingsNotifyFormdataRequestBody defines body for WithingsNotify for application/x-www-form-urlencoded ContentType.
+type WithingsNotifyFormdataRequestBody WithingsNotifyFormdataBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -2087,6 +2098,12 @@ type ServerInterface interface {
 	// OauthCallback OAuth redirect target; completes the authorization and redirects to the UI
 	// (GET /oauth/{provider}/callback)
 	OauthCallback(w http.ResponseWriter, r *http.Request, provider string, params OauthCallbackParams)
+	// WithingsNotifyProbe Withings callback validation; HEAD and GET answer 204 without side effects
+	// (GET /webhooks/withings/{hook_token})
+	WithingsNotifyProbe(w http.ResponseWriter, r *http.Request, hookToken string)
+	// WithingsNotify Withings notification; enqueues one deduplicated window sync
+	// (POST /webhooks/withings/{hook_token})
+	WithingsNotify(w http.ResponseWriter, r *http.Request, hookToken string)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -5005,6 +5022,58 @@ func (siw *ServerInterfaceWrapper) OauthCallback(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// WithingsNotifyProbe operation middleware
+func (siw *ServerInterfaceWrapper) WithingsNotifyProbe(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "hook_token" -------------
+	var hookToken string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "hook_token", r.PathValue("hook_token"), &hookToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "hook_token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.WithingsNotifyProbe(w, r, hookToken)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// WithingsNotify operation middleware
+func (siw *ServerInterfaceWrapper) WithingsNotify(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "hook_token" -------------
+	var hookToken string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "hook_token", r.PathValue("hook_token"), &hookToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "hook_token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.WithingsNotify(w, r, hookToken)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -5200,6 +5269,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/timezone-periods", wrapper.ListTimezonePeriods)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/timezone-periods", wrapper.CreateTimezonePeriod)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/oauth/{provider}/callback", wrapper.OauthCallback)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/webhooks/withings/{hook_token}", wrapper.WithingsNotifyProbe)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/webhooks/withings/{hook_token}", wrapper.WithingsNotify)
 
 	return m
 }
@@ -10422,6 +10493,101 @@ func (response OauthCallback303Response) VisitOauthCallbackResponse(w http.Respo
 	return nil
 }
 
+type OauthCallback404ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response OauthCallback404ApplicationProblemPlusJSONResponse) VisitOauthCallbackResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type WithingsNotifyProbeRequestObject struct {
+	HookToken string `json:"hook_token"`
+}
+
+type WithingsNotifyProbeResponseObject interface {
+	VisitWithingsNotifyProbeResponse(w http.ResponseWriter) error
+}
+
+type WithingsNotifyProbe204Response struct {
+}
+
+func (response WithingsNotifyProbe204Response) VisitWithingsNotifyProbeResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type WithingsNotifyProbe413ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response WithingsNotifyProbe413ApplicationProblemPlusJSONResponse) VisitWithingsNotifyProbeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type WithingsNotifyRequestObject struct {
+	HookToken string `json:"hook_token"`
+	Body      *WithingsNotifyFormdataRequestBody
+}
+
+type WithingsNotifyResponseObject interface {
+	VisitWithingsNotifyResponse(w http.ResponseWriter) error
+}
+
+type WithingsNotify204Response struct {
+}
+
+func (response WithingsNotify204Response) VisitWithingsNotifyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type WithingsNotify404ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response WithingsNotify404ApplicationProblemPlusJSONResponse) VisitWithingsNotifyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type WithingsNotify413ApplicationProblemPlusJSONResponse Problem
+
+func (response WithingsNotify413ApplicationProblemPlusJSONResponse) VisitWithingsNotifyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// ListAnalyteAliases List analyte aliases
@@ -10649,6 +10815,12 @@ type StrictServerInterface interface {
 	// OauthCallback OAuth redirect target; completes the authorization and redirects to the UI
 	// (GET /oauth/{provider}/callback)
 	OauthCallback(ctx context.Context, request OauthCallbackRequestObject) (OauthCallbackResponseObject, error)
+	// WithingsNotifyProbe Withings callback validation; HEAD and GET answer 204 without side effects
+	// (GET /webhooks/withings/{hook_token})
+	WithingsNotifyProbe(ctx context.Context, request WithingsNotifyProbeRequestObject) (WithingsNotifyProbeResponseObject, error)
+	// WithingsNotify Withings notification; enqueues one deduplicated window sync
+	// (POST /webhooks/withings/{hook_token})
+	WithingsNotify(ctx context.Context, request WithingsNotifyRequestObject) (WithingsNotifyResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -12738,6 +12910,69 @@ func (sh *strictHandler) OauthCallback(w http.ResponseWriter, r *http.Request, p
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(OauthCallbackResponseObject); ok {
 		if err := validResponse.VisitOauthCallbackResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// WithingsNotifyProbe operation middleware
+func (sh *strictHandler) WithingsNotifyProbe(w http.ResponseWriter, r *http.Request, hookToken string) {
+	var request WithingsNotifyProbeRequestObject
+
+	request.HookToken = hookToken
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.WithingsNotifyProbe(ctx, request.(WithingsNotifyProbeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "WithingsNotifyProbe")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(WithingsNotifyProbeResponseObject); ok {
+		if err := validResponse.VisitWithingsNotifyProbeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// WithingsNotify operation middleware
+func (sh *strictHandler) WithingsNotify(w http.ResponseWriter, r *http.Request, hookToken string) {
+	var request WithingsNotifyRequestObject
+
+	request.HookToken = hookToken
+
+	if err := r.ParseForm(); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode formdata: %w", err))
+		return
+	}
+	var body WithingsNotifyFormdataRequestBody
+	if err := runtime.BindForm(&body, r.Form, nil, nil); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't bind formdata: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.WithingsNotify(ctx, request.(WithingsNotifyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "WithingsNotify")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(WithingsNotifyResponseObject); ok {
+		if err := validResponse.VisitWithingsNotifyResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

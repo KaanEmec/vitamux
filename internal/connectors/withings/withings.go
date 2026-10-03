@@ -60,7 +60,7 @@ func (*Connector) Describe() connectors.Descriptor {
 			MaxBackfill: 20 * 365 * 24 * time.Hour, UnitSize: 30 * 24 * time.Hour,
 		}},
 		RateLimits:   []connectors.RateLimitSpec{{Requests: 120, Per: time.Minute}},
-		Capabilities: connectors.Capabilities{Incremental: true, Backfill: true, ManualSync: true},
+		Capabilities: connectors.Capabilities{Incremental: true, Backfill: true, Webhooks: true, ManualSync: true},
 	}
 }
 

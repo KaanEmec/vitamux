@@ -8,8 +8,8 @@ Read first: [connectors#withings-connector-reference-pattern](../../architecture
 **Outputs:** `internal/connectors/withings`, normalizer, OAuth and webhook routes, `docs/providers/withings.md`.
 
 ## Acceptance
-- The fake-Withings lifecycle passes in CI: connect, backfill, incremental, notify, refresh rotation, revoked token → reauth.
-- A manual test with the owner's real account imports BP readings with paired components.
+- [x] The fake-Withings lifecycle passes in CI: connect, backfill, incremental, notify, refresh rotation, revoked token → reauth (`TestLifecycle` in `internal/connectors/withings`).
+- [ ] A manual test with the owner's real account imports BP readings with paired components. Owner's step: [manual checklist](../../providers/withings.md#manual-real-account-checklist).
 
 ## Jobs
 | Job | Title | Depends on | Gate |

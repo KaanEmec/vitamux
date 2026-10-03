@@ -152,7 +152,7 @@ Verified API facts and the exact mapping: [providers/withings.md](../providers/w
   - manual-entry attribution (`attrib` 2, 4) → `manual_entry` flag;
   - unknown meastype → warning (raw kept).
 - Rotating refresh tokens (3 h access, the old refresh token dies once the new access token is used) use the single-flight refresh.
-- Notifications are optional: subscribe with `/webhooks/withings/{hook_token}` (`appli` 1, 2, 4). A POST only enqueues a deduplicated window sync. Polling stays on.
+- Notifications are optional (setting `withings.notifications`): subscribe with `/webhooks/withings/{hook_token}` (`appli` 1, 2, 4). A POST only enqueues a deduplicated window sync. Polling stays on. Details: [providers/withings.md](../providers/withings.md#how-vitamux-uses-notifications).
 
 ## Remote sidecar mode
 

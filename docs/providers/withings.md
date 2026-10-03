@@ -57,6 +57,27 @@ Open: how a *deleted* group appears in a `lastupdate` response is not documented
 - At subscribe time Withings sends `HEAD` to the callback URL and expects 2xx. Notifications are form POSTs (`userid`, `appli`, `startdate`, `enddate`, or `date`/`deviceid` for events) and must get HTTP 2xx within a few seconds. Failures are retried 5 cycles over about 5 hours (2 attempts each, with jitter); persistent failure leads to warning emails and, after 20 days, cancellation.
 - `appli` values for measures: **1** weight and body composition, **2** temperature, **4** blood pressure, heart rate and SpO2. Others: 16 activity, 44 sleep, 46 profile change, 50–52 bed events, 54 ECG, 55 ECG failed, 58 glucose, 61 stethoscope, 62 HRV, 63 urine (U-Scan).
 
+### How Vitamux uses notifications
+
+- Optional per install: owner setting `withings.notifications` (default off; `withings.Notifications.SetEnabled`). Polling runs either way; notifications only lower latency. Turning it on needs `VITAMUX_PUBLIC_URL`.
+- On: each active connection (and every later connect or reauthorization) gets applis 1, 2 and 4 on one callback `${VITAMUX_PUBLIC_URL}/webhooks/withings/<hook_token>`. The token is 32 random bytes; only its SHA-256 is stored (`connections.hook_token_hash`) and the token is only ever sent to Withings. Subscribing lists the profiles first, so repeating it is safe; Vitamux callbacks with older tokens are revoked.
+- Off: every Vitamux profile is revoked and the hash cleared, so later notifications get 404 (Withings cancels a callback that keeps failing).
+- `HEAD`/`GET` on the callback answer 204. A `POST` with an unknown token is 404 and enqueues nothing. A measures notification (appli 1, 2, 4) whose `userid` matches the connection enqueues one correction sync of `[startdate, enddate]` (by measurement date; the cursor stays), deduplicated per connection, stream and window while it is queued or running. Other categories, users or windows longer than 31 days are acknowledged (204) and ignored. A notification that arrives while the same window is already running is folded into it; the next `lastupdate` poll catches anything it missed.
+
 ## Fixtures
 
 `go run ./tools/fixturegen` also writes `withings/getmeas-NNNN.json` (synthetic getmeas pages of the Withings BP cuff and scale groups, oldest first, 100 groups per page with `more`/`offset`) and `withings/getmeas-corrections.json` (the corrected group versions a later `lastupdate` call returns). Deleted groups are not rendered (see the open point above).
+
+## Manual real-account checklist
+
+The owner runs this once against their own Withings account and BP monitor (E08 acceptance). Never paste real credentials, user ids, tokens, hook URLs or readings into issues, logs or docs; report only pass or fail per step.
+
+1. Register a Withings application (see [app registration](#app-registration-and-callback)) with `${VITAMUX_PUBLIC_URL}/oauth/withings/callback`; set `VITAMUX_WITHINGS_CLIENT_ID` and `VITAMUX_WITHINGS_CLIENT_SECRET_FILE`; start Vitamux.
+2. Connections › Withings › Connect; consent at Withings. Expect a redirect to `/connections?connected=withings` and an active connection.
+3. Wait for the first sync (or trigger a sync). Expect your BP readings under source data, each with systolic, diastolic and pulse in one reading, local dates in your timezone, and manual entries flagged.
+4. Take a new BP reading; trigger a sync (or wait up to an hour). Expect exactly one new reading.
+5. Edit a reading in the Withings app (if it allows); sync. Expect the edited values to supersede the old ones (history keeps both).
+6. Optional, needs a public HTTPS domain: turn `withings.notifications` on. Take a reading; expect it within a minute without a manual sync. Turn it off; expect the subscriptions gone (the notify list in the Withings developer dashboard, or no more callbacks in the access log).
+7. Leave Vitamux running for more than 3 hours; sync. Expect success (the access token was refreshed and the rotated refresh token kept).
+8. Revoke the application in your Withings account settings; sync. Expect the connection to show *needs reauthorization*. Reconnect; expect it active again and the readings taken meanwhile imported once.
+9. Check the logs: no tokens, codes, user ids, hook URLs or values.

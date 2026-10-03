@@ -14,6 +14,7 @@ import (
 	"github.com/KaanEmec/vitamux/internal/auth"
 	"github.com/KaanEmec/vitamux/internal/blob"
 	"github.com/KaanEmec/vitamux/internal/connectors"
+	"github.com/KaanEmec/vitamux/internal/connectors/withings"
 	"github.com/KaanEmec/vitamux/internal/crypto"
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/version"
@@ -49,6 +50,8 @@ type Options struct {
 	Keys *crypto.Keyring
 	// Connectors runs OAuth connection flows; nil answers 503.
 	Connectors *connectors.Runtime
+	// Withings handles Withings notification callbacks; nil answers 404.
+	Withings *withings.Notifications
 }
 
 // NewHandler builds the root HTTP handler: the route table behind the middleware chain.
@@ -93,6 +96,7 @@ func newRouter(log *slog.Logger, ui fs.FS, opts Options) (*router, error) {
 	rt.ingestRoutes()
 	rt.oauthRoutes()
 	rt.sourceRoutes()
+	rt.webhookRoutes()
 	return rt, nil
 }
 
