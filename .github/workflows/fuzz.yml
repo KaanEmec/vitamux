@@ -17,13 +17,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version-file: go.mod
       # The engine keeps the inputs it found interesting in the build cache's fuzz directory;
       # restoring it lets each night start where the last one stopped.
-      - uses: actions/cache@v4
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/go-build/fuzz
           key: fuzz-corpus-${{ github.run_id }}
@@ -32,7 +32,7 @@ jobs:
         run: make fuzz FUZZTIME=${{ inputs.fuzztime || '5m' }}
       - name: Failing inputs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: fuzz-crashers
           path: "**/testdata/fuzz/**"

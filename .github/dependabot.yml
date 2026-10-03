@@ -1,0 +1,31 @@
+# Update policy (docs/security.md#supply-chain): one grouped PR per ecosystem per week, reviewed
+# like any other change; risky bumps (new maintainers, install scripts, majors) get a closer look.
+version: 2
+updates:
+  - package-ecosystem: gomod # dependencies and the go.mod tool pins (sqlc, govulncheck, ...)
+    directory: /
+    schedule: {interval: weekly, day: monday}
+    groups:
+      go: {patterns: ["*"]}
+
+  - package-ecosystem: npm
+    directory: /web
+    schedule: {interval: weekly, day: monday}
+    groups:
+      npm-production: {dependency-type: production}
+      npm-development: {dependency-type: development}
+
+  - package-ecosystem: github-actions # SHA pins; the version comment is updated too
+    directory: /
+    schedule: {interval: weekly, day: monday}
+    groups:
+      actions: {patterns: ["*"]}
+
+  - package-ecosystem: docker # Dockerfile base image digests
+    directory: /
+    schedule: {interval: weekly, day: monday}
+    groups:
+      base-images: {patterns: ["*"]}
+    ignore:
+      - dependency-name: node # stay on the LTS line; move majors by hand
+        update-types: ["version-update:semver-major"]

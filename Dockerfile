@@ -2,14 +2,16 @@
 # Build stages run on the builder's native platform (no emulation); Go cross-compiles for the
 # target, apk installs the target's packages into a separate root, and the final stage only
 # copies files, so multi-arch builds need no QEMU.
-FROM --platform=$BUILDPLATFORM node:24-alpine AS web
+# Base images are pinned by multi-arch index digest; Dependabot (.github/dependabot.yml) bumps
+# them weekly. By hand: docker buildx imagetools inspect node:24-alpine (Digest line).
+FROM --platform=$BUILDPLATFORM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS web
 WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS go
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine@sha256:8a5910f31396cd4d89662f56c68b3ae31d374308270a1c3bd96672ee5ed43414 AS go
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -29,7 +31,7 @@ RUN mkdir -p /out/data /out/secrets /out/backups
 # PostgreSQL 18 client for `vitamux backup|restore` (docs/operations/backup.md): Alpine's package
 # for the target architecture, installed into /pg without running its scripts. Only pg_dump,
 # pg_restore and the musl libraries they link (about 12 MB) reach the final image; no shell.
-FROM --platform=$BUILDPLATFORM alpine:3.24 AS pg
+FROM --platform=$BUILDPLATFORM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS pg
 ARG TARGETARCH
 RUN set -eu; \
     case "$TARGETARCH" in amd64) arch=x86_64 ;; arm64) arch=aarch64 ;; *) echo "unsupported arch $TARGETARCH" >&2; exit 1 ;; esac; \
@@ -40,7 +42,7 @@ RUN set -eu; \
     cp -P /pg/lib/ld-musl-$arch.so.1 /pg/lib/libc.musl-$arch.so.1 /out/lib/; \
     for l in libpq.so.5 libssl.so.3 libcrypto.so.3 libz.so.1 libzstd.so.1 liblz4.so.1; do cp -L /pg/usr/lib/$l /out/usr/lib/; done
 
-FROM gcr.io/distroless/static-debian12:nonroot
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab
 COPY --from=go /out/vitamux /vitamux
 COPY --from=pg /out/ /
 COPY LICENSE NOTICE THIRD_PARTY_NOTICES.md /licenses/

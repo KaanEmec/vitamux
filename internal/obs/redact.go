@@ -13,7 +13,7 @@ const masked = "[REDACTED]"
 var (
 	// Matched as a case-insensitive substring, so it also hits keys such as
 	// status_code or X-Api-Key. Prefer other key names for non-secret values.
-	sensitiveKey = regexp.MustCompile(`(?i)token|secret|passw(or)?d|authorization|cookie|code|refresh|api[_-]?key`)
+	sensitiveKey = regexp.MustCompile(`(?i)token|secret|passw(or)?d|authorization|cookie|code|refresh|api[_-]?key|csrf|credential|otp|signature|private[_-]?key`)
 
 	queryValue = regexp.MustCompile(`([?&#][^=&#\s"'<>]+=)[^&#\s"'<>]*`)
 	userinfo   = regexp.MustCompile(`(://)[^/?#@\s"'<>]+@`)

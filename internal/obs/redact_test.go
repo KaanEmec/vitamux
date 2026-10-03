@@ -55,7 +55,7 @@ func TestNonSecretsSurvive(t *testing.T) {
 }
 
 func TestIsSensitiveKey(t *testing.T) {
-	for _, k := range []string{"token", "Access_Token", "client_secret", "password", "passwd", "Authorization", "Set-Cookie", "code", "refresh", "api_key", "X-Api-Key", "apikey"} {
+	for _, k := range []string{"token", "Access_Token", "client_secret", "password", "passwd", "Authorization", "Set-Cookie", "code", "refresh", "api_key", "X-Api-Key", "apikey", "csrf", "credentials", "totp", "otpauth_uri", "signature", "private_key"} {
 		if !IsSensitiveKey(k) {
 			t.Errorf("%q should be sensitive", k)
 		}

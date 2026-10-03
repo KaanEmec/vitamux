@@ -43,9 +43,18 @@ What Vitamux protects, from whom, and what it does not. The design details (para
 | Database dump | Provider tokens, TOTP secrets and documents encrypted under the master key; tokens stored as hashes | [Keys and secrets](architecture/security.md#keys-and-secrets) |
 | Malicious uploads and payloads | Body, nesting, decompression and page limits; streaming parsers; fuzzing | [api.md](architecture/api.md#conventions) |
 | XSS via extracted text | Strict CSP, framework escaping, no raw HTML | [Threat model](architecture/security.md#threat-model) |
-| Secret or health data in logs | Redacting logger, route patterns instead of paths, no bodies; sentinel tests | [reliability.md](architecture/reliability.md) |
+| Secret or health data in logs | Redacting logger, route patterns instead of paths, no bodies; sentinel tests and an end-to-end redaction audit in CI | [reliability.md](architecture/reliability.md#health-logs-metrics) |
+| Vulnerable or malicious dependency | Lockfiles, SHA-pinned Actions, digest-pinned base images, weekly grouped update PRs, govulncheck, npm audit, Trivy, SBOM | [Supply chain](#supply-chain) |
 | Spoofed webhooks or OAuth replies | Per-connection hook tokens; signed, single-use, session-bound OAuth `state`; payloads only trigger a fetch | [Threat model](architecture/security.md#threat-model) |
 | Data loss or theft from backups | Documented backups and restore drill; the master key is kept apart | [operations/backup.md](operations/backup.md) |
+
+## Supply chain
+
+- **Pins.** Go modules and tools in `go.mod`/`go.sum`, npm in `web/package-lock.json`, every GitHub Action by commit SHA (version in a comment), Dockerfile base images by multi-arch digest.
+- **Updates.** [Dependabot](../.github/dependabot.yml) opens one grouped PR per ecosystem (Go, npm production, npm development, Actions, base images) each Monday. Review them like code; look harder at new maintainers, install scripts and majors. Dependabot PRs are exempt from the DCO check because a bot cannot sign off.
+- **Scans in CI.** `govulncheck` (pinned Go tool) fails on vulnerabilities in reachable code. `npm audit --omit=dev --audit-level=high` fails on high or critical advisories in production dependencies, which ship in the SPA; findings in development-only tooling (build, lint, test) are printed as a warning and do not block, since that code never reaches the image. Trivy fails on fixable CRITICAL image CVEs. Locally: `make vulncheck`.
+- **SBOM.** The `image` job writes an SPDX JSON SBOM of the image (artifact `vitamux-sbom.spdx.json`); releases attach one per platform (J14.4).
+- **Redaction audit.** `scripts/redaction-audit.sh` (`make redaction-audit`; CI `integration` job, PostgreSQL 18) runs a real server with sentinel secrets (owner password, TOTP secret and recovery codes, API key, client token, Withings client secret, AI provider keys, master key, OAuth code, webhook token) and sentinel health values, drives sign-in, token use, ingestion, failing Withings and AI provider calls, a fake extraction and an export, then requires zero sentinel hits in server and CLI logs, `/metrics`, `audit_events`, `jobs` and `job_runs`, and zero secret hits anywhere in the database or the export.
 
 ## Residual risks
 
