@@ -1,12 +1,14 @@
 # Release image: SPA build → static Go binary → distroless (non-root).
-FROM node:24-alpine AS web
+# Build stages run on the builder's native platform (no emulation); Go cross-compiles for the
+# target, and the final stage only copies files, so multi-arch builds need no QEMU.
+FROM --platform=$BUILDPLATFORM node:24-alpine AS web
 WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-FROM golang:1.27-alpine AS go
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS go
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -16,7 +18,8 @@ COPY web/*.go ./web/
 COPY --from=web /src/web/build ./web/build
 ARG VERSION=0.0.0-dev
 ARG COMMIT=unknown
-RUN CGO_ENABLED=0 go build -tags webui -trimpath \
+ARG TARGETOS TARGETARCH
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -tags webui -trimpath \
     -ldflags "-s -w -X github.com/KaanEmec/vitamux/internal/version.Version=${VERSION} -X github.com/KaanEmec/vitamux/internal/version.Commit=${COMMIT}" \
     -o /out/vitamux ./cmd/vitamux
 
