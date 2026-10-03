@@ -50,6 +50,7 @@ jobs:
       - name: sqlc generation is up to date
         run: go tool sqlc generate && git diff --exit-code -- internal/db/dbq && test -z "$(git status --porcelain internal/db/dbq)"
       - run: go test -race ./...
+      - run: go test -run '^$' -fuzz=FuzzDecodeBatch -fuzztime=20s ./internal/ingest # batch parser fuzz smoke
       - run: go test -tags webui ./internal/api/ # CSP check against the real built page
       - run: CGO_ENABLED=0 go build -tags webui -trimpath -o bin/vitamux ./cmd/vitamux && ./bin/vitamux version
 

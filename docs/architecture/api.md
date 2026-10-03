@@ -9,7 +9,7 @@
 - Repeatable filters: `metric`, `provider`, `connection`, `device`, `origin`, `kind`. Expansions via `include=provenance|stages|segments|superseded`.
 - Errors are `application/problem+json` with `type`, `title`, `status`, `detail`, `code`, `request_id`, and `errors[]`. Codes: `validation_failed`, `not_found`, `conflict`, `rate_limited`, `reauth_required`, `consent_required`, `unsupported_window`, `rule_warning_unacknowledged`. Also `unauthenticated` and `totp_required` (401), `forbidden` (403), `payload_too_large` (413), `internal_error` (500) and `unavailable` (503). The registry is `internal/api/problem.go`.
 - Request bodies are capped per route class (`bodyClasses` in `internal/api/middleware.go`): 1 MiB owner JSON, 10 MiB ingest batches, 25 MiB uploads. `X-Forwarded-For`/`-Proto` are trusted only from `VITAMUX_TRUSTED_PROXIES` (comma-separated CIDRs; empty trusts none).
-- `Idempotency-Key` is required on ingest POSTs and accepted on job-creating owner POSTs.
+- `Idempotency-Key` (1–255 characters) is required on ingest batch and blob POSTs and accepted on job-creating owner POSTs. The same key with the same request (method, path, decompressed body) replays the stored response with `Idempotent-Replayed: true`; with a different request it is `409 conflict`. Failed requests store nothing.
 - Auth:
   - UI: session cookie (`HttpOnly; Secure; SameSite=Strict`) + `X-CSRF-Token` header on mutating requests (value from `POST /auth/login` or `GET /auth/session`).
   - API: `Bearer vmx_pat_<id>_<secret>` with scopes `read:health`, `read:config`, `write:config`, `write:documents`, `admin` (implies the others).

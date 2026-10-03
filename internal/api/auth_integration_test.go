@@ -20,6 +20,7 @@ import (
 	"github.com/pquerna/otp/totp"
 
 	"github.com/KaanEmec/vitamux/internal/auth"
+	"github.com/KaanEmec/vitamux/internal/blob"
 	"github.com/KaanEmec/vitamux/internal/crypto"
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/db/dbtest"
@@ -63,7 +64,7 @@ type authEnv struct {
 }
 
 // newAuthEnv builds the real handler over a fresh database with one owner, plus test-only
-// routes standing in for health, config and ingest endpoints that do not exist yet. When
+// routes standing in for health and config endpoints that do not exist yet. When
 // the test ends it asserts that no secret it used reached the logs (E03 acceptance).
 func newAuthEnv(t *testing.T, development bool) *authEnv {
 	t.Helper()
@@ -85,15 +86,19 @@ func newAuthEnv(t *testing.T, development bool) *authEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
+	blobs, err := blob.Open(filepath.Join(t.TempDir(), "blobs"), kr)
+	if err != nil {
+		t.Fatal(err)
+	}
 	logs := &syncBuffer{}
-	rt, err := newRouter(obs.NewLogger(logs, slog.LevelDebug), newUITestFS(), Options{Auth: svc, Development: development})
+	rt, err := newRouter(obs.NewLogger(logs, slog.LevelDebug), newUITestFS(),
+		Options{Auth: svc, Development: development, DB: d, Blobs: blobs})
 	if err != nil {
 		t.Fatal(err)
 	}
 	noContent := func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) }
 	rt.handle("GET /api/v1/test/health", scope(auth.ReadHealth), noContent)
 	rt.handle("PATCH /api/v1/test/config", scope(auth.WriteConfig), noContent)
-	rt.handle("POST /api/ingest/v1/test/{connection}/batches", access{ingest: true}, noContent)
 
 	e := &authEnv{t: t, d: d, svc: svc, h: rt.handler(), userID: uid, logs: logs,
 		secrets: []string{ownerPassword, wrongPassword}}
@@ -423,7 +428,7 @@ func TestAPIKeysAndScopes(t *testing.T) {
 	e.expect(res, body, http.StatusForbidden, CodeForbidden)
 	res, body = e.do(http.MethodGet, "/api/v1/api-keys", "", call{bearer: readTok})
 	e.expect(res, body, http.StatusForbidden, CodeForbidden)
-	res, body = e.do(http.MethodPost, "/api/ingest/v1/test/"+uuid.NewString()+"/batches", "{}", call{bearer: readTok})
+	res, body = e.do(http.MethodPost, "/api/ingest/v1/heartbeat", heartbeatBody(uuid.New(), "2026-09-14T09:00:00Z"), call{bearer: readTok})
 	e.expect(res, body, http.StatusForbidden, CodeForbidden)
 	if e.count("SELECT count(*) FROM api_keys WHERE id = $1 AND last_used_at IS NOT NULL", readID) != 1 {
 		t.Fatal("last_used_at not recorded")
@@ -447,7 +452,11 @@ func TestAPIKeysAndScopes(t *testing.T) {
 
 	_, expTok := create(s, `{"name":"soon","scopes":["read:health"],"expires_at":"`+time.Now().Add(time.Hour).Format(time.RFC3339)+`"}`)
 	e.exec("UPDATE api_keys SET expires_at = now() - interval '1 second' WHERE name = 'soon'")
-	for _, bad := range []string{expTok, adminTok[:len(adminTok)-1] + "A", "vmx_pat_garbage", "not-a-token"} {
+	tampered := adminTok[:len(adminTok)-1] + "A"
+	if tampered == adminTok {
+		tampered = adminTok[:len(adminTok)-1] + "B"
+	}
+	for _, bad := range []string{expTok, tampered, "vmx_pat_garbage", "not-a-token"} {
 		res, body = e.do(http.MethodGet, "/api/v1/test/health", "", call{bearer: bad})
 		e.expect(res, body, http.StatusUnauthorized, CodeUnauthenticated)
 	}
@@ -477,11 +486,11 @@ func TestClientTokens(t *testing.T) {
 	}
 	c := call{bearer: tok}
 
-	res, _ := e.do(http.MethodPost, "/api/ingest/v1/test/"+own.String()+"/batches", "{}", c)
+	res, _ := e.do(http.MethodPost, "/api/ingest/v1/heartbeat", heartbeatBody(own, "2026-09-14T09:00:00Z"), c)
 	if res.StatusCode != http.StatusNoContent {
-		t.Fatalf("ingest into own connection: %d", res.StatusCode)
+		t.Fatalf("report for own connection: %d", res.StatusCode)
 	}
-	res, body := e.do(http.MethodPost, "/api/ingest/v1/test/"+other.String()+"/batches", "{}", c)
+	res, body := e.do(http.MethodPost, "/api/ingest/v1/heartbeat", heartbeatBody(other, "2026-09-14T09:00:00Z"), c)
 	e.expect(res, body, http.StatusForbidden, CodeForbidden)
 	for _, path := range []string{"/api/v1/test/health", "/api/v1/api-keys", "/api/v1/auth/session"} {
 		res, body = e.do(http.MethodGet, path, "", c)
@@ -491,6 +500,6 @@ func TestClientTokens(t *testing.T) {
 		t.Fatal("client last_seen_at not recorded")
 	}
 	e.exec("UPDATE clients SET revoked_at = now()")
-	res, body = e.do(http.MethodPost, "/api/ingest/v1/test/"+own.String()+"/batches", "{}", c)
+	res, body = e.do(http.MethodPost, "/api/ingest/v1/heartbeat", heartbeatBody(own, "2026-09-14T09:00:00Z"), c)
 	e.expect(res, body, http.StatusUnauthorized, CodeUnauthenticated)
 }

@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/KaanEmec/vitamux/internal/auth"
+	"github.com/KaanEmec/vitamux/internal/blob"
+	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/version"
 )
 
@@ -37,6 +39,9 @@ type Options struct {
 	Auth *auth.Service
 	// Development lets the session cookie drop Secure on plain-http requests.
 	Development bool
+	// DB and Blobs back the ingest endpoints, which answer 503 while either is nil.
+	DB    *db.DB
+	Blobs *blob.Store
 }
 
 // NewHandler builds the root HTTP handler: the route table behind the middleware chain.
@@ -73,6 +78,7 @@ func newRouter(log *slog.Logger, ui fs.FS, opts Options) (*router, error) {
 	})
 	rt.mux.Handle("/", uh)
 	rt.authRoutes()
+	rt.ingestRoutes()
 	return rt, nil
 }
 

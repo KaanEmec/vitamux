@@ -73,12 +73,18 @@ paths:
       tags: [ingest]
       operationId: uploadIngestBlob
       summary: Upload one binary file (FIT, GPX, export zip)
-      description: Items reference the file by blob_sha256 (lowercase hex SHA-256 of the uploaded bytes).
+      description: >
+        Items reference the file by blob_sha256 (lowercase hex SHA-256 of the uploaded bytes).
+        Upload it to an existing batch of the same connection before the batch that references it.
       security:
         - clientToken: []
       parameters:
         - $ref: '#/components/parameters/BatchID'
         - $ref: '#/components/parameters/IdempotencyKey'
+        - name: Content-Encoding
+          in: header
+          required: false
+          schema: {type: string, enum: [gzip]}
       requestBody:
         required: true
         content:
@@ -93,7 +99,9 @@ paths:
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
         '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
         '413': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
 
   /api/ingest/v1/heartbeat:
     post:
