@@ -59,3 +59,14 @@ DELETE FROM sessions WHERE user_id = @user_id AND (expires_at <= @now OR last_se
 
 -- name: DeleteUserSessions :execrows
 DELETE FROM sessions WHERE user_id = @user_id;
+
+-- name: ListLiveSessions :many
+SELECT id, created_at, last_seen_at, expires_at FROM sessions
+WHERE user_id = @user_id AND expires_at > @now AND last_seen_at > @idle_since
+ORDER BY last_seen_at DESC, id;
+
+-- name: DeleteUserSession :execrows
+DELETE FROM sessions WHERE id = @id AND user_id = @user_id;
+
+-- name: DeleteOtherSessions :execrows
+DELETE FROM sessions WHERE user_id = @user_id AND id <> @keep;

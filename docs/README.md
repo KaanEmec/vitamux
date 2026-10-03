@@ -25,6 +25,7 @@ Precedence when documents disagree: `CLAUDE.md` (product brief) > ADRs in `docs/
 | [api.md](architecture/api.md) | API conventions, endpoint surface, example payloads | Handlers, OpenAPI, frontend data use |
 | [reliability.md](architecture/reliability.md) | Job queue, scheduler, idempotency, upgrades, health, logs, metrics, backups | Jobs, ops, backup |
 | [security.md](architecture/security.md) | Threat model, keys, DB roles, network, authorization, deletion | Auth, secrets, anything exposed |
+| [security.md](security.md) | Overview: assets, actors, trust boundaries, controls, residual risks | Security reviews, PRs touching anything exposed |
 | [apple-health.md](architecture/apple-health.md) | HealthKit bridge: package, app, sync, payload, origins, pairing | E15 |
 | [lab-documents.md](architecture/lab-documents.md) | PDF storage, extraction providers, review, privacy | E12 |
 | [frontend.md](architecture/frontend.md) | UI stack, navigation, rule builder | E11 |

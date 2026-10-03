@@ -9,5 +9,13 @@
 - [ ] Tests added or updated (`make lint test`, plus `make test-integration` for DB changes)
 - [ ] Docs updated in the smallest relevant file; plan job status and checkboxes updated
 - [ ] ADR added or updated if a decision changed
-- [ ] Security-sensitive area (auth, ingest, documents, connectors)? Reviewed against `docs/architecture/security.md`
 - [ ] Commits are signed off (`git commit -s`)
+
+## Security (when touching auth, routes, ingest, documents, connectors or secrets)
+
+- [ ] New or changed routes: `security` set in `api/openapi.yaml`, a line in `api/authz.yaml`, least access in `rt.handle` (the matrix tests pass)
+- [ ] No state change on GET (CSRF is enforced only on unsafe methods)
+- [ ] Untrusted input (provider responses, uploads, webhooks) is size-limited, validated and fails closed
+- [ ] Secrets stay encrypted or hashed, out of logs, errors, job payloads and fixtures
+- [ ] Sensitive actions are audited without health values or secrets
+- [ ] [`docs/security.md`](../docs/security.md) still holds (new asset, actor, boundary or residual risk?)

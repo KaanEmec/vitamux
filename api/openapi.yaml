@@ -1883,6 +1883,68 @@ paths:
         '409': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
 
+  /api/v1/auth/password:
+    post:
+      tags: [auth]
+      operationId: changePassword
+      summary: Change the password; ends every other session
+      description: >
+        Re-checks the current password (a wrong one is 422 on /current_password; repeated
+        failures answer 429 with Retry-After). The new password needs at least 12 characters.
+        The calling session stays signed in. Audited.
+      security: [{session: [], csrf: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password: {type: string}
+                new_password: {type: string, minLength: 12, maxLength: 1024}
+      responses:
+        '204':
+          description: Changed.
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+        '429': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/auth/sessions:
+    get:
+      tags: [auth]
+      operationId: listSessions
+      summary: List the owner's live sessions
+      security: [{session: []}]
+      responses:
+        '200':
+          description: Live sessions, most recently used first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sessions]
+                properties:
+                  sessions: {type: array, items: {$ref: '#/components/schemas/ActiveSession'}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/auth/sessions/{id}:
+    delete:
+      tags: [auth]
+      operationId: revokeSession
+      summary: End one session (ending the current one also clears its cookie)
+      security: [{session: [], csrf: []}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '204':
+          description: Ended.
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+
   /api/v1/api-keys:
     get:
       tags: [auth]
@@ -2588,6 +2650,15 @@ components:
       properties:
         user: {$ref: '#/components/schemas/User'}
         csrf_token: {type: string}
+    ActiveSession:
+      type: object
+      required: [id, created_at, last_seen_at, expires_at, current]
+      properties:
+        id: {type: string, format: uuid}
+        created_at: {type: string, format: date-time}
+        last_seen_at: {type: string, format: date-time, description: Updated at most once a minute.}
+        expires_at: {type: string, format: date-time, description: Absolute end; the session also ends after 12 h without use.}
+        current: {type: boolean, description: This request's session.}
     TOTPEnrollment:
       type: object
       required: [secret, otpauth_uri]

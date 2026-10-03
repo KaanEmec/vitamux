@@ -100,10 +100,36 @@ test('retention: typed controls, a generic extra key, and a field error', async 
 	]);
 });
 
-test('security: set up TOTP, see recovery codes once, turn it off; unavailable controls are disabled', async ({ page }) => {
+test('security: change the password, then sign out one and all other sessions', async ({ page, settings }) => {
 	await page.goto('/settings/security');
-	await expect(page.getByRole('button', { name: 'Change password' })).toBeDisabled();
+	await expect(page.getByRole('row')).toHaveCount(4); // header plus three sessions
+	await expect(page.getByRole('cell', { name: 'This browser' })).toBeVisible();
+
+	await page.getByLabel('Current password').fill('wrong-synthetic-password');
+	await page.getByLabel('New password').fill('synthetic-password-renewed');
+	await page.getByRole('button', { name: 'Change password' }).click();
+	await expect(page.getByText('does not match')).toBeVisible();
+	await page.getByLabel('Current password').fill('synthetic-password');
+	await page.getByRole('button', { name: 'Change password' }).click();
+	await expect(page.getByText('Every other session was signed out.')).toBeVisible();
+	expect(settings.passwordBodies.at(-1)).toEqual({ current_password: 'synthetic-password', new_password: 'synthetic-password-renewed' });
+	await expect(page.getByRole('row')).toHaveCount(2);
 	await expect(page.getByRole('button', { name: 'Sign out other sessions' })).toBeDisabled();
+
+	settings.sessions.push({ ...settings.sessions[0], id: '00000000-0000-4000-8000-0000000000c4', current: false },
+		{ ...settings.sessions[0], id: '00000000-0000-4000-8000-0000000000c5', current: false });
+	await page.reload();
+	await page.getByRole('button', { name: /^Sign out session from/ }).first().click();
+	await expect(page.getByText('Session signed out.')).toBeVisible();
+	await expect(page.getByRole('row')).toHaveCount(3);
+	await page.getByRole('button', { name: 'Sign out other sessions' }).click();
+	await expect(page.getByText('Other sessions signed out.')).toBeVisible();
+	await expect(page.getByRole('row')).toHaveCount(2);
+	expect(settings.sessions.map((s) => s.current)).toEqual([true]);
+});
+
+test('security: set up TOTP, see recovery codes once, turn it off', async ({ page }) => {
+	await page.goto('/settings/security');
 
 	await page.getByRole('button', { name: 'Set up two-factor' }).click();
 	await expect(page.getByLabel('Setup key')).toHaveText('SYNTHETICSECRET');

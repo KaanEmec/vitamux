@@ -39,10 +39,14 @@ var dummyHash = sync.OnceValue(func() string { return mustHash("vitamux-dummy-pa
 // HashPassword returns an argon2id PHC string:
 // $argon2id$v=19$m=65536,t=3,p=2$<salt>$<key> (unpadded standard base64).
 func HashPassword(password string) (string, error) {
-	if n := utf8.RuneCountInString(password); n < MinPasswordLen || len(password) > maxPasswordLen {
+	if !acceptablePassword(password) {
 		return "", ErrWeakPassword
 	}
 	return hashPassword(password)
+}
+
+func acceptablePassword(password string) bool {
+	return utf8.RuneCountInString(password) >= MinPasswordLen && len(password) <= maxPasswordLen
 }
 
 func hashPassword(password string) (string, error) {

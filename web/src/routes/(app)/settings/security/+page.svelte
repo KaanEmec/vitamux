@@ -1,14 +1,15 @@
 <!--
-	Security: password, two-factor (TOTP) and sessions. Changing the password and listing or
-	revoking sessions have no API operation yet (see api/openapi.yaml), so those controls are
-	shown disabled; TOTP enrolment, recovery codes and disabling use the auth endpoints.
+	Security: password, two-factor (TOTP) and sessions, all through the session-only auth
+	endpoints. Changing the password signs out every other session.
 -->
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { api, fieldErrors, type Problem, type Schemas } from '#lib/api/client.ts';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import StatusIcon from '#lib/components/StatusIcon.svelte';
 	import TextField from '#lib/components/TextField.svelte';
 	import { session, setSession } from '#lib/session.svelte.ts';
+	import { when } from '#lib/settings/format.ts';
 	import Notice from '#lib/settings/Notice.svelte';
 
 	let problem = $state<Problem | null>(null);
@@ -26,6 +27,50 @@
 	let disabling = $state(false);
 
 	const enabled = $derived(session.user?.totp_enabled === true);
+
+	let currentPassword = $state('');
+	let newPassword = $state('');
+	let sessions = $state<Schemas['ActiveSession'][] | null>(null);
+	const others = $derived((sessions ?? []).filter((s) => !s.current));
+
+	async function loadSessions() {
+		const { data, error } = await api.GET('/api/v1/auth/sessions');
+		if (error) problem = error;
+		else sessions = data.sessions;
+	}
+	onMount(() => void loadSessions());
+
+	async function changePassword(e: SubmitEvent) {
+		e.preventDefault();
+		problem = null;
+		notice = '';
+		busy = true;
+		const { error } = await api.POST('/api/v1/auth/password', { body: { current_password: currentPassword, new_password: newPassword } });
+		busy = false;
+		if (error) {
+			problem = error;
+			return;
+		}
+		currentPassword = newPassword = '';
+		notice = 'Password changed. Every other session was signed out.';
+		await loadSessions();
+	}
+
+	async function revoke(ids: string[], done: string) {
+		problem = null;
+		notice = '';
+		busy = true;
+		for (const id of ids) {
+			const { error } = await api.DELETE('/api/v1/auth/sessions/{id}', { params: { path: { id } } });
+			if (error) {
+				problem = error;
+				break;
+			}
+		}
+		busy = false;
+		if (!problem) notice = done;
+		await loadSessions();
+	}
 
 	async function refreshSession() {
 		const { data } = await api.GET('/api/v1/auth/session');
@@ -81,18 +126,15 @@
 
 <svelte:head><title>Security · Vitamux</title></svelte:head>
 
-<ProblemAlert {problem} fields={['code', 'password', 'totp_code', 'recovery_code']} />
+<ProblemAlert {problem} fields={['code', 'password', 'totp_code', 'recovery_code', 'current_password', 'new_password']} />
 {#if notice}<Notice>{notice}</Notice>{/if}
 
 <section aria-labelledby="password-h">
 	<h2 id="password-h">Password</h2>
-	<Notice status="info">Changing the password from the app is not available in this version yet.</Notice>
-	<form>
-		<fieldset disabled>
-			<TextField label="Current password" name="current_password" type="password" autocomplete="current-password" />
-			<TextField label="New password" name="new_password" type="password" autocomplete="new-password" />
-			<button class="btn primary" type="button">Change password</button>
-		</fieldset>
+	<form onsubmit={changePassword}>
+		<TextField label="Current password" name="current_password" type="password" bind:value={currentPassword} error={errors.current_password} autocomplete="current-password" required />
+		<TextField label="New password" name="new_password" type="password" bind:value={newPassword} error={errors.new_password} hint="At least 12 characters. Other sessions are signed out." autocomplete="new-password" minlength={12} required />
+		<button class="btn primary" type="submit" disabled={busy}>Change password</button>
 	</form>
 </section>
 
@@ -145,6 +187,28 @@
 
 <section aria-labelledby="sessions-h">
 	<h2 id="sessions-h">Sessions</h2>
-	<Notice status="info">Listing and revoking other sessions is not available in this version yet. Signing out ends this browser's session.</Notice>
-	<button class="btn" type="button" disabled>Sign out other sessions</button>
+	{#if sessions === null}
+		<p class="muted" role="status">Loading sessions…</p>
+	{:else}
+		<table>
+			<caption class="visually-hidden">Sessions</caption>
+			<thead>
+				<tr><th scope="col">Signed in</th><th scope="col">Last active</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+			</thead>
+			<tbody>
+				{#each sessions as s (s.id)}
+					<tr>
+						<td>{when(s.created_at)}</td>
+						<td>{when(s.last_seen_at)}</td>
+						<td>
+							{#if s.current}This browser{:else}
+								<button class="btn" type="button" onclick={() => revoke([s.id], 'Session signed out.')} disabled={busy} aria-label="Sign out session from {when(s.created_at)}">Sign out</button>
+							{/if}
+						</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	{/if}
+	<button class="btn" type="button" onclick={() => revoke(others.map((s) => s.id), 'Other sessions signed out.')} disabled={busy || others.length === 0}>Sign out other sessions</button>
 </section>

@@ -1,0 +1,110 @@
+# Route × principal matrix (J13.1; docs/security.md, docs/architecture/security.md#authorization).
+# One line per operation in openapi.yaml, keyed "METHOD /path" with the spec's path.
+#
+#   allow:   public    no credentials (authorized by something else: OAuth state, hook token)
+#            session   the owner's browser session only
+#            client    a client or device token, only for its own connection
+#            <scope>   the owner's session, or an API key with this scope or admin
+#                      (read:health, read:config, write:config, write:documents, admin)
+#   csrf:    true      a session request needs X-CSRF-Token (unsafe method allowing a session)
+#   planned: true      in the spec but not served yet; delete it when the route is registered
+#
+# TestAuthzMatrix fails when this file, the registered routes and the spec's `security`
+# disagree; TestAuthzMatrixEnforced (integration) calls every served route as every principal.
+routes:
+  POST /api/ingest/v1/batches: {allow: client}
+  GET /api/ingest/v1/batches/{batch_id}: {allow: client}
+  POST /api/ingest/v1/batches/{batch_id}/blobs: {allow: client}
+  POST /api/ingest/v1/heartbeat: {allow: client}
+  GET /api/v1/metrics: {allow: read:health, planned: true}
+  GET /api/v1/metrics/{code}: {allow: read:health, planned: true}
+  GET /api/v1/measurements: {allow: read:health}
+  POST /api/v1/measurements/manual: {allow: write:config, csrf: true}
+  GET /api/v1/groups: {allow: read:health}
+  GET /api/v1/blood-pressure: {allow: read:health}
+  GET /api/v1/sleep: {allow: read:health}
+  GET /api/v1/sleep/{id}: {allow: read:health}
+  GET /api/v1/workouts: {allow: read:health}
+  GET /api/v1/workouts/{id}: {allow: read:health}
+  GET /api/v1/provenance/{entity}/{id}: {allow: read:health}
+  GET /api/v1/resolved/daily: {allow: read:health, planned: true}
+  GET /api/v1/resolved/series: {allow: read:health, planned: true}
+  GET /api/v1/resolved/sleep: {allow: read:health, planned: true}
+  GET /api/v1/resolved/workouts: {allow: read:health, planned: true}
+  GET /api/v1/resolved/{metric}/{window_key}/sources: {allow: read:health, planned: true}
+  POST /api/v1/resolution/preview: {allow: read:health, csrf: true, planned: true}
+  GET /api/v1/rules: {allow: read:config}
+  GET /api/v1/rules/{metric}/versions: {allow: read:config}
+  POST /api/v1/rules/{metric}/versions: {allow: write:config, csrf: true}
+  POST /api/v1/rules/{metric}/activate: {allow: write:config, csrf: true}
+  GET /api/v1/overrides: {allow: read:config}
+  POST /api/v1/overrides: {allow: write:config, csrf: true}
+  POST /api/v1/overrides/{id}/revoke: {allow: write:config, csrf: true}
+  GET /api/v1/coverage: {allow: read:health, planned: true}
+  GET /api/v1/system/status: {allow: read:config, planned: true}
+  GET /api/v1/system/version: {allow: read:config}
+  GET /api/v1/jobs: {allow: read:config}
+  GET /api/v1/connections: {allow: read:config}
+  POST /api/v1/connections: {allow: write:config, csrf: true}
+  GET /api/v1/connections/{id}: {allow: read:config}
+  PATCH /api/v1/connections/{id}: {allow: write:config, csrf: true}
+  DELETE /api/v1/connections/{id}: {allow: write:config, csrf: true}
+  POST /api/v1/connections/{id}/auth/begin: {allow: session, csrf: true}
+  POST /api/v1/providers/{provider}/auth/begin: {allow: session, csrf: true}
+  POST /api/v1/connections/{id}/auth/continue: {allow: write:config, csrf: true, planned: true}
+  POST /api/v1/connections/{id}/sync: {allow: write:config, csrf: true}
+  GET /api/v1/connections/{id}/backfills: {allow: read:config}
+  POST /api/v1/connections/{id}/backfills: {allow: write:config, csrf: true}
+  GET /api/v1/connections/{id}/backfills/{backfill_id}: {allow: read:config}
+  POST /api/v1/connections/{id}/backfills/{backfill_id}/retry: {allow: write:config, csrf: true}
+  POST /api/v1/connections/{id}/backfills/{backfill_id}/cancel: {allow: write:config, csrf: true}
+  GET /api/v1/connections/{id}/runs: {allow: read:config}
+  GET /api/v1/connections/{id}/streams: {allow: read:config}
+  POST /api/v1/connections/{id}/streams/{stream}/reset-cursor: {allow: write:config, csrf: true}
+  GET /api/v1/schedules: {allow: read:config}
+  PATCH /api/v1/schedules/{id}: {allow: write:config, csrf: true}
+  GET /api/v1/devices: {allow: read:config, planned: true}
+  POST /api/v1/devices/pairing-codes: {allow: write:config, csrf: true, planned: true}
+  POST /api/v1/devices/{id}/request-anchor-reset: {allow: write:config, csrf: true, planned: true}
+  POST /api/v1/devices/{id}/revoke: {allow: write:config, csrf: true, planned: true}
+  GET /api/v1/documents: {allow: read:health}
+  POST /api/v1/documents: {allow: write:documents, csrf: true}
+  GET /api/v1/documents/{id}: {allow: read:health}
+  DELETE /api/v1/documents/{id}: {allow: write:documents, csrf: true}
+  GET /api/v1/documents/{id}/file: {allow: read:health}
+  GET /api/v1/documents/{id}/extractions: {allow: read:health}
+  POST /api/v1/documents/{id}/extractions: {allow: write:documents, csrf: true}
+  GET /api/v1/extractors: {allow: read:config}
+  GET /api/v1/extractions/{id}: {allow: read:health}
+  PATCH /api/v1/extractions/{id}/rows/{row}: {allow: write:documents, csrf: true}
+  POST /api/v1/extractions/{id}/confirm: {allow: write:documents, csrf: true}
+  POST /api/v1/extractions/{id}/unconfirm: {allow: write:documents, csrf: true}
+  GET /api/v1/lab-results: {allow: read:health}
+  GET /api/v1/lab-results/{id}/history: {allow: read:health}
+  GET /api/v1/analytes/aliases: {allow: read:config}
+  POST /api/v1/analytes/aliases: {allow: write:config, csrf: true}
+  DELETE /api/v1/analytes/aliases/{id}: {allow: write:config, csrf: true}
+  POST /api/v1/exports: {allow: admin, csrf: true}
+  GET /api/v1/exports/{id}: {allow: admin}
+  GET /api/v1/exports/{id}/download: {allow: admin}
+  POST /api/v1/auth/login: {allow: public}
+  POST /api/v1/auth/logout: {allow: session, csrf: true}
+  GET /api/v1/auth/session: {allow: session}
+  POST /api/v1/auth/totp/enroll: {allow: session, csrf: true}
+  POST /api/v1/auth/totp/confirm: {allow: session, csrf: true}
+  POST /api/v1/auth/totp/disable: {allow: session, csrf: true}
+  POST /api/v1/auth/password: {allow: session, csrf: true}
+  GET /api/v1/auth/sessions: {allow: session}
+  DELETE /api/v1/auth/sessions/{id}: {allow: session, csrf: true}
+  GET /api/v1/api-keys: {allow: admin}
+  POST /api/v1/api-keys: {allow: admin, csrf: true}
+  DELETE /api/v1/api-keys/{id}: {allow: admin, csrf: true}
+  GET /api/v1/settings: {allow: read:config}
+  PATCH /api/v1/settings: {allow: write:config, csrf: true}
+  GET /api/v1/timezone-periods: {allow: read:config}
+  POST /api/v1/timezone-periods: {allow: write:config, csrf: true}
+  PATCH /api/v1/timezone-periods/{id}: {allow: write:config, csrf: true}
+  DELETE /api/v1/timezone-periods/{id}: {allow: write:config, csrf: true}
+  GET /oauth/{provider}/callback: {allow: public}
+  GET /webhooks/withings/{hook_token}: {allow: public}
+  POST /webhooks/withings/{hook_token}: {allow: public}

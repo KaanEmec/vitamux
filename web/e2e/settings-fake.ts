@@ -1,4 +1,4 @@
-// A stateful stand-in for the settings, timezone, API key, export, TOTP and status
+// A stateful stand-in for the settings, timezone, API key, export, TOTP, password, session and status
 // endpoints used by the Settings section (J11.5), on top of fake-api.ts. All values are
 // synthetic. Settings PATCH is a merge patch (retention.raw_days merges per provider).
 import type { Page, Route } from '@playwright/test';
@@ -38,6 +38,13 @@ export class SettingsApi {
 		failing_jobs: []
 	};
 	totpEnabled = false;
+	/** Bodies of POST /auth/password, in order. */
+	passwordBodies: Json[] = [];
+	sessions = [
+		{ id: '00000000-0000-4000-8000-0000000000c1', created_at: '2026-10-03T08:00:00Z', last_seen_at: '2026-10-03T09:00:00Z', expires_at: '2026-10-10T08:00:00Z', current: true },
+		{ id: '00000000-0000-4000-8000-0000000000c2', created_at: '2026-10-01T08:00:00Z', last_seen_at: '2026-10-02T09:00:00Z', expires_at: '2026-10-08T08:00:00Z', current: false },
+		{ id: '00000000-0000-4000-8000-0000000000c3', created_at: '2026-09-30T08:00:00Z', last_seen_at: '2026-10-01T09:00:00Z', expires_at: '2026-10-07T08:00:00Z', current: false }
+	];
 	private next = 1;
 
 	constructor(private page: Page) {}
@@ -118,6 +125,19 @@ export class SettingsApi {
 		if (path === '/auth/totp/disable') {
 			if ((body().password as string) !== 'synthetic-password') return problem(r, 401, 'unauthenticated', 'invalid password or code');
 			this.totpEnabled = false;
+			return r.fulfill({ status: 204 });
+		}
+		if (path === '/auth/password' && method === 'POST') {
+			const b = body();
+			this.passwordBodies.push(b);
+			if (b.current_password !== 'synthetic-password') return problem(r, 422, 'validation_failed', 'the current password is wrong', [{ pointer: '/current_password', detail: 'does not match' }]);
+			this.sessions = this.sessions.filter((s) => s.current);
+			return r.fulfill({ status: 204 });
+		}
+		if (path === '/auth/sessions' && method === 'GET') return json(r, 200, { sessions: this.sessions });
+		if ((m = path.match(/^\/auth\/sessions\/([^/]+)$/)) && method === 'DELETE') {
+			if (!this.sessions.some((s) => s.id === m![1])) return problem(r, 404, 'not_found', 'no session with this id');
+			this.sessions = this.sessions.filter((s) => s.id !== m![1]);
 			return r.fulfill({ status: 204 });
 		}
 		if (path === '/auth/session' && method === 'GET') {

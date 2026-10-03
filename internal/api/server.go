@@ -95,6 +95,7 @@ func newRouter(log *slog.Logger, ui fs.FS, opts Options) (*router, error) {
 	})
 	rt.mux.Handle("/", uh)
 	rt.authRoutes()
+	rt.accountRoutes()
 	rt.systemRoutes()
 	rt.ingestRoutes()
 	rt.oauthRoutes()
