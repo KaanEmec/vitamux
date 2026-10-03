@@ -47,41 +47,48 @@
 
 ## Example: resolved day
 
-`GET /api/v1/resolved/daily?start_date=2026-09-14&end_date=2026-09-14&metrics=steps,blood_pressure` (synthetic). Each metric has the shape described in [resolution.md](resolution.md#result-shape).
+`GET /api/v1/resolved/daily?start_date=2025-09-14&end_date=2025-09-14&metrics=steps,blood_pressure` on the synthetic fixturegen persona ([fixtures](../../fixtures/README.md)), with the owner's steps rule `maximum_across_sources` over garmin, apple_watch and withings that excludes relayed Apple Health data, and the built-in blood pressure rule. Each metric has the shape of [resolution.md](resolution.md#result-shape); family values are keyed by catalogue code. Abbreviated: `TestResolvedDocExamples` (`internal/api/resolved_integration_test.go`) checks that every field shown is in the real response, and `…` elides the rest of a string.
 
 ```json
-{"timezone": "Europe/Amsterdam",
- "days": [{"local_date": "2026-09-14", "metrics": {
-   "steps": {"status": "calculated", "value": 11342, "unit": "count",
-     "window": {"kind": "local_day", "start": "2026-09-14T00:00:00+02:00", "end": "2026-09-15T00:00:00+02:00"},
-     "rule": {"ref": "user:steps", "version": 4, "strategy": "maximum_across_sources"},
+{"timezone": "Europe/Berlin",
+ "days": [{"local_date": "2025-09-14", "metrics": {
+   "steps": {"status": "calculated", "value": 6114, "unit": "count",
+     "window": {"kind": "local_day", "local_date": "2025-09-14", "start": "2025-09-14T00:00:00+02:00", "end": "2025-09-15T00:00:00+02:00"},
+     "rule": {"ref": "rule:steps:2", "version": 2, "strategy": "maximum_across_sources"},
      "inputs": [
-       {"group": "garmin", "status": "used", "selected": true, "value": 11342, "basis": "daily_value", "coverage": 0.96},
-       {"group": "apple_watch", "status": "used", "selected": false, "value": 10877, "basis": "intervals", "coverage": 0.92},
-       {"group": "withings", "status": "no_data"}],
-     "explanation": "Maximum of 2 eligible sources: Garmin daily total 11,342 (selected); Apple Watch 10,877. Withings had no data.",
-     "links": {"sources": "/api/v1/resolved/steps/2026-09-14/sources"}},
-   "blood_pressure": {"status": "direct", "value": {"systolic": 121, "diastolic": 79, "pulse": 64},
-     "rule": {"ref": "builtin:blood_pressure", "version": 1, "strategy": "latest"},
-     "inputs": [{"group": "withings", "status": "used", "selected": true, "basis": "reading", "readings": 2}],
-     "explanation": "Latest of 2 Withings readings (components from the same reading)."}}}]}
+       {"group": "garmin", "status": "used", "selected": false, "value": 6061, "basis": "daily_value", "coverage": 1},
+       {"group": "apple_watch", "status": "used", "selected": true, "value": 6114, "basis": "intervals", "count": 83, "coverage": 0.628,
+        "sources": [{"provider": "apple_health", "connection_id": "conn_…", "device": {"type": "watch"}, "origin": {"key": "com.apple.health.synthetic-watch"}}]},
+       {"group": "withings", "status": "no_data", "reason": "no_inputs"},
+       {"group": null, "status": "excluded", "reason": "exclude: provider=apple_health relayed=true", "count": 16},
+       {"group": null, "status": "not_in_rule", "count": 21}],
+     "explanation": "Maximum of 2 sources: garmin 6,061 (daily total); apple_watch 6,114 (83 intervals), selected. No data from withings. Excluded by the rule: apple_health com.garmin.connect.mobile watch (16 rows, exclude: provider=apple_health relayed=true). Outside the rule: apple_health com.apple.health.synthetic-phone phone (21 rows).",
+     "links": {"sources": "/api/v1/resolved/steps/2025-09-14/sources"}},
+   "blood_pressure": {"status": "direct", "value": {"bp_systolic": 126.5, "bp_diastolic": 75.5, "bp_pulse": 63.5},
+     "rule": {"ref": "builtin:blood_pressure:1", "version": 1, "strategy": "first_available"},
+     "inputs": [{"group": "bp_monitor", "status": "used", "selected": true, "basis": "mean", "readings": 2},
+       {"group": "watch_cuff", "status": "no_data"}, {"group": "manual", "status": "no_data"}],
+     "explanation": "Used bp_monitor: bp_systolic 126.5, bp_diastolic 75.5, bp_pulse 63.5 (mean of 2 readings). No data from watch_cuff, manual."}}}]}
 ```
+
+Inputs list their `record_refs` up to 100 rows; the drilldown links the rest. `/resolved/daily` resolves night metrics (the sleep family, `local_night` rules) on the night of each date and everything else on its `local_day`, from `resolved_cache` where it can. `/resolved/series` pages windows of one metric (`window` = a kind or a bucket size) with the groups behind each point; `/resolved/sleep` lists each night's main episode with every source that recorded it; `/resolved/workouts` lists clusters of overlapping workouts with the member the `heart_rate` rule picks (workouts have no rule family yet, [ADR-0008](../adr/0008-rule-schema.md)). `POST /resolution/preview {spec, start_date, end_date}` validates a draft like rule creation and returns `days[{local_date, draft, active}]`, both resolved live: it stores no rule, cache row or job.
 
 ## Example: all-sources drilldown
 
-`GET /api/v1/resolved/steps/2026-09-14/sources` lists every source, including those excluded or outside the rule:
+`GET /api/v1/resolved/steps/2025-09-14/sources` (same data) lists every source, including those excluded or outside the rule. Window keys are dates or UTC window starts; `?window=` picks the kind when the key is ambiguous.
 
 ```json
-{"metric": "steps", "window": {"kind": "local_day", "local_date": "2026-09-14"}, "rule": {"ref": "user:steps", "version": 4},
+{"metric": "steps", "window": {"kind": "local_day", "local_date": "2025-09-14", "key": "2025-09-14"}, "rule": {"ref": "rule:steps:2", "version": 2},
  "sources": [
   {"group": "garmin", "rule_status": "used", "provider": "garmin", "device": {"type": "watch"},
-   "values": {"daily_value": 11342, "interval_sum": 11290, "intervals": 96},
-   "records": {"href": "/api/v1/measurements?metric=steps&connection=conn_…&start=…&end=…&include=provenance"},
-   "provenance": {"raw_payload_ids": ["4411"], "normalizer": "garmin.daily_summary@3", "fetched_at": "2026-09-14T21:02:11Z"}},
-  {"group": null, "rule_status": "excluded", "reason": "exclude: relayed=true", "provider": "apple_health",
-   "origin": {"key": "com.garmin.connect.mobile", "relayed_provider": "garmin"}, "values": {"interval_sum": 11288}},
+   "values": {"daily_value": 6061, "interval_sum": 6061, "intervals": 62}, "count": 63,
+   "records": {"href": "/api/v1/measurements?connection=conn_…"},
+   "provenance": {"raw_payload_ids": ["…"], "normalizer": "fixtureload@1", "fetched_at": "2025-09-14T11:40:00Z"}},
+  {"group": null, "rule_status": "excluded", "reason": "exclude: provider=apple_health relayed=true", "provider": "apple_health",
+   "origin": {"key": "com.garmin.connect.mobile", "relayed": true, "relayed_provider": "garmin"}, "values": {"interval_sum": 6061, "intervals": 16}},
+  {"group": "apple_watch", "rule_status": "used", "provider": "apple_health", "values": {"interval_sum": 6114, "intervals": 83}},
   {"group": null, "rule_status": "not_in_rule", "provider": "apple_health",
-   "origin": {"name": "iPhone"}, "device": {"type": "phone"}, "values": {"interval_sum": 6034}}]}
+   "origin": {"key": "com.apple.health.synthetic-phone"}, "device": {"type": "phone"}, "values": {"interval_sum": 4760, "intervals": 21}}]}
 ```
 
 ## Exports

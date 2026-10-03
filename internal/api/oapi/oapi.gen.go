@@ -87,6 +87,33 @@ func (e BackfillUnitStatus) Valid() bool {
 	}
 }
 
+// Defines values for ComputedValueStatus.
+const (
+	ComputedValueStatusCalculated ComputedValueStatus = "calculated"
+	ComputedValueStatusDirect     ComputedValueStatus = "direct"
+	ComputedValueStatusFallback   ComputedValueStatus = "fallback"
+	ComputedValueStatusNoData     ComputedValueStatus = "no_data"
+	ComputedValueStatusOverridden ComputedValueStatus = "overridden"
+)
+
+// Valid indicates whether the value is a known member of the ComputedValueStatus enum.
+func (e ComputedValueStatus) Valid() bool {
+	switch e {
+	case ComputedValueStatusCalculated:
+		return true
+	case ComputedValueStatusDirect:
+		return true
+	case ComputedValueStatusFallback:
+		return true
+	case ComputedValueStatusNoData:
+		return true
+	case ComputedValueStatusOverridden:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ConnectionMode.
 const (
 	InProcess ConnectionMode = "in_process"
@@ -177,6 +204,27 @@ func (e DocumentStatus) Valid() bool {
 	case DocumentStatusNeedsReview:
 		return true
 	case DocumentStatusUploaded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DrilldownSourceRuleStatus.
+const (
+	DrilldownSourceRuleStatusExcluded  DrilldownSourceRuleStatus = "excluded"
+	DrilldownSourceRuleStatusNotInRule DrilldownSourceRuleStatus = "not_in_rule"
+	DrilldownSourceRuleStatusUsed      DrilldownSourceRuleStatus = "used"
+)
+
+// Valid indicates whether the value is a known member of the DrilldownSourceRuleStatus enum.
+func (e DrilldownSourceRuleStatus) Valid() bool {
+	switch e {
+	case DrilldownSourceRuleStatusExcluded:
+		return true
+	case DrilldownSourceRuleStatusNotInRule:
+		return true
+	case DrilldownSourceRuleStatusUsed:
 		return true
 	default:
 		return false
@@ -468,6 +516,129 @@ func (e MeasurementKind) Valid() bool {
 	}
 }
 
+// Defines values for MetricAggregation.
+const (
+	MetricAggregationAdditive     MetricAggregation = "additive"
+	MetricAggregationDailySummary MetricAggregation = "daily_summary"
+	MetricAggregationIntensive    MetricAggregation = "intensive"
+	MetricAggregationLatest       MetricAggregation = "latest"
+	MetricAggregationSleepDerived MetricAggregation = "sleep_derived"
+)
+
+// Valid indicates whether the value is a known member of the MetricAggregation enum.
+func (e MetricAggregation) Valid() bool {
+	switch e {
+	case MetricAggregationAdditive:
+		return true
+	case MetricAggregationDailySummary:
+		return true
+	case MetricAggregationIntensive:
+		return true
+	case MetricAggregationLatest:
+		return true
+	case MetricAggregationSleepDerived:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MetricKinds.
+const (
+	MetricKindsCumulative MetricKinds = "cumulative"
+	MetricKindsDailyValue MetricKinds = "daily_value"
+	MetricKindsInterval   MetricKinds = "interval"
+	MetricKindsSample     MetricKinds = "sample"
+)
+
+// Valid indicates whether the value is a known member of the MetricKinds enum.
+func (e MetricKinds) Valid() bool {
+	switch e {
+	case MetricKindsCumulative:
+		return true
+	case MetricKindsDailyValue:
+		return true
+	case MetricKindsInterval:
+		return true
+	case MetricKindsSample:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MetricStrategies.
+const (
+	MetricStrategiesEarliest             MetricStrategies = "earliest"
+	MetricStrategiesEventPriority        MetricStrategies = "event_priority"
+	MetricStrategiesFirstAvailable       MetricStrategies = "first_available"
+	MetricStrategiesLatest               MetricStrategies = "latest"
+	MetricStrategiesMaximumAcrossSources MetricStrategies = "maximum_across_sources"
+	MetricStrategiesMeanAcrossSources    MetricStrategies = "mean_across_sources"
+	MetricStrategiesMinimumAcrossSources MetricStrategies = "minimum_across_sources"
+	MetricStrategiesSingleSource         MetricStrategies = "single_source"
+	MetricStrategiesSumAcrossSources     MetricStrategies = "sum_across_sources"
+)
+
+// Valid indicates whether the value is a known member of the MetricStrategies enum.
+func (e MetricStrategies) Valid() bool {
+	switch e {
+	case MetricStrategiesEarliest:
+		return true
+	case MetricStrategiesEventPriority:
+		return true
+	case MetricStrategiesFirstAvailable:
+		return true
+	case MetricStrategiesLatest:
+		return true
+	case MetricStrategiesMaximumAcrossSources:
+		return true
+	case MetricStrategiesMeanAcrossSources:
+		return true
+	case MetricStrategiesMinimumAcrossSources:
+		return true
+	case MetricStrategiesSingleSource:
+		return true
+	case MetricStrategiesSumAcrossSources:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MetricWindows.
+const (
+	MetricWindowsBucket       MetricWindows = "bucket"
+	MetricWindowsHour         MetricWindows = "hour"
+	MetricWindowsLatest       MetricWindows = "latest"
+	MetricWindowsLocalDay     MetricWindows = "local_day"
+	MetricWindowsLocalNight   MetricWindows = "local_night"
+	MetricWindowsReading      MetricWindows = "reading"
+	MetricWindowsSleepEpisode MetricWindows = "sleep_episode"
+)
+
+// Valid indicates whether the value is a known member of the MetricWindows enum.
+func (e MetricWindows) Valid() bool {
+	switch e {
+	case MetricWindowsBucket:
+		return true
+	case MetricWindowsHour:
+		return true
+	case MetricWindowsLatest:
+		return true
+	case MetricWindowsLocalDay:
+		return true
+	case MetricWindowsLocalNight:
+		return true
+	case MetricWindowsReading:
+		return true
+	case MetricWindowsSleepEpisode:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OverrideAction.
 const (
 	OverrideActionExcludeInput OverrideAction = "exclude_input"
@@ -512,31 +683,31 @@ func (e OverrideInputAction) Valid() bool {
 
 // Defines values for OverrideWindowKind.
 const (
-	Bucket       OverrideWindowKind = "bucket"
-	Hour         OverrideWindowKind = "hour"
-	Latest       OverrideWindowKind = "latest"
-	LocalDay     OverrideWindowKind = "local_day"
-	LocalNight   OverrideWindowKind = "local_night"
-	Reading      OverrideWindowKind = "reading"
-	SleepEpisode OverrideWindowKind = "sleep_episode"
+	OverrideWindowKindBucket       OverrideWindowKind = "bucket"
+	OverrideWindowKindHour         OverrideWindowKind = "hour"
+	OverrideWindowKindLatest       OverrideWindowKind = "latest"
+	OverrideWindowKindLocalDay     OverrideWindowKind = "local_day"
+	OverrideWindowKindLocalNight   OverrideWindowKind = "local_night"
+	OverrideWindowKindReading      OverrideWindowKind = "reading"
+	OverrideWindowKindSleepEpisode OverrideWindowKind = "sleep_episode"
 )
 
 // Valid indicates whether the value is a known member of the OverrideWindowKind enum.
 func (e OverrideWindowKind) Valid() bool {
 	switch e {
-	case Bucket:
+	case OverrideWindowKindBucket:
 		return true
-	case Hour:
+	case OverrideWindowKindHour:
 		return true
-	case Latest:
+	case OverrideWindowKindLatest:
 		return true
-	case LocalDay:
+	case OverrideWindowKindLocalDay:
 		return true
-	case LocalNight:
+	case OverrideWindowKindLocalNight:
 		return true
-	case Reading:
+	case OverrideWindowKindReading:
 		return true
-	case SleepEpisode:
+	case OverrideWindowKindSleepEpisode:
 		return true
 	default:
 		return false
@@ -567,27 +738,54 @@ func (e ProvenanceEntity) Valid() bool {
 	}
 }
 
+// Defines values for ResolvedPointStatus.
+const (
+	ResolvedPointStatusCalculated ResolvedPointStatus = "calculated"
+	ResolvedPointStatusDirect     ResolvedPointStatus = "direct"
+	ResolvedPointStatusFallback   ResolvedPointStatus = "fallback"
+	ResolvedPointStatusNoData     ResolvedPointStatus = "no_data"
+	ResolvedPointStatusOverridden ResolvedPointStatus = "overridden"
+)
+
+// Valid indicates whether the value is a known member of the ResolvedPointStatus enum.
+func (e ResolvedPointStatus) Valid() bool {
+	switch e {
+	case ResolvedPointStatusCalculated:
+		return true
+	case ResolvedPointStatusDirect:
+		return true
+	case ResolvedPointStatusFallback:
+		return true
+	case ResolvedPointStatusNoData:
+		return true
+	case ResolvedPointStatusOverridden:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ResolvedValueStatus.
 const (
-	Calculated ResolvedValueStatus = "calculated"
-	Direct     ResolvedValueStatus = "direct"
-	Fallback   ResolvedValueStatus = "fallback"
-	NoData     ResolvedValueStatus = "no_data"
-	Overridden ResolvedValueStatus = "overridden"
+	ResolvedValueStatusCalculated ResolvedValueStatus = "calculated"
+	ResolvedValueStatusDirect     ResolvedValueStatus = "direct"
+	ResolvedValueStatusFallback   ResolvedValueStatus = "fallback"
+	ResolvedValueStatusNoData     ResolvedValueStatus = "no_data"
+	ResolvedValueStatusOverridden ResolvedValueStatus = "overridden"
 )
 
 // Valid indicates whether the value is a known member of the ResolvedValueStatus enum.
 func (e ResolvedValueStatus) Valid() bool {
 	switch e {
-	case Calculated:
+	case ResolvedValueStatusCalculated:
 		return true
-	case Direct:
+	case ResolvedValueStatusDirect:
 		return true
-	case Fallback:
+	case ResolvedValueStatusFallback:
 		return true
-	case NoData:
+	case ResolvedValueStatusNoData:
 		return true
-	case Overridden:
+	case ResolvedValueStatusOverridden:
 		return true
 	default:
 		return false
@@ -633,6 +831,27 @@ func (e Scope) Valid() bool {
 	case WriteConfig:
 		return true
 	case WriteDocuments:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SleepMemberRuleStatus.
+const (
+	SleepMemberRuleStatusExcluded  SleepMemberRuleStatus = "excluded"
+	SleepMemberRuleStatusNotInRule SleepMemberRuleStatus = "not_in_rule"
+	SleepMemberRuleStatusUsed      SleepMemberRuleStatus = "used"
+)
+
+// Valid indicates whether the value is a known member of the SleepMemberRuleStatus enum.
+func (e SleepMemberRuleStatus) Valid() bool {
+	switch e {
+	case SleepMemberRuleStatusExcluded:
+		return true
+	case SleepMemberRuleStatusNotInRule:
+		return true
+	case SleepMemberRuleStatusUsed:
 		return true
 	default:
 		return false
@@ -687,27 +906,6 @@ func (e SleepStageStage) Valid() bool {
 	}
 }
 
-// Defines values for SourcesDrilldownSourcesRuleStatus.
-const (
-	Excluded  SourcesDrilldownSourcesRuleStatus = "excluded"
-	NotInRule SourcesDrilldownSourcesRuleStatus = "not_in_rule"
-	Used      SourcesDrilldownSourcesRuleStatus = "used"
-)
-
-// Valid indicates whether the value is a known member of the SourcesDrilldownSourcesRuleStatus enum.
-func (e SourcesDrilldownSourcesRuleStatus) Valid() bool {
-	switch e {
-	case Excluded:
-		return true
-	case NotInRule:
-		return true
-	case Used:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for StreamStatus.
 const (
 	StreamStatusDegraded StreamStatus = "degraded"
@@ -720,6 +918,27 @@ func (e StreamStatus) Valid() bool {
 	case StreamStatusDegraded:
 		return true
 	case StreamStatusOk:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkoutMemberRuleStatus.
+const (
+	WorkoutMemberRuleStatusExcluded  WorkoutMemberRuleStatus = "excluded"
+	WorkoutMemberRuleStatusNotInRule WorkoutMemberRuleStatus = "not_in_rule"
+	WorkoutMemberRuleStatusUsed      WorkoutMemberRuleStatus = "used"
+)
+
+// Valid indicates whether the value is a known member of the WorkoutMemberRuleStatus enum.
+func (e WorkoutMemberRuleStatus) Valid() bool {
+	switch e {
+	case WorkoutMemberRuleStatusExcluded:
+		return true
+	case WorkoutMemberRuleStatusNotInRule:
+		return true
+	case WorkoutMemberRuleStatusUsed:
 		return true
 	default:
 		return false
@@ -1172,6 +1391,18 @@ type BloodPressureReading struct {
 	TzOffsetMin *int      `json:"tz_offset_min"`
 }
 
+// ComputedValue defines model for ComputedValue.
+type ComputedValue struct {
+	Selected *string             `json:"selected,omitempty"`
+	Status   ComputedValueStatus `json:"status"`
+
+	// Value Same shape as ResolvedValue.value.
+	Value interface{} `json:"value,omitempty"`
+}
+
+// ComputedValueStatus defines model for ComputedValue.Status.
+type ComputedValueStatus string
+
 // Connection A connection with its derived health; never credentials.
 type Connection struct {
 	ConsecutiveFailures int       `json:"consecutive_failures"`
@@ -1253,7 +1484,10 @@ type DeviceID = string
 
 // DeviceRef defines model for DeviceRef.
 type DeviceRef struct {
-	Type *string `json:"type,omitempty"`
+	// ID dev_ id
+	ID    *string `json:"id,omitempty"`
+	Model *string `json:"model,omitempty"`
+	Type  *string `json:"type,omitempty"`
 }
 
 // Document A stored lab PDF. A deleted document keeps only its id, status, sizes and times.
@@ -1286,6 +1520,39 @@ type DocumentPage struct {
 	// NextCursor Present when has_more is true.
 	NextCursor *string `json:"next_cursor,omitempty"`
 }
+
+// DrilldownProvenance defines model for DrilldownProvenance.
+type DrilldownProvenance struct {
+	// FetchedAt The latest fetch of those raw payloads.
+	FetchedAt *time.Time `json:"fetched_at,omitempty"`
+
+	// Normalizer name@version of the normalizers behind the rows, comma-separated.
+	Normalizer    string   `json:"normalizer"`
+	RawPayloadIds []string `json:"raw_payload_ids"`
+}
+
+// DrilldownSource defines model for DrilldownSource.
+type DrilldownSource struct {
+	ConnectionID *string    `json:"connection_id,omitempty"`
+	Count        *int       `json:"count,omitempty"`
+	Device       *DeviceRef `json:"device,omitempty"`
+
+	// Group Rule group; null when the source is outside the rule.
+	Group       *string                   `json:"group"`
+	Origin      *OriginRef                `json:"origin,omitempty"`
+	Provenance  *DrilldownProvenance      `json:"provenance,omitempty"`
+	Provider    string                    `json:"provider"`
+	Reason      *string                   `json:"reason,omitempty"`
+	Records     *RecordsLink              `json:"records,omitempty"`
+	RuleStatus  DrilldownSourceRuleStatus `json:"rule_status"`
+	SessionRefs *[]openapi_types.UUID     `json:"session_refs,omitempty"`
+
+	// Values The source's own values by basis: daily_value, interval_sum, intervals (additive); samples, bucket_means (intensive); latest, readings or component codes (latest); sessions, sleep_in_bed, sleep_total (sleep).
+	Values *map[string]float64 `json:"values,omitempty"`
+}
+
+// DrilldownSourceRuleStatus defines model for DrilldownSource.RuleStatus.
+type DrilldownSourceRuleStatus string
 
 // Export defines model for Export.
 type Export struct {
@@ -1517,6 +1784,14 @@ type GroupPage struct {
 // Health Derived health (internal/connectors/health.go).
 type Health string
 
+// HourPick defines model for HourPick.
+type HourPick struct {
+	Group  *string   `json:"group,omitempty"`
+	Start  time.Time `json:"start"`
+	Status string    `json:"status"`
+	Value  *float64  `json:"value,omitempty"`
+}
+
 // Job A background job (docs/architecture/reliability.md#job-queue).
 type Job struct {
 	Attempts     int                `json:"attempts"`
@@ -1685,8 +1960,60 @@ type MeasurementPage struct {
 	NextCursor *string `json:"next_cursor,omitempty"`
 }
 
-// Metric Catalogue metric (docs/architecture/metric-catalog.md). Open object.
-type Metric = map[string]interface{}
+// Metric Catalogue metric (docs/architecture/metric-catalog.md) with what a rule for it may use.
+type Metric struct {
+	Aggregation MetricAggregation `json:"aggregation"`
+	Code        string            `json:"code"`
+
+	// DerivedFrom The source metric of a derived code (rule extension E2).
+	DerivedFrom *string `json:"derived_from,omitempty"`
+
+	// Family The rule family the code resolves under (sleep
+	Family *string `json:"family,omitempty"`
+
+	// Group The measurement group the code belongs to (bp_reading
+	Group *string `json:"group,omitempty"`
+
+	// Kinds Kinds a source may store; empty for derived and sleep codes.
+	Kinds          []MetricKinds `json:"kinds"`
+	PlausibleRange []float64     `json:"plausible_range"`
+
+	// ProviderScoped A provider-namespaced score; never pooled.
+	ProviderScoped bool   `json:"provider_scoped"`
+	Section        string `json:"section"`
+
+	// SelectionOnly Providers define it differently; rules select one source and never pool it.
+	SelectionOnly bool `json:"selection_only"`
+
+	// Strategies Rule strategy ops (strategy.op) allowed for this metric; sum_across_sources also needs the duplicate-risk acknowledgement.
+	Strategies []MetricStrategies `json:"strategies"`
+
+	// Unit Canonical unit code.
+	Unit string `json:"unit"`
+
+	// Windows Window kinds a rule for this metric may use.
+	Windows []MetricWindows `json:"windows"`
+}
+
+// MetricAggregation defines model for Metric.Aggregation.
+type MetricAggregation string
+
+// MetricKinds defines model for Metric.Kinds.
+type MetricKinds string
+
+// MetricStrategies defines model for Metric.Strategies.
+type MetricStrategies string
+
+// MetricWindows defines model for Metric.Windows.
+type MetricWindows string
+
+// OriginRef defines model for OriginRef.
+type OriginRef struct {
+	Key             *string `json:"key,omitempty"`
+	Name            *string `json:"name,omitempty"`
+	Relayed         *bool   `json:"relayed,omitempty"`
+	RelayedProvider *string `json:"relayed_provider,omitempty"`
+}
 
 // Override A manual override (docs/architecture/resolution.md#manual-overrides). Only the fields of its action are set.
 type Override struct {
@@ -1769,6 +2096,13 @@ type PairedDevice = map[string]interface{}
 
 // PairingCode Open object.
 type PairingCode = map[string]interface{}
+
+// PreviewDay defines model for PreviewDay.
+type PreviewDay struct {
+	Active    ResolvedValue      `json:"active"`
+	Draft     ResolvedValue      `json:"draft"`
+	LocalDate openapi_types.Date `json:"local_date"`
+}
 
 // Problem defines model for Problem.
 type Problem struct {
@@ -1904,76 +2238,247 @@ type RecordProvenance struct {
 	SupersededBy *string `json:"superseded_by"`
 }
 
-// ResolutionPreview Open object; properties are added with the endpoint.
-type ResolutionPreview = map[string]interface{}
+// RecordsLink defines model for RecordsLink.
+type RecordsLink struct {
+	// Href The source's rows in the window on GET /measurements.
+	Href string `json:"href"`
+}
 
-// ResolutionPreviewRequest A draft rule and a date range. Open object; properties are added with the endpoint.
-type ResolutionPreviewRequest = map[string]interface{}
+// ResolutionPreview defines model for ResolutionPreview.
+type ResolutionPreview struct {
+	// ActiveRule The rule in effect; null when the metric has none.
+	ActiveRule *RuleRef     `json:"active_rule"`
+	Days       []PreviewDay `json:"days"`
+	DraftRule  RuleRef      `json:"draft_rule"`
+	Metric     string       `json:"metric"`
+	Timezone   string       `json:"timezone"`
+
+	// Window The window kind both rules resolve.
+	Window string `json:"window"`
+}
+
+// ResolutionPreviewRequest defines model for ResolutionPreviewRequest.
+type ResolutionPreviewRequest struct {
+	EndDate openapi_types.Date `json:"end_date"`
+
+	// Spec A draft rule (docs/architecture/resolution.md#rule-specification); validated, never stored.
+	Spec      json.RawMessage    `json:"spec"`
+	StartDate openapi_types.Date `json:"start_date"`
+}
 
 // ResolvedDaily defines model for ResolvedDaily.
 type ResolvedDaily struct {
-	Days []struct {
-		LocalDate openapi_types.Date       `json:"local_date"`
-		Metrics   map[string]ResolvedValue `json:"metrics"`
-	} `json:"days"`
+	Days []ResolvedDay `json:"days"`
 
-	// Timezone IANA timezone of the requested period.
+	// Timezone IANA timezone of the requested period; empty (and every value no_data) while no timezone period is configured.
 	Timezone string `json:"timezone"`
 }
 
-// ResolvedEvents Open object; properties are added with the endpoint.
-type ResolvedEvents = map[string]interface{}
+// ResolvedDay defines model for ResolvedDay.
+type ResolvedDay struct {
+	LocalDate openapi_types.Date       `json:"local_date"`
+	Metrics   map[string]ResolvedValue `json:"metrics"`
+}
+
+// ResolvedFollow The E5 leader metric and the group it selected.
+type ResolvedFollow struct {
+	Group  *string `json:"group,omitempty"`
+	Metric string  `json:"metric"`
+}
 
 // ResolvedInput defines model for ResolvedInput.
 type ResolvedInput struct {
-	// Basis e.g. daily_value, intervals, samples, reading.
-	Basis      *string   `json:"basis,omitempty"`
-	Coverage   *float64  `json:"coverage,omitempty"`
-	Group      string    `json:"group"`
-	Readings   *int      `json:"readings,omitempty"`
-	Reason     *string   `json:"reason,omitempty"`
-	RecordRefs *[]string `json:"record_refs,omitempty"`
-	Selected   *bool     `json:"selected,omitempty"`
-	Sources    *[]struct {
-		ConnectionID *string    `json:"connection_id,omitempty"`
-		Device       *DeviceRef `json:"device,omitempty"`
-		Provider     *string    `json:"provider,omitempty"`
-	} `json:"sources,omitempty"`
+	// At Latest contributing instant.
+	At *time.Time `json:"at,omitempty"`
 
-	// Status e.g. used, no_data, below_quality, excluded.
+	// Basis e.g. daily_value, intervals, samples, reading.
+	Basis *string `json:"basis,omitempty"`
+
+	// Count Contributing rows (sessions for sleep).
+	Count    *int     `json:"count,omitempty"`
+	Coverage *float64 `json:"coverage,omitempty"`
+
+	// Group Rule group; null for an excluded or unmatched source.
+	Group    *string `json:"group"`
+	Prorated *bool   `json:"prorated,omitempty"`
+	Readings *int    `json:"readings,omitempty"`
+	Reason   *string `json:"reason,omitempty"`
+
+	// RecordRefs measurements ids.
+	RecordRefs *[]string `json:"record_refs,omitempty"`
+
+	// Selected The group's value is (part of) the window value.
+	Selected *bool `json:"selected,omitempty"`
+
+	// SessionRefs sleep_sessions ids.
+	SessionRefs *[]openapi_types.UUID `json:"session_refs,omitempty"`
+	Sources     *[]ResolvedSource     `json:"sources,omitempty"`
+
+	// Span The span an E2 min or min_rolling_mean statistic picked.
+	Span *Span `json:"span,omitempty"`
+
+	// Status used, fallback_unused, no_data, below_quality, stale, not_aligned, no_stage_data, excluded or not_in_rule.
 	Status string `json:"status"`
 
 	// Value Same shape as ResolvedValue.value.
-	Value interface{} `json:"value,omitempty"`
+	Value       interface{} `json:"value,omitempty"`
+	WearExempt  *bool       `json:"wear_exempt,omitempty"`
+	WornBuckets *int        `json:"worn_buckets,omitempty"`
 }
 
-// ResolvedSeries Open object; properties are added with the endpoint.
-type ResolvedSeries = map[string]interface{}
+// ResolvedLinks defines model for ResolvedLinks.
+type ResolvedLinks struct {
+	// Sources The all-sources drilldown of the window.
+	Sources *string `json:"sources,omitempty"`
+}
+
+// ResolvedNight defines model for ResolvedNight.
+type ResolvedNight struct {
+	LocalDate openapi_types.Date `json:"local_date"`
+
+	// Members Every source with a session in the main episode, inside the rule or not.
+	Members []SleepMember `json:"members"`
+	Result  ResolvedValue `json:"result"`
+}
+
+// ResolvedOverrides Manual overrides of the window; computed is what the rule alone gave.
+type ResolvedOverrides struct {
+	Applied  []openapi_types.UUID `json:"applied"`
+	Computed *ComputedValue       `json:"computed,omitempty"`
+	Ignored  []openapi_types.UUID `json:"ignored"`
+}
+
+// ResolvedPoint defines model for ResolvedPoint.
+type ResolvedPoint struct {
+	Coverage  *float64            `json:"coverage,omitempty"`
+	End       time.Time           `json:"end"`
+	Key       string              `json:"key"`
+	Links     *ResolvedLinks      `json:"links,omitempty"`
+	LocalDate *openapi_types.Date `json:"local_date,omitempty"`
+	Partial   *bool               `json:"partial,omitempty"`
+
+	// Sources The groups the value came from (one for selecting strategies).
+	Sources []string `json:"sources"`
+
+	// Start Absent for latest windows.
+	Start  *time.Time          `json:"start,omitempty"`
+	Status ResolvedPointStatus `json:"status"`
+
+	// Value Same shape as ResolvedValue.value.
+	Value    interface{} `json:"value,omitempty"`
+	Warnings *[]string   `json:"warnings,omitempty"`
+}
+
+// ResolvedPointStatus defines model for ResolvedPoint.Status.
+type ResolvedPointStatus string
+
+// ResolvedSeries defines model for ResolvedSeries.
+type ResolvedSeries struct {
+	HasMore    bool            `json:"has_more"`
+	Metric     string          `json:"metric"`
+	NextCursor *string         `json:"next_cursor,omitempty"`
+	Points     []ResolvedPoint `json:"points"`
+	Rule       RuleRef         `json:"rule"`
+
+	// SourcesUsed The groups this page's values came from
+	SourcesUsed []string     `json:"sources_used"`
+	Timezone    string       `json:"timezone"`
+	Unit        *string      `json:"unit,omitempty"`
+	Window      SeriesWindow `json:"window"`
+}
+
+// ResolvedSleep defines model for ResolvedSleep.
+type ResolvedSleep struct {
+	Nights   []ResolvedNight `json:"nights"`
+	Timezone string          `json:"timezone"`
+}
+
+// ResolvedSource defines model for ResolvedSource.
+type ResolvedSource struct {
+	ConnectionID *string    `json:"connection_id,omitempty"`
+	Device       *DeviceRef `json:"device,omitempty"`
+	Manual       *bool      `json:"manual,omitempty"`
+	Origin       *OriginRef `json:"origin,omitempty"`
+	Provider     string     `json:"provider"`
+}
 
 // ResolvedValue defines model for ResolvedValue.
 type ResolvedValue struct {
-	ComputedAt  *time.Time       `json:"computed_at,omitempty"`
-	Explanation string           `json:"explanation"`
-	Inputs      *[]ResolvedInput `json:"inputs,omitempty"`
-	Links       *struct {
-		Sources *string `json:"sources,omitempty"`
-	} `json:"links,omitempty"`
-	Partial *bool               `json:"partial,omitempty"`
-	Rule    *RuleRef            `json:"rule,omitempty"`
-	Status  ResolvedValueStatus `json:"status"`
-	Unit    *string             `json:"unit,omitempty"`
+	ComputedAt *time.Time `json:"computed_at,omitempty"`
 
-	// Value A number, or an object of components (e.g. blood pressure systolic/diastolic/pulse).
-	Value    interface{} `json:"value,omitempty"`
-	Warnings *[]struct {
-		Code  string  `json:"code"`
-		Group *string `json:"group,omitempty"`
-	} `json:"warnings,omitempty"`
-	Window *Window `json:"window,omitempty"`
+	// Context The E1 context of the window (workout or sleep).
+	Context *string `json:"context,omitempty"`
+
+	// Coverage Coverage of the groups behind the value.
+	Coverage    *float64 `json:"coverage,omitempty"`
+	Explanation string   `json:"explanation"`
+
+	// Follow The E5 leader metric and the group it selected.
+	Follow *ResolvedFollow `json:"follow,omitempty"`
+
+	// Hours The hourly picks of a composed day (E9).
+	Hours *[]HourPick `json:"hours,omitempty"`
+
+	// Inputs Every rule group in ladder order, then each excluded or unmatched source.
+	Inputs *[]ResolvedInput `json:"inputs,omitempty"`
+	Links  *ResolvedLinks   `json:"links,omitempty"`
+
+	// Missing Family codes without a value and why, e.g. sleep_deep no_stage_data.
+	Missing *map[string]string `json:"missing,omitempty"`
+
+	// Overrides Manual overrides of the window; computed is what the rule alone gave.
+	Overrides *ResolvedOverrides `json:"overrides,omitempty"`
+
+	// Partial The window ends after the request time.
+	Partial *bool    `json:"partial,omitempty"`
+	Rule    *RuleRef `json:"rule,omitempty"`
+
+	// Selected The group the value came from
+	Selected *string             `json:"selected,omitempty"`
+	Status   ResolvedValueStatus `json:"status"`
+
+	// Unit Canonical unit; absent for a family.
+	Unit *string `json:"unit,omitempty"`
+
+	// Value A number in unit, or for a rule family an object of catalogue codes to numbers (bp_systolic, bp_diastolic, bp_pulse; the sleep_* codes). Absent without a value.
+	Value    interface{}        `json:"value,omitempty"`
+	Warnings *[]ResolvedWarning `json:"warnings,omitempty"`
+	Window   *Window            `json:"window,omitempty"`
 }
 
 // ResolvedValueStatus defines model for ResolvedValue.Status.
 type ResolvedValueStatus string
+
+// ResolvedWarning defines model for ResolvedWarning.
+type ResolvedWarning struct {
+	Code  string  `json:"code"`
+	Group *string `json:"group,omitempty"`
+}
+
+// ResolvedWorkout defines model for ResolvedWorkout.
+type ResolvedWorkout struct {
+	End         time.Time `json:"end"`
+	Explanation string    `json:"explanation"`
+
+	// Group The rule group of the picked workout.
+	Group     *string            `json:"group,omitempty"`
+	LocalDate openapi_types.Date `json:"local_date"`
+	Members   []WorkoutMember    `json:"members"`
+
+	// Selected The picked workout; null when no member is in a rule group.
+	Selected *openapi_types.UUID `json:"selected"`
+
+	// Sport The cluster's specific sport
+	Sport string    `json:"sport"`
+	Start time.Time `json:"start"`
+}
+
+// ResolvedWorkouts defines model for ResolvedWorkouts.
+type ResolvedWorkouts struct {
+	Rule     RuleRef           `json:"rule"`
+	Timezone string            `json:"timezone"`
+	Workouts []ResolvedWorkout `json:"workouts"`
+}
 
 // Rule A rule version, the owner's or a built-in (docs/architecture/resolution.md#rule-specification).
 type Rule = RuleVersion
@@ -1987,10 +2492,12 @@ type RuleActivation struct {
 
 // RuleRef defines model for RuleRef.
 type RuleRef struct {
-	// Ref builtin:<metric> or user:<metric>.
+	// Ref builtin:<metric>:<n>, rule:<metric>:<n>, or draft:<metric> in a preview.
 	Ref      string  `json:"ref"`
 	Strategy *string `json:"strategy,omitempty"`
-	Version  int     `json:"version"`
+
+	// Version 0 for a draft.
+	Version int `json:"version"`
 }
 
 // RuleVersion A rule version, the owner's or a built-in (docs/architecture/resolution.md#rule-specification).
@@ -2085,6 +2592,14 @@ type SchedulePatch struct {
 // Scope defines model for Scope.
 type Scope string
 
+// SeriesWindow defines model for SeriesWindow.
+type SeriesWindow struct {
+	Kind string `json:"kind"`
+
+	// Size Bucket size of bucket windows.
+	Size *string `json:"size,omitempty"`
+}
+
 // Session defines model for Session.
 type Session struct {
 	CsrfToken string `json:"csrf_token"`
@@ -2120,6 +2635,27 @@ type Settings struct {
 	// WithingsNotifications Withings notification subscriptions (polling runs either way); needs VITAMUX_PUBLIC_URL.
 	WithingsNotifications *bool `json:"withings.notifications,omitempty"`
 }
+
+// SleepMember defines model for SleepMember.
+type SleepMember struct {
+	ConnectionID *string               `json:"connection_id,omitempty"`
+	Device       *DeviceRef            `json:"device,omitempty"`
+	Group        *string               `json:"group"`
+	Origin       *OriginRef            `json:"origin,omitempty"`
+	Provider     string                `json:"provider"`
+	Reason       *string               `json:"reason,omitempty"`
+	RuleStatus   SleepMemberRuleStatus `json:"rule_status"`
+
+	// Selected The episode's values come from this source.
+	Selected    bool                 `json:"selected"`
+	SessionRefs []openapi_types.UUID `json:"session_refs"`
+
+	// Values sessions, sleep_in_bed and sleep_total (seconds).
+	Values *map[string]float64 `json:"values,omitempty"`
+}
+
+// SleepMemberRuleStatus defines model for SleepMember.RuleStatus.
+type SleepMemberRuleStatus string
 
 // SleepPage defines model for SleepPage.
 type SleepPage struct {
@@ -2191,38 +2727,17 @@ type SourceRef struct {
 
 // SourcesDrilldown defines model for SourcesDrilldown.
 type SourcesDrilldown struct {
-	Metric  string  `json:"metric"`
-	Rule    RuleRef `json:"rule"`
-	Sources []struct {
-		Device *DeviceRef `json:"device,omitempty"`
-
-		// Group Rule group; null when the source is outside the rule.
-		Group  *string `json:"group"`
-		Origin *struct {
-			Key             *string `json:"key,omitempty"`
-			Name            *string `json:"name,omitempty"`
-			RelayedProvider *string `json:"relayed_provider,omitempty"`
-		} `json:"origin,omitempty"`
-		Provenance *struct {
-			FetchedAt     *time.Time `json:"fetched_at,omitempty"`
-			Normalizer    *string    `json:"normalizer,omitempty"`
-			RawPayloadIds *[]string  `json:"raw_payload_ids,omitempty"`
-		} `json:"provenance,omitempty"`
-		Provider string  `json:"provider"`
-		Reason   *string `json:"reason,omitempty"`
-		Records  *struct {
-			Href string `json:"href"`
-		} `json:"records,omitempty"`
-		RuleStatus SourcesDrilldownSourcesRuleStatus `json:"rule_status"`
-
-		// Values Per-basis values, e.g. daily_value, interval_sum, intervals.
-		Values *map[string]float64 `json:"values,omitempty"`
-	} `json:"sources"`
-	Window Window `json:"window"`
+	Metric  string            `json:"metric"`
+	Rule    RuleRef           `json:"rule"`
+	Sources []DrilldownSource `json:"sources"`
+	Window  Window            `json:"window"`
 }
 
-// SourcesDrilldownSourcesRuleStatus defines model for SourcesDrilldown.Sources.RuleStatus.
-type SourcesDrilldownSourcesRuleStatus string
+// Span The span an E2 min or min_rolling_mean statistic picked.
+type Span struct {
+	End   time.Time `json:"end"`
+	Start time.Time `json:"start"`
+}
 
 // StatusConnection defines model for StatusConnection.
 type StatusConnection struct {
@@ -2344,7 +2859,10 @@ type User struct {
 type Window struct {
 	End *time.Time `json:"end,omitempty"`
 
-	// Kind e.g. local_day, hour, bucket, night, latest.
+	// Key The window key of drilldowns and overrides: a date, a UTC start, an as-of instant, or g:/m: for a reading.
+	Key *string `json:"key,omitempty"`
+
+	// Kind bucket, hour, local_day, local_night, sleep_episode, latest or reading.
 	Kind      string              `json:"kind"`
 	LocalDate *openapi_types.Date `json:"local_date,omitempty"`
 	Start     *time.Time          `json:"start,omitempty"`
@@ -2378,6 +2896,29 @@ type Workout struct {
 	StartAt     time.Time `json:"start_at"`
 	TzOffsetMin *int      `json:"tz_offset_min"`
 }
+
+// WorkoutMember defines model for WorkoutMember.
+type WorkoutMember struct {
+	AvgHrBpm     *float64                `json:"avg_hr_bpm,omitempty"`
+	ConnectionID *string                 `json:"connection_id,omitempty"`
+	Device       *DeviceRef              `json:"device,omitempty"`
+	DistanceM    *float64                `json:"distance_m,omitempty"`
+	EndAt        time.Time               `json:"end_at"`
+	EnergyKcal   *float64                `json:"energy_kcal,omitempty"`
+	Group        *string                 `json:"group"`
+	ID           openapi_types.UUID      `json:"id"`
+	MaxHrBpm     *float64                `json:"max_hr_bpm,omitempty"`
+	Origin       *OriginRef              `json:"origin,omitempty"`
+	Provider     string                  `json:"provider"`
+	Reason       *string                 `json:"reason,omitempty"`
+	RuleStatus   WorkoutMemberRuleStatus `json:"rule_status"`
+	Selected     bool                    `json:"selected"`
+	Sport        string                  `json:"sport"`
+	StartAt      time.Time               `json:"start_at"`
+}
+
+// WorkoutMemberRuleStatus defines model for WorkoutMember.RuleStatus.
+type WorkoutMemberRuleStatus string
 
 // WorkoutPage defines model for WorkoutPage.
 type WorkoutPage struct {
@@ -2749,18 +3290,25 @@ type GetResolvedDailyParams struct {
 	// EndDate Last local date, inclusive.
 	EndDate EndDateRequired `form:"end_date" json:"end_date"`
 
-	// Metrics Comma-separated metric codes; all resolvable metrics when omitted.
+	// Metrics Comma-separated metric codes or rule families (repeating the parameter also works); every metric with a rule in effect when omitted. Night metrics (sleep, local_night rules) resolve the night of each date, the others its local_day. At most 366 dates.
 	Metrics *[]string `form:"metrics,omitempty" json:"metrics,omitempty"`
 }
 
 // GetResolvedSeriesParams defines parameters for GetResolvedSeries.
 type GetResolvedSeriesParams struct {
+	// Metric Catalogue code or rule family (sleep, blood_pressure).
 	Metric string    `form:"metric" json:"metric"`
 	Start  time.Time `form:"start" json:"start"`
 	End    time.Time `form:"end" json:"end"`
 
-	// Window Window kind or bucket size, e.g. hour, local_day, 5m.
+	// Window Window kind (bucket, hour, local_day, local_night, sleep_episode, latest, reading) or a bucket size (1m, 5m, 15m, 30m); the rule's window when omitted. A window the metric does not allow is 422 unsupported_window.
 	Window *string `form:"window,omitempty" json:"window,omitempty"`
+
+	// Limit Page size. Endpoints may cap it lower than 10,000.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque next_cursor from the previous page of the same query.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // GetResolvedSleepParams defines parameters for GetResolvedSleep.
@@ -2779,6 +3327,12 @@ type GetResolvedWorkoutsParams struct {
 
 	// EndDate Last local date, inclusive.
 	EndDate EndDateRequired `form:"end_date" json:"end_date"`
+}
+
+// GetResolvedSourcesParams defines parameters for GetResolvedSources.
+type GetResolvedSourcesParams struct {
+	// Window Window kind (local_day, local_night, hour, bucket, sleep_episode). For a date key the default is the kind /resolved/daily uses for the metric; for an instant key the rule's bucket or sleep_episode window, else hour.
+	Window *string `form:"window,omitempty" json:"window,omitempty"`
 }
 
 // ListSchedulesParams defines parameters for ListSchedules.
@@ -3186,7 +3740,7 @@ type ServerInterface interface {
 	GetResolvedWorkouts(w http.ResponseWriter, r *http.Request, params GetResolvedWorkoutsParams)
 	// GetResolvedSources All-sources drilldown for one metric and window
 	// (GET /api/v1/resolved/{metric}/{window_key}/sources)
-	GetResolvedSources(w http.ResponseWriter, r *http.Request, metric MetricPath, windowKey string)
+	GetResolvedSources(w http.ResponseWriter, r *http.Request, metric MetricPath, windowKey string, params GetResolvedSourcesParams)
 	// ListRules List active rules per metric
 	// (GET /api/v1/rules)
 	ListRules(w http.ResponseWriter, r *http.Request)
@@ -5666,6 +6220,32 @@ func (siw *ServerInterfaceWrapper) GetResolvedSeries(w http.ResponseWriter, r *h
 		return
 	}
 
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetResolvedSeries(w, r, params)
 	}))
@@ -5793,8 +6373,24 @@ func (siw *ServerInterfaceWrapper) GetResolvedSources(w http.ResponseWriter, r *
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetResolvedSourcesParams
+
+	// ------------- Optional query parameter "window" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "window", r.URL.Query(), &params.Window, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "window"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "window", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetResolvedSources(w, r, metric, windowKey)
+		siw.Handler.GetResolvedSources(w, r, metric, windowKey, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -11728,6 +12324,20 @@ func (response PreviewResolution403ApplicationProblemPlusJSONResponse) VisitPrev
 	return err
 }
 
+type PreviewResolution409ApplicationProblemPlusJSONResponse Problem
+
+func (response PreviewResolution409ApplicationProblemPlusJSONResponse) VisitPreviewResolutionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type PreviewResolution422ApplicationProblemPlusJSONResponse Problem
 
 func (response PreviewResolution422ApplicationProblemPlusJSONResponse) VisitPreviewResolutionResponse(w http.ResponseWriter) error {
@@ -11860,6 +12470,20 @@ func (response GetResolvedSeries403ApplicationProblemPlusJSONResponse) VisitGetR
 	return err
 }
 
+type GetResolvedSeries404ApplicationProblemPlusJSONResponse Problem
+
+func (response GetResolvedSeries404ApplicationProblemPlusJSONResponse) VisitGetResolvedSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetResolvedSeries422ApplicationProblemPlusJSONResponse Problem
 
 func (response GetResolvedSeries422ApplicationProblemPlusJSONResponse) VisitGetResolvedSeriesResponse(w http.ResponseWriter) error {
@@ -11882,7 +12506,7 @@ type GetResolvedSleepResponseObject interface {
 	VisitGetResolvedSleepResponse(w http.ResponseWriter) error
 }
 
-type GetResolvedSleep200JSONResponse ResolvedEvents
+type GetResolvedSleep200JSONResponse ResolvedSleep
 
 func (response GetResolvedSleep200JSONResponse) VisitGetResolvedSleepResponse(w http.ResponseWriter) error {
 
@@ -11926,6 +12550,20 @@ func (response GetResolvedSleep403ApplicationProblemPlusJSONResponse) VisitGetRe
 	return err
 }
 
+type GetResolvedSleep404ApplicationProblemPlusJSONResponse Problem
+
+func (response GetResolvedSleep404ApplicationProblemPlusJSONResponse) VisitGetResolvedSleepResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetResolvedSleep422ApplicationProblemPlusJSONResponse Problem
 
 func (response GetResolvedSleep422ApplicationProblemPlusJSONResponse) VisitGetResolvedSleepResponse(w http.ResponseWriter) error {
@@ -11948,7 +12586,7 @@ type GetResolvedWorkoutsResponseObject interface {
 	VisitGetResolvedWorkoutsResponse(w http.ResponseWriter) error
 }
 
-type GetResolvedWorkouts200JSONResponse ResolvedEvents
+type GetResolvedWorkouts200JSONResponse ResolvedWorkouts
 
 func (response GetResolvedWorkouts200JSONResponse) VisitGetResolvedWorkoutsResponse(w http.ResponseWriter) error {
 
@@ -11992,6 +12630,20 @@ func (response GetResolvedWorkouts403ApplicationProblemPlusJSONResponse) VisitGe
 	return err
 }
 
+type GetResolvedWorkouts404ApplicationProblemPlusJSONResponse Problem
+
+func (response GetResolvedWorkouts404ApplicationProblemPlusJSONResponse) VisitGetResolvedWorkoutsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetResolvedWorkouts422ApplicationProblemPlusJSONResponse Problem
 
 func (response GetResolvedWorkouts422ApplicationProblemPlusJSONResponse) VisitGetResolvedWorkoutsResponse(w http.ResponseWriter) error {
@@ -12009,6 +12661,7 @@ func (response GetResolvedWorkouts422ApplicationProblemPlusJSONResponse) VisitGe
 type GetResolvedSourcesRequestObject struct {
 	Metric    MetricPath `json:"metric"`
 	WindowKey string     `json:"window_key"`
+	Params    GetResolvedSourcesParams
 }
 
 type GetResolvedSourcesResponseObject interface {
@@ -15725,11 +16378,12 @@ func (sh *strictHandler) GetResolvedWorkouts(w http.ResponseWriter, r *http.Requ
 }
 
 // GetResolvedSources operation middleware
-func (sh *strictHandler) GetResolvedSources(w http.ResponseWriter, r *http.Request, metric MetricPath, windowKey string) {
+func (sh *strictHandler) GetResolvedSources(w http.ResponseWriter, r *http.Request, metric MetricPath, windowKey string, params GetResolvedSourcesParams) {
 	var request GetResolvedSourcesRequestObject
 
 	request.Metric = metric
 	request.WindowKey = windowKey
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.GetResolvedSources(ctx, request.(GetResolvedSourcesRequestObject))

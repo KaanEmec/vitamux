@@ -4,9 +4,9 @@
 // after sign-in to be a 2xx (apart from the endpoints listed below). Run with `--project=stack`; skipped without the stack variables.
 import { expect, test } from '@playwright/test';
 
-// Documented in api/openapi.yaml but not served yet (J10.3 resolved endpoints, J10.4 metric
-// catalogue): a 404 is tolerated for these until they land. Delete the entry then.
-const notServedYet = new Set(['/api/v1/resolved/daily', '/api/v1/metrics']);
+// Documented in api/openapi.yaml but not served yet: a 404 is tolerated for these until they
+// land. Delete the entry then.
+const notServedYet = new Set<string>([]);
 const username = process.env.VITAMUX_E2E_USER;
 const password = process.env.VITAMUX_E2E_PASSWORD;
 test.skip(!username || !password, 'run via scripts/e2e-stack.sh');

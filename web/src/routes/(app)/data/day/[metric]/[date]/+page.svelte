@@ -41,7 +41,7 @@
 	let provenance = $state<{ entity: ProvenanceEntity; id: string } | null>(null);
 
 	const todaysOverrides = $derived(overrides.filter((o) => o.window.local_date === date));
-	const groups = $derived((result?.inputs ?? []).map((i) => i.group));
+	const groups = $derived((result?.inputs ?? []).flatMap((i) => (i.group ? [i.group] : [])));
 	const warningCodes = $derived((result?.warnings ?? []).map((w) => (w.group ? `${w.code} (${w.group})` : w.code)));
 
 	async function loadResult() {

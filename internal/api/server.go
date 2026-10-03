@@ -114,6 +114,7 @@ func newRouter(log *slog.Logger, ui fs.FS, opts Options) (*router, error) {
 	rt.configRoutes()
 	rt.manualRoutes()
 	rt.statusRoutes()
+	rt.resolvedRoutes()
 	return rt, nil
 }
 

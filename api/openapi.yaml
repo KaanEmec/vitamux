@@ -503,6 +503,7 @@ paths:
               schema: {$ref: '#/components/schemas/ResolvedSeries'}
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
 
   /api/v1/resolved/sleep:
@@ -523,6 +524,7 @@ paths:
               schema: {$ref: '#/components/schemas/ResolvedSleep'}
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
 
   /api/v1/resolved/workouts:
@@ -546,6 +548,7 @@ paths:
               schema: {$ref: '#/components/schemas/ResolvedWorkouts'}
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
 
   /api/v1/resolved/{metric}/{window_key}/sources:
@@ -2464,82 +2467,156 @@ components:
       type: object
       required: [timezone, days]
       properties:
-        timezone: {type: string, description: IANA timezone of the requested period.}
-        days:
-          type: array
-          items:
-            type: object
-            required: [local_date, metrics]
-            properties:
-              local_date: {type: string, format: date}
-              metrics:
-                type: object
-                additionalProperties: {$ref: '#/components/schemas/ResolvedValue'}
+        timezone: {type: string, description: IANA timezone of the requested period; empty (and every value no_data) while no timezone period is configured.}
+        days: {type: array, items: {$ref: '#/components/schemas/ResolvedDay'}}
+    ResolvedDay:
+      type: object
+      required: [local_date, metrics]
+      properties:
+        local_date: {type: string, format: date}
+        metrics:
+          type: object
+          additionalProperties: {$ref: '#/components/schemas/ResolvedValue'}
     ResolvedValue:
       type: object
       required: [status, explanation]
       properties:
         status: {type: string, enum: [direct, fallback, calculated, overridden, no_data]}
-        value: {description: 'A number, or an object of components (e.g. blood pressure systolic/diastolic/pulse).'}
-        unit: {type: string}
-        partial: {type: boolean}
+        value:
+          description: >
+            A number in unit, or for a rule family an object of catalogue codes to numbers
+            (bp_systolic, bp_diastolic, bp_pulse; the sleep_* codes). Absent without a value.
+        unit: {type: string, description: Canonical unit; absent for a family.}
+        partial: {type: boolean, description: The window ends after the request time.}
         window: {$ref: '#/components/schemas/Window'}
         rule: {$ref: '#/components/schemas/RuleRef'}
-        inputs: {type: array, items: {$ref: '#/components/schemas/ResolvedInput'}}
-        warnings:
+        selected: {type: string, description: The group the value came from, for selecting strategies.}
+        coverage: {type: number, format: double, minimum: 0, maximum: 1, description: Coverage of the groups behind the value.}
+        missing:
+          type: object
+          description: Family codes without a value and why, e.g. sleep_deep no_stage_data.
+          additionalProperties: {type: string}
+        inputs:
           type: array
-          items:
-            type: object
-            required: [code]
-            properties:
-              code: {type: string}
-              group: {type: string}
+          description: Every rule group in ladder order, then each excluded or unmatched source.
+          items: {$ref: '#/components/schemas/ResolvedInput'}
+        warnings: {type: array, items: {$ref: '#/components/schemas/ResolvedWarning'}}
+        context: {type: string, description: The E1 context of the window (workout or sleep).}
+        follow: {$ref: '#/components/schemas/ResolvedFollow'}
+        hours:
+          type: array
+          description: The hourly picks of a composed day (E9).
+          items: {$ref: '#/components/schemas/HourPick'}
+        overrides: {$ref: '#/components/schemas/ResolvedOverrides'}
         explanation: {type: string}
         computed_at: {type: string, format: date-time}
-        links:
-          type: object
-          properties:
-            sources: {type: string}
+        links: {$ref: '#/components/schemas/ResolvedLinks'}
+    ResolvedWarning:
+      type: object
+      required: [code]
+      properties:
+        code: {type: string}
+        group: {type: string}
+    ResolvedFollow:
+      type: object
+      description: The E5 leader metric and the group it selected.
+      required: [metric]
+      properties:
+        metric: {type: string}
+        group: {type: string}
+    HourPick:
+      type: object
+      required: [start, status]
+      properties:
+        start: {type: string, format: date-time}
+        status: {type: string}
+        group: {type: string}
+        value: {type: number, format: double}
+    ResolvedOverrides:
+      type: object
+      description: Manual overrides of the window; computed is what the rule alone gave.
+      required: [applied, ignored]
+      properties:
+        applied: {type: array, items: {type: string, format: uuid}}
+        ignored: {type: array, items: {type: string, format: uuid}}
+        computed: {$ref: '#/components/schemas/ComputedValue'}
+    ComputedValue:
+      type: object
+      required: [status]
+      properties:
+        status: {type: string, enum: [direct, fallback, calculated, overridden, no_data]}
+        value: {description: Same shape as ResolvedValue.value.}
+        selected: {type: string}
+    ResolvedLinks:
+      type: object
+      properties:
+        sources: {type: string, description: The all-sources drilldown of the window.}
     Window:
       type: object
       required: [kind]
       properties:
-        kind: {type: string, description: 'e.g. local_day, hour, bucket, night, latest.'}
+        kind: {type: string, description: 'bucket, hour, local_day, local_night, sleep_episode, latest or reading.'}
         start: {type: string, format: date-time}
         end: {type: string, format: date-time}
         local_date: {type: string, format: date}
+        key: {type: string, description: 'The window key of drilldowns and overrides: a date, a UTC start, an as-of instant, or g:/m: for a reading.'}
     RuleRef:
       type: object
       required: [ref, version]
       properties:
-        ref: {type: string, description: 'builtin:<metric> or user:<metric>.'}
-        version: {type: integer}
+        ref: {type: string, description: 'builtin:<metric>:<n>, rule:<metric>:<n>, or draft:<metric> in a preview.'}
+        version: {type: integer, description: 0 for a draft.}
         strategy: {type: string}
     ResolvedInput:
       type: object
       required: [group, status]
       properties:
-        group: {type: string}
-        status: {type: string, description: 'e.g. used, no_data, below_quality, excluded.'}
-        selected: {type: boolean}
+        group: {type: [string, 'null'], description: Rule group; null for an excluded or unmatched source.}
+        status: {type: string, description: 'used, fallback_unused, no_data, below_quality, stale, not_aligned, no_stage_data, excluded or not_in_rule.'}
+        selected: {type: boolean, description: The group's value is (part of) the window value.}
         value: {description: Same shape as ResolvedValue.value.}
         basis: {type: string, description: 'e.g. daily_value, intervals, samples, reading.'}
         coverage: {type: number, format: double, minimum: 0, maximum: 1}
+        count: {type: integer, description: Contributing rows (sessions for sleep).}
         readings: {type: integer}
+        prorated: {type: boolean}
+        at: {type: string, format: date-time, description: Latest contributing instant.}
+        span: {$ref: '#/components/schemas/Span'}
+        wear_exempt: {type: boolean}
+        worn_buckets: {type: integer}
         reason: {type: string}
-        sources:
-          type: array
-          items:
-            type: object
-            properties:
-              provider: {type: string}
-              connection_id: {type: string}
-              device: {$ref: '#/components/schemas/DeviceRef'}
-        record_refs: {type: array, items: {type: string}}
+        sources: {type: array, items: {$ref: '#/components/schemas/ResolvedSource'}}
+        record_refs: {type: array, items: {type: string}, description: measurements ids.}
+        session_refs: {type: array, items: {type: string, format: uuid}, description: sleep_sessions ids.}
+    Span:
+      type: object
+      description: The span an E2 min or min_rolling_mean statistic picked.
+      required: [start, end]
+      properties:
+        start: {type: string, format: date-time}
+        end: {type: string, format: date-time}
+    ResolvedSource:
+      type: object
+      required: [provider]
+      properties:
+        provider: {type: string}
+        connection_id: {type: string}
+        device: {$ref: '#/components/schemas/DeviceRef'}
+        origin: {$ref: '#/components/schemas/OriginRef'}
+        manual: {type: boolean}
     DeviceRef:
       type: object
       properties:
+        id: {type: string, description: dev_ id, the device filter value.}
         type: {type: string}
+        model: {type: string}
+    OriginRef:
+      type: object
+      properties:
+        key: {type: string}
+        name: {type: string}
+        relayed: {type: boolean}
+        relayed_provider: {type: string}
     SourcesDrilldown:
       type: object
       required: [metric, window, rule, sources]
@@ -2547,50 +2624,177 @@ components:
         metric: {type: string}
         window: {$ref: '#/components/schemas/Window'}
         rule: {$ref: '#/components/schemas/RuleRef'}
-        sources:
-          type: array
-          items:
-            type: object
-            required: [group, rule_status, provider]
-            properties:
-              group: {type: [string, 'null'], description: Rule group; null when the source is outside the rule.}
-              rule_status: {type: string, enum: [used, excluded, not_in_rule]}
-              reason: {type: string}
-              provider: {type: string}
-              device: {$ref: '#/components/schemas/DeviceRef'}
-              origin:
-                type: object
-                properties:
-                  key: {type: string}
-                  name: {type: string}
-                  relayed_provider: {type: string}
-              values:
-                type: object
-                description: Per-basis values, e.g. daily_value, interval_sum, intervals.
-                additionalProperties: {type: number, format: double}
-              records:
-                type: object
-                required: [href]
-                properties:
-                  href: {type: string}
-              provenance:
-                type: object
-                properties:
-                  raw_payload_ids: {type: array, items: {type: string}}
-                  normalizer: {type: string}
-                  fetched_at: {type: string, format: date-time}
+        sources: {type: array, items: {$ref: '#/components/schemas/DrilldownSource'}}
+    DrilldownSource:
+      type: object
+      required: [group, rule_status, provider]
+      properties:
+        group: {type: [string, 'null'], description: Rule group; null when the source is outside the rule.}
+        rule_status: {type: string, enum: [used, excluded, not_in_rule]}
+        reason: {type: string}
+        provider: {type: string}
+        connection_id: {type: string}
+        device: {$ref: '#/components/schemas/DeviceRef'}
+        origin: {$ref: '#/components/schemas/OriginRef'}
+        values:
+          type: object
+          description: >
+            The source's own values by basis: daily_value, interval_sum, intervals (additive);
+            samples, bucket_means (intensive); latest, readings or component codes (latest);
+            sessions, sleep_in_bed, sleep_total (sleep).
+          additionalProperties: {type: number, format: double}
+        count: {type: integer}
+        records: {$ref: '#/components/schemas/RecordsLink'}
+        provenance: {$ref: '#/components/schemas/DrilldownProvenance'}
+        session_refs: {type: array, items: {type: string, format: uuid}}
+    RecordsLink:
+      type: object
+      required: [href]
+      properties:
+        href: {type: string, description: The source's rows in the window on GET /measurements.}
+    DrilldownProvenance:
+      type: object
+      required: [raw_payload_ids, normalizer]
+      properties:
+        raw_payload_ids: {type: array, items: {type: string}}
+        normalizer: {type: string, description: 'name@version of the normalizers behind the rows, comma-separated.'}
+        fetched_at: {type: string, format: date-time, description: The latest fetch of those raw payloads.}
     ResolvedSeries:
       type: object
-      description: Open object; properties are added with the endpoint.
-    ResolvedEvents:
+      required: [metric, window, rule, timezone, points, sources_used, has_more]
+      properties:
+        metric: {type: string}
+        unit: {type: string}
+        window: {$ref: '#/components/schemas/SeriesWindow'}
+        rule: {$ref: '#/components/schemas/RuleRef'}
+        timezone: {type: string}
+        points: {type: array, items: {$ref: '#/components/schemas/ResolvedPoint'}}
+        sources_used: {type: array, items: {type: string}, description: The groups this page's values came from, in first-use order.}
+        has_more: {type: boolean}
+        next_cursor: {type: string}
+    SeriesWindow:
       type: object
-      description: Open object; properties are added with the endpoint.
+      required: [kind]
+      properties:
+        kind: {type: string}
+        size: {type: string, description: Bucket size of bucket windows.}
+    ResolvedPoint:
+      type: object
+      required: [key, end, status, sources]
+      properties:
+        key: {type: string}
+        start: {type: string, format: date-time, description: Absent for latest windows.}
+        end: {type: string, format: date-time}
+        local_date: {type: string, format: date}
+        status: {type: string, enum: [direct, fallback, calculated, overridden, no_data]}
+        value: {description: Same shape as ResolvedValue.value.}
+        partial: {type: boolean}
+        coverage: {type: number, format: double, minimum: 0, maximum: 1}
+        sources: {type: array, items: {type: string}, description: The groups the value came from (one for selecting strategies).}
+        warnings: {type: array, items: {type: string}}
+        links: {$ref: '#/components/schemas/ResolvedLinks'}
+    ResolvedSleep:
+      type: object
+      required: [timezone, nights]
+      properties:
+        timezone: {type: string}
+        nights: {type: array, items: {$ref: '#/components/schemas/ResolvedNight'}}
+    ResolvedNight:
+      type: object
+      required: [local_date, result, members]
+      properties:
+        local_date: {type: string, format: date}
+        result: {$ref: '#/components/schemas/ResolvedValue'}
+        members:
+          type: array
+          description: Every source with a session in the main episode, inside the rule or not.
+          items: {$ref: '#/components/schemas/SleepMember'}
+    SleepMember:
+      type: object
+      required: [group, rule_status, selected, provider, session_refs]
+      properties:
+        group: {type: [string, 'null']}
+        rule_status: {type: string, enum: [used, excluded, not_in_rule]}
+        reason: {type: string}
+        selected: {type: boolean, description: The episode's values come from this source.}
+        provider: {type: string}
+        connection_id: {type: string}
+        device: {$ref: '#/components/schemas/DeviceRef'}
+        origin: {$ref: '#/components/schemas/OriginRef'}
+        values:
+          type: object
+          description: sessions, sleep_in_bed and sleep_total (seconds).
+          additionalProperties: {type: number, format: double}
+        session_refs: {type: array, items: {type: string, format: uuid}}
+    ResolvedWorkouts:
+      type: object
+      required: [timezone, rule, workouts]
+      properties:
+        timezone: {type: string}
+        rule: {$ref: '#/components/schemas/RuleRef'}
+        workouts: {type: array, items: {$ref: '#/components/schemas/ResolvedWorkout'}}
+    ResolvedWorkout:
+      type: object
+      required: [local_date, start, end, sport, selected, members, explanation]
+      properties:
+        local_date: {type: string, format: date}
+        start: {type: string, format: date-time}
+        end: {type: string, format: date-time}
+        sport: {type: string, description: The cluster's specific sport, else other.}
+        selected: {type: [string, 'null'], format: uuid, description: The picked workout; null when no member is in a rule group.}
+        group: {type: string, description: The rule group of the picked workout.}
+        explanation: {type: string}
+        members: {type: array, items: {$ref: '#/components/schemas/WorkoutMember'}}
+    WorkoutMember:
+      type: object
+      required: [id, group, rule_status, selected, start_at, end_at, sport, provider]
+      properties:
+        id: {type: string, format: uuid}
+        group: {type: [string, 'null']}
+        rule_status: {type: string, enum: [used, excluded, not_in_rule]}
+        reason: {type: string}
+        selected: {type: boolean}
+        start_at: {type: string, format: date-time}
+        end_at: {type: string, format: date-time}
+        sport: {type: string}
+        distance_m: {type: number, format: double}
+        energy_kcal: {type: number, format: double}
+        avg_hr_bpm: {type: number, format: double}
+        max_hr_bpm: {type: number, format: double}
+        provider: {type: string}
+        connection_id: {type: string}
+        device: {$ref: '#/components/schemas/DeviceRef'}
+        origin: {$ref: '#/components/schemas/OriginRef'}
     ResolutionPreviewRequest:
       type: object
-      description: A draft rule and a date range. Open object; properties are added with the endpoint.
+      additionalProperties: false
+      required: [spec, start_date, end_date]
+      properties:
+        spec:
+          type: object
+          description: A draft rule (docs/architecture/resolution.md#rule-specification); validated, never stored.
+          x-go-type: json.RawMessage
+        start_date: {type: string, format: date}
+        end_date: {type: string, format: date}
     ResolutionPreview:
       type: object
-      description: Open object; properties are added with the endpoint.
+      required: [metric, timezone, window, draft_rule, active_rule, days]
+      properties:
+        metric: {type: string}
+        timezone: {type: string}
+        window: {type: string, description: The window kind both rules resolve.}
+        draft_rule: {$ref: '#/components/schemas/RuleRef'}
+        active_rule:
+          description: The rule in effect; null when the metric has none.
+          oneOf: [{$ref: '#/components/schemas/RuleRef'}, {type: 'null'}]
+        days: {type: array, items: {$ref: '#/components/schemas/PreviewDay'}}
+    PreviewDay:
+      type: object
+      required: [local_date, draft, active]
+      properties:
+        local_date: {type: string, format: date}
+        draft: {$ref: '#/components/schemas/ResolvedValue'}
+        active: {$ref: '#/components/schemas/ResolvedValue'}
 
     # ------------------------------------------------ system
     SystemVersion:
@@ -2783,7 +2987,34 @@ components:
             token: {type: string, description: Shown in this response only.}
 
     # ------------------------------------------------ open objects: properties are added with each endpoint
-    Metric: {type: object, description: Catalogue metric (docs/architecture/metric-catalog.md). Open object.}
+    Metric:
+      type: object
+      description: Catalogue metric (docs/architecture/metric-catalog.md) with what a rule for it may use.
+      additionalProperties: false
+      required: [code, section, unit, kinds, aggregation, windows, strategies, plausible_range, provider_scoped, selection_only]
+      properties:
+        code: {type: string}
+        section: {type: string}
+        unit: {type: string, description: Canonical unit code.}
+        kinds:
+          type: array
+          description: Kinds a source may store; empty for derived and sleep codes.
+          items: {type: string, enum: [sample, interval, cumulative, daily_value]}
+        aggregation: {type: string, enum: [intensive, additive, latest, daily_summary, sleep_derived]}
+        windows:
+          type: array
+          description: Window kinds a rule for this metric may use.
+          items: {type: string, enum: [bucket, hour, local_day, local_night, sleep_episode, latest, reading]}
+        strategies:
+          type: array
+          description: Rule strategy ops (strategy.op) allowed for this metric; sum_across_sources also needs the duplicate-risk acknowledgement.
+          items: {type: string, enum: [single_source, first_available, mean_across_sources, minimum_across_sources, maximum_across_sources, sum_across_sources, latest, earliest, event_priority]}
+        plausible_range: {type: array, items: {type: number, format: double}, minItems: 2, maxItems: 2}
+        group: {type: string, description: The measurement group the code belongs to (bp_reading, body_composition).}
+        family: {type: string, description: The rule family the code resolves under (sleep, blood_pressure).}
+        provider_scoped: {type: boolean, description: A provider-namespaced score; never pooled.}
+        selection_only: {type: boolean, description: Providers define it differently; rules select one source and never pool it.}
+        derived_from: {type: string, description: The source metric of a derived code (rule extension E2).}
     Measurement:
       type: object
       description: Normalized measurement (docs/architecture/data-model.md#measurements).

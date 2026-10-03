@@ -51,9 +51,11 @@ export function formatValue(value: unknown, unit?: string): string {
 	if (typeof value === 'number') return number.format(value) + u;
 	if (typeof value === 'object') {
 		const v = value as Record<string, unknown>;
-		if (typeof v.systolic === 'number' && typeof v.diastolic === 'number') {
-			const pulse = typeof v.pulse === 'number' ? ` · pulse ${number.format(v.pulse)}` : '';
-			return `${number.format(v.systolic)}/${number.format(v.diastolic)}${pulse}${u || ' mmHg'}`;
+		// Family values are keyed by catalogue code (bp_systolic, bp_diastolic, bp_pulse).
+		const [sys, dia, pul] = [v.bp_systolic ?? v.systolic, v.bp_diastolic ?? v.diastolic, v.bp_pulse ?? v.pulse];
+		if (typeof sys === 'number' && typeof dia === 'number') {
+			const pulse = typeof pul === 'number' ? ` · pulse ${number.format(pul)}` : '';
+			return `${number.format(sys)}/${number.format(dia)}${pulse}${u || ' mmHg'}`;
 		}
 		return Object.entries(v)
 			.map(([k, x]) => `${k} ${typeof x === 'number' ? number.format(x) : String(x)}`)

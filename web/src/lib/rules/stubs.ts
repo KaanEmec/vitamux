@@ -1,6 +1,6 @@
-// Typed stand-ins for two endpoints whose schemas are still open objects in api/openapi.yaml.
-// Both call the real spec path; a 404 or 503 means "not available yet", and the pages show a
-// friendly empty state instead of an error.
+// Calls for the rules pages. Coverage is a typed stand-in while its schema is an open object in
+// api/openapi.yaml. Both call the real spec path; a 404 or 503 means "not available yet", and the
+// pages show a friendly empty state instead of an error.
 import { api, type Problem, type Schemas } from '../api/client.ts';
 import type { Rule } from './rule.ts';
 
@@ -24,25 +24,17 @@ export async function getCoverage(start: string, end: string, metric?: string): 
 	return Array.isArray(c?.rows) ? c : null;
 }
 
-// TODO(J10.3): replace with components['schemas']['ResolutionPreview*'] once preview ships.
-type Resolved = Schemas['ResolvedValue'];
-export interface PreviewDay {
-	local_date: string;
-	draft: Resolved;
-	active: Resolved;
-}
-export interface Preview {
-	days: PreviewDay[];
-}
+/** POST /resolution/preview (J10.3): the draft rule and the rule in effect, per local date. */
+export type PreviewDay = Schemas['PreviewDay'];
+export type Preview = Schemas['ResolutionPreview'];
 
 export type PreviewOutcome = { preview: Preview } | { unavailable: true } | { problem: Problem };
 
 /** POST /resolution/preview: the draft rule against the active one over [start, end]. */
 export async function previewRule(spec: Rule, start: string, end: string): Promise<PreviewOutcome> {
 	const { data, error } = await api.POST('/api/v1/resolution/preview', {
-		body: { spec, start_date: start, end_date: end } as unknown as Schemas['ResolutionPreviewRequest']
+		body: { spec: spec as unknown as Schemas['ResolutionPreviewRequest']['spec'], start_date: start, end_date: end }
 	});
 	if (error) return unavailable(error) ? { unavailable: true } : { problem: error };
-	const p = data as unknown as Preview;
-	return Array.isArray(p?.days) ? { preview: p } : { unavailable: true };
+	return { preview: data };
 }

@@ -95,12 +95,11 @@
 
 	/** Source chips: the selected inputs' groups, with their provider when it adds information. */
 	function chips(v: Resolved | undefined): string[] {
-		return (v?.inputs ?? [])
-			.filter((i) => i.selected)
-			.map((i) => {
-				const p = i.sources?.[0]?.provider;
-				return p && p !== i.group ? `${i.group} · ${providerLabel(p)}` : i.group;
-			});
+		return (v?.inputs ?? []).flatMap((i) => {
+			if (!i.selected || !i.group) return [];
+			const p = i.sources?.[0]?.provider;
+			return [p && p !== i.group ? `${i.group} · ${providerLabel(p)}` : i.group];
+		});
 	}
 
 	function connectionAlert(c: Connection): Alert {

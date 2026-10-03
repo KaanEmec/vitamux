@@ -313,7 +313,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Resolved series of one metric over a range */
+        /**
+         * Resolved series of one metric over a range
+         * @description One point per window whose start lies in [start, end) (latest windows: whose as-of instant does), in start order, paged. The range spans at most 366 local dates.
+         */
         get: operations["getResolvedSeries"];
         put?: never;
         post?: never;
@@ -330,7 +333,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Resolved sleep episodes per night */
+        /**
+         * Resolved sleep episodes per night
+         * @description The sleep rule's main episode of every night in the range (at most 366), with every source that recorded it.
+         */
         get: operations["getResolvedSleep"];
         put?: never;
         post?: never;
@@ -347,7 +353,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Resolved workouts */
+        /**
+         * Resolved workouts
+         * @description Overlapping workouts clustered as in docs/architecture/resolution.md#sleep-episode-alignment, one entry per cluster starting on a local date of the range (at most 366), with the member the rule picks marked as selected.
+         */
         get: operations["getResolvedWorkouts"];
         put?: never;
         post?: never;
@@ -386,7 +395,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Resolve a draft rule over a range without writing anything */
+        /**
+         * Resolve a draft rule over a range without writing anything
+         * @description Validates the draft like POST /rules/{metric}/versions (422, or 409 rule_warning_unacknowledged) and resolves it live beside the rule in effect, one window per local date (at most 366): the draft's local_day or local_night window, else local_day. Nothing is stored: no rule version, no cache rows, no jobs.
+         */
         post: operations["previewResolution"];
         delete?: never;
         options?: never;
@@ -1542,39 +1554,89 @@ export interface components {
             size_bytes: number;
         };
         ResolvedDaily: {
-            /** @description IANA timezone of the requested period. */
+            /** @description IANA timezone of the requested period; empty (and every value no_data) while no timezone period is configured. */
             timezone: string;
-            days: {
-                /** Format: date */
-                local_date: string;
-                metrics: {
-                    [key: string]: components["schemas"]["ResolvedValue"];
-                };
-            }[];
+            days: components["schemas"]["ResolvedDay"][];
+        };
+        ResolvedDay: {
+            /** Format: date */
+            local_date: string;
+            metrics: {
+                [key: string]: components["schemas"]["ResolvedValue"];
+            };
         };
         ResolvedValue: {
             /** @enum {string} */
             status: "direct" | "fallback" | "calculated" | "overridden" | "no_data";
-            /** @description A number, or an object of components (e.g. blood pressure systolic/diastolic/pulse). */
+            /** @description A number in unit, or for a rule family an object of catalogue codes to numbers (bp_systolic, bp_diastolic, bp_pulse; the sleep_* codes). Absent without a value. */
             value?: unknown;
+            /** @description Canonical unit; absent for a family. */
             unit?: string;
+            /** @description The window ends after the request time. */
             partial?: boolean;
             window?: components["schemas"]["Window"];
             rule?: components["schemas"]["RuleRef"];
+            /** @description The group the value came from */
+            selected?: string;
+            /**
+             * Format: double
+             * @description Coverage of the groups behind the value.
+             */
+            coverage?: number;
+            /** @description Family codes without a value and why, e.g. sleep_deep no_stage_data. */
+            missing?: {
+                [key: string]: string;
+            };
+            /** @description Every rule group in ladder order, then each excluded or unmatched source. */
             inputs?: components["schemas"]["ResolvedInput"][];
-            warnings?: {
-                code: string;
-                group?: string;
-            }[];
+            warnings?: components["schemas"]["ResolvedWarning"][];
+            /** @description The E1 context of the window (workout or sleep). */
+            context?: string;
+            follow?: components["schemas"]["ResolvedFollow"];
+            /** @description The hourly picks of a composed day (E9). */
+            hours?: components["schemas"]["HourPick"][];
+            overrides?: components["schemas"]["ResolvedOverrides"];
             explanation: string;
             /** Format: date-time */
             computed_at?: string;
-            links?: {
-                sources?: string;
-            };
+            links?: components["schemas"]["ResolvedLinks"];
+        };
+        ResolvedWarning: {
+            code: string;
+            group?: string;
+        };
+        /** @description The E5 leader metric and the group it selected. */
+        ResolvedFollow: {
+            metric: string;
+            group?: string;
+        };
+        HourPick: {
+            /** Format: date-time */
+            start: string;
+            status: string;
+            group?: string;
+            /** Format: double */
+            value?: number;
+        };
+        /** @description Manual overrides of the window; computed is what the rule alone gave. */
+        ResolvedOverrides: {
+            applied: string[];
+            ignored: string[];
+            computed?: components["schemas"]["ComputedValue"];
+        };
+        ComputedValue: {
+            /** @enum {string} */
+            status: "direct" | "fallback" | "calculated" | "overridden" | "no_data";
+            /** @description Same shape as ResolvedValue.value. */
+            value?: unknown;
+            selected?: string;
+        };
+        ResolvedLinks: {
+            /** @description The all-sources drilldown of the window. */
+            sources?: string;
         };
         Window: {
-            /** @description e.g. local_day, hour, bucket, night, latest. */
+            /** @description bucket, hour, local_day, local_night, sleep_episode, latest or reading. */
             kind: string;
             /** Format: date-time */
             start?: string;
@@ -1582,17 +1644,22 @@ export interface components {
             end?: string;
             /** Format: date */
             local_date?: string;
+            /** @description The window key of drilldowns and overrides: a date, a UTC start, an as-of instant, or g:/m: for a reading. */
+            key?: string;
         };
         RuleRef: {
-            /** @description builtin:<metric> or user:<metric>. */
+            /** @description builtin:<metric>:<n>, rule:<metric>:<n>, or draft:<metric> in a preview. */
             ref: string;
+            /** @description 0 for a draft. */
             version: number;
             strategy?: string;
         };
         ResolvedInput: {
-            group: string;
-            /** @description e.g. used, no_data, below_quality, excluded. */
+            /** @description Rule group; null for an excluded or unmatched source. */
+            group: string | null;
+            /** @description used, fallback_unused, no_data, below_quality, stale, not_aligned, no_stage_data, excluded or not_in_rule. */
             status: string;
+            /** @description The group's value is (part of) the window value. */
             selected?: boolean;
             /** @description Same shape as ResolvedValue.value. */
             value?: unknown;
@@ -1600,58 +1667,232 @@ export interface components {
             basis?: string;
             /** Format: double */
             coverage?: number;
+            /** @description Contributing rows (sessions for sleep). */
+            count?: number;
             readings?: number;
+            prorated?: boolean;
+            /**
+             * Format: date-time
+             * @description Latest contributing instant.
+             */
+            at?: string;
+            span?: components["schemas"]["Span"];
+            wear_exempt?: boolean;
+            worn_buckets?: number;
             reason?: string;
-            sources?: {
-                provider?: string;
-                connection_id?: string;
-                device?: components["schemas"]["DeviceRef"];
-            }[];
+            sources?: components["schemas"]["ResolvedSource"][];
+            /** @description measurements ids. */
             record_refs?: string[];
+            /** @description sleep_sessions ids. */
+            session_refs?: string[];
+        };
+        /** @description The span an E2 min or min_rolling_mean statistic picked. */
+        Span: {
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+        };
+        ResolvedSource: {
+            provider: string;
+            connection_id?: string;
+            device?: components["schemas"]["DeviceRef"];
+            origin?: components["schemas"]["OriginRef"];
+            manual?: boolean;
         };
         DeviceRef: {
+            /** @description dev_ id */
+            id?: string;
             type?: string;
+            model?: string;
+        };
+        OriginRef: {
+            key?: string;
+            name?: string;
+            relayed?: boolean;
+            relayed_provider?: string;
         };
         SourcesDrilldown: {
             metric: string;
             window: components["schemas"]["Window"];
             rule: components["schemas"]["RuleRef"];
-            sources: {
-                /** @description Rule group; null when the source is outside the rule. */
-                group: string | null;
-                /** @enum {string} */
-                rule_status: "used" | "excluded" | "not_in_rule";
-                reason?: string;
-                provider: string;
-                device?: components["schemas"]["DeviceRef"];
-                origin?: {
-                    key?: string;
-                    name?: string;
-                    relayed_provider?: string;
-                };
-                /** @description Per-basis values, e.g. daily_value, interval_sum, intervals. */
-                values?: {
-                    [key: string]: number;
-                };
-                records?: {
-                    href: string;
-                };
-                provenance?: {
-                    raw_payload_ids?: string[];
-                    normalizer?: string;
-                    /** Format: date-time */
-                    fetched_at?: string;
-                };
-            }[];
+            sources: components["schemas"]["DrilldownSource"][];
         };
-        /** @description Open object; properties are added with the endpoint. */
-        ResolvedSeries: Record<string, never>;
-        /** @description Open object; properties are added with the endpoint. */
-        ResolvedEvents: Record<string, never>;
-        /** @description A draft rule and a date range. Open object; properties are added with the endpoint. */
-        ResolutionPreviewRequest: Record<string, never>;
-        /** @description Open object; properties are added with the endpoint. */
-        ResolutionPreview: Record<string, never>;
+        DrilldownSource: {
+            /** @description Rule group; null when the source is outside the rule. */
+            group: string | null;
+            /** @enum {string} */
+            rule_status: "used" | "excluded" | "not_in_rule";
+            reason?: string;
+            provider: string;
+            connection_id?: string;
+            device?: components["schemas"]["DeviceRef"];
+            origin?: components["schemas"]["OriginRef"];
+            /** @description The source's own values by basis: daily_value, interval_sum, intervals (additive); samples, bucket_means (intensive); latest, readings or component codes (latest); sessions, sleep_in_bed, sleep_total (sleep). */
+            values?: {
+                [key: string]: number;
+            };
+            count?: number;
+            records?: components["schemas"]["RecordsLink"];
+            provenance?: components["schemas"]["DrilldownProvenance"];
+            session_refs?: string[];
+        };
+        RecordsLink: {
+            /** @description The source's rows in the window on GET /measurements. */
+            href: string;
+        };
+        DrilldownProvenance: {
+            raw_payload_ids: string[];
+            /** @description name@version of the normalizers behind the rows, comma-separated. */
+            normalizer: string;
+            /**
+             * Format: date-time
+             * @description The latest fetch of those raw payloads.
+             */
+            fetched_at?: string;
+        };
+        ResolvedSeries: {
+            metric: string;
+            unit?: string;
+            window: components["schemas"]["SeriesWindow"];
+            rule: components["schemas"]["RuleRef"];
+            timezone: string;
+            points: components["schemas"]["ResolvedPoint"][];
+            /** @description The groups this page's values came from */
+            sources_used: string[];
+            has_more: boolean;
+            next_cursor?: string;
+        };
+        SeriesWindow: {
+            kind: string;
+            /** @description Bucket size of bucket windows. */
+            size?: string;
+        };
+        ResolvedPoint: {
+            key: string;
+            /**
+             * Format: date-time
+             * @description Absent for latest windows.
+             */
+            start?: string;
+            /** Format: date-time */
+            end: string;
+            /** Format: date */
+            local_date?: string;
+            /** @enum {string} */
+            status: "direct" | "fallback" | "calculated" | "overridden" | "no_data";
+            /** @description Same shape as ResolvedValue.value. */
+            value?: unknown;
+            partial?: boolean;
+            /** Format: double */
+            coverage?: number;
+            /** @description The groups the value came from (one for selecting strategies). */
+            sources: string[];
+            warnings?: string[];
+            links?: components["schemas"]["ResolvedLinks"];
+        };
+        ResolvedSleep: {
+            timezone: string;
+            nights: components["schemas"]["ResolvedNight"][];
+        };
+        ResolvedNight: {
+            /** Format: date */
+            local_date: string;
+            result: components["schemas"]["ResolvedValue"];
+            /** @description Every source with a session in the main episode, inside the rule or not. */
+            members: components["schemas"]["SleepMember"][];
+        };
+        SleepMember: {
+            group: string | null;
+            /** @enum {string} */
+            rule_status: "used" | "excluded" | "not_in_rule";
+            reason?: string;
+            /** @description The episode's values come from this source. */
+            selected: boolean;
+            provider: string;
+            connection_id?: string;
+            device?: components["schemas"]["DeviceRef"];
+            origin?: components["schemas"]["OriginRef"];
+            /** @description sessions, sleep_in_bed and sleep_total (seconds). */
+            values?: {
+                [key: string]: number;
+            };
+            session_refs: string[];
+        };
+        ResolvedWorkouts: {
+            timezone: string;
+            rule: components["schemas"]["RuleRef"];
+            workouts: components["schemas"]["ResolvedWorkout"][];
+        };
+        ResolvedWorkout: {
+            /** Format: date */
+            local_date: string;
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+            /** @description The cluster's specific sport */
+            sport: string;
+            /**
+             * Format: uuid
+             * @description The picked workout; null when no member is in a rule group.
+             */
+            selected: string | null;
+            /** @description The rule group of the picked workout. */
+            group?: string;
+            explanation: string;
+            members: components["schemas"]["WorkoutMember"][];
+        };
+        WorkoutMember: {
+            /** Format: uuid */
+            id: string;
+            group: string | null;
+            /** @enum {string} */
+            rule_status: "used" | "excluded" | "not_in_rule";
+            reason?: string;
+            selected: boolean;
+            /** Format: date-time */
+            start_at: string;
+            /** Format: date-time */
+            end_at: string;
+            sport: string;
+            /** Format: double */
+            distance_m?: number;
+            /** Format: double */
+            energy_kcal?: number;
+            /** Format: double */
+            avg_hr_bpm?: number;
+            /** Format: double */
+            max_hr_bpm?: number;
+            provider: string;
+            connection_id?: string;
+            device?: components["schemas"]["DeviceRef"];
+            origin?: components["schemas"]["OriginRef"];
+        };
+        ResolutionPreviewRequest: {
+            /** @description A draft rule (docs/architecture/resolution.md#rule-specification); validated, never stored. */
+            spec: Record<string, never>;
+            /** Format: date */
+            start_date: string;
+            /** Format: date */
+            end_date: string;
+        };
+        ResolutionPreview: {
+            metric: string;
+            timezone: string;
+            /** @description The window kind both rules resolve. */
+            window: string;
+            draft_rule: components["schemas"]["RuleRef"];
+            /** @description The rule in effect; null when the metric has none. */
+            active_rule: components["schemas"]["RuleRef"] | null;
+            days: components["schemas"]["PreviewDay"][];
+        };
+        PreviewDay: {
+            /** Format: date */
+            local_date: string;
+            draft: components["schemas"]["ResolvedValue"];
+            active: components["schemas"]["ResolvedValue"];
+        };
         SystemVersion: {
             version: string;
             commit: string;
@@ -1831,8 +2072,32 @@ export interface components {
             /** @description Shown in this response only. */
             token: string;
         };
-        /** @description Catalogue metric (docs/architecture/metric-catalog.md). Open object. */
-        Metric: Record<string, never>;
+        /** @description Catalogue metric (docs/architecture/metric-catalog.md) with what a rule for it may use. */
+        Metric: {
+            code: string;
+            section: string;
+            /** @description Canonical unit code. */
+            unit: string;
+            /** @description Kinds a source may store; empty for derived and sleep codes. */
+            kinds: ("sample" | "interval" | "cumulative" | "daily_value")[];
+            /** @enum {string} */
+            aggregation: "intensive" | "additive" | "latest" | "daily_summary" | "sleep_derived";
+            /** @description Window kinds a rule for this metric may use. */
+            windows: ("bucket" | "hour" | "local_day" | "local_night" | "sleep_episode" | "latest" | "reading")[];
+            /** @description Rule strategy ops (strategy.op) allowed for this metric; sum_across_sources also needs the duplicate-risk acknowledgement. */
+            strategies: ("single_source" | "first_available" | "mean_across_sources" | "minimum_across_sources" | "maximum_across_sources" | "sum_across_sources" | "latest" | "earliest" | "event_priority")[];
+            plausible_range: number[];
+            /** @description The measurement group the code belongs to (bp_reading */
+            group?: string;
+            /** @description The rule family the code resolves under (sleep */
+            family?: string;
+            /** @description A provider-namespaced score; never pooled. */
+            provider_scoped: boolean;
+            /** @description Providers define it differently; rules select one source and never pool it. */
+            selection_only: boolean;
+            /** @description The source metric of a derived code (rule extension E2). */
+            derived_from?: string;
+        };
         /** @description Normalized measurement (docs/architecture/data-model.md#measurements). */
         Measurement: {
             id: string;
@@ -3418,7 +3683,7 @@ export interface operations {
                 start_date: components["parameters"]["StartDateRequired"];
                 /** @description Last local date, inclusive. */
                 end_date: components["parameters"]["EndDateRequired"];
-                /** @description Comma-separated metric codes; all resolvable metrics when omitted. */
+                /** @description Comma-separated metric codes or rule families (repeating the parameter also works); every metric with a rule in effect when omitted. Night metrics (sleep, local_night rules) resolve the night of each date, the others its local_day. At most 366 dates. */
                 metrics?: string[];
             };
             header?: never;
@@ -3444,11 +3709,16 @@ export interface operations {
     getResolvedSeries: {
         parameters: {
             query: {
+                /** @description Catalogue code or rule family (sleep, blood_pressure). */
                 metric: string;
                 start: string;
                 end: string;
-                /** @description Window kind or bucket size, e.g. hour, local_day, 5m. */
+                /** @description Window kind (bucket, hour, local_day, local_night, sleep_episode, latest, reading) or a bucket size (1m, 5m, 15m, 30m); the rule's window when omitted. A window the metric does not allow is 422 unsupported_window. */
                 window?: string;
+                /** @description Page size. Endpoints may cap it lower than 10,000. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Opaque next_cursor from the previous page of the same query. */
+                cursor?: components["parameters"]["Cursor"];
             };
             header?: never;
             path?: never;
@@ -3467,6 +3737,7 @@ export interface operations {
             };
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
         };
     };
@@ -3490,11 +3761,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ResolvedEvents"];
+                    "application/json": components["schemas"]["ResolvedSleep"];
                 };
             };
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
         };
     };
@@ -3518,21 +3790,25 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ResolvedEvents"];
+                    "application/json": components["schemas"]["ResolvedWorkouts"];
                 };
             };
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
         };
     };
     getResolvedSources: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Window kind (local_day, local_night, hour, bucket, sleep_episode). For a date key the default is the kind /resolved/daily uses for the metric; for an instant key the rule's bucket or sleep_episode window, else hour. */
+                window?: string;
+            };
             header?: never;
             path: {
                 metric: components["parameters"]["MetricPath"];
-                /** @description Window key, e.g. a local date (2026-09-14) or an hour start. */
+                /** @description Window key, e.g. a local date (2026-09-14) or an hour start in UTC (2026-09-14T08:00:00Z). */
                 window_key: string;
             };
             cookie?: never;
@@ -3578,6 +3854,7 @@ export interface operations {
             };
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
         };
     };
