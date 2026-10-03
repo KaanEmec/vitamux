@@ -18,6 +18,7 @@ import (
 
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/db/dbq"
+	"github.com/KaanEmec/vitamux/internal/metrics"
 )
 
 // Handler runs one job. Return nil on success, RescheduleAt to run later without using an
@@ -177,9 +178,11 @@ func (r *Runner) execute(handlerCtx context.Context, j Job, h Handler) {
 		defer close(beats)
 		r.heartbeat(ctx, j, &lost, cancel)
 	}()
+	began := time.Now()
 	err := call(ctx, h, j)
 	cancel()
 	<-beats
+	metrics.JobDuration.WithLabelValues(j.Kind).Observe(time.Since(began).Seconds())
 
 	log := r.log.With("job_id", j.ID, "kind", j.Kind, "attempt", j.Attempt)
 	if j.ConnectionID != nil {
@@ -282,6 +285,11 @@ func (r *Runner) finish(ctx context.Context, j Job, herr error, shuttingDown boo
 	if err != nil {
 		return err
 	}
+	outcome := run.Outcome
+	if outcome == "failed" && (perm != nil || j.Attempt >= j.MaxAttempts) {
+		outcome = "dead" // no retry left
+	}
+	metrics.JobRuns.WithLabelValues(j.Kind, outcome).Inc()
 	var p panicError
 	switch {
 	case herr == nil:

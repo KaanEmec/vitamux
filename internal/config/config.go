@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/netip"
 	"net/url"
 	"os"
@@ -26,8 +27,10 @@ const (
 
 // Config is the validated process configuration.
 type Config struct {
-	Env           Env
-	HTTPAddr      string
+	Env      Env
+	HTTPAddr string
+	// MetricsAddr is the private listener of /metrics (VITAMUX_METRICS_ADDR); empty disables it.
+	MetricsAddr   string
 	PublicURL     *url.URL
 	LogLevel      slog.Level
 	DataDir       string
@@ -63,8 +66,8 @@ func (s Secret) GoString() string { return s.String() }
 
 // String renders the config with secrets redacted, suitable for startup logs.
 func (c Config) String() string {
-	return fmt.Sprintf("env=%s http_addr=%s public_url=%s log_level=%s data_dir=%s master_key_file=%s trusted_proxies=%v database_url=%s",
-		c.Env, c.HTTPAddr, c.PublicURL, c.LogLevel, c.DataDir, c.MasterKeyFile, c.TrustedProxies, c.DatabaseURL)
+	return fmt.Sprintf("env=%s http_addr=%s metrics_addr=%s public_url=%s log_level=%s data_dir=%s master_key_file=%s trusted_proxies=%v database_url=%s",
+		c.Env, c.HTTPAddr, c.MetricsAddr, c.PublicURL, c.LogLevel, c.DataDir, c.MasterKeyFile, c.TrustedProxies, c.DatabaseURL)
 }
 
 // Lookup abstracts os.LookupEnv for tests.
@@ -88,6 +91,7 @@ func load(env Lookup, readFile ReadFile) (Config, error) {
 	c := Config{
 		Env:           Env(get("ENV", string(Production))),
 		HTTPAddr:      get("HTTP_ADDR", "127.0.0.1:8080"),
+		MetricsAddr:   get("METRICS_ADDR", ""),
 		DataDir:       get("DATA_DIR", "./data"),
 		MasterKeyFile: get("MASTER_KEY_FILE", ""),
 	}
@@ -98,6 +102,12 @@ func load(env Lookup, readFile ReadFile) (Config, error) {
 	}
 	if c.Env != Production && c.Env != Development {
 		errs = append(errs, fmt.Errorf("%sENV must be %q or %q, got %q", prefix, Production, Development, c.Env))
+	}
+
+	if _, _, err := net.SplitHostPort(c.MetricsAddr); c.MetricsAddr != "" && err != nil {
+		errs = append(errs, fmt.Errorf("%sMETRICS_ADDR must be host:port, got %q", prefix, c.MetricsAddr))
+	} else if c.MetricsAddr == c.HTTPAddr && c.MetricsAddr != "" {
+		errs = append(errs, fmt.Errorf("%sMETRICS_ADDR must differ from %sHTTP_ADDR: /metrics is never served publicly", prefix, prefix))
 	}
 
 	pub, err := url.Parse(get("PUBLIC_URL", "http://127.0.0.1:8080"))

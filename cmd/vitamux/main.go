@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -24,6 +25,7 @@ import (
 	"github.com/KaanEmec/vitamux/internal/crypto"
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/jobs"
+	"github.com/KaanEmec/vitamux/internal/metrics"
 	"github.com/KaanEmec/vitamux/internal/normalize"
 	"github.com/KaanEmec/vitamux/internal/obs"
 	"github.com/KaanEmec/vitamux/internal/version"
@@ -135,7 +137,9 @@ func serve(stderr io.Writer) int {
 		return 1
 	}
 	if blobs != nil { // syncs need the blob store and the master key
-		runner.Register(jobs.KindSync, connectors.New(connectors.Config{DB: db.New(pool), Blobs: blobs, Keys: keys, Registry: syncRegistry, Log: log}).Handle)
+		syncRuntime := connectors.New(connectors.Config{DB: db.New(pool), Blobs: blobs, Keys: keys, Registry: syncRegistry, Log: log})
+		runner.Register(jobs.KindSync, syncRuntime.Handle)
+		runner.Register(connectors.KindBackfillUnit, syncRuntime.HandleBackfillUnit)
 	}
 	if err := registerNormalizeJobs(runner, db.New(pool), blobs, log); err != nil {
 		log.Error("normalizers", "err", err)
@@ -171,6 +175,14 @@ func serve(stderr io.Writer) int {
 	}
 
 	var background sync.WaitGroup
+	if cfg.MetricsAddr != "" { // private listener; stops with ctx like the workers
+		ln, err := (&net.ListenConfig{}).Listen(ctx, "tcp", cfg.MetricsAddr)
+		if err != nil {
+			log.Error("metrics listener", "err", err)
+			return 1
+		}
+		background.Go(func() { metrics.Serve(ctx, ln, db.New(pool), log) })
+	}
 	background.Go(func() { runner.Run(ctx) })
 	background.Go(func() { scheduler.Run(ctx) })
 	defer func() { stop(); background.Wait() }() // SIGTERM drain: finish or release jobs before the pool closes

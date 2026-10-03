@@ -119,3 +119,19 @@ func TestPreviousMasterKeyFiles(t *testing.T) {
 		t.Fatalf("got %v, %v", c.PreviousMasterKeyFiles, err)
 	}
 }
+
+func TestMetricsAddr(t *testing.T) {
+	c, err := load(envOf(nil), filesOf(nil))
+	if err != nil || c.MetricsAddr != "" {
+		t.Fatalf("default must be disabled: %q, %v", c.MetricsAddr, err)
+	}
+	c, err = load(envOf(map[string]string{"VITAMUX_METRICS_ADDR": "127.0.0.1:9090"}), filesOf(nil))
+	if err != nil || c.MetricsAddr != "127.0.0.1:9090" {
+		t.Fatalf("got %q, %v", c.MetricsAddr, err)
+	}
+	for _, bad := range []string{"9090", "127.0.0.1:8080"} { // not host:port; same as the public listener
+		if _, err := load(envOf(map[string]string{"VITAMUX_METRICS_ADDR": bad}), filesOf(nil)); err == nil {
+			t.Errorf("VITAMUX_METRICS_ADDR=%q accepted", bad)
+		}
+	}
+}

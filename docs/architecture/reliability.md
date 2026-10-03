@@ -52,7 +52,7 @@ Re-running a job or re-importing a file changes nothing.
 
 - `/healthz`: process alive. `/readyz`: DB reachable, schema matches, blob volume writable, worker heartbeat < 60 s old, master key loaded.
 - Logs are `slog` JSON with `request_id`, `job_id`, `connection_id`, `provider`, `stream`, `error_class`. A redacting handler drops `token|secret|password|authorization|cookie|code|refresh`-like attributes. Bodies of provider calls, ingest payloads, documents, and AI responses are never logged.
-- Metrics on private `:9090/metrics`:
+- Metrics (`internal/metrics`) on the private listener `VITAMUX_METRICS_ADDR` (e.g. `127.0.0.1:9090`; empty disables it), serving `/metrics` only and never mounted on the public mux. Built so far: `vitamux_jobs{kind,status}`, `vitamux_job_queue_age_seconds`, `vitamux_job_runs_total{kind,outcome}`, `vitamux_job_duration_seconds`, `vitamux_sync_pages_total`, `vitamux_sync_raw_items_total{outcome}`, `vitamux_provider_rate_limit_blocks_total`, `vitamux_connections{provider,status}`, `vitamux_connection_last_success_timestamp_seconds`, plus Go runtime. Health words come from `connectors.DeriveHealth`. Planned:
   - jobs by kind and status, durations, queue age;
   - provider requests, throttles, and errors;
   - raw items stored, duplicate, or new version;
