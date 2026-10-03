@@ -1,7 +1,7 @@
 # synthetic: true
-local_day 2025-05-11 steps: direct 8,967.12 [watch:used* ring:no_data band:no_data phone:fallback_unused]
-  Sum of 24 hourly values: watch 24 h (8,967.12), 6 h without a value = 8,967.12. No data from ring, band. Not needed: phone. Wear gate (heart_rate): watch worn in 288 buckets, phone exempt (no heart_rate rows).
-local_day 2025-05-12 steps: direct 16,942.19 [watch:used* ring:no_data band:no_data phone:fallback_unused]
-  Sum of 24 hourly values: watch 24 h (16,942.19) = 16,942.19. No data from ring, band. Not needed: phone. Wear gate (heart_rate): watch worn in 288 buckets, phone exempt (no heart_rate rows).
-local_day 2025-05-13 steps: direct 10,598.21 [watch:used* ring:no_data band:no_data phone:fallback_unused]
-  Sum of 24 hourly values: watch 24 h (10,598.21) = 10,598.21. No data from ring, band. Not needed: phone. Wear gate (heart_rate): watch worn in 288 buckets, phone exempt (no heart_rate rows).
+local_day 2025-05-11 steps: direct 6,745.08 [watch:used* watch_relayed:fallback_unused ring:no_data ring_relayed:no_data band:no_data band_relayed:no_data phone:fallback_unused]
+  Sum of 24 hourly values: watch 24 h (6,745.08), 6 h without a value = 6,745.08. No data from ring, ring_relayed, band, band_relayed. Not needed: watch_relayed, phone. Wear gate (heart_rate): watch worn in 288 buckets, watch_relayed worn in 281 buckets, phone exempt (no heart_rate rows).
+local_day 2025-05-12 steps: direct 12,520.94 [watch:used* watch_relayed:fallback_unused ring:no_data ring_relayed:no_data band:no_data band_relayed:no_data phone:fallback_unused]
+  Sum of 24 hourly values: watch 24 h (12,520.94) = 12,520.94. No data from ring, ring_relayed, band, band_relayed. Not needed: watch_relayed, phone. Wear gate (heart_rate): watch worn in 288 buckets, watch_relayed worn in 277 buckets, phone exempt (no heart_rate rows).
+local_day 2025-05-13 steps: direct 7,988.82 [watch:used* watch_relayed:fallback_unused ring:no_data ring_relayed:no_data band:no_data band_relayed:no_data phone:fallback_unused]
+  Sum of 24 hourly values: watch 24 h (7,988.82) = 7,988.82. No data from ring, ring_relayed, band, band_relayed. Not needed: watch_relayed, phone. Wear gate (heart_rate): watch worn in 288 buckets, watch_relayed worn in 280 buckets, phone exempt (no heart_rate rows).

@@ -8,9 +8,9 @@ A built-in applies while the owner has no rule for the metric. The first edit co
 
 | Rule | Window | Strategy and gates | Ladder | Why |
 | --- | --- | --- | --- | --- |
-| `builtin:steps:1` | local_day | first_available · min_coverage 0.6 · require_wear heart_rate · compose first_available by hour (E9) | `watch` › `ring` › `band` › `phone` | Watch, ring, band, phone; hours resolve separately so a watch left on the charger falls back to the phone for those hours only. |
-| `builtin:distance_walk_run:1` | local_day | first_available · min_coverage 0.6 · require_wear heart_rate · compose first_available by hour (E9) · contexts.workout @workout_source (E1) | `watch` › `phone` › `ring` | Follows the step source; inside a workout, the device that recorded it. |
-| `builtin:active_energy:1` | local_day | first_available · min_coverage 0.8 · require_wear heart_rate | `watch` › `band` › `ring` › `phone` | Every device is far off; one worn source per day keeps days comparable. |
+| `builtin:steps:2` | local_day | first_available · min_coverage 0.6 · require_wear heart_rate · compose first_available by hour (E9) | `watch` › `watch_relayed` › `ring` › `ring_relayed` › `band` › `band_relayed` › `phone` | Watch, ring, band, phone, each direct before relayed; hours resolve separately so a watch left on the charger falls back to the phone for those hours only. |
+| `builtin:distance_walk_run:2` | local_day | first_available · min_coverage 0.6 · require_wear heart_rate · compose first_available by hour (E9) · contexts.workout @workout_source (E1) | `watch` › `watch_relayed` › `phone` › `ring` › `ring_relayed` | Follows the step source; inside a workout, the device that recorded it. |
+| `builtin:active_energy:2` | local_day | first_available · min_coverage 0.8 · require_wear heart_rate | `watch` › `watch_relayed` › `band` › `band_relayed` › `ring` › `ring_relayed` › `phone` | Every device is far off; one worn source per day keeps days comparable. |
 | `builtin:heart_rate:1` | bucket 5m | first_available · plausible_range 25–230 · exclude_flags manual_entry · contexts.workout chest_strap, arm_band, @workout_source (E1) | `chest_strap` › `arm_band` › `apple_watch` › `garmin` › `garmin_apple` › `fitbit` › `samsung` › `whoop` › `polar` › `xiaomi` › `amazfit` › `oura` › `oura_apple` | Chest straps are ECG-class, then wrist devices by independent validation; inside workouts the recording device follows the straps. |
 | `builtin:resting_heart_rate:1` | local_day | first_available · max_staleness 36h | `oura` › `oura_apple` › `whoop` › `polar` › `apple` › `garmin` › `garmin_apple` › `fitbit` › `samsung` | Selection only (definitions differ); ranked by nightly error against a chest strap. |
 | `builtin:hrv_sdnn:1` | local_day | single_source | `apple` | Spot SDNN is its own method and comes from Apple only; never mixed with RMSSD. |
@@ -49,7 +49,8 @@ A group id means the same selectors in every built-in. Fields of one selector ar
 | `apple` | `{"provider":"apple_health","origin_key_prefix":"com.apple.health"}` |
 | `apple_watch` | `{"provider":"apple_health","origin_key_prefix":"com.apple.health","device_type":"watch"}` |
 | `arm_band` | `{"device_type":"arm_band","entry":"device"}` |
-| `band` | `{"device_type":"band","entry":"device"}` |
+| `band` | `{"relayed":false,"device_type":"band","entry":"device"}` |
+| `band_relayed` | `{"relayed":true,"device_type":"band","entry":"device"}` |
 | `bp_monitor` | `{"device_type":"bp_monitor","entry":"device"}` |
 | `chest_strap` | `{"device_type":"chest_strap","entry":"device"}` |
 | `device` | `{"entry":"device"}` |
@@ -61,13 +62,15 @@ A group id means the same selectors in every built-in. Fields of one selector ar
 | `oura_apple` | `{"provider":"apple_health","origin_key":"com.ouraring.oura"}` |
 | `phone` | `{"device_type":"phone","entry":"device"}` |
 | `polar` | `{"provider":"polar"}` |
-| `ring` | `{"device_type":"ring","entry":"device"}` |
+| `ring` | `{"relayed":false,"device_type":"ring","entry":"device"}` |
+| `ring_relayed` | `{"relayed":true,"device_type":"ring","entry":"device"}` |
 | `samsung` | `{"provider":"samsung"}` |
 | `scale` | `{"device_type":"scale","entry":"device"}` |
 | `scale_apps` | `{"provider":"apple_health","entry":"device"}` |
 | `under_mattress` | `{"device_type":"under_mattress"}` or `{"device_type":"sleep_monitor"}` |
-| `watch` | `{"device_type":"watch","entry":"device"}` |
+| `watch` | `{"relayed":false,"device_type":"watch","entry":"device"}` |
 | `watch_cuff` | `{"device_type":"watch","entry":"device"}` |
+| `watch_relayed` | `{"relayed":true,"device_type":"watch","entry":"device"}` |
 | `whoop` | `{"provider":"whoop"}` |
 | `withings` | `{"provider":"withings"}` |
 | `withings_apple` | `{"provider":"apple_health","origin_key":"com.withings.wiScaleNG"}` |

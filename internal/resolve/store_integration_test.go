@@ -77,11 +77,11 @@ func TestFirstEditCopiesBuiltin(t *testing.T) {
 	s, e, by := newStore(t)
 
 	v, err := s.Active(ctx, by.UserID, "steps")
-	if err != nil || !v.Builtin || v.Ref != "builtin:steps:1" {
+	if err != nil || !v.Builtin || v.Ref != "builtin:steps:2" {
 		t.Fatalf("before any edit the built-in applies: %+v %v", v, err)
 	}
 	// The owner drops the phone fallback.
-	edited := spec(t, "steps", func(r *resolve.Rule) { r.Groups = r.Groups[:3] })
+	edited := spec(t, "steps", func(r *resolve.Rule) { r.Groups = r.Groups[:len(r.Groups)-1] })
 	v, err = s.Create(ctx, by, edited, "no phone", true)
 	if err != nil {
 		t.Fatal(err)
@@ -93,7 +93,7 @@ func TestFirstEditCopiesBuiltin(t *testing.T) {
 	if err != nil || len(hist) != 2 {
 		t.Fatalf("history = %+v %v", hist, err)
 	}
-	if hist[0].Version != 2 || !hist[0].Active || hist[1].Version != 1 || hist[1].Active || hist[1].BasedOn != "builtin:steps:1" {
+	if hist[0].Version != 2 || !hist[0].Active || hist[1].Version != 1 || hist[1].Active || hist[1].BasedOn != "builtin:steps:2" {
 		t.Fatalf("history = %+v", hist)
 	}
 	b, _ := resolve.LookupBuiltin("steps")
@@ -121,7 +121,7 @@ func TestFirstEditCopiesBuiltin(t *testing.T) {
 			t.Errorf("audit %d = %+v", i, e)
 		}
 	}
-	if !strings.Contains(ev[1].detail, `"groups"`) || !strings.Contains(ev[2].detail, `"from": "builtin:steps:1"`) ||
+	if !strings.Contains(ev[1].detail, `"groups"`) || !strings.Contains(ev[2].detail, `"from": "builtin:steps:2"`) ||
 		!strings.Contains(ev[2].detail, `"to": "rule:steps:2"`) {
 		t.Errorf("audit details carry the diff and refs: %+v", ev)
 	}

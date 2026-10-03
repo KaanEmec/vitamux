@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -29,43 +30,40 @@ type Request struct {
 	Now      time.Time      // zero is time.Now(); open windows are partial and capped at it
 	Rule     *Version       // nil uses the rule in effect (Store.Active); a preview passes a draft
 	Sources  bool           // also build every window's all-sources drilldown (Result.Sources)
+	// Live skips resolved_cache (verify, benchmarks). A draft Rule and Sources always do.
+	Live bool
 }
 
 // Resolve resolves metric for every window of kind ("" for the rule's) on the local dates from
 // through to, with the rule in effect and the active overrides. It only reads: rule, timezone
 // periods, overrides, the metric's rows (and its wear series), sleep sessions and workouts for
-// contexts and night windows, and the follow leader's results. J09.9 caches what it returns.
+// contexts and night windows, and the follow leader's results; closed dates come from and go to
+// resolved_cache (cache.go).
 func Resolve(ctx context.Context, d *db.DB, userID uuid.UUID, metric string, kind catalog.Window, from, to time.Time) ([]Result, error) {
 	return Run(ctx, d, Request{UserID: userID, Metric: metric, Kind: kind, From: from, To: to})
 }
 
 // Run is Resolve with every option of Request.
 func Run(ctx context.Context, d *db.DB, req Request) ([]Result, error) {
-	if req.Now.IsZero() {
-		req.Now = time.Now()
-	}
-	req.From, req.To = midnightUTC(req.From), midnightUTC(req.To)
-	if req.To.Before(req.From) {
-		return nil, fmt.Errorf("resolve: range ends before it starts")
-	}
-	ruleMetric := RuleMetric(req.Metric)
-	v, err := activeRule(ctx, d, req.UserID, ruleMetric, req.Rule)
+	days, err := run(ctx, d, req)
 	if err != nil {
 		return nil, err
 	}
+	var out []Result
+	for _, day := range days {
+		out = append(out, day...)
+	}
+	return out, nil
+}
+
+// compute resolves req (normalized by run) live, one slice of results per local date.
+func compute(ctx context.Context, d *db.DB, req Request, v Version, ovs []Override) ([][]Result, error) {
 	l := &loader{d: d, q: d.Q(), req: req, rule: v.Rule}
-	if req.Kind == "" {
-		req.Kind = v.Rule.Window.Kind
-		l.req.Kind = req.Kind
-	}
-	if l.tl, err = normalize.NewPeriods(d).Timeline(ctx, req.UserID); err != nil {
+	var err error
+	if l.tl, err = timeline(ctx, d, req.UserID); err != nil {
 		return nil, err
 	}
-	ovs, err := NewOverrides(d).Active(ctx, req.UserID, ruleMetric, req.From.AddDate(0, 0, -1), req.To.AddDate(0, 0, 1))
-	if err != nil {
-		return nil, err
-	}
-	if ruleMetric == FamilySleep {
+	if RuleMetric(req.Metric) == FamilySleep {
 		return l.sleepResults(ctx, v, ovs)
 	}
 	return l.results(ctx, v, ovs)
@@ -112,12 +110,20 @@ type loader struct {
 	nights    map[time.Time]SleepAlignment
 }
 
-// results resolves a non-sleep metric.
-func (l *loader) results(ctx context.Context, v Version, ovs []Override) ([]Result, error) {
+// results resolves a non-sleep metric, one local date at a time. Each date sees exactly the
+// rows a request for that date alone loads (the date padded by a day on both sides, a year back
+// for latest windows, WearLookback more for the wear series), so its results do not depend on
+// the requested range and the cache (cache.go) can store them per date. A selection-only metric
+// also resolves the day before the range, whose last window is the first one's previous window
+// for definition_changed.
+func (l *loader) results(ctx context.Context, v Version, ovs []Override) ([][]Result, error) {
 	r, req := v.Rule, l.req
 	sp, err := r.spec()
 	if err != nil {
 		return nil, err
+	}
+	if r.selectionOnly() {
+		l.req.From = req.From.AddDate(0, 0, -1)
 	}
 	needSleep := req.Kind == catalog.WindowLocalNight || req.Kind == catalog.WindowSleepEpisode || len(r.Contexts[ContextSleep]) > 0
 	if needSleep {
@@ -125,7 +131,7 @@ func (l *loader) results(ctx context.Context, v Version, ovs []Override) ([]Resu
 			return nil, err
 		}
 	}
-	first, err := LocalDay(req.From, l.tl)
+	first, err := LocalDay(l.req.From, l.tl)
 	if err != nil {
 		return nil, err
 	}
@@ -133,26 +139,20 @@ func (l *loader) results(ctx context.Context, v Version, ovs []Override) ([]Resu
 	if err != nil {
 		return nil, err
 	}
-	from, to := first.Start.Add(-24*time.Hour), last.End.Add(24*time.Hour) // nights start the evening before
+	back := 24 * time.Hour // nights start the evening before
 	if req.Kind == catalog.WindowLatest {
-		from = first.Start.Add(-LatestLookback)
+		back = LatestLookback
 	}
-	s, err := l.loadSeries(ctx, sp.codes, from, to)
+	s, err := l.loadSeries(ctx, sp.codes, first.Start.Add(-back), last.End.Add(24*time.Hour))
 	if err != nil {
 		return nil, err
 	}
-	if q := r.Quality; q != nil && q.RequireWear != "" {
-		wear, err := l.loadSeries(ctx, []string{q.RequireWear}, from.Add(-WearLookback), to)
-		if err != nil {
+	wearCode, wear := "", []Input(nil)
+	if q := r.Quality; q != nil && q.RequireWear != "" && !slices.Contains(sp.codes, q.RequireWear) {
+		wearCode = q.RequireWear
+		if wear, err = l.loadWear(ctx, r, wearCode, first.Start.Add(-back-WearLookback), last.End.Add(24*time.Hour)); err != nil {
 			return nil, err
 		}
-		if _, dup := s[q.RequireWear]; !dup {
-			s[q.RequireWear] = wear[q.RequireWear]
-		}
-	}
-	ws, err := l.windows(r, s, sp)
-	if err != nil {
-		return nil, err
 	}
 
 	opt := Options{Now: req.Now}
@@ -171,7 +171,7 @@ func (l *loader) results(ctx context.Context, v Version, ovs []Override) ([]Resu
 		}
 	}
 	if r.Follow != "" {
-		lead := req
+		lead := l.req
 		lead.Metric, lead.Rule, lead.Sources = r.Follow, nil, false
 		leader, err := Run(ctx, l.d, lead)
 		if err != nil {
@@ -185,82 +185,114 @@ func (l *loader) results(ctx context.Context, v Version, ovs []Override) ([]Resu
 		}
 	}
 
-	resolved, err := r.ResolveWindowsOverridden(ws, s, opt, ovs)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]Result, len(resolved))
-	for i, res := range resolved {
-		out[i] = BuildResult(req.Metric, v, res, req.Now)
-		if req.Sources {
-			if out[i].Sources, err = BuildSources(r, res.Window, s, req.Now); err != nil {
-				return nil, err
+	var out [][]Result
+	for d := l.req.From; !d.After(req.To); d = d.AddDate(0, 0, 1) {
+		day, err := LocalDay(d, l.tl)
+		if err != nil {
+			return nil, err
+		}
+		lo, hi := day.Start.Add(-back), day.End.Add(24*time.Hour)
+		sub := s.between(lo, hi)
+		if wearCode != "" {
+			sub[wearCode] = between(wear, lo.Add(-WearLookback), hi)
+		}
+		ws, err := l.windows(r, sub, sp, d)
+		if err != nil {
+			return nil, err
+		}
+		resolved, err := r.ResolveWindowsOverridden(ws, sub, opt, ovs)
+		if err != nil {
+			return nil, err
+		}
+		opt.Previous = ""
+		if n := len(resolved); n > 0 {
+			opt.Previous = resolved[n-1].Selected
+		}
+		if d.Before(req.From) {
+			continue
+		}
+		rs := make([]Result, len(resolved))
+		for i, res := range resolved {
+			rs[i] = BuildResult(req.Metric, v, res, req.Now)
+			if req.Sources {
+				if rs[i].Sources, err = BuildSources(r, res.Window, sub, req.Now); err != nil {
+					return nil, err
+				}
 			}
 		}
+		out = append(out, rs)
 	}
 	return out, nil
 }
 
-// windows builds the windows of the requested kind on every date of the range.
-func (l *loader) windows(r *Rule, s Series, sp spec) ([]Window, error) {
+// between returns the rows of s that start in [lo, hi); s holds rows in start order.
+func (s Series) between(lo, hi time.Time) Series {
+	out := make(Series, len(s))
+	for code, in := range s {
+		out[code] = between(in, lo, hi)
+	}
+	return out
+}
+
+func between(in []Input, lo, hi time.Time) []Input {
+	i, _ := slices.BinarySearchFunc(in, lo, func(x Input, t time.Time) int { return x.Start.Compare(t) })
+	j, _ := slices.BinarySearchFunc(in, hi, func(x Input, t time.Time) int { return x.Start.Compare(t) })
+	return in[i:j:j]
+}
+
+// windows builds the windows of the requested kind on local date d; s holds that date's rows.
+func (l *loader) windows(r *Rule, s Series, sp spec, d time.Time) ([]Window, error) {
 	req := l.req
-	var out []Window
-	if req.Kind == catalog.WindowReading {
+	switch req.Kind {
+	case catalog.WindowReading:
 		var in []Input
 		for _, code := range sp.codes {
 			for _, x := range s[code] {
-				if !x.LocalDate.Before(req.From) && !x.LocalDate.After(req.To) {
+				if x.LocalDate.Equal(d) {
 					in = append(in, x)
 				}
 			}
 		}
 		return ReadingWindows(in), nil
+	case catalog.WindowLatest:
+		day, err := LocalDay(d, l.tl)
+		if err != nil {
+			return nil, err
+		}
+		return []Window{LatestWindow(timeMin(day.End, req.Now))}, nil
+	case catalog.WindowSleepEpisode:
+		var out []Window
+		for _, e := range l.nights[d].Episodes {
+			out = append(out, EpisodeWindow(e))
+		}
+		return out, nil
+	case catalog.WindowLocalNight:
+		w, err := LocalNight(d, l.sleepRule.NightAnchor(), l.tl)
+		if err != nil {
+			return nil, err
+		}
+		if e, ok := l.nights[d].Main(); ok {
+			w = w.WithEpisode(e)
+		} else {
+			w.Start = w.End // no episode: an empty window, explained as such
+		}
+		return []Window{w}, nil
+	case catalog.WindowBucket, catalog.WindowHour, catalog.WindowLocalDay:
 	}
-	for d := req.From; !d.After(req.To); d = d.AddDate(0, 0, 1) {
-		switch req.Kind {
-		case catalog.WindowLatest:
-			day, err := LocalDay(d, l.tl)
-			if err != nil {
-				return nil, err
-			}
-			out = append(out, LatestWindow(timeMin(day.End, req.Now)))
-		case catalog.WindowSleepEpisode:
-			for _, e := range l.nights[d].Episodes {
-				out = append(out, EpisodeWindow(e))
-			}
-		case catalog.WindowLocalNight:
-			w, err := LocalNight(d, l.sleepRule.NightAnchor(), l.tl)
-			if err != nil {
-				return nil, err
-			}
-			if e, ok := l.nights[d].Main(); ok {
-				w = w.WithEpisode(e)
-			} else {
-				w.Start = w.End // no episode: an empty window, explained as such
-			}
-			out = append(out, w)
-		default:
-			rw := RuleWindow{Kind: req.Kind}
-			if req.Kind == catalog.WindowBucket {
-				rw.Size = r.Window.Size
-				if rw.Size == "" {
-					rw.Size = "5m"
-				}
-			}
-			ws, err := DayWindows(rw, d, l.tl, r.NightAnchor())
-			if err != nil {
-				return nil, err
-			}
-			out = append(out, ws...)
+	rw := RuleWindow{Kind: req.Kind}
+	if req.Kind == catalog.WindowBucket {
+		rw.Size = r.Window.Size
+		if rw.Size == "" {
+			rw.Size = "5m"
 		}
 	}
-	return out, nil
+	return DayWindows(rw, d, l.tl, r.NightAnchor())
 }
 
 // sleepResults resolves the sleep family or one sleep code: one result per night (local_night,
 // the main episode) or per episode (sleep_episode). Overrides of the sleep family can force a
 // group; other actions are listed as ignored.
-func (l *loader) sleepResults(ctx context.Context, v Version, ovs []Override) ([]Result, error) {
+func (l *loader) sleepResults(ctx context.Context, v Version, ovs []Override) ([][]Result, error) {
 	req := l.req
 	l.sleepRule = v.Rule
 	if err := l.loadSleep(ctx); err != nil {
@@ -271,9 +303,10 @@ func (l *loader) sleepResults(ctx context.Context, v Version, ovs []Override) ([
 		codes = metricCodes(FamilySleep)
 	}
 	opt := Options{Now: req.Now}
-	var out []Result
+	var out [][]Result
 	for d := req.From; !d.After(req.To); d = d.AddDate(0, 0, 1) {
 		a := l.nights[d]
+		var day []Result
 		var eps []Episode
 		var ws []Window
 		switch req.Kind {
@@ -320,8 +353,9 @@ func (l *loader) sleepResults(ctx context.Context, v Version, ovs []Override) ([
 			if req.Sources {
 				r.Sources = a.Sources(e)
 			}
-			out = append(out, r)
+			day = append(day, r)
 		}
+		out = append(out, day)
 	}
 	return out, nil
 }
@@ -377,21 +411,81 @@ func (l *loader) loadSeries(ctx context.Context, codes []string, from, to time.T
 	if err != nil {
 		return nil, db.MapErr(err)
 	}
+	// Rows carry source ids; their identities are looked up once per distinct triple.
+	type ids struct {
+		provider       int16
+		device, origin uuid.UUID
+	}
+	idx := map[ids]int{}
+	var p dbq.ResolveSourceIdentitiesParams
+	keys := make([]int, len(rows))
+	for i, row := range rows {
+		k := ids{provider: row.ProviderID}
+		if row.DeviceID != nil {
+			k.device = *row.DeviceID
+		}
+		if row.OriginID != nil {
+			k.origin = *row.OriginID
+		}
+		n, ok := idx[k]
+		if !ok {
+			n = len(idx)
+			idx[k] = n
+			p.ProviderIds, p.DeviceIds, p.OriginIds = append(p.ProviderIds, k.provider), append(p.DeviceIds, k.device), append(p.OriginIds, k.origin)
+		}
+		keys[i] = n
+	}
+	srcs := make([]dbq.ResolveSourceIdentitiesRow, len(idx))
+	if len(idx) > 0 {
+		found, err := l.q.ResolveSourceIdentities(ctx, p)
+		if err != nil {
+			return nil, db.MapErr(err)
+		}
+		for _, f := range found {
+			srcs[f.I-1] = f
+		}
+	}
 	s := Series{}
 	for _, code := range codes {
 		s[code] = nil
 	}
-	for _, row := range rows {
+	for i, row := range rows {
+		f := srcs[keys[i]]
+		flags := normalize.Flags(row.QualityFlags)
 		in := Input{ID: row.ID, Kind: catalog.Kind(row.Kind), Start: row.StartAt, LocalDate: row.LocalDate,
-			Value: row.Value, Flags: normalize.Flags(row.QualityFlags), GroupID: row.GroupID,
-			Source: sourceOf(row.Provider, row.ConnectionID, row.DeviceID, row.DeviceType, row.DeviceModel, row.OriginKey, row.OriginName, row.Relayed,
-				normalize.Flags(row.QualityFlags))}
+			Value: row.Value, Flags: flags, GroupID: row.GroupID,
+			Source: sourceOf(f.Provider, row.ConnectionID, row.DeviceID, f.DeviceType, f.DeviceModel, f.OriginKey, f.OriginName, f.Relayed, flags)}
 		if row.EndAt != nil {
 			in.End = *row.EndAt
 		}
-		s[row.Metric] = append(s[row.Metric], in)
+		code := codes[row.MetricIdx-1]
+		s[code] = append(s[code], in)
 	}
 	return s, nil
+}
+
+// loadWear loads the wear series of quality.require_wear from from to to. Where every base bucket
+// is a UTC-aligned 5 minutes, the series is one row per source and 5-minute bucket
+// (ResolveWearBuckets), which gates exactly like the rows it stands for and is far smaller for
+// dense heart rate; shorter windows (small buckets, short episodes) read the rows.
+func (l *loader) loadWear(ctx context.Context, r *Rule, code string, from, to time.Time) ([]Input, error) {
+	short := l.req.Kind == catalog.WindowSleepEpisode || l.req.Kind == catalog.WindowLocalNight ||
+		(l.req.Kind == catalog.WindowBucket && r.Window.Size != "" && r.Window.Size.Std() < 5*time.Minute)
+	if short {
+		s, err := l.loadSeries(ctx, []string{code}, from, to)
+		return s[code], err
+	}
+	rows, err := l.q.ResolveWearBuckets(ctx, dbq.ResolveWearBucketsParams{UserID: l.req.UserID, Metric: code, FromAt: from, ToAt: to,
+		NotWear: int32(normalize.FlagManualEntry | normalize.FlagImplausible)})
+	if err != nil {
+		return nil, db.MapErr(err)
+	}
+	out := make([]Input, len(rows))
+	for i, row := range rows {
+		out[i] = Input{Kind: catalog.Sample, Start: row.Bucket,
+			Source: sourceOf(row.Provider, row.ConnectionID, row.DeviceID, row.DeviceType, row.DeviceModel, row.OriginKey, row.OriginName, row.Relayed, 0)}
+	}
+	return out, nil
 }
 
 // loadWorkouts loads the active workouts overlapping [from, to), without segments.
@@ -418,4 +512,9 @@ func sourceOf(provider string, conn uuid.UUID, device *uuid.UUID, deviceType, mo
 		s.DeviceID = *device
 	}
 	return s
+}
+
+// timeline returns the owner's timezone periods.
+func timeline(ctx context.Context, d *db.DB, userID uuid.UUID) (normalize.Timeline, error) {
+	return normalize.NewPeriods(d).Timeline(ctx, userID)
 }

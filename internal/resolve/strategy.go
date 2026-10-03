@@ -87,7 +87,8 @@ type WindowResult struct {
 // Options are per-call inputs that are not part of the rule.
 type Options struct {
 	Now time.Time // caps elapsed buckets and staleness and sets Partial; zero means no cap
-	// Previous is the group id the previous window selected, for definition_changed; "" if unknown.
+	// Previous is the group id the previous window selected, for definition_changed; "" if it
+	// selected none or is unknown.
 	// ResolveWindows sets it from window to window.
 	Previous string
 	// Context (E1) forces the window's context; "" derives it from Events (Rule.ContextAt).
@@ -97,8 +98,9 @@ type Options struct {
 	Leader map[string]string
 }
 
-// ResolveWindows resolves consecutive windows; each window falls back on its own, and the
-// selection carries over for definition_changed.
+// ResolveWindows resolves consecutive windows; each window falls back on its own, and each
+// window's selection is the next one's Options.Previous for definition_changed (a window
+// without one resets it, so a window depends only on the one before it).
 func (r *Rule) ResolveWindows(ws []Window, s Series, opt Options) ([]WindowResult, error) {
 	sp, err := r.spec()
 	if err != nil {
@@ -111,9 +113,7 @@ func (r *Rule) ResolveWindows(ws []Window, s Series, opt Options) ([]WindowResul
 		if err != nil {
 			return nil, err
 		}
-		if res.Selected != "" {
-			opt.Previous = res.Selected
-		}
+		opt.Previous = res.Selected
 		out = append(out, res)
 	}
 	return out, nil

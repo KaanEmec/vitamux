@@ -34,6 +34,7 @@ import (
 	"github.com/KaanEmec/vitamux/internal/metrics"
 	"github.com/KaanEmec/vitamux/internal/normalize"
 	"github.com/KaanEmec/vitamux/internal/obs"
+	"github.com/KaanEmec/vitamux/internal/resolve"
 	"github.com/KaanEmec/vitamux/internal/version"
 	"github.com/KaanEmec/vitamux/web"
 )
@@ -52,6 +53,7 @@ Commands:
   import    ndjson [--merge] EXPORT (load a Vitamux export zip)
   backup    [--out DIR|-] (database dump, blobs and manifest; default VITAMUX_BACKUP_DIR)
   restore   --from DIR (into an empty database and data dir, then migrate up)
+  resolve   verify [--windows N] (compare the resolved cache with live resolution)
   version   print version information
 `
 
@@ -87,6 +89,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return backupCmd(args[1:], stdout, stderr)
 	case "restore":
 		return restoreCmd(args[1:], stdout, stderr)
+	case "resolve":
+		return resolveCmd(args[1:], stdout, stderr)
 	case "help", "-h", "--help":
 		fmt.Fprint(stdout, usage)
 		return 0
@@ -154,6 +158,7 @@ func serve(stderr io.Writer) int {
 		scheduler.Daily(backup.Kind)
 	}
 	runner.Register(normalize.KindRecomputeLocalDates, normalize.RecomputeJob(db.New(pool), log))
+	resolve.Register(runner, scheduler, db.New(pool)) // rebuild_aggregates
 	lifecycle.Register(runner, scheduler, db.New(pool), log)
 	documents.Register(runner, scheduler, db.New(pool), blobs, keys, log) // no-op without blobs and key
 	// Extraction providers; nil without blobs and key.

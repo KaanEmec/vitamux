@@ -32,34 +32,53 @@ import (
 type slice struct {
 	ctx   context.Context
 	d     *db.DB
-	owner func(stmt string, args ...any) error // runs a statement as the schema owner
+	owner func(stmt string, args ...any) error              // runs a statement as the schema owner
+	scan  func(dest []any, query string, args ...any) error // scans one row of a query as the schema owner
 	user  uuid.UUID
 }
 
 func loadSlice(t *testing.T, start string, days int) *slice {
 	t.Helper()
-	dir := t.TempDir()
+	return loadDir(t, generate(t, t.TempDir(), start, days, "-hr-step", "60"))
+}
+
+// generate runs fixturegen for the days from start into dir and returns dir.
+func generate(t testing.TB, dir, start string, days int, flags ...string) string {
+	t.Helper()
 	_, file, _, _ := runtime.Caller(0)
-	cmd := exec.CommandContext(t.Context(), "go", "run", "./tools/fixturegen", "-out", dir, "-start", start, "-days", strconv.Itoa(days), "-hr-step", "60") //nolint:gosec // fixed tool path
+	args := append([]string{"run", "./tools/fixturegen", "-out", dir, "-start", start, "-days", strconv.Itoa(days)}, flags...)
+	cmd := exec.CommandContext(context.Background(), "go", args...) //nolint:gosec // fixed tool path
 	cmd.Dir = filepath.Join(filepath.Dir(file), "..", "..")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("fixturegen: %v\n%s", err, out)
 	}
+	return dir
+}
+
+// loadDir loads a fixturegen dataset into a fresh database with the persona's timezone periods.
+func loadDir(t testing.TB, dir string) *slice {
+	t.Helper()
 	u, app := dbtest.Migrated(t)
-	stats, err := fixtureload.Load(t.Context(), app, dir)
+	stats, err := fixtureload.Load(context.Background(), app, dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	owner := dbtest.Pool(t, u, db.OwnerRole)
-	s := &slice{ctx: t.Context(), d: db.New(app), user: stats.UserID,
-		owner: func(stmt string, args ...any) error { _, err := owner.Exec(t.Context(), stmt, args...); return err }}
+	s := &slice{ctx: context.Background(), d: db.New(app), user: stats.UserID,
+		owner: func(stmt string, args ...any) error {
+			_, err := owner.Exec(context.Background(), stmt, args...)
+			return err
+		},
+		scan: func(dest []any, query string, args ...any) error {
+			return owner.QueryRow(context.Background(), query, args...).Scan(dest...)
+		}}
 	// The persona's timezone periods (fixtures/README.md): Berlin, New York for the trip, Berlin.
 	for _, p := range []struct{ from, tz string }{
 		{"2024-01-01T00:00:00Z", "Europe/Berlin"},
 		{"2025-05-11T22:00:00Z", "America/New_York"},
 		{"2025-05-22T04:00:00Z", "Europe/Berlin"},
 	} {
-		if _, err := app.Exec(t.Context(), `INSERT INTO timezone_periods (id, user_id, tz, valid_from) VALUES ($1, $2, $3, $4)`,
+		if _, err := app.Exec(context.Background(), `INSERT INTO timezone_periods (id, user_id, tz, valid_from) VALUES ($1, $2, $3, $4)`,
 			uuid.New(), s.user, p.tz, p.from); err != nil {
 			t.Fatal(err)
 		}
@@ -422,18 +441,17 @@ func TestScenarioTravel(t *testing.T) {
 	golden(t, "scenario-13-travel", days...)
 }
 
-// cachedResolve is the hook for the J09.9 property "cached = live": set it to the cache
-// read-through and TestPropertyCachedEqualsLive checks that it returns exactly what Run does.
-var cachedResolve func(ctx context.Context, d *db.DB, req Request) ([]Result, error)
+// cachedResolve is the hook for the J09.9 property "cached = live": the cache read-through,
+// which TestPropertyCachedEqualsLive checks returns exactly what a Live run does.
+var cachedResolve = Run
 
 func TestPropertyCachedEqualsLive(t *testing.T) {
-	if cachedResolve == nil {
-		t.Skip("the resolved cache arrives with J09.9")
-	}
 	s := loadSlice(t, "2025-02-15", 3)
 	for _, metric := range []string{"steps", "heart_rate", "sleep", "blood_pressure", "weight"} {
 		req := Request{UserID: s.user, Metric: metric, From: date("2025-02-15"), To: date("2025-02-17"), Now: instant(sliceANow)}
-		live, err := Run(s.ctx, s.d, req)
+		lreq := req
+		lreq.Live = true
+		live, err := Run(s.ctx, s.d, lreq)
 		if err != nil {
 			t.Fatal(err)
 		}

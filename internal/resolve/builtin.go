@@ -86,6 +86,19 @@ func biDevice(deviceType string) []Group {
 	return biGroup(deviceType, Selector{DeviceType: deviceType, Entry: EntryDevice})
 }
 
+// biWorn is a device-type group of directly synced wearables, followed by <type>_relayed with
+// the copies a brand app relays into Apple Health (a Garmin watch through Garmin Connect). The
+// direct device wins whenever it has a valid value, so a watch that is both connected and relayed
+// is not counted twice: in one group the per-bucket max took the larger of two copies with
+// different interval shapes, which inflated the day.
+func biWorn(deviceType string) []Group {
+	direct, relayed := false, true
+	return []Group{
+		{ID: deviceType, Match: []Selector{{DeviceType: deviceType, Entry: EntryDevice, Relayed: &direct}}},
+		{ID: deviceType + "_relayed", Match: []Selector{{DeviceType: deviceType, Entry: EntryDevice, Relayed: &relayed}}},
+	}
+}
+
 // biBrand is a brand's direct-connector group, followed by its Apple Health relay group when the
 // brand's app relays into HealthKit. The direct path wins whenever it has a valid value; the
 // relayed copy is used only when it has none (resolution-defaults.md, relayed origins).
@@ -127,6 +140,14 @@ func biV1(why string, r Rule) Builtin {
 	return Builtin{Rule: r, Version: 1, Why: why}
 }
 
+// biV2 is version 2 of a built-in. v2 of steps, distance_walk_run and active_energy put relayed
+// wearables in their own groups (biWorn).
+func biV2(why string, r Rule) Builtin {
+	b := biV1(why, r)
+	b.Version = 2
+	return b
+}
+
 func builtins() []Builtin {
 	firstAvailable := Strategy{Op: OpFirstAvailable}
 	day := RuleWindow{Kind: catalog.WindowLocalDay}
@@ -160,17 +181,17 @@ func builtins() []Builtin {
 	}
 
 	out := []Builtin{
-		biV1("Watch, ring, band, phone; hours resolve separately so a watch left on the charger falls back to the phone for those hours only.",
+		biV2("Watch, ring, band, phone, each direct before relayed; hours resolve separately so a watch left on the charger falls back to the phone for those hours only.",
 			Rule{Metric: "steps", Window: day, Strategy: firstAvailable, Quality: stepGates(), Compose: hourly(),
-				Groups: biLadder(biDevice("watch"), biDevice("ring"), biDevice("band"), biDevice("phone"))}),
-		biV1("Follows the step source; inside a workout, the device that recorded it.",
+				Groups: biLadder(biWorn("watch"), biWorn("ring"), biWorn("band"), biDevice("phone"))}),
+		biV2("Follows the step source; inside a workout, the device that recorded it.",
 			Rule{Metric: "distance_walk_run", Window: day, Strategy: firstAvailable, Quality: stepGates(), Compose: hourly(),
-				Groups:   biLadder(biDevice("watch"), biDevice("phone"), biDevice("ring")),
+				Groups:   biLadder(biWorn("watch"), biDevice("phone"), biWorn("ring")),
 				Contexts: map[Context][]string{ContextWorkout: {ContextWorkoutSource}}}),
-		biV1("Every device is far off; one worn source per day keeps days comparable.",
+		biV2("Every device is far off; one worn source per day keeps days comparable.",
 			Rule{Metric: "active_energy", Window: day, Strategy: firstAvailable,
 				Quality: &Quality{MinCoverage: biRatio(0.8), RequireWear: "heart_rate"},
-				Groups:  biLadder(biDevice("watch"), biDevice("band"), biDevice("ring"), biDevice("phone"))}),
+				Groups:  biLadder(biWorn("watch"), biWorn("band"), biWorn("ring"), biDevice("phone"))}),
 		biV1("Chest straps are ECG-class, then wrist devices by independent validation; inside workouts the recording device follows the straps.",
 			Rule{Metric: "heart_rate", Window: RuleWindow{Kind: catalog.WindowBucket, Size: "5m"}, Strategy: firstAvailable,
 				Quality: hrQuality(), Groups: hrGroups(),

@@ -84,7 +84,7 @@ For each window, independently:
 | `latest` / `earliest` | Across groups; ties go by group order | — |
 | `event_priority` | Whole event (session with stages, workout) from the first group with an aligned event | Stages are never spliced across sources |
 
-   For selection-only metrics ([metric-catalog.md](metric-catalog.md#rules)), a selected group that differs from the previous window's adds warning `definition_changed`.
+   For selection-only metrics ([metric-catalog.md](metric-catalog.md#rules)), a selected group that differs from the previous window's adds warning `definition_changed`. The previous window is the one just before (the day before's last for the first window of a date); one that selected nothing gives no warning. A date's results therefore never depend on the requested range.
 4. Apply overrides.
 5. Emit the result.
 
@@ -182,6 +182,7 @@ Each case is a scenario test (`internal/resolve/scenario_integration_test.go`, o
 
 ## Cache and materialization
 
-- `source_hourly_aggregates(user, metric, source_key, hour)` stores sample count, covered buckets, sum of bucket means, min, max, pro-rated interval sum, and first/last timestamps. It is rebuilt for dirty days by the `rebuild_aggregates` job and serves day and range windows. Buckets of 5 min and finer read `measurements` directly.
-- `resolved_cache(user, metric, window_kind, window_key, rule_ref)` is written on miss. It is deleted in the writer's transaction on a dirty mark, override, or rule activation.
-- `vitamux resolve verify --sample N` compares cache with live computation in CI. Truncating both tables is always safe.
+- `source_hourly_aggregates(user, metric, source_key, hour)` stores, per source and local hour of the owner's timeline, sample count, covered 5-minute buckets, sum of bucket means, min, max, pro-rated interval sum, and first/last timestamps (daily values excluded). The `rebuild_aggregates` job consumes `resolution_dirty` marks older than a minute, rebuilds the marked days and their neighbours, and deletes the marks in one transaction; requests that met a pending mark queue it, and it also runs daily. The aggregates serve coverage and range views ([J10.5](../plan/E10-query-api/J10.5-coverage-status.md)). Explained results read `measurements`, because they list the rows behind a value.
+- `resolved_cache(user, metric, window_kind, local_date, rule_ref, overrides_fp)` holds one local date's results. A date reads only the rows a request for that date alone would load, so requests read their closed dates from the cache and compute only the span of the rest. It is written for dates whose windows have all closed and that have no pending dirty mark on what they read; never for bucket windows, previews with a draft rule, or the all-sources drilldown.
+- Invalidation runs in the writer's transaction (triggers of the `resolution_cache` migration). Each row lists what it read in `deps`: the metric, the codes it loads, the wear metric, a follow leader's deps, `sleep` for night windows and sleep contexts, and `workouts` for workout contexts. Its `dep_from..dep_to` dates run from three days before to two after, plus the wear lookback or the latest lookback. A dirty mark deletes the rows that list its code on a date in that range: derived codes, followers, and night D+1 for a session with `sleep_date` D ([ADR-0009](../adr/0009-sleep-date-night-window.md)). Overrides mark dirty too. Rule activation deletes the rows that list the rule's metric. A workout change deletes rows with `workouts` in deps. A timezone period, device type or model, or origin name change clears the owner's rows.
+- `vitamux resolve verify [--windows N]` fills the cache over a range, then compares N random (metric, date) pairs from the cache with live single-date runs ([baseline](../benchmarks/baseline.md#resolution-and-cache)). Truncating both tables is always safe.

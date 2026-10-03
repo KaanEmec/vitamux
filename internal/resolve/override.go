@@ -158,7 +158,7 @@ func (r *Rule) ResolveWindowOverridden(w Window, s Series, opt Options, ovs []Ov
 }
 
 // ResolveWindowsOverridden resolves consecutive windows with overrides, as ResolveWindows does
-// without them: each window falls back on its own and the selection carries over.
+// without them: each window falls back on its own and passes its selection to the next.
 func (r *Rule) ResolveWindowsOverridden(ws []Window, s Series, opt Options, ovs []Override) ([]Resolved, error) {
 	out := make([]Resolved, 0, len(ws))
 	for _, w := range ws {
@@ -166,9 +166,7 @@ func (r *Rule) ResolveWindowsOverridden(ws []Window, s Series, opt Options, ovs 
 		if err != nil {
 			return nil, err
 		}
-		if res.Selected != "" {
-			opt.Previous = res.Selected
-		}
+		opt.Previous = res.Selected
 		out = append(out, res)
 	}
 	return out, nil

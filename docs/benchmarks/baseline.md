@@ -63,3 +63,26 @@ ADR-005 and [data-model](../architecture/data-model.md#volume-and-partitioning) 
 | plan uses `measurements_metric_start_idx` and `measurements_daily_value_idx` | required | yes |
 
 The plan checks catch a lost or unusable index; the timing limits only catch order-of-magnitude regressions.
+
+## Resolution and cache
+
+Measured by J09.9 on the same dataset (`fixturegen -seed 42`, 2025, 6.2 M rows), same machine and setup as above. A request resolves one metric over 90 local days (2025-03-02..05-30: spring DST, the New York trip) in its built-in window. Cold means an empty `resolved_cache` (buffers warm); warm means every date is cached. Five rounds.
+
+| Metric (90 days) | Cold p50 | Cold max | Warm p50 |
+| --- | --- | --- | --- |
+| `steps` (hourly compose, wear gate) | 1.27 s | 1.35 s | 7.5 ms |
+| `distance_walk_run` (no rows; wear gate) | 1.15 s | 1.27 s | 4.8 ms |
+| `active_energy` (no rows; wear gate) | 1.15 s | 1.24 s | 3.6 ms |
+| `resting_heart_rate_nocturnal` (1.5 M heart rate rows) | 1.74 s | 1.83 s | 36 ms |
+| `resting_heart_rate`, `weight`, `body_fat_ratio`, `blood_pressure`, `spo2` | 0.18-0.20 s | 0.21 s | 3-5 ms |
+| `sleep` | 19 ms | 22 ms | 6 ms |
+| **All ten, per request** | p50 0.20 s | **p95 1.74 s** (target < 2 s) | **p95 36 ms** (target < 500 ms) |
+| Ten in parallel (one dashboard), wall time | p50 4.46 s | p95 4.58 s | p95 62 ms |
+| `heart_rate` by `local_day` (densest, not in the ten) | 2.32 s | 2.33 s | 102 ms |
+
+- `vitamux resolve verify` logic on the whole year: **0 diffs on 1,000 random (metric, date) windows**, 2 min 33 s including filling the cache.
+- Reproduce: `VITAMUX_RESOLVE_BASELINE=1 go test -tags integration -run TestResolveBaseline -v -timeout 60m ./internal/resolve/` (about 8 min; `VITAMUX_VOLUME_DATASET` reuses a generated year).
+- Before J09.9, a cold 90-day `steps` took 25-32 s: every window scanned the whole range, and the wear index was rebuilt from 1.7 M heart rate rows per window. Now each date resolves from its own rows, and the wear series loads as one row per source and 5-minute bucket (`ResolveWearBuckets`).
+- Cold time is mostly moving dense heart rate rows: 1.5 M rows take about 1.1 s to transfer and scan, and the server needs 0.27 s. The parallel dashboard is slower than any single request because ten requests share the database and the Go GC. It goes away once the dates are cached. If it matters, the next step is loading only the night windows' rows for night metrics.
+
+CI smoke: `TestResolveSmoke` resolves 14 days of the ten metrics on a 6 s heart rate slice (cold p95 0.26 s, warm p95 6 ms) and fails above 5 s cold or 1 s warm.
