@@ -1473,7 +1473,10 @@ paths:
     get:
       tags: [documents]
       operationId: getExtraction
-      summary: Get an extraction run with its rows
+      summary: Get an extraction run with its rows, suggestions and validation warnings
+      description: >-
+        Rows carry the extractor's warnings, deterministic validation warnings (lab-documents.md#validation), the alias
+        suggestion and their review trail. Warnings only point at what to compare with the PDF; nothing is interpreted.
       security: [{session: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/ID'
@@ -1491,14 +1494,20 @@ paths:
     patch:
       tags: [documents]
       operationId: updateExtractionRow
-      summary: Edit an extracted row during review (audited)
+      summary: Edit, accept or reject an extracted row during review (audited)
+      description: >-
+        Merge patch: fields present replace the row's values (null clears one; `analyte: null` marks it unknown) and are
+        appended to the row's edit trail with their previous values. `review` accepts or rejects the row; any change
+        marks it edited. Rows of a confirmed run may still be edited; confirm again to revise the results. 409 when the
+        run has no rows to review (not succeeded).
       security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
       parameters:
         - $ref: '#/components/parameters/ID'
         - name: row
           in: path
           required: true
-          schema: {type: string}
+          description: Row index (0-based).
+          schema: {type: string, pattern: '^[0-9]{1,4}$'}
       requestBody:
         required: true
         content:
@@ -1521,12 +1530,18 @@ paths:
       tags: [documents]
       operationId: confirmExtraction
       summary: Confirm reviewed rows as lab results
+      description: >-
+        One transaction creates the lab report and a result per kept row (printed label, value, unit, range and flag;
+        a canonical value only when the analyte has a conversion for the printed unit). 422 lists rows not yet reviewed
+        and kept rows missing a value or collection date; an accepted row without a unit is confirmed as unitless. 409
+        when the run is not succeeded or another run of the document is confirmed. Confirming again applies later edits:
+        changed results get a new revision (see /lab-results/{id}/history).
       security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
         '200':
-          description: The confirmed extraction.
+          description: The confirmed extraction with its rows.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Extraction'}
@@ -1536,11 +1551,31 @@ paths:
         '409': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
 
+  /api/v1/extractions/{id}/unconfirm:
+    post:
+      tags: [documents]
+      operationId: unconfirmExtraction
+      summary: Delete the lab results confirmed from a run and return it to review (audited)
+      description: 409 when the run is not the document's confirmed one.
+      security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: The extraction, back in review.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Extraction'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+
   /api/v1/lab-results:
     get:
       tags: [documents]
       operationId: listLabResults
-      summary: List confirmed lab results
+      summary: List confirmed lab results by collection date
       security: [{session: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/StartDate'
@@ -1567,7 +1602,7 @@ paths:
         - $ref: '#/components/parameters/ID'
       responses:
         '200':
-          description: Revisions, newest first.
+          description: Revisions, newest (the current one) first.
           content:
             application/json:
               schema:
@@ -3178,9 +3213,138 @@ components:
         created_at: {type: string, format: date-time}
         started_at: {type: [string, 'null'], format: date-time}
         finished_at: {type: [string, 'null'], format: date-time}
-    ExtractionRow: {type: object, description: Open object.}
-    ExtractionRowPatch: {type: object, description: Open object.}
-    LabResult: {type: object, description: Open object.}
+        rows: {type: array, items: {$ref: '#/components/schemas/ExtractionRow'}, description: 'The rows, on GET /extractions/{id} and after review actions.'}
+    ExtractionRow:
+      type: object
+      description: >-
+        An extracted row under review: values as printed (or as the owner edited them), the analyte confirming would
+        record, and warnings that only point at what to compare with the PDF.
+      required: [index, page, analyte_label, value_text, value_numeric, comparator, unit_text, reference_range_text, ref_low, ref_high,
+        printed_flag, specimen_type, collected_at, reported_at, laboratory, evidence_text, bbox, confidence, review_status, reviewed_at,
+        analyte, suggested_analyte, warnings, validation, edits, lab_result_id]
+      properties:
+        index: {type: integer, minimum: 0}
+        page: {type: [integer, 'null'], minimum: 1}
+        analyte_label: {type: string, description: The label as printed.}
+        value_text: {type: [string, 'null']}
+        value_numeric: {type: [number, 'null'], format: double}
+        comparator: {type: [string, 'null'], description: '<, >, <= or >=.'}
+        unit_text: {type: [string, 'null'], description: The unit as printed.}
+        reference_range_text: {type: [string, 'null']}
+        ref_low: {type: [number, 'null'], format: double}
+        ref_high: {type: [number, 'null'], format: double}
+        printed_flag: {type: [string, 'null'], description: The flag as printed; never computed.}
+        specimen_type: {type: [string, 'null']}
+        collected_at: {type: [string, 'null'], description: ISO 8601 local date or date-time without offset.}
+        reported_at: {type: [string, 'null'], description: ISO 8601 local date or date-time without offset.}
+        laboratory: {type: [string, 'null']}
+        evidence_text: {type: string, description: The printed text the row was read from.}
+        bbox:
+          oneOf:
+            - type: object
+              description: Row area as fractions of the page, origin top left.
+              required: [x0, y0, x1, y1]
+              properties:
+                x0: {type: number, format: double}
+                y0: {type: number, format: double}
+                x1: {type: number, format: double}
+                y1: {type: number, format: double}
+            - {type: 'null'}
+          x-go-type: json.RawMessage
+        confidence: {type: number, format: double, minimum: 0, maximum: 1, description: Extractor hint only; never a reason to skip review.}
+        review_status: {type: string, enum: [pending, accepted, edited, rejected]}
+        reviewed_at: {type: [string, 'null'], format: date-time}
+        analyte: {type: [string, 'null'], description: 'Analyte code confirming records: the alias suggestion while pending, then the reviewed one. Null is unknown, which stays confirmable.'}
+        suggested_analyte: {type: [string, 'null'], description: The current alias suggestion (analyte_aliases).}
+        warnings: {type: array, items: {type: string}, description: The extractor's warnings.}
+        validation:
+          type: array
+          items: {type: string}
+          description: >-
+            Deterministic checks (lab-documents.md#validation): value_mismatch, comparator_mismatch, range_mismatch,
+            evidence_unverified, value_not_in_evidence, unknown_unit, unit_not_convertible, unit_missing, date_missing,
+            date_in_future, date_ambiguous, reported_before_collected, duplicate_in_run, already_confirmed, unknown_analyte.
+        edits: {type: array, items: {$ref: '#/components/schemas/ExtractionRowEdit'}, description: The review trail, oldest first.}
+        lab_result_id: {type: [string, 'null'], pattern: '^lab_[0-9a-f]{32}$', description: The confirmed result.}
+    ExtractionRowEdit:
+      type: object
+      required: [action, changes, actor, created_at]
+      properties:
+        action: {type: string, enum: [edit, accept, reject]}
+        changes: {type: object, description: '{"field": {"from": old, "to": new}} for edits.', x-go-type: json.RawMessage}
+        actor: {type: string}
+        created_at: {type: string, format: date-time}
+    ExtractionRowPatch:
+      type: object
+      description: Merge patch of an extracted row; every field is optional and null clears it.
+      additionalProperties: false
+      properties:
+        review: {type: string, enum: [accept, reject]}
+        analyte_label: {type: string, minLength: 1, maxLength: 200}
+        value_text: {type: [string, 'null'], minLength: 1, maxLength: 200}
+        value_numeric: {type: [number, 'null'], format: double}
+        comparator: {type: [string, 'null'], enum: ['<', '>', '<=', '>=', null]}
+        unit_text: {type: [string, 'null'], minLength: 1, maxLength: 64}
+        reference_range_text: {type: [string, 'null'], minLength: 1, maxLength: 200}
+        ref_low: {type: [number, 'null'], format: double}
+        ref_high: {type: [number, 'null'], format: double}
+        printed_flag: {type: [string, 'null'], minLength: 1, maxLength: 32}
+        specimen_type: {type: [string, 'null'], minLength: 1, maxLength: 64}
+        collected_at: {type: [string, 'null'], description: ISO 8601 local date or date-time without offset.}
+        reported_at: {type: [string, 'null'], description: ISO 8601 local date or date-time without offset.}
+        laboratory: {type: [string, 'null'], minLength: 1, maxLength: 200}
+        analyte: {type: [string, 'null'], pattern: '^[a-z][a-z0-9_]*$', description: Analyte code from docs/analytes.md; null for unknown.}
+      x-go-type: json.RawMessage
+    LabResult:
+      type: object
+      description: >-
+        A confirmed lab result at one revision. The printed label, value, unit, range and flag are always kept; the
+        canonical value exists only when the analyte has a conversion for the printed unit. No interpretation.
+      required: [id, revision, analyte, original_label, value_text, value_numeric, comparator, unit_text, reference_range_text, ref_low,
+        ref_high, printed_flag, specimen_type, canonical_value, canonical_unit, conversion_factor, conversion_offset, catalog_version,
+        collected_at, collected_date, page, evidence_text, created_at, updated_at, provenance]
+      properties:
+        id: {type: string, pattern: '^lab_[0-9a-f]{32}$'}
+        revision: {type: integer, minimum: 1}
+        analyte: {type: [string, 'null'], description: Analyte code; null for an unknown analyte.}
+        original_label: {type: string}
+        value_text: {type: string}
+        value_numeric: {type: [number, 'null'], format: double}
+        comparator: {type: [string, 'null']}
+        unit_text: {type: [string, 'null'], description: Printed unit; null means confirmed as unitless.}
+        reference_range_text: {type: [string, 'null']}
+        ref_low: {type: [number, 'null'], format: double}
+        ref_high: {type: [number, 'null'], format: double}
+        printed_flag: {type: [string, 'null']}
+        specimen_type: {type: [string, 'null']}
+        canonical_value: {type: [number, 'null'], format: double}
+        canonical_unit: {type: [string, 'null']}
+        conversion_factor: {type: [number, 'null'], format: double, description: canonical = value * factor + offset.}
+        conversion_offset: {type: [number, 'null'], format: double}
+        catalog_version: {type: [integer, 'null']}
+        collected_at: {type: [string, 'null'], format: date-time, description: Null when only a date was printed or no timezone is configured.}
+        collected_date: {type: string, format: date, description: Collection date as printed (the owner's local date).}
+        page: {type: [integer, 'null']}
+        evidence_text: {type: [string, 'null']}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time, description: When this revision was written.}
+        provenance:
+          type: object
+          required: [report_id, document_id, extraction_id, row_index, laboratory, reported_at, provider, model, schema_version,
+            prompt_version, confirmed_by, confirmed_at]
+          properties:
+            report_id: {type: string, pattern: '^rpt_[0-9a-f]{32}$'}
+            document_id: {type: string, pattern: '^doc_[0-9a-f]{32}$'}
+            extraction_id: {type: [string, 'null'], pattern: '^ext_[0-9a-f]{32}$', description: Null once the original and its runs were deleted.}
+            row_index: {type: [integer, 'null']}
+            laboratory: {type: [string, 'null']}
+            reported_at: {type: [string, 'null'], format: date-time}
+            provider: {type: string}
+            model: {type: [string, 'null']}
+            schema_version: {type: string}
+            prompt_version: {type: string}
+            confirmed_by: {type: string}
+            confirmed_at: {type: string, format: date-time}
     LabResultPage:
       allOf:
         - $ref: '#/components/schemas/PageInfo'
@@ -3210,6 +3374,17 @@ components:
       additionalProperties: false
       properties:
         withings.notifications: {type: boolean, description: Withings notification subscriptions (polling runs either way); needs VITAMUX_PUBLIC_URL.}
+        documents.external_ai.gemini.enabled: {type: boolean, description: Allow lab extraction with the configured Gemini model (each run still needs consent).}
+        documents.external_ai.openai.enabled: {type: boolean, description: Allow lab extraction with the configured OpenAI model (each run still needs consent).}
+        documents.external_ai.openai_compatible.enabled: {type: boolean, description: Allow lab extraction with the configured OpenAI-compatible server (each run still needs consent).}
+        documents.retention_days:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 36500
+          description: Days to keep lab PDF originals after upload; null keeps them. Applies to every live document.
+          x-go-type: json.RawMessage
+          x-go-type-skip-optional-pointer: true
+        documents.delete_original_after_confirmation: {type: boolean, description: Delete a lab PDF original once its extraction is confirmed (results are kept).}
         retention.raw_days:
           type: object
           additionalProperties: {type: integer, minimum: 0, maximum: 36500}

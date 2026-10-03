@@ -975,7 +975,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get an extraction run with its rows */
+        /**
+         * Get an extraction run with its rows, suggestions and validation warnings
+         * @description Rows carry the extractor's warnings, deterministic validation warnings (lab-documents.md#validation), the alias suggestion and their review trail. Warnings only point at what to compare with the PDF; nothing is interpreted.
+         */
         get: operations["getExtraction"];
         put?: never;
         post?: never;
@@ -998,7 +1001,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Edit an extracted row during review (audited) */
+        /**
+         * Edit, accept or reject an extracted row during review (audited)
+         * @description Merge patch: fields present replace the row's values (null clears one; `analyte: null` marks it unknown) and are appended to the row's edit trail with their previous values. `review` accepts or rejects the row; any change marks it edited. Rows of a confirmed run may still be edited; confirm again to revise the results. 409 when the run has no rows to review (not succeeded).
+         */
         patch: operations["updateExtractionRow"];
         trace?: never;
     };
@@ -1011,8 +1017,31 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Confirm reviewed rows as lab results */
+        /**
+         * Confirm reviewed rows as lab results
+         * @description One transaction creates the lab report and a result per kept row (printed label, value, unit, range and flag; a canonical value only when the analyte has a conversion for the printed unit). 422 lists rows not yet reviewed and kept rows missing a value or collection date; an accepted row without a unit is confirmed as unitless. 409 when the run is not succeeded or another run of the document is confirmed. Confirming again applies later edits: changed results get a new revision (see /lab-results/{id}/history).
+         */
         post: operations["confirmExtraction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/extractions/{id}/unconfirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete the lab results confirmed from a run and return it to review (audited)
+         * @description 409 when the run is not the document's confirmed one.
+         */
+        post: operations["unconfirmExtraction"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1026,7 +1055,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List confirmed lab results */
+        /** List confirmed lab results by collection date */
         get: operations["listLabResults"];
         put?: never;
         post?: never;
@@ -2303,13 +2332,172 @@ export interface components {
             started_at: string | null;
             /** Format: date-time */
             finished_at: string | null;
+            /** @description The rows, on GET /extractions/{id} and after review actions. */
+            rows?: components["schemas"]["ExtractionRow"][];
         };
-        /** @description Open object. */
-        ExtractionRow: Record<string, never>;
-        /** @description Open object. */
-        ExtractionRowPatch: Record<string, never>;
-        /** @description Open object. */
-        LabResult: Record<string, never>;
+        /** @description An extracted row under review: values as printed (or as the owner edited them), the analyte confirming would record, and warnings that only point at what to compare with the PDF. */
+        ExtractionRow: {
+            index: number;
+            page: number | null;
+            /** @description The label as printed. */
+            analyte_label: string;
+            value_text: string | null;
+            /** Format: double */
+            value_numeric: number | null;
+            /** @description <, >, <= or >=. */
+            comparator: string | null;
+            /** @description The unit as printed. */
+            unit_text: string | null;
+            reference_range_text: string | null;
+            /** Format: double */
+            ref_low: number | null;
+            /** Format: double */
+            ref_high: number | null;
+            /** @description The flag as printed; never computed. */
+            printed_flag: string | null;
+            specimen_type: string | null;
+            /** @description ISO 8601 local date or date-time without offset. */
+            collected_at: string | null;
+            /** @description ISO 8601 local date or date-time without offset. */
+            reported_at: string | null;
+            laboratory: string | null;
+            /** @description The printed text the row was read from. */
+            evidence_text: string;
+            bbox: {
+                /** Format: double */
+                x0: number;
+                /** Format: double */
+                y0: number;
+                /** Format: double */
+                x1: number;
+                /** Format: double */
+                y1: number;
+            } | null;
+            /**
+             * Format: double
+             * @description Extractor hint only; never a reason to skip review.
+             */
+            confidence: number;
+            /** @enum {string} */
+            review_status: "pending" | "accepted" | "edited" | "rejected";
+            /** Format: date-time */
+            reviewed_at: string | null;
+            /** @description Analyte code confirming records: the alias suggestion while pending, then the reviewed one. Null is unknown, which stays confirmable. */
+            analyte: string | null;
+            /** @description The current alias suggestion (analyte_aliases). */
+            suggested_analyte: string | null;
+            /** @description The extractor's warnings. */
+            warnings: string[];
+            /** @description Deterministic checks (lab-documents.md#validation): value_mismatch, comparator_mismatch, range_mismatch, evidence_unverified, value_not_in_evidence, unknown_unit, unit_not_convertible, unit_missing, date_missing, date_in_future, date_ambiguous, reported_before_collected, duplicate_in_run, already_confirmed, unknown_analyte. */
+            validation: string[];
+            /** @description The review trail */
+            edits: components["schemas"]["ExtractionRowEdit"][];
+            /** @description The confirmed result. */
+            lab_result_id: string | null;
+        };
+        ExtractionRowEdit: {
+            /** @enum {string} */
+            action: "edit" | "accept" | "reject";
+            /** @description {"field": {"from": old, "to": new}} for edits. */
+            changes: Record<string, never>;
+            actor: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /** @description Merge patch of an extracted row; every field is optional and null clears it. */
+        ExtractionRowPatch: {
+            /** @enum {string} */
+            review?: "accept" | "reject";
+            analyte_label?: string;
+            value_text?: string | null;
+            /** Format: double */
+            value_numeric?: number | null;
+            /** @enum {string|null} */
+            comparator?: "<" | ">" | "<=" | ">=" | null;
+            unit_text?: string | null;
+            reference_range_text?: string | null;
+            /** Format: double */
+            ref_low?: number | null;
+            /** Format: double */
+            ref_high?: number | null;
+            printed_flag?: string | null;
+            specimen_type?: string | null;
+            /** @description ISO 8601 local date or date-time without offset. */
+            collected_at?: string | null;
+            /** @description ISO 8601 local date or date-time without offset. */
+            reported_at?: string | null;
+            laboratory?: string | null;
+            /** @description Analyte code from docs/analytes.md; null for unknown. */
+            analyte?: string | null;
+        };
+        /** @description A confirmed lab result at one revision. The printed label, value, unit, range and flag are always kept; the canonical value exists only when the analyte has a conversion for the printed unit. No interpretation. */
+        LabResult: {
+            id: string;
+            revision: number;
+            /** @description Analyte code; null for an unknown analyte. */
+            analyte: string | null;
+            original_label: string;
+            value_text: string;
+            /** Format: double */
+            value_numeric: number | null;
+            comparator: string | null;
+            /** @description Printed unit; null means confirmed as unitless. */
+            unit_text: string | null;
+            reference_range_text: string | null;
+            /** Format: double */
+            ref_low: number | null;
+            /** Format: double */
+            ref_high: number | null;
+            printed_flag: string | null;
+            specimen_type: string | null;
+            /** Format: double */
+            canonical_value: number | null;
+            canonical_unit: string | null;
+            /**
+             * Format: double
+             * @description canonical = value * factor + offset.
+             */
+            conversion_factor: number | null;
+            /** Format: double */
+            conversion_offset: number | null;
+            catalog_version: number | null;
+            /**
+             * Format: date-time
+             * @description Null when only a date was printed or no timezone is configured.
+             */
+            collected_at: string | null;
+            /**
+             * Format: date
+             * @description Collection date as printed (the owner's local date).
+             */
+            collected_date: string;
+            page: number | null;
+            evidence_text: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /**
+             * Format: date-time
+             * @description When this revision was written.
+             */
+            updated_at: string;
+            provenance: {
+                report_id: string;
+                document_id: string;
+                /** @description Null once the original and its runs were deleted. */
+                extraction_id: string | null;
+                row_index: number | null;
+                laboratory: string | null;
+                /** Format: date-time */
+                reported_at: string | null;
+                provider: string;
+                model: string | null;
+                schema_version: string;
+                prompt_version: string;
+                confirmed_by: string;
+                /** Format: date-time */
+                confirmed_at: string;
+            };
+        };
         LabResultPage: components["schemas"]["PageInfo"] & {
             lab_results: components["schemas"]["LabResult"][];
         };
@@ -2333,6 +2521,16 @@ export interface components {
         Settings: {
             /** @description Withings notification subscriptions (polling runs either way); needs VITAMUX_PUBLIC_URL. */
             "withings.notifications"?: boolean;
+            /** @description Allow lab extraction with the configured Gemini model (each run still needs consent). */
+            "documents.external_ai.gemini.enabled"?: boolean;
+            /** @description Allow lab extraction with the configured OpenAI model (each run still needs consent). */
+            "documents.external_ai.openai.enabled"?: boolean;
+            /** @description Allow lab extraction with the configured OpenAI-compatible server (each run still needs consent). */
+            "documents.external_ai.openai_compatible.enabled"?: boolean;
+            /** @description Days to keep lab PDF originals after upload; null keeps them. Applies to every live document. */
+            "documents.retention_days"?: number | null;
+            /** @description Delete a lab PDF original once its extraction is confirmed (results are kept). */
+            "documents.delete_original_after_confirmation"?: boolean;
             /** @description Days to keep raw payloads, per provider code; a missing provider or 0 keeps them (default). PATCH merges per provider. Pruned raw cannot be reprocessed; the prune_raw job keeps raw that reprocessing still needs. */
             "retention.raw_days"?: {
                 [key: string]: number;
@@ -4399,6 +4597,7 @@ export interface operations {
             header?: never;
             path: {
                 id: components["parameters"]["ID"];
+                /** @description Row index (0-based). */
                 row: string;
             };
             cookie?: never;
@@ -4436,7 +4635,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The confirmed extraction. */
+            /** @description The confirmed extraction with its rows. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4450,6 +4649,32 @@ export interface operations {
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+        };
+    };
+    unconfirmExtraction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The extraction, back in review. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Extraction"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
         };
     };
     listLabResults: {
@@ -4495,7 +4720,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Revisions, newest first. */
+            /** @description Revisions, newest (the current one) first. */
             200: {
                 headers: {
                     [name: string]: unknown;

@@ -294,6 +294,51 @@ func (e ExtractionInputProvider) Valid() bool {
 	}
 }
 
+// Defines values for ExtractionRowReviewStatus.
+const (
+	ExtractionRowReviewStatusAccepted ExtractionRowReviewStatus = "accepted"
+	ExtractionRowReviewStatusEdited   ExtractionRowReviewStatus = "edited"
+	ExtractionRowReviewStatusPending  ExtractionRowReviewStatus = "pending"
+	ExtractionRowReviewStatusRejected ExtractionRowReviewStatus = "rejected"
+)
+
+// Valid indicates whether the value is a known member of the ExtractionRowReviewStatus enum.
+func (e ExtractionRowReviewStatus) Valid() bool {
+	switch e {
+	case ExtractionRowReviewStatusAccepted:
+		return true
+	case ExtractionRowReviewStatusEdited:
+		return true
+	case ExtractionRowReviewStatusPending:
+		return true
+	case ExtractionRowReviewStatusRejected:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExtractionRowEditAction.
+const (
+	Accept ExtractionRowEditAction = "accept"
+	Edit   ExtractionRowEditAction = "edit"
+	Reject ExtractionRowEditAction = "reject"
+)
+
+// Valid indicates whether the value is a known member of the ExtractionRowEditAction enum.
+func (e ExtractionRowEditAction) Valid() bool {
+	switch e {
+	case Accept:
+		return true
+	case Edit:
+		return true
+	case Reject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GroupKind.
 const (
 	GroupKindBodyComposition GroupKind = "body_composition"
@@ -1241,13 +1286,16 @@ type Extraction struct {
 	ID         string     `json:"id"`
 
 	// Model Model the provider reported (or the configured one).
-	Model             *string    `json:"model"`
-	PromptVersion     string     `json:"prompt_version"`
-	Provider          string     `json:"provider"`
-	ProviderRequestID *string    `json:"provider_request_id"`
-	RowCount          int        `json:"row_count"`
-	SchemaVersion     string     `json:"schema_version"`
-	StartedAt         *time.Time `json:"started_at"`
+	Model             *string `json:"model"`
+	PromptVersion     string  `json:"prompt_version"`
+	Provider          string  `json:"provider"`
+	ProviderRequestID *string `json:"provider_request_id"`
+	RowCount          int     `json:"row_count"`
+
+	// Rows The rows, on GET /extractions/{id} and after review actions.
+	Rows          *[]ExtractionRow `json:"rows,omitempty"`
+	SchemaVersion string           `json:"schema_version"`
+	StartedAt     *time.Time       `json:"started_at"`
 
 	// Status queued with an error_class: the last attempt failed and will be retried.
 	Status ExtractionStatus `json:"status"`
@@ -1278,11 +1326,81 @@ type ExtractionInput struct {
 // ExtractionInputProvider defines model for ExtractionInput.Provider.
 type ExtractionInputProvider string
 
-// ExtractionRow Open object.
-type ExtractionRow = map[string]interface{}
+// ExtractionRow An extracted row under review: values as printed (or as the owner edited them), the analyte confirming would record, and warnings that only point at what to compare with the PDF.
+type ExtractionRow struct {
+	// Analyte Analyte code confirming records: the alias suggestion while pending, then the reviewed one. Null is unknown, which stays confirmable.
+	Analyte *string `json:"analyte"`
 
-// ExtractionRowPatch Open object.
-type ExtractionRowPatch = map[string]interface{}
+	// AnalyteLabel The label as printed.
+	AnalyteLabel string           `json:"analyte_label"`
+	Bbox         *json.RawMessage `json:"bbox"`
+
+	// CollectedAt ISO 8601 local date or date-time without offset.
+	CollectedAt *string `json:"collected_at"`
+
+	// Comparator <, >, <= or >=.
+	Comparator *string `json:"comparator"`
+
+	// Confidence Extractor hint only; never a reason to skip review.
+	Confidence float64 `json:"confidence"`
+
+	// Edits The review trail
+	Edits []ExtractionRowEdit `json:"edits"`
+
+	// EvidenceText The printed text the row was read from.
+	EvidenceText string `json:"evidence_text"`
+	Index        int    `json:"index"`
+
+	// LabResultID The confirmed result.
+	LabResultID *string `json:"lab_result_id"`
+	Laboratory  *string `json:"laboratory"`
+	Page        *int    `json:"page"`
+
+	// PrintedFlag The flag as printed; never computed.
+	PrintedFlag        *string  `json:"printed_flag"`
+	RefHigh            *float64 `json:"ref_high"`
+	RefLow             *float64 `json:"ref_low"`
+	ReferenceRangeText *string  `json:"reference_range_text"`
+
+	// ReportedAt ISO 8601 local date or date-time without offset.
+	ReportedAt   *string                   `json:"reported_at"`
+	ReviewStatus ExtractionRowReviewStatus `json:"review_status"`
+	ReviewedAt   *time.Time                `json:"reviewed_at"`
+	SpecimenType *string                   `json:"specimen_type"`
+
+	// SuggestedAnalyte The current alias suggestion (analyte_aliases).
+	SuggestedAnalyte *string `json:"suggested_analyte"`
+
+	// UnitText The unit as printed.
+	UnitText *string `json:"unit_text"`
+
+	// Validation Deterministic checks (lab-documents.md#validation): value_mismatch, comparator_mismatch, range_mismatch, evidence_unverified, value_not_in_evidence, unknown_unit, unit_not_convertible, unit_missing, date_missing, date_in_future, date_ambiguous, reported_before_collected, duplicate_in_run, already_confirmed, unknown_analyte.
+	Validation   []string `json:"validation"`
+	ValueNumeric *float64 `json:"value_numeric"`
+	ValueText    *string  `json:"value_text"`
+
+	// Warnings The extractor's warnings.
+	Warnings []string `json:"warnings"`
+}
+
+// ExtractionRowReviewStatus defines model for ExtractionRow.ReviewStatus.
+type ExtractionRowReviewStatus string
+
+// ExtractionRowEdit defines model for ExtractionRowEdit.
+type ExtractionRowEdit struct {
+	Action ExtractionRowEditAction `json:"action"`
+	Actor  string                  `json:"actor"`
+
+	// Changes {"field": {"from": old, "to": new}} for edits.
+	Changes   json.RawMessage `json:"changes"`
+	CreatedAt time.Time       `json:"created_at"`
+}
+
+// ExtractionRowEditAction defines model for ExtractionRowEdit.Action.
+type ExtractionRowEditAction string
+
+// ExtractionRowPatch Merge patch of an extracted row; every field is optional and null clears it.
+type ExtractionRowPatch = json.RawMessage
 
 // Group Measurement group (bp_reading, body_composition) with its components.
 type Group struct {
@@ -1362,8 +1480,60 @@ type JobPage struct {
 	NextCursor *string `json:"next_cursor,omitempty"`
 }
 
-// LabResult Open object.
-type LabResult = map[string]interface{}
+// LabResult A confirmed lab result at one revision. The printed label, value, unit, range and flag are always kept; the canonical value exists only when the analyte has a conversion for the printed unit. No interpretation.
+type LabResult struct {
+	// Analyte Analyte code; null for an unknown analyte.
+	Analyte        *string  `json:"analyte"`
+	CanonicalUnit  *string  `json:"canonical_unit"`
+	CanonicalValue *float64 `json:"canonical_value"`
+	CatalogVersion *int     `json:"catalog_version"`
+
+	// CollectedAt Null when only a date was printed or no timezone is configured.
+	CollectedAt *time.Time `json:"collected_at"`
+
+	// CollectedDate Collection date as printed (the owner's local date).
+	CollectedDate openapi_types.Date `json:"collected_date"`
+	Comparator    *string            `json:"comparator"`
+
+	// ConversionFactor canonical = value * factor + offset.
+	ConversionFactor *float64  `json:"conversion_factor"`
+	ConversionOffset *float64  `json:"conversion_offset"`
+	CreatedAt        time.Time `json:"created_at"`
+	EvidenceText     *string   `json:"evidence_text"`
+	ID               string    `json:"id"`
+	OriginalLabel    string    `json:"original_label"`
+	Page             *int      `json:"page"`
+	PrintedFlag      *string   `json:"printed_flag"`
+	Provenance       struct {
+		ConfirmedAt time.Time `json:"confirmed_at"`
+		ConfirmedBy string    `json:"confirmed_by"`
+		DocumentID  string    `json:"document_id"`
+
+		// ExtractionID Null once the original and its runs were deleted.
+		ExtractionID  *string    `json:"extraction_id"`
+		Laboratory    *string    `json:"laboratory"`
+		Model         *string    `json:"model"`
+		PromptVersion string     `json:"prompt_version"`
+		Provider      string     `json:"provider"`
+		ReportID      string     `json:"report_id"`
+		ReportedAt    *time.Time `json:"reported_at"`
+		RowIndex      *int       `json:"row_index"`
+		SchemaVersion string     `json:"schema_version"`
+	} `json:"provenance"`
+	RefHigh            *float64 `json:"ref_high"`
+	RefLow             *float64 `json:"ref_low"`
+	ReferenceRangeText *string  `json:"reference_range_text"`
+	Revision           int      `json:"revision"`
+	SpecimenType       *string  `json:"specimen_type"`
+
+	// UnitText Printed unit; null means confirmed as unitless.
+	UnitText *string `json:"unit_text"`
+
+	// UpdatedAt When this revision was written.
+	UpdatedAt    time.Time `json:"updated_at"`
+	ValueNumeric *float64  `json:"value_numeric"`
+	ValueText    string    `json:"value_text"`
+}
 
 // LabResultPage defines model for LabResultPage.
 type LabResultPage struct {
@@ -1854,6 +2024,21 @@ type Session struct {
 
 // Settings Owner settings. PATCH changes only the keys it sends.
 type Settings struct {
+	// DocumentsDeleteOriginalAfterConfirmation Delete a lab PDF original once its extraction is confirmed (results are kept).
+	DocumentsDeleteOriginalAfterConfirmation *bool `json:"documents.delete_original_after_confirmation,omitempty"`
+
+	// DocumentsExternalAiGeminiEnabled Allow lab extraction with the configured Gemini model (each run still needs consent).
+	DocumentsExternalAiGeminiEnabled *bool `json:"documents.external_ai.gemini.enabled,omitempty"`
+
+	// DocumentsExternalAiOpenaiEnabled Allow lab extraction with the configured OpenAI model (each run still needs consent).
+	DocumentsExternalAiOpenaiEnabled *bool `json:"documents.external_ai.openai.enabled,omitempty"`
+
+	// DocumentsExternalAiOpenaiCompatibleEnabled Allow lab extraction with the configured OpenAI-compatible server (each run still needs consent).
+	DocumentsExternalAiOpenaiCompatibleEnabled *bool `json:"documents.external_ai.openai_compatible.enabled,omitempty"`
+
+	// DocumentsRetentionDays Days to keep lab PDF originals after upload; null keeps them. Applies to every live document.
+	DocumentsRetentionDays json.RawMessage `json:"documents.retention_days,omitempty"`
+
 	// RetentionIdempotencyKeyDays Days to keep stored ingest responses for Idempotency-Key replays (default 30).
 	RetentionIdempotencyKeyDays *int `json:"retention.idempotency_key_days,omitempty"`
 
@@ -2794,22 +2979,25 @@ type ServerInterface interface {
 	// DownloadExport Download the export zip with its one-time, short-lived token
 	// (GET /api/v1/exports/{id}/download)
 	DownloadExport(w http.ResponseWriter, r *http.Request, id ID, params DownloadExportParams)
-	// GetExtraction Get an extraction run with its rows
+	// GetExtraction Get an extraction run with its rows, suggestions and validation warnings
 	// (GET /api/v1/extractions/{id})
 	GetExtraction(w http.ResponseWriter, r *http.Request, id ID)
 	// ConfirmExtraction Confirm reviewed rows as lab results
 	// (POST /api/v1/extractions/{id}/confirm)
 	ConfirmExtraction(w http.ResponseWriter, r *http.Request, id ID)
-	// UpdateExtractionRow Edit an extracted row during review (audited)
+	// UpdateExtractionRow Edit, accept or reject an extracted row during review (audited)
 	// (PATCH /api/v1/extractions/{id}/rows/{row})
 	UpdateExtractionRow(w http.ResponseWriter, r *http.Request, id ID, row string)
+	// UnconfirmExtraction Delete the lab results confirmed from a run and return it to review (audited)
+	// (POST /api/v1/extractions/{id}/unconfirm)
+	UnconfirmExtraction(w http.ResponseWriter, r *http.Request, id ID)
 	// ListGroups List measurement groups (blood-pressure readings, weigh-ins)
 	// (GET /api/v1/groups)
 	ListGroups(w http.ResponseWriter, r *http.Request, params ListGroupsParams)
 	// ListJobs List background jobs
 	// (GET /api/v1/jobs)
 	ListJobs(w http.ResponseWriter, r *http.Request, params ListJobsParams)
-	// ListLabResults List confirmed lab results
+	// ListLabResults List confirmed lab results by collection date
 	// (GET /api/v1/lab-results)
 	ListLabResults(w http.ResponseWriter, r *http.Request, params ListLabResultsParams)
 	// GetLabResultHistory Revisions of one lab result
@@ -4366,6 +4554,32 @@ func (siw *ServerInterfaceWrapper) UpdateExtractionRow(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateExtractionRow(w, r, id, row)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnconfirmExtraction operation middleware
+func (siw *ServerInterfaceWrapper) UnconfirmExtraction(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnconfirmExtraction(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6368,6 +6582,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/extractions/{id}", wrapper.GetExtraction)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/extractions/{id}/rows/{row}", wrapper.UpdateExtractionRow)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/extractions/{id}/confirm", wrapper.ConfirmExtraction)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/extractions/{id}/unconfirm", wrapper.UnconfirmExtraction)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/lab-results", wrapper.ListLabResults)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/lab-results/{id}/history", wrapper.GetLabResultHistory)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/analytes/aliases", wrapper.ListAnalyteAliases)
@@ -10026,6 +10241,86 @@ func (response UpdateExtractionRow422ApplicationProblemPlusJSONResponse) VisitUp
 	return err
 }
 
+type UnconfirmExtractionRequestObject struct {
+	ID ID `json:"id"`
+}
+
+type UnconfirmExtractionResponseObject interface {
+	VisitUnconfirmExtractionResponse(w http.ResponseWriter) error
+}
+
+type UnconfirmExtraction200JSONResponse Extraction
+
+func (response UnconfirmExtraction200JSONResponse) VisitUnconfirmExtractionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnconfirmExtraction401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response UnconfirmExtraction401ApplicationProblemPlusJSONResponse) VisitUnconfirmExtractionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnconfirmExtraction403ApplicationProblemPlusJSONResponse Problem
+
+func (response UnconfirmExtraction403ApplicationProblemPlusJSONResponse) VisitUnconfirmExtractionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnconfirmExtraction404ApplicationProblemPlusJSONResponse Problem
+
+func (response UnconfirmExtraction404ApplicationProblemPlusJSONResponse) VisitUnconfirmExtractionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnconfirmExtraction409ApplicationProblemPlusJSONResponse Problem
+
+func (response UnconfirmExtraction409ApplicationProblemPlusJSONResponse) VisitUnconfirmExtractionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListGroupsRequestObject struct {
 	Params ListGroupsParams
 }
@@ -12856,22 +13151,25 @@ type StrictServerInterface interface {
 	// DownloadExport Download the export zip with its one-time, short-lived token
 	// (GET /api/v1/exports/{id}/download)
 	DownloadExport(ctx context.Context, request DownloadExportRequestObject) (DownloadExportResponseObject, error)
-	// GetExtraction Get an extraction run with its rows
+	// GetExtraction Get an extraction run with its rows, suggestions and validation warnings
 	// (GET /api/v1/extractions/{id})
 	GetExtraction(ctx context.Context, request GetExtractionRequestObject) (GetExtractionResponseObject, error)
 	// ConfirmExtraction Confirm reviewed rows as lab results
 	// (POST /api/v1/extractions/{id}/confirm)
 	ConfirmExtraction(ctx context.Context, request ConfirmExtractionRequestObject) (ConfirmExtractionResponseObject, error)
-	// UpdateExtractionRow Edit an extracted row during review (audited)
+	// UpdateExtractionRow Edit, accept or reject an extracted row during review (audited)
 	// (PATCH /api/v1/extractions/{id}/rows/{row})
 	UpdateExtractionRow(ctx context.Context, request UpdateExtractionRowRequestObject) (UpdateExtractionRowResponseObject, error)
+	// UnconfirmExtraction Delete the lab results confirmed from a run and return it to review (audited)
+	// (POST /api/v1/extractions/{id}/unconfirm)
+	UnconfirmExtraction(ctx context.Context, request UnconfirmExtractionRequestObject) (UnconfirmExtractionResponseObject, error)
 	// ListGroups List measurement groups (blood-pressure readings, weigh-ins)
 	// (GET /api/v1/groups)
 	ListGroups(ctx context.Context, request ListGroupsRequestObject) (ListGroupsResponseObject, error)
 	// ListJobs List background jobs
 	// (GET /api/v1/jobs)
 	ListJobs(ctx context.Context, request ListJobsRequestObject) (ListJobsResponseObject, error)
-	// ListLabResults List confirmed lab results
+	// ListLabResults List confirmed lab results by collection date
 	// (GET /api/v1/lab-results)
 	ListLabResults(ctx context.Context, request ListLabResultsRequestObject) (ListLabResultsResponseObject, error)
 	// GetLabResultHistory Revisions of one lab result
@@ -14329,6 +14627,32 @@ func (sh *strictHandler) UpdateExtractionRow(w http.ResponseWriter, r *http.Requ
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateExtractionRowResponseObject); ok {
 		if err := validResponse.VisitUpdateExtractionRowResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnconfirmExtraction operation middleware
+func (sh *strictHandler) UnconfirmExtraction(w http.ResponseWriter, r *http.Request, id ID) {
+	var request UnconfirmExtractionRequestObject
+
+	request.ID = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnconfirmExtraction(ctx, request.(UnconfirmExtractionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnconfirmExtraction")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnconfirmExtractionResponseObject); ok {
+		if err := validResponse.VisitUnconfirmExtractionResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

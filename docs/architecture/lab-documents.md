@@ -44,21 +44,21 @@ Contract: [`schemas/lab-extraction.v1.json`](../../schemas/lab-extraction.v1.jso
 
 ## Validation
 
-Deterministic checks after extraction:
+Deterministic checks after extraction, recomputed on every read of a run (`internal/documents/review`). Each adds a row warning; none judges a value:
 
-- re-parse value, comparator, and range from verbatim text and flag disagreements;
-- check that `evidence_text` exists in the PDF text layer (otherwise `evidence_unverified`);
-- `unknown_unit`, `date_in_future`, `date_ambiguous`, duplicate analyte rows;
-- suggest an analyte via `analyte_aliases`, never final until confirmed.
+- re-parse value, comparator, and range from verbatim text and flag disagreements (`value_mismatch`, `comparator_mismatch`, `range_mismatch`; decimal comma and thousands readings both accepted);
+- check that `evidence_text` exists in the PDF text layer (otherwise `evidence_unverified`) and that `value_text` occurs in it (`value_not_in_evidence`). Pages without a text layer skip the check; v1 does not decode Type0/CMap fonts, so such PDFs count as having none (`documents.TextLayer`);
+- unit against the analyte's units (`unknown_unit`, `unit_not_convertible`, `unit_missing`), dates (`date_missing`, `date_in_future`, `date_ambiguous` for a printed day/month that reads both ways, `reported_before_collected`), duplicates (`duplicate_in_run`, `already_confirmed` for the same analyte and collection date confirmed from another run);
+- suggest an analyte via `analyte_aliases`, never final until confirmed (`unknown_analyte` when none matches).
 
 ## Review and confirmation
 
-- The UI shows the PDF page (pdf.js) with evidence highlighted beside an editable row table. Every row must be accepted, edited, or rejected. Required fields: label, value, unit (or explicit unitless), collection date. Each edit is recorded in `extraction_row_edits`.
+- The UI shows the PDF page (pdf.js) with evidence highlighted beside an editable row table. Every row must be accepted, edited, or rejected. Required fields: label, value, unit (or explicit unitless), collection date. Each edit is recorded in `extraction_row_edits`. `PATCH /extractions/{id}/rows/{row}` is a merge patch of the row's fields plus `review: accept|reject`; accepting a row without a unit confirms it as unitless, and the analyte reviewed is the suggestion shown unless the owner set one (`analyte: null` is unknown).
 - `confirm` atomically creates `lab_reports` and `lab_results`. Each result keeps:
   - original label, value text, unit, and printed range and flag;
   - numeric value; canonical analyte and value **only** if an analyte-specific conversion exists;
   - page, evidence, run, and prompt/model/normalizer versions.
-- Later edits create `lab_result_revisions`. Re-extraction creates a new run, and runs can be compared.
+- Later edits create `lab_result_revisions` when the run is confirmed again. Only one run per document is confirmed; `unconfirm` deletes its report and results (audited) and returns the run to review. Re-extraction creates a new run, and runs can be compared.
 - The UI shows printed ranges and flags only. No scores, judgements, or advice.
 
 ## Privacy controls

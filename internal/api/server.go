@@ -103,6 +103,7 @@ func newRouter(log *slog.Logger, ui fs.FS, opts Options) (*router, error) {
 	rt.exportRoutes()
 	rt.documentRoutes()
 	rt.extractionRoutes()
+	rt.reviewRoutes()
 	rt.analyteRoutes()
 	rt.ruleRoutes()
 	rt.connectionRoutes()

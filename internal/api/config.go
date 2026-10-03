@@ -262,7 +262,11 @@ func (o *owner) settings(ctx context.Context) (oapi.Settings, error) {
 	} else if !errors.Is(err, db.ErrNotFound) {
 		return oapi.Settings{}, err
 	}
-	return oapi.Settings{WithingsNotifications: &on}, nil
+	out := oapi.Settings{WithingsNotifications: &on}
+	if err := documentSettings(ctx, o.opts.DB.Q(), auth.PrincipalFrom(ctx).UserID, &out); err != nil {
+		return oapi.Settings{}, err
+	}
+	return out, retentionSettings(ctx, o.opts.DB.Q(), auth.PrincipalFrom(ctx).UserID, &out)
 }
 
 func (o *owner) GetSettings(ctx context.Context, _ oapi.GetSettingsRequestObject) (oapi.GetSettingsResponseObject, error) {
@@ -285,6 +289,12 @@ func (o *owner) UpdateSettings(ctx context.Context, req oapi.UpdateSettingsReque
 	}
 	before, err := o.settings(ctx)
 	if err != nil {
+		return nil, err
+	}
+	if err := o.updateRetention(ctx, req.Body); err != nil {
+		return nil, err
+	}
+	if err := o.updateDocumentSettings(ctx, req.Body); err != nil {
 		return nil, err
 	}
 	var applyErr error
