@@ -106,14 +106,16 @@ type Normalizer interface {
     ID() string      // "withings.measures", "healthkit.samples"
     Version() int    // bump on ANY output-affecting change
     Accepts(stream, shapeFingerprint string) bool
-    Normalize(ctx context.Context, raw RawPayload, nc NormalizeContext) (Output, error)
+    Normalize(ctx context.Context, raw RawPayload, env Env) (Output, error)
 }
 // Output: Measurements, Groups, Sleep, Workouts, Devices, Origins, Tombstones, Warnings
 ```
 
+Code: `internal/normalize` (interface, `Registry`, `Output.Validate`, `RegisterVersions`, and the writer of [ADR-0016](../adr/0016-canonical-writer.md)).
+
 - **Pure and deterministic.** Same bytes, version, and context give identical output. No clock, randomness, or network.
-- **Golden tests** per normalizer (synthetic raw → canonical JSON). CI fails when output changes without a `Version()` bump.
-- Canonical units are applied. The original value and unit are kept when they differ.
+- **Golden tests** per normalizer (synthetic raw → canonical JSON) with `normtest.Golden`: cases are `testdata/<id>/<case>.raw.<ext>`, goldens `<case>.golden.json` record the version. Output that changes without a `Version()` bump fails; after a bump, `UPDATE_GOLDEN=1 make golden` rewrites.
+- Normalizers emit source values and units; the writer applies canonical units and keeps the original value and unit when they differ.
 - Every row references `normalizer_versions(name, version, git_sha)`.
 - Third-party adapters may submit canonical records alongside raw (tagged `external:<adapter>@<version>`). These are validated against the canonical schema.
 

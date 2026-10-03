@@ -12,3 +12,4 @@ ADRs record decisions that code depends on. Keep each one short and link to the 
 | [0011](0011-secrets-vault.md) | Master key file, HKDF purposes, AES-256-GCM sealed values with `key_id` | Accepted |
 | [0012](0012-mit-license-dco.md) | MIT license with DCO sign-off | Accepted |
 | [0015](0015-rest-openapi-conventions.md) | REST + OpenAPI 3.1 contract-first, problem+json, cursor pagination | Accepted |
+| [0016](0016-canonical-writer.md) | Account-scoped dedupe keys; corrections supersede; one canonical writer | Accepted |

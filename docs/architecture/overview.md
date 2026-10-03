@@ -53,7 +53,7 @@ ADRs are written during implementation (J01.1 and the owning jobs).
 | ADR-013 | Extraction | Provider interface, consent model, no interpretation | [lab-documents.md](lab-documents.md) |
 | ADR-014 | Apple Health | Swift package + minimal SwiftUI app; anchor committed after ack | [apple-health.md](apple-health.md) |
 | ADR-015 | API | REST + OpenAPI 3.1 contract-first, problem+json, cursor pagination | [api.md](api.md) |
-| ADR-016 | Dedupe | Account-scoped dedupe keys; corrections supersede | [data-model.md](data-model.md#identifiers-and-dedupe-keys) |
+| ADR-016 | Dedupe | Account-scoped dedupe keys; corrections supersede | [ADR-0016](../adr/0016-canonical-writer.md) |
 
 Libraries: `pgx` v5, `sqlc`, `goose`, `log/slog`, `oapi-codegen`, `openapi-typescript`, `klauspost/compress` (zstd), `x/crypto` (HKDF, argon2id), `pquerna/otp`, `uPlot`, `pdf.js`.
 

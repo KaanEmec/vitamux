@@ -1,0 +1,11 @@
+{
+  "synthetic": true,
+  "device": "bpm-0001",
+  "readings": [
+    {"id": "r1", "metric": "heart_rate", "at": "2026-06-15T07:00:00Z", "value": 61, "unit": "bpm", "offset_min": 120},
+    {"id": "r2", "metric": "body_temperature", "at": "2026-06-15T07:05:00Z", "value": 98.6, "unit": "°F"},
+    {"id": "r3", "metric": "not_a_metric", "at": "2026-06-15T07:10:00Z", "value": 1, "unit": "count"}
+  ],
+  "bp": [{"id": "b1", "at": "2026-06-15T07:15:00Z", "sys": 121, "dia": 79}],
+  "deleted": ["r0"]
+}

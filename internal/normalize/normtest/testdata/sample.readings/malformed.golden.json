@@ -1,0 +1,6 @@
+{
+  "synthetic": true,
+  "normalizer": "sample.readings",
+  "version": 1,
+  "error": "sample: invalid character 's' looking for beginning of value"
+}

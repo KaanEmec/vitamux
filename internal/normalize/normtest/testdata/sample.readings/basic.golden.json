@@ -1,0 +1,81 @@
+{
+  "synthetic": true,
+  "normalizer": "sample.readings",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "bpm-0001",
+        "type": "bp_monitor"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "heart_rate",
+        "kind": "sample",
+        "start": "2026-06-15T07:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 61,
+        "unit": "bpm",
+        "device": "bpm-0001",
+        "key": {
+          "record_type": "reading",
+          "external_id": "r1"
+        }
+      },
+      {
+        "metric": "body_temperature",
+        "kind": "sample",
+        "start": "2026-06-15T07:05:00Z",
+        "value": 98.6,
+        "unit": "°F",
+        "device": "bpm-0001",
+        "key": {
+          "record_type": "reading",
+          "external_id": "r2"
+        }
+      }
+    ],
+    "groups": [
+      {
+        "kind": "bp_reading",
+        "measured_at": "2026-06-15T07:15:00Z",
+        "device": "bpm-0001",
+        "key": {
+          "record_type": "bp",
+          "external_id": "b1"
+        },
+        "components": [
+          {
+            "metric": "bp_systolic",
+            "kind": "sample",
+            "start": "2026-06-15T07:15:00Z",
+            "value": 121,
+            "unit": "mmHg"
+          },
+          {
+            "metric": "bp_diastolic",
+            "kind": "sample",
+            "start": "2026-06-15T07:15:00Z",
+            "value": 79,
+            "unit": "mmHg"
+          }
+        ]
+      }
+    ],
+    "tombstones": [
+      {
+        "record_type": "reading",
+        "external_id": "r0"
+      }
+    ],
+    "warnings": [
+      {
+        "code": "unknown_metric",
+        "detail": "r3"
+      }
+    ]
+  }
+}
