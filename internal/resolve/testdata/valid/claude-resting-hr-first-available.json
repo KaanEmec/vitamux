@@ -1,0 +1,12 @@
+{
+  "schema": "vitamux.rule/1",
+  "metric": "resting_heart_rate",
+  "window": {"kind": "local_day"},
+  "groups": [
+    {"id": "oura", "match": [{"provider": "oura"}, {"provider": "apple_health", "origin_key": "com.example.ring"}]},
+    {"id": "garmin", "match": [{"provider": "garmin"}]},
+    {"id": "apple", "match": [{"provider": "apple_health", "relayed": false}]}
+  ],
+  "strategy": {"op": "first_available"},
+  "quality": {"max_staleness": "36h"}
+}

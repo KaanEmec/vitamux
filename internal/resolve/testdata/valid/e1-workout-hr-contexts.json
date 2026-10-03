@@ -1,0 +1,13 @@
+{
+  "schema": "vitamux.rule/1",
+  "metric": "heart_rate",
+  "window": {"kind": "bucket", "size": "5m"},
+  "groups": [
+    {"id": "apple_watch", "match": [{"provider": "apple_health", "device_type": "watch", "relayed": false}]},
+    {"id": "garmin", "match": [{"provider": "garmin"}]},
+    {"id": "chest_strap", "match": [{"device_type": "chest_strap"}]},
+    {"id": "ring", "match": [{"device_type": "ring"}]}
+  ],
+  "strategy": {"op": "first_available"},
+  "contexts": {"workout": ["chest_strap", "@workout_source"], "sleep": ["ring"]}
+}

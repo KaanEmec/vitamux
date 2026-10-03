@@ -1,0 +1,12 @@
+{
+  "schema": "vitamux.rule/1",
+  "metric": "steps",
+  "window": {"kind": "local_day"},
+  "groups": [
+    {"id": "watch", "match": [{"device_type": "watch"}]},
+    {"id": "phone", "match": [{"device_type": "phone"}]}
+  ],
+  "within_source": {"daily_value_policy": "prefer_reported"},
+  "strategy": {"op": "sum_across_sources", "min_sources": 2, "on_insufficient": "no_value"},
+  "acknowledged_warnings": ["cross_source_sum_duplicate_risk"]
+}

@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Vitamux resolution rule v1",
+  "description": "One versioned rule (resolution_rules.spec). Frozen (Gate G2, ADR-0008): only additive, optional changes within v1. This file is the structural contract; internal/resolve.Validate also checks the rule against the metric catalogue (allowed windows and strategies, families, wear metric, follow leader) and across fields.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "metric", "window", "groups", "strategy"],
+  "properties": {
+    "schema": {"const": "vitamux.rule/1"},
+    "metric": {
+      "description": "Catalogue code, or a rule family: sleep (every sleep-derived code) or blood_pressure (bp_reading components). Family members cannot have their own rule.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+    },
+    "window": {
+      "description": "The rule's default window. Other window kinds the catalogue allows reuse the rule's groups, strategy and gates.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {"enum": ["bucket", "hour", "local_day", "local_night", "sleep_episode", "latest", "reading"]},
+        "size": {"enum": ["1m", "5m", "15m", "30m"]}
+      },
+      "if": {"properties": {"kind": {"const": "bucket"}}},
+      "then": {"required": ["size"]},
+      "else": {"not": {"required": ["size"]}}
+    },
+    "groups": {
+      "description": "Ordered source groups. Each input joins the first group with a matching selector.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "match"],
+        "properties": {
+          "id": {"$ref": "#/$defs/group_id"},
+          "match": {"$ref": "#/$defs/selectors"}
+        }
+      }
+    },
+    "exclude": {
+      "description": "Inputs matching any of these are excluded, whatever group they would match.",
+      "type": "array",
+      "maxItems": 32,
+      "items": {"$ref": "#/$defs/selector"}
+    },
+    "within_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "intra_group": {"description": "Sub-sources of one group per bucket; auto = mean (intensive) or max (additive). sum needs acknowledgement.", "enum": ["auto", "mean", "max", "sum"]},
+        "daily_value_policy": {"description": "Additive local_day: provider daily total if present, else intervals (prefer_reported), or intervals only. Never both.", "enum": ["prefer_reported", "intervals_only"]},
+        "statistic": {"description": "E2 min_rolling_mean or min (intensive); latest or mean of the day's readings (latest-type metrics on local_day).", "enum": ["min_rolling_mean", "min", "latest", "mean"]},
+        "span": {"description": "Rolling span for min_rolling_mean, a multiple of the base bucket.", "$ref": "#/$defs/duration"}
+      },
+      "if": {"properties": {"statistic": {"const": "min_rolling_mean"}}, "required": ["statistic"]},
+      "then": {"required": ["span"]},
+      "else": {"not": {"required": ["span"]}}
+    },
+    "strategy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op"],
+      "properties": {
+        "op": {"enum": ["single_source", "first_available", "mean_across_sources", "minimum_across_sources", "maximum_across_sources", "sum_across_sources", "latest", "earliest", "event_priority"]},
+        "min_sources": {"description": "Pooling ops only; default 1.", "type": "integer", "minimum": 1, "maximum": 32},
+        "on_insufficient": {"description": "Pooling ops only; default use_available.", "enum": ["use_available", "no_value"]}
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min_coverage": {"description": "Covered (or, with require_wear, worn) buckets / elapsed buckets.", "type": "number", "exclusiveMinimum": 0, "maximum": 1},
+        "plausible_range": {"description": "[low, high] in the metric's canonical unit.", "type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2},
+        "exclude_flags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"enum": ["manual_entry", "motion_context", "implausible", "relayed", "migrated_without_raw", "prorated_source"]}
+        },
+        "max_staleness": {"$ref": "#/$defs/duration"},
+        "require_wear": {"description": "E3: the wear metric, e.g. heart_rate. Devices that never report it are exempt.", "type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
+        "sleep": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "match_overlap": {"description": "Default 0.5.", "type": "number", "exclusiveMinimum": 0, "maximum": 1},
+            "min_episode_coverage": {"description": "Default 0.7.", "type": "number", "exclusiveMinimum": 0, "maximum": 1},
+            "include_naps": {"type": "boolean"},
+            "night_anchor": {"description": "Local time separating nights (ADR-0009); default 18:00.", "type": "string", "pattern": "^(1[2-9]|2[0-3]):[0-5][0-9]$"}
+          }
+        }
+      }
+    },
+    "contexts": {
+      "description": "E1: inside aligned workouts or the sleep episode the listed groups go first, then the rest in rule order. @workout_source is the group of the source that recorded the workout.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "workout": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"anyOf": [{"$ref": "#/$defs/group_id"}, {"const": "@workout_source"}]}},
+        "sleep": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/group_id"}}
+      }
+    },
+    "follow": {
+      "description": "E5: use the group (by id) the leader metric selected for the same window, else fall back with warning follow_unavailable. No cycles; same window as the leader rule.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+    },
+    "compose": {
+      "description": "E9: additive local_day built from hourly picks.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "op"],
+      "properties": {
+        "from": {"const": "hour"},
+        "op": {"enum": ["first_available", "max"]}
+      }
+    },
+    "acknowledged_warnings": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"enum": ["cross_source_sum_duplicate_risk", "composite_exceeds_any_source", "insufficient_sources", "preferred_source_unavailable", "definition_changed", "follow_unavailable"]}
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"strategy": {"properties": {"op": {"const": "sum_across_sources"}}}}},
+      "then": {"required": ["acknowledged_warnings"], "properties": {"acknowledged_warnings": {"contains": {"const": "cross_source_sum_duplicate_risk"}}}}
+    },
+    {
+      "if": {"properties": {"within_source": {"properties": {"intra_group": {"const": "sum"}}, "required": ["intra_group"]}}, "required": ["within_source"]},
+      "then": {"required": ["acknowledged_warnings"], "properties": {"acknowledged_warnings": {"contains": {"const": "cross_source_sum_duplicate_risk"}}}}
+    },
+    {
+      "if": {"properties": {"strategy": {"properties": {"op": {"const": "single_source"}}}}},
+      "then": {"properties": {"groups": {"maxItems": 1}}}
+    }
+  ],
+  "$defs": {
+    "group_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,31}$"},
+    "duration": {"description": "Positive integer and one unit: s, m, h or d.", "type": "string", "pattern": "^[1-9][0-9]{0,5}[smhd]$"},
+    "selectors": {"type": "array", "minItems": 1, "maxItems": 32, "items": {"$ref": "#/$defs/selector"}},
+    "selector": {
+      "description": "Fields are ANDed; a list of selectors is ORed. At least one field.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "provider": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
+        "connection_id": {"$ref": "#/$defs/uuid"},
+        "origin_key": {"type": "string", "minLength": 1, "maxLength": 256},
+        "origin_key_prefix": {"type": "string", "minLength": 1, "maxLength": 256},
+        "origin_name": {"type": "string", "minLength": 1, "maxLength": 256},
+        "relayed": {"type": "boolean"},
+        "device_type": {"type": "string", "minLength": 1, "maxLength": 256},
+        "device_model": {"type": "string", "minLength": 1, "maxLength": 256},
+        "device_id": {"$ref": "#/$defs/uuid"},
+        "entry": {"enum": ["device", "manual"]}
+      },
+      "not": {"required": ["origin_key", "origin_key_prefix"]}
+    },
+    "uuid": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"}
+  }
+}

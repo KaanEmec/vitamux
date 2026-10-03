@@ -1,0 +1,14 @@
+{
+  "schema": "vitamux.rule/1",
+  "metric": "steps",
+  "window": {"kind": "local_day"},
+  "groups": [
+    {"id": "watch", "match": [{"device_type": "watch"}]},
+    {"id": "ring", "match": [{"device_type": "ring"}]},
+    {"id": "phone", "match": [{"device_type": "phone"}]}
+  ],
+  "exclude": [{"relayed": true}],
+  "strategy": {"op": "first_available"},
+  "quality": {"min_coverage": 0.6, "require_wear": "heart_rate"},
+  "compose": {"from": "hour", "op": "first_available"}
+}

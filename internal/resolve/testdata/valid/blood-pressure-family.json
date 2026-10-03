@@ -1,0 +1,11 @@
+{
+  "schema": "vitamux.rule/1",
+  "metric": "blood_pressure",
+  "window": {"kind": "local_day"},
+  "groups": [
+    {"id": "cuff", "match": [{"device_type": "bp_monitor"}]},
+    {"id": "manual", "match": [{"entry": "manual"}]}
+  ],
+  "within_source": {"statistic": "mean"},
+  "strategy": {"op": "first_available"}
+}

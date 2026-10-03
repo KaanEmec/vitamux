@@ -1,0 +1,12 @@
+{
+  "schema": "vitamux.rule/1",
+  "metric": "sleep",
+  "window": {"kind": "local_night"},
+  "groups": [
+    {"id": "ring", "match": [{"device_type": "ring"}]},
+    {"id": "apple_watch", "match": [{"provider": "apple_health", "device_type": "watch", "relayed": false}]},
+    {"id": "mattress", "match": [{"provider": "withings", "device_type": "sleep_mat"}]}
+  ],
+  "strategy": {"op": "event_priority"},
+  "quality": {"max_staleness": "36h", "sleep": {"match_overlap": 0.5, "min_episode_coverage": 0.7}}
+}

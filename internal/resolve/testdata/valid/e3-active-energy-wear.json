@@ -1,0 +1,12 @@
+{
+  "schema": "vitamux.rule/1",
+  "metric": "active_energy",
+  "window": {"kind": "local_day"},
+  "groups": [
+    {"id": "watch", "match": [{"device_type": "watch"}]},
+    {"id": "ring", "match": [{"device_type": "ring"}]},
+    {"id": "phone", "match": [{"device_type": "phone"}]}
+  ],
+  "strategy": {"op": "first_available"},
+  "quality": {"min_coverage": 0.8, "require_wear": "heart_rate"}
+}

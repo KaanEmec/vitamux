@@ -1,0 +1,12 @@
+{
+  "schema": "vitamux.rule/1",
+  "metric": "body_fat_ratio",
+  "window": {"kind": "local_day"},
+  "groups": [
+    {"id": "scale", "match": [{"device_type": "scale"}]},
+    {"id": "manual", "match": [{"entry": "manual"}]}
+  ],
+  "within_source": {"statistic": "latest"},
+  "strategy": {"op": "first_available"},
+  "follow": "weight"
+}

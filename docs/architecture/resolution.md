@@ -4,7 +4,7 @@ Resolution turns many source rows into one explained value per (metric, window).
 
 ## Rule specification
 
-A rule is stored as JSONB in `resolution_rules.spec` and validated by `schemas/resolution-rule.v1.json`. There is no expression language.
+A rule is stored as JSONB in `resolution_rules.spec` and validated by `schemas/resolution-rule.v1.json` plus catalogue checks in `internal/resolve` ([ADR-0008](../adr/0008-rule-schema.md)). There is no expression language. `metric` is a catalogue code or a rule family (`sleep`, `blood_pressure`; see [group-coherent selection](#group-coherent-selection)).
 
 ```yaml
 schema: vitamux.rule/1
@@ -30,12 +30,13 @@ The provider names are illustrative; rules work for any provider.
 
 ## Selectors and validation
 
-- Selector fields: `provider`, `connection_id`, `origin_key`, `origin_key_prefix`, `origin_name`, `relayed`, `device_type`, `device_model`, `device_id`, `entry` (`device|manual`). Fields within one selector are ANDed; a list of selectors is ORed.
+- Selector fields: `provider`, `connection_id`, `origin_key`, `origin_key_prefix`, `origin_name`, `relayed`, `device_type`, `device_model`, `device_id`, `entry` (`device|manual`). Fields within one selector are ANDed; a list of selectors is ORed. `exclude` wins over every group; contexts (E1) reorder groups but never change membership.
 - Validation rejects:
   - unknown fields;
   - windows or strategies not allowed for the metric's aggregation;
   - `single_source` with more than one group; empty groups;
-  - `sum_across_sources` or `intra_group: sum` without `acknowledged_warnings: [cross_source_sum_duplicate_risk]`.
+  - `sum_across_sources` or `intra_group: sum` without `acknowledged_warnings: [cross_source_sum_duplicate_risk]`;
+  - per-code rules for family members, and the extension checks listed in [ADR-0008](../adr/0008-rule-schema.md).
 - Every edit creates an immutable version, and `active_rules` points to one. Built-in defaults live in code as `builtin:<metric>:<n>` and are copied on first edit.
 
 ## Windows
@@ -45,7 +46,7 @@ The provider names are illustrative; rules work for any provider.
 | `bucket(size)` | 1, 5, 15, or 30 min, aligned to local midnight. DST follows the wall clock. |
 | `hour` | Local hours. DST days have 23 or 25. |
 | `local_day` | Rows with stored `local_date = D`, so a travel day is not split |
-| `local_night` | Main sleep episode with `sleep_date = D`; candidates end in `[D−1 anchor, D anchor)` |
+| `local_night` | Main sleep episode of night D: candidates end in `[D−1 anchor, D anchor)` ([ADR-0009](../adr/0009-sleep-date-night-window.md)) |
 | `sleep_episode` | Every aligned episode, naps included |
 | `latest` | Most recent valid input at or before `as_of` |
 | `reading` | One result per measurement group (e.g., each BP reading) |
@@ -100,7 +101,7 @@ Workouts cluster the same way: overlap ≥ 0.6 of the shorter and a compatible s
 
 ## Group-coherent selection
 
-BP and body-composition components always come from the same reading. `blood_pressure` returns systolic, diastolic, and pulse together. A daily mean (`within_source.statistic: mean`) averages each component across selected readings and never mixes sources within one reading.
+BP and body-composition components always come from the same reading. One `metric: blood_pressure` rule returns systolic, diastolic, and pulse together; body-composition codes use `follow: weight`. A daily mean (`within_source.statistic: mean`) averages each component across selected readings and never mixes sources within one reading.
 
 Sleep codes are one family. A single rule (`metric: sleep`) selects one episode per window, and every `sleep_*` code reads from that episode. A selected source without stages gives `no_stage_data` for the stage codes, instead of falling through to another source.
 

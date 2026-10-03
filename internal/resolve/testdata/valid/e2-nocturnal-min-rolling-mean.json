@@ -1,0 +1,13 @@
+{
+  "schema": "vitamux.rule/1",
+  "metric": "heart_rate",
+  "window": {"kind": "local_night"},
+  "groups": [
+    {"id": "ring", "match": [{"device_type": "ring"}]},
+    {"id": "watch", "match": [{"device_type": "watch"}]}
+  ],
+  "within_source": {"statistic": "min_rolling_mean", "span": "30m"},
+  "strategy": {"op": "first_available"},
+  "quality": {"min_coverage": 0.7},
+  "contexts": {"sleep": ["ring"]}
+}

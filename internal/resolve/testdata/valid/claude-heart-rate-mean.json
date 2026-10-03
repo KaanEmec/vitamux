@@ -1,0 +1,21 @@
+{
+  "schema": "vitamux.rule/1",
+  "metric": "heart_rate",
+  "window": {"kind": "bucket", "size": "5m"},
+  "groups": [
+    {"id": "garmin", "match": [{"provider": "garmin"}]},
+    {"id": "whoop", "match": [{"provider": "whoop"}]},
+    {"id": "apple_watch", "match": [{"provider": "apple_health", "device_type": "watch", "relayed": false}]}
+  ],
+  "exclude": [{"provider": "apple_health", "relayed": true}],
+  "within_source": {"intra_group": "auto"},
+  "strategy": {"op": "mean_across_sources", "min_sources": 1, "on_insufficient": "use_available"},
+  "quality": {
+    "min_coverage": 0.5,
+    "plausible_range": [25, 230],
+    "exclude_flags": ["manual_entry"],
+    "max_staleness": "36h",
+    "sleep": {"match_overlap": 0.5, "min_episode_coverage": 0.7, "include_naps": false, "night_anchor": "18:00"}
+  },
+  "acknowledged_warnings": []
+}

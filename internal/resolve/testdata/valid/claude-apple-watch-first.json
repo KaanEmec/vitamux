@@ -1,0 +1,13 @@
+{
+  "schema": "vitamux.rule/1",
+  "metric": "heart_rate",
+  "window": {"kind": "bucket", "size": "5m"},
+  "groups": [
+    {"id": "apple_watch", "match": [{"provider": "apple_health", "device_type": "watch", "relayed": false}]},
+    {"id": "withings", "match": [{"provider": "withings"}]},
+    {"id": "iphone", "match": [{"provider": "apple_health", "device_type": "phone"}]}
+  ],
+  "exclude": [{"provider": "apple_health", "origin_key_prefix": "com.garmin."}, {"entry": "manual"}],
+  "strategy": {"op": "first_available"},
+  "quality": {"plausible_range": [25, 230], "exclude_flags": ["manual_entry"]}
+}
