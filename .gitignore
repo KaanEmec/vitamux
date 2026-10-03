@@ -18,6 +18,6 @@ web/build/
 .vscode/
 coverage/
 tmp/
-data/
+/data/
 /fixtures/generated/
 /vitamux
