@@ -8,7 +8,7 @@ COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 LDFLAGS := -s -w -X github.com/KaanEmec/vitamux/internal/version.Version=$(VERSION) -X github.com/KaanEmec/vitamux/internal/version.Commit=$(COMMIT)
 COMPOSE := docker compose -f deploy/compose/compose.dev.yaml
 
-.PHONY: help dev services migrate services-down web-install web-build build test test-integration lint fixtures golden image clean
+.PHONY: help dev services migrate services-down web-install web-build build test test-integration sqlc lint fixtures golden image clean
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -42,6 +42,9 @@ test: ## Unit tests (offline)
 
 test-integration: services ## Integration tests against dev PostgreSQL
 	go test -tags integration ./...
+
+sqlc: ## Regenerate internal/db/dbq from migrations and queries
+	go tool sqlc generate
 
 lint: web-install ## Go and web linters
 	golangci-lint run ./...
