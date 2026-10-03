@@ -47,10 +47,11 @@ func Empty(t testing.TB) string {
 	}
 	c := connect(t, dbURL)
 	defer func() { _ = c.Close(ctx) }()
-	// Roles are cluster-wide; serialize their creation across parallel test packages.
-	exec(t, c, "SELECT pg_advisory_lock(7461626)")
+	// Roles are cluster-wide; serialize their creation across parallel test packages. Advisory
+	// locks are scoped to one database, so take it on the shared admin database, not the new one.
+	exec(t, conn, "SELECT pg_advisory_lock(7461626)")
 	exec(t, c, string(roles))
-	exec(t, c, "SELECT pg_advisory_unlock(7461626)")
+	exec(t, conn, "SELECT pg_advisory_unlock(7461626)")
 	return dbURL
 }
 
