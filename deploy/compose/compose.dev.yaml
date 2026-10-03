@@ -1,0 +1,21 @@
+# Development services only. The Go server and Vite run on the host with live reload
+# (`make dev`). Ports bind to 127.0.0.1 only.
+name: vitamux-dev
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: vitamux
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vitamux-dev}
+      POSTGRES_DB: vitamux
+    ports:
+      - "127.0.0.1:${VITAMUX_DEV_PG_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vitamux -d vitamux"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+volumes:
+  pgdata:

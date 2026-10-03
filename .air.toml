@@ -1,0 +1,13 @@
+# Live reload for `make dev` (go tool air).
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/vitamux ./cmd/vitamux"
+  entrypoint = ["./tmp/vitamux", "serve"]
+  include_ext = ["go", "sql"]
+  exclude_dir = ["web", "tmp", "bin", "docs", "data", "deploy", ".git"]
+  delay = 300
+
+[log]
+  main_only = true

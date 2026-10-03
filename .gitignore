@@ -18,3 +18,4 @@ web/build/
 .vscode/
 coverage/
 tmp/
+data/

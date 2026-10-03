@@ -113,7 +113,7 @@ All absolute URLs come from `VITAMUX_PUBLIC_URL`. No host-specific values are co
 
 ```text
 cmd/vitamux/                      main + subcommands
-internal/  api auth audit blob catalog config crypto db(sqlc, migrations) ingest jobs
+internal/  api auth audit blob catalog config crypto db(sqlc, migrations) ingest jobs obs version
            normalize resolve documents(extractors) imports
            connectors/(runtime, ratelimit, withings, applehealth)
 web/                          SvelteKit SPA (embedded at build)

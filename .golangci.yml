@@ -1,0 +1,64 @@
+version: "2"
+
+linters:
+  default: standard # errcheck, govet, ineffassign, staticcheck, unused
+  enable:
+    - bodyclose
+    - depguard
+    - errorlint
+    - exhaustive
+    - gosec
+    - misspell
+    - noctx
+    - sqlclosecheck
+  settings:
+    exhaustive:
+      default-signifies-exhaustive: true
+    depguard:
+      # Module boundaries; see docs/development.md for the table.
+      rules:
+        no-std-log:
+          files: ["$all"]
+          deny:
+            - pkg: "log$"
+              desc: "use log/slog"
+        pgx-only-in-db:
+          files: ["$all", "!**/internal/db/**"]
+          deny:
+            - pkg: "github.com/jackc/pgx"
+              desc: "database access goes through internal/db"
+        domain-not-http:
+          files: ["**/internal/connectors/**", "**/internal/normalize/**", "**/internal/resolve/**", "**/internal/ingest/**", "**/internal/jobs/**", "**/internal/documents/**", "**/internal/imports/**"]
+          deny:
+            - pkg: "github.com/KaanEmec/vitamux/internal/api"
+              desc: "domain packages must not depend on the HTTP layer"
+        connectors-not-resolve:
+          files: ["**/internal/connectors/**"]
+          deny:
+            - pkg: "github.com/KaanEmec/vitamux/internal/resolve"
+              desc: "selection is separate from ingestion"
+        resolve-not-ingestion:
+          files: ["**/internal/resolve/**"]
+          deny:
+            - pkg: "github.com/KaanEmec/vitamux/internal/connectors"
+              desc: "resolution reads canonical data only"
+            - pkg: "github.com/KaanEmec/vitamux/internal/ingest"
+              desc: "resolution reads canonical data only"
+        normalize-not-connectors:
+          files: ["**/internal/normalize/**"]
+          deny:
+            - pkg: "github.com/KaanEmec/vitamux/internal/connectors"
+              desc: "connectors import normalize, never the reverse"
+  exclusions:
+    presets: [std-error-handling]
+    rules:
+      - path: _test\.go
+        linters: [gosec, bodyclose]
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes: [github.com/KaanEmec/vitamux]
