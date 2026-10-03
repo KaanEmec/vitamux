@@ -8,6 +8,21 @@ Read only what the current task needs.
 
 Precedence when documents disagree: `CLAUDE.md` (product brief) > ADRs in `docs/adr/` (created during E01) > `architecture/` > `plan/`. Fix the lower document.
 
+## Install, run, use
+
+| File | Covers | Read when working on |
+| --- | --- | --- |
+| [install.md](install.md) | Compose install, reverse proxies, first owner, Withings URLs, backups, Coolify | Installing; changing Compose files or setup steps |
+| [configuration.md](configuration.md) | Every `VITAMUX_*` variable: default, secret, since (test-enforced against `internal/config`) | Adding or changing a setting |
+| [operations/upgrade.md](operations/upgrade.md) | Image bump, migrate, drain, rollback rules | Releases, migrations |
+| [operations/key-rotation.md](operations/key-rotation.md) | Master key rotation and what gets re-sealed | Anything sealed with the master key |
+| [operations/troubleshooting.md](operations/troubleshooting.md) | `/readyz` failures, schema mismatch, `needs_reauth`, degraded streams, cache verify | Health checks, connection states, error messages |
+| [faq.md](faq.md) | What Vitamux is and is not, data ownership, sources, roadmap | Product questions |
+| [api-reference.md](api-reference.md) | Generated: operations by tag with access (`go run ./tools/apiref`) | API consumers; regenerate after spec or `authz.yaml` changes |
+| [adapters.md](adapters.md) | Writing a connector step by step; toy example in `internal/connectors/example` | New connectors and normalizers |
+
+`go test ./tools/doclinks` checks every relative link and anchor in `docs/` and the root `*.md` files.
+
 ## Architecture (`architecture/`)
 
 | File | Covers | Read when working on |
@@ -30,8 +45,9 @@ Precedence when documents disagree: `CLAUDE.md` (product brief) > ADRs in `docs/
 | [lab-documents.md](architecture/lab-documents.md) | PDF storage, extraction providers, review, privacy | E12 |
 | [frontend.md](architecture/frontend.md) | UI stack, navigation, rule builder | E11 |
 | [project.md](architecture/project.md) | License, testing, releases, resource budget, deferred features, risks, assumptions, open questions | Release, CI, planning |
-| [deploy/compose.md](deploy/compose.md) | Release Compose install, hardening, upgrade, Coolify note | Deploying, container or Compose changes |
+| [deploy/compose.md](deploy/compose.md) | Release and Coolify Compose files: hardening policy, files and permissions | Deploying, container or Compose changes |
 | [operations/backup.md](operations/backup.md) | Backup contents, scheduled backups, off-host encryption, restore steps, drill | Backups, restore, disaster recovery |
+| [release-checklist.md](release-checklist.md) | Tagging an rc, artifacts, clean installs, changelog, final tag | Releasing |
 | [providers/withings.md](providers/withings.md) | Verified Withings API facts: OAuth, getmeas, meastypes, notifications, limits; how Vitamux syncs | Withings connector (E08) |
 | [migration.md](architecture/migration.md), [migration-reference.md](architecture/migration-reference.md) | **Deferred** final epic: design notes and owner-verified reference facts (VPS, Open Wearables, Garmin collector, WHOOP) | Only E16 |
 

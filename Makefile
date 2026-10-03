@@ -8,7 +8,7 @@ COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 LDFLAGS := -s -w -X github.com/KaanEmec/vitamux/internal/version.Version=$(VERSION) -X github.com/KaanEmec/vitamux/internal/version.Commit=$(COMMIT)
 COMPOSE := docker compose -f deploy/compose/compose.dev.yaml
 
-.PHONY: help dev services migrate services-down web-install web-build build test test-integration test-e2e-stack redaction-audit vulncheck sqlc openapi lint fixtures fixture-guard golden fuzz notices notices-check image clean
+.PHONY: help dev services migrate services-down web-install web-build build test test-integration test-e2e-stack redaction-audit vulncheck sqlc openapi lint fixtures fixture-guard golden fuzz notices notices-check image upgrade-test changelog clean
 
 help: ## Show targets
 	@grep -hE '^[a-z0-9-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -99,6 +99,15 @@ notices-check: web-install ## Fail if THIRD_PARTY_NOTICES.md is stale or a depen
 
 image: ## Build the release container image locally
 	docker build --build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) -t vitamux:dev .
+
+OLD_IMAGE ?= ghcr.io/kaanemec/vitamux:latest
+NEW_IMAGE ?= vitamux:dev
+upgrade-test: ## Release Compose upgrade OLD_IMAGE -> NEW_IMAGE with a fixture slice and backup (default: latest release -> `make image`)
+	scripts/upgrade-test.sh
+
+changelog: ## Add TAG's section to CHANGELOG.md from Conventional Commits (before tagging a final release; TAG=vX.Y.Z)
+	@test -n "$(TAG)" || { echo "usage: make changelog TAG=vX.Y.Z"; exit 1; }
+	scripts/release-notes.sh --changelog $(TAG)
 
 clean: ## Remove build outputs
 	rm -rf bin tmp web/build web/.svelte-kit

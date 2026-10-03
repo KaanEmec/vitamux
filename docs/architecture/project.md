@@ -28,7 +28,7 @@
 ## Versioning and releases
 
 - SemVer for `vitamux`. Independent versions for: ingest schema (`vitamux.ingest.batch/1`), rule schema (`vitamux.rule/1`), each normalizer (integer), and migrations (sequence).
-- Release artifacts: multi-arch images, SBOMs, checksums, a Compose bundle with `.env.example`, a Swift package tag, and a changelog with upgrade notes.
+- Release artifacts: multi-arch images, SBOMs, checksums, a Compose bundle with `.env.example`, a Swift package tag, and a changelog with upgrade notes. Image tags: `vX.Y.Z` (also for `-rc.N`), plus `vX.Y` and `latest` for final releases. Process: [release-checklist.md](../release-checklist.md).
 - Contributor workflow: `make dev | test | lint | fixtures | golden`, conventional commits, and a PR template with privacy and security checklists.
 
 ## Resource budget

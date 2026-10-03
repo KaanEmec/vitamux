@@ -12,7 +12,7 @@ Thanks for helping! Start with [`docs/README.md`](docs/README.md); work items ar
 ## Workflow
 
 1. Pick or open an issue and find its plan job; read only the linked architecture sections.
-2. Branch from `main`, make focused commits ([Conventional Commits](https://www.conventionalcommits.org/) style, e.g. `feat(ingest): …`).
+2. Branch from `main`, make focused commits ([Conventional Commits](https://www.conventionalcommits.org/) style, e.g. `feat(ingest): …`). Subjects become the release notes and [`CHANGELOG.md`](CHANGELOG.md) (`scripts/release-notes.sh`), so write them for users; mark breaking changes with `!` or a `BREAKING CHANGE:` footer that says how to upgrade.
 3. Run `make lint test` (and `make test-integration` when touching the database).
 4. Open a PR and complete the checklist in the template.
 

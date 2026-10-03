@@ -17,6 +17,10 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY cmd ./cmd
 COPY internal ./internal
+# Embedded by internal/documents/extract: prompts, JSON schemas, the fake extractor's synthetic rows.
+COPY prompts ./prompts
+COPY schemas ./schemas
+COPY fixtures/lab ./fixtures/lab
 COPY web/*.go ./web/
 COPY --from=web /src/web/build ./web/build
 ARG VERSION=0.0.0-dev
