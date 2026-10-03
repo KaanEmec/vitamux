@@ -6,13 +6,17 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/db/dbq"
 	"github.com/KaanEmec/vitamux/internal/db/dbtest"
+	"github.com/KaanEmec/vitamux/internal/jobs"
 )
 
 var errCrash = errors.New("simulated crash before the referencing row")
@@ -168,5 +172,48 @@ func TestPutDeduplicatesAndHeals(t *testing.T) {
 	}
 	if got, err := s.Get(sealed.SHA256); err != nil || !bytes.Equal(got, synthetic(8)) {
 		t.Fatalf("sealed round trip: %v", err)
+	}
+}
+
+// TestSweepJob runs the registered handler through a real Runner: an old unreferenced blob is
+// gone once the enqueued job has succeeded, a referenced one stays.
+func TestSweepJob(t *testing.T) {
+	s, d, sql := setup(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	kept := put(t, s, d, synthetic(1), Plain, true)
+	loose := put(t, s, d, synthetic(2), Plain, false)
+	if err := sql.Exec("UPDATE blobs SET created_at = now() - interval '2 days'"); err != nil {
+		t.Fatal(err)
+	}
+
+	r := jobs.NewRunner(d, jobs.Config{Poll: 50 * time.Millisecond})
+	r.Register(KindSweep, SweepJob(d, s, slog.New(slog.DiscardHandler)))
+	done := make(chan struct{})
+	go func() { r.Run(ctx); close(done) }()
+	defer func() { cancel(); <-done }()
+
+	var id uuid.UUID
+	if err := d.Tx(ctx, func(q *dbq.Queries) (err error) {
+		id, _, err = jobs.Enqueue(ctx, q, jobs.NewJob{Kind: KindSweep})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var status string
+	for range 100 {
+		if err := sql.QueryRow("SELECT status FROM jobs WHERE id = $1", []any{id}, &status); err != nil {
+			t.Fatal(err)
+		}
+		if status == "succeeded" {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if status != "succeeded" {
+		t.Fatalf("job status %q", status)
+	}
+	if exists(s.path(loose.SHA256)) || !exists(s.path(kept.SHA256)) {
+		t.Fatal("sweep job did not remove exactly the unreferenced blob")
 	}
 }

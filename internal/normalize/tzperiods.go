@@ -18,7 +18,8 @@ import (
 type Range struct{ From, To time.Time }
 
 // Periods manages an owner's timezone periods. An edit returns the Range whose local dates it can
-// change (nil when none can); the caller passes it to RecomputeLocalDates.
+// change (nil when none can) and enqueues the recompute_local_dates job for it in the same
+// transaction (RecomputeJob runs RecomputeLocalDates).
 type Periods struct{ db *db.DB }
 
 // NewPeriods returns the period service over d.
@@ -61,7 +62,10 @@ func (p *Periods) Add(ctx context.Context, userID uuid.UUID, actor string, valid
 		if err := q.InsertTimezonePeriod(ctx, dbq.InsertTimezonePeriodParams{ID: id, UserID: userID, Tz: tz, ValidFrom: np.ValidFrom}); err != nil {
 			return err
 		}
-		return audit.Record(ctx, q, periodEvent(userID, actor, "timezone_period.add", np))
+		if err := audit.Record(ctx, q, periodEvent(userID, actor, "timezone_period.add", np)); err != nil {
+			return err
+		}
+		return enqueueRecompute(ctx, q, userID, r)
 	}, db.Serializable())
 	return np, r, err
 }
@@ -85,7 +89,10 @@ func (p *Periods) Edit(ctx context.Context, userID uuid.UUID, actor string, id u
 		if _, err := q.UpdateTimezonePeriod(ctx, dbq.UpdateTimezonePeriodParams{ID: id, UserID: userID, Tz: tz, ValidFrom: np.ValidFrom}); err != nil {
 			return err
 		}
-		return audit.Record(ctx, q, periodEvent(userID, actor, "timezone_period.edit", np))
+		if err := audit.Record(ctx, q, periodEvent(userID, actor, "timezone_period.edit", np)); err != nil {
+			return err
+		}
+		return enqueueRecompute(ctx, q, userID, r)
 	}, db.Serializable())
 	return r, err
 }
@@ -107,7 +114,10 @@ func (p *Periods) Remove(ctx context.Context, userID uuid.UUID, actor string, id
 		if _, err := q.DeleteTimezonePeriod(ctx, dbq.DeleteTimezonePeriodParams{ID: id, UserID: userID}); err != nil {
 			return err
 		}
-		return audit.Record(ctx, q, periodEvent(userID, actor, "timezone_period.remove", before[i]))
+		if err := audit.Record(ctx, q, periodEvent(userID, actor, "timezone_period.remove", before[i])); err != nil {
+			return err
+		}
+		return enqueueRecompute(ctx, q, userID, r)
 	}, db.Serializable())
 	return r, err
 }

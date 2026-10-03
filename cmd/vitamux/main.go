@@ -18,10 +18,12 @@ import (
 
 	"github.com/KaanEmec/vitamux/internal/api"
 	"github.com/KaanEmec/vitamux/internal/auth"
+	"github.com/KaanEmec/vitamux/internal/blob"
 	"github.com/KaanEmec/vitamux/internal/config"
 	"github.com/KaanEmec/vitamux/internal/crypto"
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/jobs"
+	"github.com/KaanEmec/vitamux/internal/normalize"
 	"github.com/KaanEmec/vitamux/internal/obs"
 	"github.com/KaanEmec/vitamux/internal/version"
 	"github.com/KaanEmec/vitamux/web"
@@ -112,6 +114,17 @@ func serve(stderr io.Writer) int {
 	}
 	runner := jobs.NewRunner(db.New(pool), jobs.Config{Log: log}) // job handlers register on it before Run
 	scheduler := jobs.NewScheduler(db.New(pool), log)
+	var blobs *blob.Store // nil without a key or data dir; /readyz reports both
+	if keys != nil {
+		if blobs, err = blob.Open(filepath.Join(cfg.DataDir, "blobs"), keys); err != nil {
+			log.Error("blob store", "err", err)
+		}
+	}
+	if blobs != nil {
+		runner.Register(blob.KindSweep, blob.SweepJob(db.New(pool), blobs, log))
+		scheduler.Daily(blob.KindSweep)
+	}
+	runner.Register(normalize.KindRecomputeLocalDates, normalize.RecomputeJob(db.New(pool), log))
 	handler, err := api.NewHandler(log, web.Assets(), api.Options{
 		HSTS:           cfg.PublicURL.Scheme == "https",
 		TrustedProxies: cfg.TrustedProxies,

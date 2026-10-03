@@ -600,3 +600,33 @@ func TestConcurrentMaterializeNoDuplicates(t *testing.T) {
 		t.Fatalf("%d jobs, %d distinct slots; want 30", n, keys)
 	}
 }
+
+// TestSchedulerDailyJob: the leader enqueues a registered global job once per UTC day, however
+// often it ticks, even after the job finished, and again when the day changes.
+func TestSchedulerDailyJob(t *testing.T) {
+	d, pool := setup(t)
+	ctx := context.Background()
+	now := time.Date(2026, 10, 3, 9, 0, 0, 0, time.UTC)
+	s := NewScheduler(d, nil)
+	s.now = func() time.Time { return now }
+	t.Cleanup(s.resign)
+	s.Daily("sweep_blobs")
+
+	count := func() (n int) {
+		if err := pool.QueryRow(ctx, "SELECT count(*) FROM jobs WHERE kind = 'sweep_blobs'").Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	s.tick(ctx)
+	exec(t, pool, "UPDATE jobs SET status = 'succeeded' WHERE kind = 'sweep_blobs'")
+	s.tick(ctx)
+	if n := count(); n != 1 {
+		t.Fatalf("%d jobs on day one, want 1", n)
+	}
+	now = now.Add(24 * time.Hour)
+	s.tick(ctx)
+	if n := count(); n != 2 {
+		t.Fatalf("%d jobs after two days, want 2", n)
+	}
+}

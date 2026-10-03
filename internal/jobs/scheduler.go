@@ -143,7 +143,15 @@ type Scheduler struct {
 	log  *slog.Logger
 	now  func() time.Time // tests simulate days with it
 	lock *db.SessionLock
+
+	daily   []string          // kinds of global maintenance jobs, see Daily
+	dailyAt map[string]string // kind -> UTC day last enqueued by this process
 }
+
+// Daily makes the leader enqueue a connection-less job of kind once per UTC day (after Run
+// starts, or on the first tick of a new leader). Handlers are idempotent, so a leadership
+// change may enqueue a second run on the same day. Call it before Run.
+func (s *Scheduler) Daily(kind string) { s.daily = append(s.daily, kind) }
 
 // NewScheduler returns a scheduler; call Run.
 func NewScheduler(d *db.DB, log *slog.Logger) *Scheduler {
@@ -193,7 +201,31 @@ func (s *Scheduler) tick(ctx context.Context) (leader bool) {
 	if _, err := s.materialize(ctx, s.now()); err != nil && ctx.Err() == nil {
 		s.log.Error("materialize schedules", "err", err)
 	}
+	s.enqueueDaily(ctx, s.now())
 	return true
+}
+
+func (s *Scheduler) enqueueDaily(ctx context.Context, now time.Time) {
+	day := now.UTC().Format(time.DateOnly)
+	for _, kind := range s.daily {
+		if s.dailyAt[kind] == day {
+			continue
+		}
+		err := s.db.Tx(ctx, func(q *dbq.Queries) error {
+			_, _, err := Enqueue(ctx, q, NewJob{Kind: kind, Priority: PriorityLow, DedupeKey: kind + ":" + day})
+			return err
+		})
+		if err != nil {
+			if ctx.Err() == nil {
+				s.log.Error("enqueue daily job", "kind", kind, "err", err)
+			}
+			continue
+		}
+		if s.dailyAt == nil {
+			s.dailyAt = map[string]string{}
+		}
+		s.dailyAt[kind] = day
+	}
 }
 
 func (s *Scheduler) resign() {

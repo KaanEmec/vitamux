@@ -37,7 +37,7 @@ type cursor struct {
 // Measurements whose date changed mark both the old and the new date in resolution_dirty.
 //
 // It runs in batches of short transactions and is safe to repeat or resume after a failure.
-// J07.2 T07.2.3 wraps it in the recompute_local_dates job once internal/jobs exists.
+// RecomputeJob wraps it as the recompute_local_dates job, which period edits enqueue.
 func RecomputeLocalDates(ctx context.Context, d *db.DB, userID uuid.UUID, r Range) (Recomputed, error) {
 	var out Recomputed
 	tl, err := loadTimeline(ctx, d.Q(), userID)

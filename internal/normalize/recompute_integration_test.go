@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/db/dbtest"
+	"github.com/KaanEmec/vitamux/internal/jobs"
 )
 
 const sentinel = "2000-01-01" // a deliberately wrong local date: rows that must not be touched keep it
@@ -294,5 +296,60 @@ func TestPeriodService(t *testing.T) {
 	var n int
 	if err := e.scan(&n, `SELECT count(*) FROM audit_events WHERE action LIKE 'timezone_period.%'`); err != nil || n != 5 {
 		t.Errorf("audit events %d, want 5 (%v)", n, err)
+	}
+}
+
+// TestPeriodEditEnqueuesRecomputeJob: an edit with an affected range enqueues the job in its own
+// transaction, a no-op edit enqueues nothing, and the registered handler applies the new dates.
+func TestPeriodEditEnqueuesRecomputeJob(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	e := newEnv(t)
+	periods := NewPeriods(e.d)
+	count := func() (n int) {
+		if err := e.scan(&n, `SELECT count(*) FROM jobs WHERE kind = 'recompute_local_dates'`); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	p, _, err := periods.Add(ctx, e.user, "owner", utc("2026-01-01T00:00:00Z"), "Europe/Amsterdam")
+	if err != nil {
+		t.Fatal(err)
+	}
+	row := e.measurement("2026-03-01T20:00:00Z", "2026-03-01", nil, false) // 21:00 in Amsterdam
+	if n := count(); n != 1 {
+		t.Fatalf("%d jobs after the first period, want 1", n)
+	}
+	if r, err := periods.Edit(ctx, e.user, "owner", p.ID, utc("2026-01-01T00:00:00Z"), "Europe/Amsterdam"); err != nil || r != nil || count() != 1 {
+		t.Fatalf("no-op edit: range %v, err %v, %d jobs", r, err, count())
+	}
+	if _, err := periods.Edit(ctx, e.user, "owner", p.ID, utc("2026-01-01T00:00:00Z"), "Asia/Tokyo"); err != nil {
+		t.Fatal(err)
+	}
+	if n := count(); n != 2 {
+		t.Fatalf("%d jobs after the zone edit, want 2", n)
+	}
+
+	r := jobs.NewRunner(e.d, jobs.Config{Poll: 50 * time.Millisecond})
+	r.Register(KindRecomputeLocalDates, RecomputeJob(e.d, slog.New(slog.DiscardHandler)))
+	done := make(chan struct{})
+	go func() { r.Run(ctx); close(done) }()
+	defer func() { cancel(); <-done }()
+	for range 100 {
+		var open int
+		if err := e.scan(&open, `SELECT count(*) FROM jobs WHERE status NOT IN ('succeeded', 'dead')`); err != nil {
+			t.Fatal(err)
+		}
+		if open == 0 {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	var dead int
+	if err := e.scan(&dead, `SELECT count(*) FROM jobs WHERE status = 'dead'`); err != nil || dead != 0 {
+		t.Fatalf("dead jobs %d (%v)", dead, err)
+	}
+	if got := e.date("measurements", "local_date", "id", row); got != "2026-03-02" { // 05:00 in Tokyo
+		t.Fatalf("local_date %s, want 2026-03-02", got)
 	}
 }
