@@ -81,7 +81,7 @@ flowchart LR
 
 ## Deployment
 
-The minimal reliable topology is **`vitamux` + `postgres`**, with volumes `pgdata` and `vitamux-blobs` and one secret file `master.key`. Optional sidecars, such as third-party collectors, are Compose profiles on the internal network. **Install targets:** plain Docker Compose (reference) and Coolify (a Compose variant that uses Coolify's proxy, domains and secrets), both documented and validated for each release. The deployer's reverse proxy (Caddy, Traefik, or Nginx) terminates TLS. The product ships an example but does not depend on it. No container publishes a host port, except optionally `127.0.0.1:8080` for proxy-less local use.
+The minimal reliable topology is **`vitamux` + `postgres`**, with volumes `pgdata`, `vitamux-data` (blobs, documents) and `vitamux-secrets` (`master.key`), and generated secret files for the database roles ([compose.md](../deploy/compose.md)). Optional sidecars, such as third-party collectors, are Compose profiles on the internal network. **Install targets:** plain Docker Compose (reference) and Coolify (a Compose variant that uses Coolify's proxy, domains and secrets), both documented and validated for each release. The deployer's reverse proxy (Caddy, Traefik, or Nginx) terminates TLS. The product ships an example but does not depend on it. No container publishes a host port except `vitamux` on `127.0.0.1:8080` by default (reverse proxy in front); containers run read-only with all capabilities dropped.
 
 ## Process modes
 

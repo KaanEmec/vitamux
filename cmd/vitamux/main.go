@@ -39,6 +39,7 @@ Usage: vitamux <command>
 
 Commands:
   serve     run HTTP server, scheduler and workers
+  healthcheck  probe the local /readyz (container healthcheck; exit 0 when ready)
   migrate   up | status | down-to VERSION (development only)
   admin     administrative tasks (E03)
   keys      rotate (re-seal values under the current master key)
@@ -62,6 +63,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 0
 	case "serve":
 		return serve(stderr)
+	case "healthcheck":
+		return healthcheck(stderr)
 	case "migrate":
 		return migrate(args[1:], stdout, stderr)
 	case "admin":
@@ -132,17 +135,20 @@ func serve(stderr io.Writer) int {
 		scheduler.Daily(blob.KindSweep)
 	}
 	runner.Register(normalize.KindRecomputeLocalDates, normalize.RecomputeJob(db.New(pool), log))
-	syncRegistry, err := connectors.NewRegistry( // provider connectors are added as arguments
-		withings.New(withings.Config{ClientID: cfg.WithingsClientID, ClientSecret: cfg.WithingsClientSecret.Value()}))
+	withingsConn := withings.New(withings.Config{ClientID: cfg.WithingsClientID, ClientSecret: cfg.WithingsClientSecret.Value()})
+	syncRegistry, err := connectors.NewRegistry(withingsConn) // provider connectors are added as arguments
 	if err != nil {
 		log.Error("connector registry", "err", err)
 		return 1
 	}
 	var syncRuntime *connectors.Runtime
+	var withingsNotify *withings.Notifications
 	if blobs != nil { // syncs need the blob store and the master key
 		syncRuntime = connectors.New(connectors.Config{DB: db.New(pool), Blobs: blobs, Keys: keys, Registry: syncRegistry, Log: log, PublicURL: cfg.PublicURL})
 		runner.Register(jobs.KindSync, syncRuntime.Handle)
 		runner.Register(connectors.KindBackfillUnit, syncRuntime.HandleBackfillUnit)
+		withingsNotify = withings.NewNotifications(db.New(pool), syncRuntime, withingsConn, cfg.PublicURL, log)
+		syncRuntime.OnAuthorized(withingsNotify.Authorized)
 	}
 	if err := registerNormalizeJobs(runner, db.New(pool), blobs, log); err != nil {
 		log.Error("normalizers", "err", err)
@@ -157,6 +163,7 @@ func serve(stderr io.Writer) int {
 		Blobs:          blobs,
 		Keys:           keys,
 		Connectors:     syncRuntime,
+		Withings:       withingsNotify,
 		ReadyChecks: []api.ReadyCheck{
 			{Name: "database", Check: pool.Ping},
 			{Name: "schema", Check: func(ctx context.Context) error { return db.CheckSchema(ctx, pool) }},

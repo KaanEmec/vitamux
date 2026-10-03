@@ -1,0 +1,133 @@
+# Vitamux release stack: vitamux + postgres (+ a one-shot migrate). Setup: docs/deploy/compose.md.
+#
+# - PostgreSQL lives on an internal network with no route out and no published port.
+# - vitamux publishes only 127.0.0.1:${VITAMUX_PORT:-8080}; put your TLS reverse proxy in front.
+# - Secrets are files under ./secrets (see init-secrets.sh) mounted through Compose secrets and
+#   read by the *_FILE settings; nothing sensitive is in this file or in the environment.
+# Policy (checked in CI by compose_test.go): no DB port, loopback-only publishing, read-only
+# rootfs, cap_drop ALL, no-new-privileges, healthchecks, memory limits.
+name: vitamux
+
+x-hardened: &hardened
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  pids_limit: 512
+  logging:
+    driver: json-file
+    options: {max-size: "10m", max-file: "3"}
+
+x-vitamux: &vitamux
+  <<: *hardened
+  image: ${VITAMUX_IMAGE:-ghcr.io/kaanemec/vitamux:latest}
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+
+services:
+  postgres:
+    <<: *hardened
+    image: postgres:18-alpine
+    restart: unless-stopped
+    user: postgres # not root: no chown/gosu step, so no capabilities are needed
+    command: ["postgres", "-c", "shared_buffers=128MB"]
+    environment:
+      POSTGRES_USER: vitamux_admin
+      POSTGRES_DB: vitamux
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg_superuser_password
+    secrets: [pg_superuser_password, pg_owner_password, pg_app_password]
+    volumes:
+      - pgdata:/var/lib/postgresql
+      # First start only (empty pgdata): create roles and schema, then give them logins.
+      - ../sql/roles.sql:/docker-entrypoint-initdb.d/10-roles.sql:ro
+      - ./initdb/20-role-logins.sql:/docker-entrypoint-initdb.d/20-role-logins.sql:ro
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /run/postgresql:size=8m,mode=1777
+    networks: [backend]
+    mem_limit: 1g
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vitamux_admin -d vitamux"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+  # One-shot schema migration as the DDL owner role; vitamux starts only after it succeeds.
+  migrate:
+    <<: *vitamux
+    command: ["migrate", "up"]
+    restart: "no"
+    environment:
+      VITAMUX_ENV: production
+      VITAMUX_MIGRATE_DATABASE_URL_FILE: /run/secrets/migrate_database_url
+    secrets: [migrate_database_url]
+    networks: [backend]
+    mem_limit: 256m
+    healthcheck: {disable: true}
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  vitamux:
+    <<: *vitamux
+    restart: unless-stopped
+    environment:
+      VITAMUX_ENV: production
+      VITAMUX_PUBLIC_URL: ${VITAMUX_PUBLIC_URL:?set VITAMUX_PUBLIC_URL to the https URL users reach}
+      VITAMUX_TRUSTED_PROXIES: ${VITAMUX_TRUSTED_PROXIES:-}
+      VITAMUX_LOG_LEVEL: ${VITAMUX_LOG_LEVEL:-info}
+      VITAMUX_DATABASE_URL_FILE: /run/secrets/database_url
+      VITAMUX_MASTER_KEY_FILE: /secrets/master.key
+      VITAMUX_WITHINGS_CLIENT_ID: ${VITAMUX_WITHINGS_CLIENT_ID:-}
+      VITAMUX_WITHINGS_CLIENT_SECRET_FILE: /run/secrets/withings_client_secret
+      GOMEMLIMIT: 400MiB # keep the Go heap under mem_limit
+    secrets: [database_url, withings_client_secret]
+    volumes:
+      - vitamux-data:/data
+      - vitamux-secrets:/secrets:ro
+    ports:
+      - "127.0.0.1:${VITAMUX_PORT:-8080}:8080"
+    networks: [backend, frontend] # frontend: outbound access to provider APIs
+    mem_limit: 512m
+    stop_grace_period: 60s # job drain on SIGTERM (reliability.md#upgrades)
+    healthcheck:
+      test: ["CMD", "/vitamux", "healthcheck"]
+      interval: 15s
+      timeout: 6s
+      retries: 4
+      start_period: 30s
+    depends_on:
+      postgres: {condition: service_healthy}
+      migrate: {condition: service_completed_successfully}
+
+  # Run once before the first start: docker compose --profile setup run --rm init-secrets
+  init-secrets:
+    <<: *vitamux
+    profiles: [setup]
+    command: ["admin", "init-secrets"]
+    restart: "no"
+    environment:
+      VITAMUX_MASTER_KEY_FILE: /secrets/master.key
+    volumes:
+      - vitamux-secrets:/secrets
+    network_mode: none
+    mem_limit: 64m
+    healthcheck: {disable: true}
+
+networks:
+  backend:
+    internal: true # no route out: postgres and migrate cannot reach the internet
+  frontend: {}
+
+volumes:
+  pgdata:
+  vitamux-data:
+  vitamux-secrets:
+
+secrets:
+  pg_superuser_password: {file: ./secrets/pg_superuser_password}
+  pg_owner_password: {file: ./secrets/pg_owner_password}
+  pg_app_password: {file: ./secrets/pg_app_password}
+  database_url: {file: ./secrets/database_url}
+  migrate_database_url: {file: ./secrets/migrate_database_url}
+  withings_client_secret: {file: ./secrets/withings_client_secret}
