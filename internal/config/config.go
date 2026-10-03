@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/netip"
 	"net/url"
 	"os"
 	"strings"
@@ -31,7 +32,12 @@ type Config struct {
 	LogLevel      slog.Level
 	DataDir       string
 	MasterKeyFile string
-	DatabaseURL   Secret
+	// PreviousMasterKeyFiles lists retired master keys that can still open old sealed values
+	// during rotation (comma-separated VITAMUX_PREVIOUS_MASTER_KEY_FILES).
+	PreviousMasterKeyFiles []string
+	// TrustedProxies lists the peers whose X-Forwarded-For/-Proto are believed. Empty trusts none.
+	TrustedProxies []netip.Prefix
+	DatabaseURL    Secret
 	// MigrateDatabaseURL connects `vitamux migrate`; it falls back to DatabaseURL.
 	MigrateDatabaseURL Secret
 }
@@ -57,8 +63,8 @@ func (s Secret) GoString() string { return s.String() }
 
 // String renders the config with secrets redacted, suitable for startup logs.
 func (c Config) String() string {
-	return fmt.Sprintf("env=%s http_addr=%s public_url=%s log_level=%s data_dir=%s master_key_file=%s database_url=%s",
-		c.Env, c.HTTPAddr, c.PublicURL, c.LogLevel, c.DataDir, c.MasterKeyFile, c.DatabaseURL)
+	return fmt.Sprintf("env=%s http_addr=%s public_url=%s log_level=%s data_dir=%s master_key_file=%s trusted_proxies=%v database_url=%s",
+		c.Env, c.HTTPAddr, c.PublicURL, c.LogLevel, c.DataDir, c.MasterKeyFile, c.TrustedProxies, c.DatabaseURL)
 }
 
 // Lookup abstracts os.LookupEnv for tests.
@@ -85,6 +91,11 @@ func load(env Lookup, readFile ReadFile) (Config, error) {
 		DataDir:       get("DATA_DIR", "./data"),
 		MasterKeyFile: get("MASTER_KEY_FILE", ""),
 	}
+	for _, p := range strings.Split(get("PREVIOUS_MASTER_KEY_FILES", ""), ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			c.PreviousMasterKeyFiles = append(c.PreviousMasterKeyFiles, p)
+		}
+	}
 	if c.Env != Production && c.Env != Development {
 		errs = append(errs, fmt.Errorf("%sENV must be %q or %q, got %q", prefix, Production, Development, c.Env))
 	}
@@ -99,6 +110,18 @@ func load(env Lookup, readFile ReadFile) (Config, error) {
 		errs = append(errs, fmt.Errorf("%sPUBLIC_URL must use https in production unless it is a loopback address", prefix))
 	}
 	c.PublicURL = pub
+
+	for _, part := range strings.Split(get("TRUSTED_PROXIES", ""), ",") {
+		if part = strings.TrimSpace(part); part == "" {
+			continue
+		}
+		p, err := parseCIDR(part)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("%sTRUSTED_PROXIES: %q is not a CIDR or IP address", prefix, part))
+			continue
+		}
+		c.TrustedProxies = append(c.TrustedProxies, p)
+	}
 
 	if err := c.LogLevel.UnmarshalText([]byte(get("LOG_LEVEL", "info"))); err != nil {
 		errs = append(errs, fmt.Errorf("%sLOG_LEVEL: %w", prefix, err))
@@ -142,6 +165,18 @@ func secret(env Lookup, readFile ReadFile, name string, mode Env) (Secret, error
 		return Secret{value: plain}, nil
 	}
 	return Secret{}, nil
+}
+
+// parseCIDR accepts a CIDR or a single address (treated as /32 or /128).
+func parseCIDR(s string) (netip.Prefix, error) {
+	if p, err := netip.ParsePrefix(s); err == nil {
+		return p.Masked(), nil
+	}
+	a, err := netip.ParseAddr(s)
+	if err != nil {
+		return netip.Prefix{}, err
+	}
+	return netip.PrefixFrom(a.Unmap(), a.Unmap().BitLen()), nil
 }
 
 func isLoopback(host string) bool {

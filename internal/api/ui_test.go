@@ -24,7 +24,7 @@ func newTestHandler(t *testing.T) http.Handler {
 		"index.html":                    {Data: []byte(sampleIndex)},
 		"favicon.svg":                   {Data: []byte("<svg/>")},
 		"_app/immutable/entry/start.js": {Data: []byte("export{}")},
-	})
+	}, Options{})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -15,6 +15,7 @@ help: ## Show targets
 
 dev: migrate web-install ## Run PostgreSQL, the Go server (live reload) and Vite
 	@test -f .env || { echo "missing .env — run: cp .env.example .env"; exit 1; }
+	@test -f "$(VITAMUX_MASTER_KEY_FILE)" || go run ./cmd/vitamux admin init-secrets
 	@trap 'kill 0' EXIT; go tool air & npm --prefix web run dev & wait
 
 services: ## Start dev services, wait until healthy, apply roles.sql (idempotent)

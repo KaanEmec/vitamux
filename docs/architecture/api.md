@@ -7,7 +7,8 @@
 - Instants are RFC 3339 **with offset**, half-open `[start, end)`. Dates are `YYYY-MM-DD` (`start_date`/`end_date`, inclusive), in the user's timezone periods.
 - Cursor pagination: `limit` (default 500, max 10,000 for measurements) and an opaque HMAC-protected `cursor`. Responses carry `next_cursor` and `has_more`. No offsets.
 - Repeatable filters: `metric`, `provider`, `connection`, `device`, `origin`, `kind`. Expansions via `include=provenance|stages|segments|superseded`.
-- Errors are `application/problem+json` with `type`, `title`, `status`, `detail`, `code`, `request_id`, and `errors[]`. Codes: `validation_failed`, `not_found`, `conflict`, `rate_limited`, `reauth_required`, `consent_required`, `unsupported_window`, `rule_warning_unacknowledged`.
+- Errors are `application/problem+json` with `type`, `title`, `status`, `detail`, `code`, `request_id`, and `errors[]`. Codes: `validation_failed`, `not_found`, `conflict`, `rate_limited`, `reauth_required`, `consent_required`, `unsupported_window`, `rule_warning_unacknowledged`. Also `payload_too_large` (413) and `internal_error` (500). The registry is `internal/api/problem.go`.
+- Request bodies are capped per route class (`bodyClasses` in `internal/api/middleware.go`): 1 MiB owner JSON, 10 MiB ingest batches, 25 MiB uploads. `X-Forwarded-For`/`-Proto` are trusted only from `VITAMUX_TRUSTED_PROXIES` (comma-separated CIDRs; empty trusts none).
 - `Idempotency-Key` is required on ingest POSTs and accepted on job-creating owner POSTs.
 - Auth:
   - UI: session cookie (`HttpOnly; Secure; SameSite=Strict`) + CSRF header.

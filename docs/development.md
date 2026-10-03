@@ -14,6 +14,7 @@
 | `make test` / `make test-integration` | Unit tests (offline) / integration tests against dev PostgreSQL (`-tags integration`) |
 | `make lint` | golangci-lint, svelte-check, ESLint |
 | `make build` | `bin/vitamux` with the UI embedded (`-tags webui`) |
+| `vitamux admin init-secrets` | Creates the master key file (`VITAMUX_MASTER_KEY_FILE`, default `./data/master.key`); never overwrites |
 | `make image` | Release container image (distroless, non-root) |
 
 Without `-tags webui` the binary serves a placeholder page, so backend work never needs Node.
@@ -26,6 +27,7 @@ Without `-tags webui` the binary serves a placeholder page, so backend work neve
 - Tables get app DML by default privileges. Narrow per table in the same migration (e.g. `REVOKE UPDATE, DELETE ON audit_events FROM vitamux_app`).
 - Expand/contract: a release only adds (nullable or defaulted columns, new tables, `CREATE INDEX CONCURRENTLY` in its own `-- +goose NO TRANSACTION` file). Code stops using a column one release before a later migration drops it. Never edit a released migration.
 - Integration tests use `internal/db/dbtest`: `dbtest.Migrated(t)` creates a fresh migrated database per test and returns an app-role pool.
+- [`docs/schema/`](schema/README.md) is generated from the migrated schema; the integration tests fail when it drifts. After changing a migration, run `VITAMUX_UPDATE_SCHEMA_DOC=1 go test -tags integration -run TestSchemaDoc ./internal/db`.
 
 ## Package boundaries
 

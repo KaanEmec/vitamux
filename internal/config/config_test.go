@@ -96,3 +96,26 @@ func TestRedactedRendering(t *testing.T) {
 		}
 	}
 }
+
+func TestTrustedProxies(t *testing.T) {
+	c, err := load(envOf(map[string]string{"VITAMUX_TRUSTED_PROXIES": "172.18.0.0/16, 10.0.0.5 ,"}), filesOf(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := fmt.Sprint(c.TrustedProxies); got != "[172.18.0.0/16 10.0.0.5/32]" {
+		t.Fatalf("got %s", got)
+	}
+	if c, err := load(envOf(nil), filesOf(nil)); err != nil || len(c.TrustedProxies) != 0 {
+		t.Fatalf("default must trust none: %v %v", c.TrustedProxies, err)
+	}
+	if _, err := load(envOf(map[string]string{"VITAMUX_TRUSTED_PROXIES": "not-a-cidr"}), filesOf(nil)); err == nil {
+		t.Fatal("expected validation error")
+	}
+}
+
+func TestPreviousMasterKeyFiles(t *testing.T) {
+	c, err := load(envOf(map[string]string{"VITAMUX_PREVIOUS_MASTER_KEY_FILES": "/k/old1, /k/old2 ,"}), filesOf(nil))
+	if err != nil || fmt.Sprint(c.PreviousMasterKeyFiles) != "[/k/old1 /k/old2]" {
+		t.Fatalf("got %v, %v", c.PreviousMasterKeyFiles, err)
+	}
+}

@@ -17,6 +17,7 @@ import (
 
 	"github.com/KaanEmec/vitamux/internal/api"
 	"github.com/KaanEmec/vitamux/internal/config"
+	"github.com/KaanEmec/vitamux/internal/crypto"
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/obs"
 	"github.com/KaanEmec/vitamux/internal/version"
@@ -53,8 +54,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case "migrate":
 		return migrate(args[1:], stdout, stderr)
 	case "admin":
-		fmt.Fprintf(stderr, "vitamux %s: not implemented yet\n", args[0])
-		return 1
+		return admin(args[1:], stdout, stderr)
 	case "help", "-h", "--help":
 		fmt.Fprint(stdout, usage)
 		return 0
@@ -89,7 +89,26 @@ func serve(stderr io.Writer) int {
 		return 1
 	}
 
-	handler, err := api.NewHandler(log, web.Assets())
+	if err := os.MkdirAll(cfg.DataDir, 0o750); err != nil {
+		log.Warn("create data dir", "err", err) // /readyz reports it as not writable
+	}
+	keyErr := errors.New("VITAMUX_MASTER_KEY_FILE is not set (create one with `vitamux admin init-secrets`)")
+	if cfg.MasterKeyFile != "" {
+		_, keyErr = crypto.Load(cfg.MasterKeyFile, cfg.PreviousMasterKeyFiles...)
+	}
+	if keyErr != nil {
+		log.Error("master key", "err", keyErr) // /readyz reports it as not loaded
+	}
+	handler, err := api.NewHandler(log, web.Assets(), api.Options{
+		HSTS:           cfg.PublicURL.Scheme == "https",
+		TrustedProxies: cfg.TrustedProxies,
+		ReadyChecks: []api.ReadyCheck{
+			{Name: "database", Check: pool.Ping},
+			{Name: "schema", Check: func(ctx context.Context) error { return db.CheckSchema(ctx, pool) }},
+			{Name: "data_dir", Check: func(context.Context) error { return dirWritable(cfg.DataDir) }},
+			{Name: "master_key", Check: func(context.Context) error { return keyErr }},
+		},
+	})
 	if err != nil {
 		log.Error("build handler", "err", err)
 		return 1
@@ -124,6 +143,15 @@ func serve(stderr io.Writer) int {
 		}
 	}
 	return 0
+}
+
+// dirWritable proves the directory accepts new files by creating and removing one.
+func dirWritable(dir string) error {
+	f, err := os.CreateTemp(dir, ".ready-*")
+	if err != nil {
+		return err
+	}
+	return errors.Join(f.Close(), os.Remove(f.Name()))
 }
 
 func migrate(args []string, stdout, stderr io.Writer) int {
