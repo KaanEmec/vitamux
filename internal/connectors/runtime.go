@@ -17,6 +17,7 @@ import (
 	"github.com/KaanEmec/vitamux/internal/httpx"
 	"github.com/KaanEmec/vitamux/internal/ingest"
 	"github.com/KaanEmec/vitamux/internal/jobs"
+	"github.com/KaanEmec/vitamux/internal/metrics"
 )
 
 // Config wires a Runtime.
@@ -110,7 +111,7 @@ func (rt *Runtime) Handle(ctx context.Context, j jobs.Job) error {
 	if req.To.IsZero() {
 		req.To = time.Now()
 	}
-	resume, err := rt.run(ctx, j, r, req)
+	resume, err := rt.run(ctx, j, r, req, nil)
 	if err == nil && !resume.IsZero() {
 		return jobs.RescheduleAt(resume, nil)
 	}
@@ -129,11 +130,11 @@ func (rt *Runtime) prepare(ctx context.Context, connectionID uuid.UUID, stream s
 	}
 	c, ok := rt.reg.Get(row.Provider)
 	if !ok {
-		return syncRun{}, jobs.Permanent(fmt.Errorf("no connector registered for %s", row.Provider))
+		return syncRun{}, jobs.Permanent(fmt.Errorf("%w: no connector registered for %s", ErrPermanent, row.Provider))
 	}
 	d := c.Describe()
 	if _, ok := d.stream(stream); !ok {
-		return syncRun{}, jobs.Permanent(fmt.Errorf("%s has no stream %q", row.Provider, stream))
+		return syncRun{}, jobs.Permanent(fmt.Errorf("%w: %s has no stream %q", ErrPermanent, row.Provider, stream))
 	}
 	r := syncRun{
 		conn: Conn{ID: row.ID, UserID: row.UserID, Provider: row.Provider, Config: row.Config, HTTP: rt.clients.get(d)},
@@ -146,8 +147,9 @@ func (rt *Runtime) prepare(ctx context.Context, connectionID uuid.UUID, stream s
 }
 
 // run plans the sync and fetches every unit page by page. A non-zero resume means a page
-// asked for a pause and the rest should run then.
-func (rt *Runtime) run(ctx context.Context, j jobs.Job, r syncRun, req PlanRequest) (resume time.Time, err error) {
+// asked for a pause and the rest should run then. final, if set, runs in the transaction that
+// commits the last page (a backfill unit marks itself done there).
+func (rt *Runtime) run(ctx context.Context, j jobs.Job, r syncRun, req PlanRequest, final func(*dbq.Queries) error) (resume time.Time, err error) {
 	cur, err := rt.db.Q().GetSyncCursor(ctx, dbq.GetSyncCursorParams{ConnectionID: r.conn.ID, Stream: req.Stream})
 	switch err = db.MapErr(err); {
 	case err == nil:
@@ -161,6 +163,9 @@ func (rt *Runtime) run(ctx context.Context, j jobs.Job, r syncRun, req PlanReque
 	units, err := r.c.Plan(ctx, r.conn, req)
 	if err != nil {
 		return time.Time{}, err
+	}
+	if len(units) == 0 && final != nil {
+		return time.Time{}, rt.db.Tx(ctx, final)
 	}
 	advance := advancesCursor(req.Mode)
 	var cp checkpoint // an incremental run resumes from the stream cursor instead
@@ -177,8 +182,12 @@ func (rt *Runtime) run(ctx context.Context, j jobs.Job, r syncRun, req PlanReque
 		if i == cp.Unit && cp.Cursor != nil {
 			u.Cursor = cp.Cursor
 		}
+		var fin func(*dbq.Queries) error
+		if i == len(units)-1 {
+			fin = final
+		}
 		for {
-			res, err := rt.page(ctx, r, u, advance)
+			res, err := rt.page(ctx, r, u, advance, fin)
 			if err != nil {
 				return time.Time{}, err
 			}
@@ -207,9 +216,9 @@ func (rt *Runtime) run(ctx context.Context, j jobs.Job, r syncRun, req PlanReque
 	return time.Time{}, nil
 }
 
-// page fetches one page of u and commits it. A refused access token is refreshed once
-// (single-flight) and the page retried; a second refusal stands.
-func (rt *Runtime) page(ctx context.Context, r syncRun, u WorkUnit, advance bool) (FetchResult, error) {
+// page fetches one page of u and commits it, with final when it completes u. A refused access
+// token is refreshed once (single-flight) and the page retried; a second refusal stands.
+func (rt *Runtime) page(ctx context.Context, r syncRun, u WorkUnit, advance bool, final func(*dbq.Queries) error) (FetchResult, error) {
 	var cred Credentials
 	var version int32
 	if r.auth != nil {
@@ -233,7 +242,7 @@ func (rt *Runtime) page(ctx context.Context, r syncRun, u WorkUnit, advance bool
 			for i := range sink.items {
 				sink.items[i].Quarantine = true
 			}
-			if cerr := rt.commit(ctx, r.conn, u.Stream, sink.items, nil); cerr != nil {
+			if cerr := rt.commit(ctx, r.conn, u.Stream, sink.items, nil, nil); cerr != nil {
 				return FetchResult{}, cerr
 			}
 			return FetchResult{}, err
@@ -246,22 +255,39 @@ func (rt *Runtime) page(ctx context.Context, r syncRun, u WorkUnit, advance bool
 		if advance {
 			adv = &res
 		}
-		return res, rt.commit(ctx, r.conn, u.Stream, sink.items, adv)
+		if !res.Done {
+			final = nil
+		}
+		return res, rt.commit(ctx, r.conn, u.Stream, sink.items, adv, final)
 	}
 }
 
-// commit stores items and, given adv, advances the stream cursor in the same transaction,
-// so a cursor never moves past records that are not stored. A crash leaves at most orphan
-// blob files for the sweeper.
-func (rt *Runtime) commit(ctx context.Context, c Conn, stream string, items []ingest.RawItem, adv *FetchResult) error {
-	return rt.db.Tx(ctx, func(q *dbq.Queries) error {
+// commit stores items, enqueues their normalization and, given adv, advances the stream
+// cursor in the same transaction, so a cursor never moves past records that are not stored.
+// final, if set, runs in that transaction too. A crash leaves at most orphan blob files for
+// the sweeper.
+func (rt *Runtime) commit(ctx context.Context, c Conn, stream string, items []ingest.RawItem, adv *FetchResult, final func(*dbq.Queries) error) error {
+	var stored []ingest.Result
+	err := rt.db.Tx(ctx, func(q *dbq.Queries) error {
 		if len(items) > 0 {
 			b, err := ingest.CreateBatch(ctx, q, ingest.BatchInfo{UserID: c.UserID, ConnectionID: c.ID, SourceKind: ingest.SourceSync})
 			if err != nil {
 				return err
 			}
-			if _, err := ingest.StoreRaw(ctx, q, rt.blobs, b, items); err != nil {
+			if stored, err = ingest.StoreRaw(ctx, q, rt.blobs, b, items); err != nil {
 				return err
+			}
+			fresh := false // quarantined rows wait for release instead of normalization
+			for i, r := range stored {
+				fresh = fresh || (r.Outcome != ingest.Duplicate && !items[i].Quarantine)
+			}
+			if fresh {
+				if _, _, err := jobs.Enqueue(ctx, q, jobs.NewJob{
+					Kind: ingest.KindNormalizeBatch, ConnectionID: &c.ID,
+					DedupeKey: ingest.KindNormalizeBatch + ":" + b.ID.String(), Payload: ingest.NormalizePayload{BatchID: b.ID},
+				}); err != nil {
+					return err
+				}
 			}
 		}
 		if adv != nil && (adv.NextCursor != nil || !adv.HighWatermark.IsZero()) {
@@ -275,11 +301,23 @@ func (rt *Runtime) commit(ctx context.Context, c Conn, stream string, items []in
 				return err
 			}
 		}
+		if final != nil {
+			if err := final(q); err != nil {
+				return err
+			}
+		}
 		if rt.beforeCommit != nil {
 			return rt.beforeCommit()
 		}
 		return nil
 	})
+	if err == nil {
+		metrics.SyncPages.WithLabelValues(c.Provider, stream).Inc()
+		for _, r := range stored {
+			metrics.RawItems.WithLabelValues(c.Provider, stream, string(r.Outcome)).Inc()
+		}
+	}
+	return err
 }
 
 // settle applies connectors.md#typed-errors to the connection and stream and returns what
@@ -372,5 +410,6 @@ func (rt *Runtime) block(ctx context.Context, r syncRun, d time.Duration) (time.
 		return time.Time{}, err
 	}
 	r.conn.HTTP.block(until)
+	metrics.ProviderBlocks.WithLabelValues(r.conn.Provider).Inc()
 	return until, nil
 }

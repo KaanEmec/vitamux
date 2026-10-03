@@ -57,10 +57,10 @@ The core does these so connectors stay small:
 
 1. **Credentials**: decrypt; refresh single-flight under `SELECT … FOR UPDATE` on the credential row; persist a rotated token before using it.
 2. **Rate limits**: an in-process token bucket per provider, plus a shared `blocked_until` in PostgreSQL that honours `Retry-After` across restarts.
-3. **Raw-first**: blob write + fsync → `raw_payloads` insert → cursor advance, all in one transaction. A crash leaves at most an orphan blob, which the sweeper collects after 24 h.
+3. **Raw-first**: blob write + fsync → `raw_payloads` insert → `normalize_batch` job (when anything new was stored) → cursor advance, all in one transaction. A crash leaves at most an orphan blob, which the sweeper collects after 24 h.
 4. **Cursors**: JSON cursor + `high_watermark` per (connection, stream). A cursor advances only together with its raw rows.
 5. **Correction windows**: each stream declares a `lookback`, which is re-fetched on schedule. Same content is a no-op (sha256). Changed content creates a new raw version and canonical supersession.
-6. **Backfill**: a range is split into units with per-unit status, failed-unit retry, and resume after restart.
+6. **Backfill**: a range is split into units (stream `UnitSize` by default) with per-unit status, failed-unit retry, cancel, and resume after restart. Each unit is one exclusive, low-priority `backfill_unit` job that plans with `ModeBackfill` over the unit's range; its last page commits together with the unit's `done` mark, so a unit finishes exactly once. A unit fails on a permanent error or its job's last attempt. Backfills never move the stream cursor.
 7. **Manual sync**: a high-priority job with a dedupe key (double-clicks enqueue once).
 8. **Schema drift**: shape fingerprint = hash of sorted JSON key paths and value kinds. Extra fields → warning; missing or retyped required fields → drift.
 9. **Health**: last success, last error class, consecutive failures, stream lag. Connection states: `active | degraded | needs_reauth | paused | error | disabled`.

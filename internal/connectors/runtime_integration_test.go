@@ -36,6 +36,7 @@ type fake struct {
 	auth    AuthKind
 	fetch   func(ctx context.Context, c Conn, cred Credentials, u WorkUnit, out *RawSink) (FetchResult, error)
 	refresh func(ctx context.Context, c Conn, cred Credentials) (Credentials, error)
+	mu      sync.Mutex
 	plans   []PlanRequest
 	fetches atomic.Int32
 }
@@ -43,12 +44,16 @@ type fake struct {
 func (f *fake) Describe() Descriptor {
 	return Descriptor{
 		Provider: "withings", Version: "test", AuthKind: cmpOr(f.auth, AuthNone),
-		Streams:    []StreamSpec{{Name: stream, Interval: time.Hour, Lookback: 7 * 24 * time.Hour}},
-		RateLimits: []RateLimitSpec{{Requests: 1000, Per: time.Second}},
+		Streams: []StreamSpec{{Name: stream, Interval: time.Hour, Lookback: 7 * 24 * time.Hour,
+			MaxBackfill: 2 * 365 * 24 * time.Hour, UnitSize: 24 * time.Hour}},
+		RateLimits:   []RateLimitSpec{{Requests: 1000, Per: time.Second}},
+		Capabilities: Capabilities{Backfill: true},
 	}
 }
 
 func (f *fake) Plan(_ context.Context, _ Conn, req PlanRequest) ([]WorkUnit, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.plans = append(f.plans, req)
 	return []WorkUnit{{Cursor: req.Cursor, From: req.From, To: req.To}}, nil
 }
@@ -232,6 +237,19 @@ func (e *env) raw(t *testing.T) string {
 	return s
 }
 
+// normalizeJobs counts the normalize_batch jobs, each for a batch of this connection.
+func (e *env) normalizeJobs(t *testing.T) int {
+	t.Helper()
+	var n, bad int
+	e.scan(`SELECT count(*), count(*) FILTER (WHERE connection_id IS DISTINCT FROM $2 OR dedupe_key <> 'normalize_batch:' || (payload->>'batch_id')
+		OR NOT EXISTS (SELECT 1 FROM ingest_batches b WHERE b.id::text = payload->>'batch_id'))
+		FROM jobs WHERE kind = $1`, []any{ingest.KindNormalizeBatch, e.conn}, &n, &bad)
+	if bad > 0 {
+		t.Fatalf("%d normalize_batch jobs without their connection, dedupe key or batch", bad)
+	}
+	return n
+}
+
 func item(key string) ingest.RawItem {
 	return ingest.RawItem{ExternalKey: key, ContentType: "application/json", Body: []byte(`{"synthetic":"` + key + `"}`)}
 }
@@ -301,6 +319,10 @@ func TestErrorTransitions(t *testing.T) {
 			}
 			if got := e.raw(t); got != tc.raw {
 				t.Errorf("raw = %q, want %q", got, tc.raw)
+			}
+			// New raw rows are queued for normalization in their commit; quarantined ones are not.
+			if got, want := e.normalizeJobs(t), map[bool]int{true: 1}[tc.err == nil]; got != want {
+				t.Errorf("%d normalize_batch jobs, want %d", got, want)
 			}
 			if tc.name == "rate_limited" {
 				var blocked time.Time
@@ -520,8 +542,8 @@ func TestCursorNeverAdvancesWithoutRaw(t *testing.T) {
 	}
 	var batches int
 	e.scan(`SELECT count(*) FROM ingest_batches`, nil, &batches)
-	if batches != 1 {
-		t.Fatalf("%d ingest batches, want 1 (the crashed one rolled back)", batches)
+	if batches != 1 || e.normalizeJobs(t) != 1 {
+		t.Fatalf("%d ingest batches, %d normalize jobs; want 1, 1 (the crashed commit rolled back)", batches, e.normalizeJobs(t))
 	}
 
 	e.rt.beforeCommit = nil // the retry resumes from the committed cursor
@@ -529,6 +551,9 @@ func TestCursorNeverAdvancesWithoutRaw(t *testing.T) {
 	j = e.drive(t, e.rt, j.ID, 2)
 	if cur, st := e.cursor(t); j.Status != "succeeded" || cur != `{"page": 2}` || st != "ok" || e.raw(t) != "page1:stored,page2:stored" {
 		t.Fatalf("after retry: job %s, cursor %q %s, raw %q", j.Status, cur, st, e.raw(t))
+	}
+	if n := e.normalizeJobs(t); n != 2 {
+		t.Fatalf("%d normalize jobs after retry, want 2", n)
 	}
 	if last := f.plans[len(f.plans)-1]; string(last.Cursor) != `{"page": 1}` {
 		t.Fatalf("retry planned from cursor %s", last.Cursor)
@@ -550,6 +575,11 @@ func TestCorrectionLeavesCursor(t *testing.T) {
 	}
 	if p := f.plans[0]; !p.From.Equal(from) || !p.To.Equal(slot) || p.Mode != ModeCorrection {
 		t.Fatalf("plan request %+v", p)
+	}
+	// Re-fetching the same content stores nothing new and queues no normalization.
+	j = e.drive(t, e.rt, e.enqueue(t, jobs.SyncPayload{Mode: ModeCorrection, Slot: slot, From: &from}), 1)
+	if n := e.normalizeJobs(t); j.Status != "succeeded" || n != 1 || e.raw(t) != "w1:stored" {
+		t.Fatalf("second correction: job %s, %d normalize jobs, raw %q", j.Status, n, e.raw(t))
 	}
 }
 
