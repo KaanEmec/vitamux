@@ -31,6 +31,14 @@ Without `-tags webui` the binary serves a placeholder page, so backend work neve
 - Queries live in `internal/db/queries/*.sql`; `make sqlc` regenerates `internal/db/dbq` (commit the output; CI fails on drift). Domain code uses `db.DB` (`Q()`, `Tx`, `CopyFrom`) and `db.ErrNotFound`/`db.ErrConflict`, never pgx.
 - [`docs/schema/`](schema/README.md) is generated from the migrated schema; the integration tests fail when it drifts. After changing a migration, run `VITAMUX_UPDATE_SCHEMA_DOC=1 go test -tags integration -run TestSchemaDoc ./internal/db`.
 
+## Writing integration tests
+
+- Put them in `*_integration_test.go` with `//go:build integration`; `make test-integration` and the CI `integration` job (PostgreSQL 17 and 18) run them. Keep plain unit tests tag-free so `make test` stays offline.
+- `dbtest.Migrated(t)` returns a database URL and an app-role pool on a fresh, fully migrated database dropped at test end, so tests may run in parallel. `dbtest.Empty(t)` skips migrations. `dbtest.Truncate(t, url)` empties every app-writable table between scenarios and keeps seeded reference data. Test as the app role; the domain code under test takes `db.New(pool)`.
+- `internal/testutil/fakeprovider` replaces provider HTTP. Queue the requests you expect with `Expect(...)` (strict order; method, path, query, form, header and `Check` assertions), each with a scripted reply: `JSON`, `RateLimited` (429 + Retry-After), `ServerError`, `Unauthorized`, `InvalidGrant`, `Malformed`, `Drop`, `Status`, and `TokenRefresh` for a rotating OAuth token. The package comment maps each helper to a [typed error](architecture/connectors.md#typed-errors). Unexpected requests and unconsumed steps fail the test; failure messages name keys, never values.
+- Point the code under test at `fake.URL`. See `internal/testutil/fakeprovider/example_integration_test.go`.
+- Use synthetic values only (`synthetic-access-1`). Fixtures follow the [synthetic fixtures policy](architecture/project.md#synthetic-fixtures-policy); `make fixture-guard` checks them.
+
 ## Package boundaries
 
 These rules are enforced by `depguard` in `.golangci.yml`:

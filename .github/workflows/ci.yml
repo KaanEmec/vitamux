@@ -107,6 +107,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - name: Fixture privacy guard (synthetic marker, emails, phones, tokens)
+        run: go run ./tools/fixtureguard
       - name: Go license report
         run: go run github.com/google/go-licenses/v2@v2.0.1 report ./cmd/vitamux
       - name: Web license summary

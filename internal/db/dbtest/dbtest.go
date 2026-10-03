@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -67,6 +68,35 @@ func Migrated(t testing.TB) (string, *pgxpool.Pool) {
 		t.Fatal(err)
 	}
 	return u, Pool(t, u, db.AppRole)
+}
+
+// seeded lists tables that migrations fill with reference rows although the app role may write them.
+// Truncate keeps them, along with every table the app role cannot insert into (providers, metric_catalog, ...).
+var seeded = []string{"goose_db_version", "known_relay_origins"}
+
+// Truncate empties every table the app role writes, so one migrated database can serve several
+// scenarios inside a test. Reference data seeded by migrations stays. It runs as the owner role.
+func Truncate(t testing.TB, dbURL string) {
+	t.Helper()
+	ctx := context.Background()
+	owner := Pool(t, dbURL, db.OwnerRole)
+	rows, err := owner.Query(ctx, `SELECT format('%I.%I', schemaname, tablename) FROM pg_tables
+		WHERE schemaname = $1 AND tablename <> ALL($2)
+		  AND has_table_privilege($3, format('%I.%I', schemaname, tablename), 'INSERT')
+		ORDER BY 1`, db.Schema, seeded, string(db.AppRole))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tables, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tables) == 0 {
+		return
+	}
+	if _, err := owner.Exec(ctx, "TRUNCATE "+strings.Join(tables, ", ")+" RESTART IDENTITY CASCADE"); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // Pool opens a pool as role and closes it when the test ends.
