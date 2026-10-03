@@ -119,7 +119,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List normalized measurements */
+        /**
+         * List normalized measurements
+         * @description Active rows by default, ordered by (start_at, id); include=superseded adds earlier versions and include=deleted adds rows deleted upstream. start/end filter start_at, start_date/end_date the local date. include=provenance adds the raw payload's fetch metadata.
+         */
         get: operations["listMeasurements"];
         put?: never;
         post?: never;
@@ -153,7 +156,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List measurement groups (blood-pressure readings, weigh-ins) */
+        /**
+         * List measurement groups (blood-pressure readings, weigh-ins)
+         * @description Groups with their components, ordered by (measured_at, id). Filters and include work as on /measurements.
+         */
         get: operations["listGroups"];
         put?: never;
         post?: never;
@@ -170,7 +176,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List blood-pressure readings */
+        /**
+         * List blood-pressure readings
+         * @description bp_reading groups with their components side by side, ordered by (measured_at, id). Filters and include work as on /measurements.
+         */
         get: operations["listBloodPressure"];
         put?: never;
         post?: never;
@@ -187,7 +196,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List sleep sessions */
+        /**
+         * List sleep sessions
+         * @description Ordered by (start_at, id). start_date/end_date filter sleep_date (the local wake date), start/end filter start_at. include=stages adds the stages; other filters and include work as on /measurements.
+         */
         get: operations["listSleep"];
         put?: never;
         post?: never;
@@ -204,7 +216,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get one sleep session */
+        /**
+         * Get one sleep session
+         * @description Any version, superseded or deleted included, always with its stages.
+         */
         get: operations["getSleep"];
         put?: never;
         post?: never;
@@ -221,7 +236,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List workouts */
+        /**
+         * List workouts
+         * @description Ordered by (start_at, id). include=segments adds the laps, sets or intervals; other filters and include work as on /measurements.
+         */
         get: operations["listWorkouts"];
         put?: never;
         post?: never;
@@ -238,7 +256,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get one workout */
+        /**
+         * Get one workout
+         * @description Any version, superseded or deleted included, always with its segments.
+         */
         get: operations["getWorkout"];
         put?: never;
         post?: never;
@@ -577,8 +598,31 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Start interactive authorization (OAuth redirect or credential prompt) */
+        /**
+         * Reauthorize a connection (OAuth redirect or credential prompt)
+         * @description OAuth: answers {"redirect_url"} and sets the short-lived browser-binding cookie that the provider callback needs (docs/architecture/connectors.md#oauth-connection-flow). Owner session only, since the state is bound to it.
+         */
         post: operations["beginConnectionAuth"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/providers/{provider}/auth/begin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Connect an account of a provider (OAuth redirect)
+         * @description Like beginConnectionAuth, for an account not connected yet. The callback creates the connection, or reuses the existing one when the same provider account connects again.
+         */
+        post: operations["beginProviderAuth"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1155,6 +1199,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/oauth/{provider}/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * OAuth redirect target; completes the authorization and redirects to the UI
+         * @description Authorized by the signed, single-use `state` and the browser-binding cookie, not by the session. Always answers 303 to /connections?connected=<provider> or /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable. HEAD answers 204 without side effects.
+         */
+        get: operations["oauthCallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1177,6 +1241,7 @@ export interface components {
             next_cursor?: string;
         };
         ConnectionID: string;
+        DeviceID: string;
         /** @enum {string} */
         Scope: "read:health" | "read:config" | "write:config" | "write:documents" | "admin";
         BatchID: string;
@@ -1396,35 +1461,312 @@ export interface components {
         };
         /** @description Catalogue metric (docs/architecture/metric-catalog.md). Open object. */
         Metric: Record<string, never>;
-        /** @description Normalized measurement (docs/architecture/data-model.md#measurements). Open object. */
-        Measurement: Record<string, never>;
+        /** @description Normalized measurement (docs/architecture/data-model.md#measurements). */
+        Measurement: {
+            id: string;
+            /** @description Metric code. */
+            metric: string;
+            /** @enum {string} */
+            kind: "sample" | "interval" | "cumulative" | "daily_value";
+            /** Format: date-time */
+            start_at: string;
+            /**
+             * Format: date-time
+             * @description Exclusive; null for samples.
+             */
+            end_at: string | null;
+            tz_offset_min: number | null;
+            /** Format: date */
+            local_date: string;
+            /**
+             * Format: double
+             * @description In the metric's canonical unit.
+             */
+            value: number;
+            /** @description Canonical unit code. */
+            unit: string;
+            /**
+             * Format: double
+             * @description Original value
+             */
+            source_value: number | null;
+            source_unit: string | null;
+            /** @description Bitset: 1 manual_entry, 2 motion_context, 4 implausible, 8 relayed, 16 migrated_without_raw, 32 prorated_source. */
+            quality_flags: number;
+            /** @description Measurement group (blood-pressure reading */
+            group_id: string | null;
+            source: components["schemas"]["SourceRef"];
+            provenance: components["schemas"]["RecordProvenance"];
+        };
+        /** @description Where a canonical row came from. device and origin are the values the device and origin filters take. */
+        SourceRef: {
+            /** @description Provider code. */
+            provider: string;
+            connection_id: components["schemas"]["ConnectionID"];
+            device: components["schemas"]["DeviceID"] | null;
+            device_type: string | null;
+            /** @description Origin key */
+            origin: string | null;
+            external_id: string | null;
+            dedupe_key: string;
+        };
+        /** @description Version and provenance columns of a canonical row; GET /provenance/{entity}/{id} has the full trace. */
+        RecordProvenance: {
+            /** @description Null only for rows migrated without raw. */
+            raw_payload_id: string | null;
+            /** @description name@version */
+            normalizer: string;
+            /** Format: date-time */
+            ingested_at: string;
+            /** Format: date-time */
+            normalized_at: string;
+            /** Format: date-time */
+            superseded_at: string | null;
+            /** @description Id of the version that replaced this one. */
+            superseded_by: string | null;
+            /** Format: date-time */
+            deleted_at: string | null;
+            deleted_by_raw_id: string | null;
+            raw?: components["schemas"]["RawRef"];
+        };
+        /** @description The row's raw payload; with include=provenance, when the row has one. */
+        RawRef: {
+            stream: string;
+            external_key: string;
+            version: number;
+            /** Format: date-time */
+            fetched_at: string;
+            /** Format: uuid */
+            batch_id: string;
+            source_kind: string;
+        };
         MeasurementPage: components["schemas"]["PageInfo"] & {
             measurements: components["schemas"]["Measurement"][];
         };
         /** @description Open object. */
         ManualMeasurementInput: Record<string, never>;
-        /** @description Measurement group (bp_reading */
-        Group: Record<string, never>;
+        /** @description Measurement group (bp_reading, body_composition) with its components. */
+        Group: {
+            id: string;
+            /** @enum {string} */
+            kind: "bp_reading" | "body_composition";
+            /** Format: date-time */
+            measured_at: string;
+            tz_offset_min: number | null;
+            /** Format: date */
+            local_date: string;
+            /** @description Provider detail such as arm or position. */
+            context: Record<string, never>;
+            components: components["schemas"]["GroupComponent"][];
+            source: components["schemas"]["SourceRef"];
+            provenance: components["schemas"]["RecordProvenance"];
+        };
+        /** @description A measurement belonging to the group, in the version that belongs to this group version. */
+        GroupComponent: {
+            /** @description Measurement id. */
+            id: string;
+            metric: string;
+            /** Format: double */
+            value: number;
+            unit: string;
+            /** Format: double */
+            source_value: number | null;
+            source_unit: string | null;
+            quality_flags: number;
+        };
         GroupPage: components["schemas"]["PageInfo"] & {
             groups: components["schemas"]["Group"][];
         };
-        /** @description Open object. */
-        BloodPressureReading: Record<string, never>;
+        /** @description A bp_reading group with its components side by side; systolic and diastolic in mmHg, pulse in bpm. */
+        BloodPressureReading: {
+            /** @description Group id. */
+            id: string;
+            /** Format: date-time */
+            measured_at: string;
+            tz_offset_min: number | null;
+            /** Format: date */
+            local_date: string;
+            /** Format: double */
+            systolic: number | null;
+            /** Format: double */
+            diastolic: number | null;
+            /** Format: double */
+            pulse: number | null;
+            context: Record<string, never>;
+            source: components["schemas"]["SourceRef"];
+            provenance: components["schemas"]["RecordProvenance"];
+        };
         BloodPressurePage: components["schemas"]["PageInfo"] & {
             readings: components["schemas"]["BloodPressureReading"][];
         };
-        /** @description Open object. */
-        SleepSession: Record<string, never>;
+        /** @description One sleep session as the source reported it. */
+        SleepSession: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            start_at: string;
+            /** Format: date-time */
+            end_at: string;
+            tz_offset_min: number | null;
+            /**
+             * Format: date
+             * @description Local date of waking up.
+             */
+            sleep_date: string;
+            is_nap: boolean;
+            has_stages: boolean;
+            /**
+             * @description Whether the *_s totals are provider-reported or summed from stages.
+             * @enum {string}
+             */
+            totals_basis: "provider" | "stages";
+            asleep_s: number | null;
+            deep_s: number | null;
+            light_s: number | null;
+            rem_s: number | null;
+            awake_s: number | null;
+            latency_s: number | null;
+            /** @description With include=stages, and always on GET /sleep/{id}. */
+            stages?: components["schemas"]["SleepStage"][];
+            source: components["schemas"]["SourceRef"];
+            provenance: components["schemas"]["RecordProvenance"];
+        };
+        SleepStage: {
+            /** @enum {string} */
+            stage: "awake" | "light" | "deep" | "rem" | "asleep_unspecified" | "in_bed";
+            /** Format: date-time */
+            start_at: string;
+            /** Format: date-time */
+            end_at: string;
+        };
         SleepPage: components["schemas"]["PageInfo"] & {
             sleep: components["schemas"]["SleepSession"][];
         };
-        /** @description Open object. */
-        Workout: Record<string, never>;
+        /** @description One workout as the source reported it. */
+        Workout: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            start_at: string;
+            /** Format: date-time */
+            end_at: string;
+            tz_offset_min: number | null;
+            /** Format: date */
+            local_date: string;
+            /** @description Canonical sport. */
+            sport: string;
+            provider_sport: string | null;
+            /** Format: double */
+            distance_m: number | null;
+            /** Format: double */
+            energy_kcal: number | null;
+            /** Format: double */
+            avg_hr_bpm: number | null;
+            /** Format: double */
+            max_hr_bpm: number | null;
+            /** @description Original activity file (FIT */
+            file_sha256: string | null;
+            /** @description With include=segments, and always on GET /workouts/{id}. */
+            segments?: components["schemas"]["WorkoutSegment"][];
+            source: components["schemas"]["SourceRef"];
+            provenance: components["schemas"]["RecordProvenance"];
+        };
+        WorkoutSegment: {
+            seq: number;
+            /** @enum {string} */
+            kind: "lap" | "set" | "interval";
+            /** Format: date-time */
+            start_at: string;
+            /** Format: date-time */
+            end_at: string | null;
+            data: Record<string, never>;
+        };
         WorkoutPage: components["schemas"]["PageInfo"] & {
             workouts: components["schemas"]["Workout"][];
         };
-        /** @description Provenance trace (internal/provenance). Open object. */
-        Provenance: Record<string, never>;
+        /** @description Provenance trace of one canonical row (internal/provenance): the row and every earlier and later version linked through superseded_by, oldest first. Raw bodies are never returned. */
+        Provenance: {
+            /** @enum {string} */
+            entity: "measurement" | "group" | "sleep" | "workout";
+            row: components["schemas"]["ProvenanceVersion"];
+            earlier: components["schemas"]["ProvenanceVersion"][];
+            later: components["schemas"]["ProvenanceVersion"][];
+        };
+        ProvenanceVersion: {
+            id: string;
+            superseded_by: string | null;
+            /** @description The stored row's columns, plus metric, unit, device and origin codes and its stages, segments or components. */
+            record: Record<string, never>;
+            provider: string;
+            connection_id: components["schemas"]["ConnectionID"];
+            connection_mode: string;
+            /** @description Pushing client; null for in-process syncs. */
+            client: components["schemas"]["ProvenanceClient"] | null;
+            /** @description Null for rows migrated without raw. */
+            batch: components["schemas"]["ProvenanceBatch"] | null;
+            /** @description Raw payload metadata; null for rows migrated without raw. */
+            raw: components["schemas"]["ProvenanceRaw"] | null;
+            normalizer: components["schemas"]["ProvenanceNormalizer"];
+            /** Format: date-time */
+            fetched_at: string | null;
+            /** Format: date-time */
+            ingested_at: string;
+            /** Format: date-time */
+            normalized_at: string;
+            /**
+             * Format: date-time
+             * @description When this version replaced its predecessor.
+             */
+            corrected_at: string | null;
+            /** Format: date-time */
+            superseded_at: string | null;
+            /** Format: date-time */
+            deleted_at: string | null;
+            /** @description The raw payload that carried the upstream deletion. */
+            deleted_by: components["schemas"]["ProvenanceDeletion"] | null;
+        };
+        ProvenanceClient: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            name: string;
+        };
+        ProvenanceBatch: {
+            /** Format: uuid */
+            id: string;
+            source_kind: string;
+            migration_source: string | null;
+            /** Format: date-time */
+            received_at: string;
+        };
+        ProvenanceRaw: {
+            id: string;
+            stream: string;
+            external_key: string;
+            version: number;
+            content_sha256: string;
+            content_type: string;
+            /** Format: int64 */
+            size_bytes: number;
+            /** Format: date-time */
+            fetched_at: string;
+            /** Format: date-time */
+            stored_at: string;
+            /** @description Sanitized request. */
+            request_meta: unknown;
+            shape_fingerprint: string;
+            status: string;
+        };
+        ProvenanceNormalizer: {
+            name: string;
+            version: number;
+            git_sha: string;
+        };
+        ProvenanceDeletion: {
+            raw_id: string;
+            /** Format: date-time */
+            fetched_at: string | null;
+        };
         /** @description Open object. */
         Rule: Record<string, never>;
         /** @description Open object. */
@@ -1649,14 +1991,14 @@ export interface components {
         ProviderFilter: string[];
         /** @description Connection id; repeatable. */
         ConnectionFilter: components["schemas"]["ConnectionID"][];
-        /** @description Device id; repeatable. */
-        DeviceFilter: string[];
+        /** @description Device id (dev_…); repeatable. */
+        DeviceFilter: components["schemas"]["DeviceID"][];
         /** @description Origin key (e.g. a HealthKit bundle id); repeatable. */
         OriginFilter: string[];
         /** @description Measurement kind; repeatable. */
         KindFilter: ("sample" | "interval" | "cumulative" | "daily_value")[];
         /** @description Comma-separated expansions. */
-        Include: ("provenance" | "stages" | "segments" | "superseded")[];
+        Include: ("provenance" | "stages" | "segments" | "superseded" | "deleted")[];
     };
     requestBodies: never;
     headers: never;
@@ -1837,13 +2179,17 @@ export interface operations {
                 start?: components["parameters"]["Start"];
                 /** @description Exclusive end instant (RFC 3339 with offset). */
                 end?: components["parameters"]["End"];
+                /** @description First local date, inclusive. */
+                start_date?: components["parameters"]["StartDate"];
+                /** @description Last local date, inclusive. */
+                end_date?: components["parameters"]["EndDate"];
                 /** @description Metric code; repeatable. */
                 metric?: components["parameters"]["MetricFilter"];
                 /** @description Provider code; repeatable. */
                 provider?: components["parameters"]["ProviderFilter"];
                 /** @description Connection id; repeatable. */
                 connection?: components["parameters"]["ConnectionFilter"];
-                /** @description Device id; repeatable. */
+                /** @description Device id (dev_…); repeatable. */
                 device?: components["parameters"]["DeviceFilter"];
                 /** @description Origin key (e.g. a HealthKit bundle id); repeatable. */
                 origin?: components["parameters"]["OriginFilter"];
@@ -1911,11 +2257,15 @@ export interface operations {
                 start?: components["parameters"]["Start"];
                 /** @description Exclusive end instant (RFC 3339 with offset). */
                 end?: components["parameters"]["End"];
+                /** @description First local date, inclusive. */
+                start_date?: components["parameters"]["StartDate"];
+                /** @description Last local date, inclusive. */
+                end_date?: components["parameters"]["EndDate"];
                 /** @description Provider code; repeatable. */
                 provider?: components["parameters"]["ProviderFilter"];
                 /** @description Connection id; repeatable. */
                 connection?: components["parameters"]["ConnectionFilter"];
-                /** @description Device id; repeatable. */
+                /** @description Device id (dev_…); repeatable. */
                 device?: components["parameters"]["DeviceFilter"];
                 /** @description Origin key (e.g. a HealthKit bundle id); repeatable. */
                 origin?: components["parameters"]["OriginFilter"];
@@ -1953,11 +2303,15 @@ export interface operations {
                 start?: components["parameters"]["Start"];
                 /** @description Exclusive end instant (RFC 3339 with offset). */
                 end?: components["parameters"]["End"];
+                /** @description First local date, inclusive. */
+                start_date?: components["parameters"]["StartDate"];
+                /** @description Last local date, inclusive. */
+                end_date?: components["parameters"]["EndDate"];
                 /** @description Provider code; repeatable. */
                 provider?: components["parameters"]["ProviderFilter"];
                 /** @description Connection id; repeatable. */
                 connection?: components["parameters"]["ConnectionFilter"];
-                /** @description Device id; repeatable. */
+                /** @description Device id (dev_…); repeatable. */
                 device?: components["parameters"]["DeviceFilter"];
                 /** @description Origin key (e.g. a HealthKit bundle id); repeatable. */
                 origin?: components["parameters"]["OriginFilter"];
@@ -1991,6 +2345,10 @@ export interface operations {
     listSleep: {
         parameters: {
             query?: {
+                /** @description Inclusive start instant (RFC 3339 with offset). */
+                start?: components["parameters"]["Start"];
+                /** @description Exclusive end instant (RFC 3339 with offset). */
+                end?: components["parameters"]["End"];
                 /** @description First local date, inclusive. */
                 start_date?: components["parameters"]["StartDate"];
                 /** @description Last local date, inclusive. */
@@ -1999,7 +2357,7 @@ export interface operations {
                 provider?: components["parameters"]["ProviderFilter"];
                 /** @description Connection id; repeatable. */
                 connection?: components["parameters"]["ConnectionFilter"];
-                /** @description Device id; repeatable. */
+                /** @description Device id (dev_…); repeatable. */
                 device?: components["parameters"]["DeviceFilter"];
                 /** @description Origin key (e.g. a HealthKit bundle id); repeatable. */
                 origin?: components["parameters"]["OriginFilter"];
@@ -2056,6 +2414,7 @@ export interface operations {
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
         };
     };
     listWorkouts: {
@@ -2065,11 +2424,15 @@ export interface operations {
                 start?: components["parameters"]["Start"];
                 /** @description Exclusive end instant (RFC 3339 with offset). */
                 end?: components["parameters"]["End"];
+                /** @description First local date, inclusive. */
+                start_date?: components["parameters"]["StartDate"];
+                /** @description Last local date, inclusive. */
+                end_date?: components["parameters"]["EndDate"];
                 /** @description Provider code; repeatable. */
                 provider?: components["parameters"]["ProviderFilter"];
                 /** @description Connection id; repeatable. */
                 connection?: components["parameters"]["ConnectionFilter"];
-                /** @description Device id; repeatable. */
+                /** @description Device id (dev_…); repeatable. */
                 device?: components["parameters"]["DeviceFilter"];
                 /** @description Origin key (e.g. a HealthKit bundle id); repeatable. */
                 origin?: components["parameters"]["OriginFilter"];
@@ -2126,6 +2489,7 @@ export interface operations {
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
         };
     };
     getProvenance: {
@@ -2133,8 +2497,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Record type, e.g. measurement, group, sleep, workout, lab_result. */
-                entity: string;
+                /** @description Record type. */
+                entity: "measurement" | "group" | "sleep" | "workout";
                 id: components["parameters"]["ID"];
             };
             cookie?: never;
@@ -2782,6 +3146,32 @@ export interface operations {
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    beginProviderAuth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Next step. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthStep"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     continueConnectionAuth: {
@@ -3834,6 +4224,36 @@ export interface operations {
             403: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+        };
+    };
+    oauthCallback: {
+        parameters: {
+            query?: {
+                state?: string;
+                code?: string;
+            };
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description HEAD probe. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Back to the UI with the outcome. */
+            303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
 }

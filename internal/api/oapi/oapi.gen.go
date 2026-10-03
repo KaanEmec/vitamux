@@ -80,6 +80,72 @@ func (e ExportRequestFormat) Valid() bool {
 	}
 }
 
+// Defines values for GroupKind.
+const (
+	GroupKindBodyComposition GroupKind = "body_composition"
+	GroupKindBpReading       GroupKind = "bp_reading"
+)
+
+// Valid indicates whether the value is a known member of the GroupKind enum.
+func (e GroupKind) Valid() bool {
+	switch e {
+	case GroupKindBodyComposition:
+		return true
+	case GroupKindBpReading:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeasurementKind.
+const (
+	MeasurementKindCumulative MeasurementKind = "cumulative"
+	MeasurementKindDailyValue MeasurementKind = "daily_value"
+	MeasurementKindInterval   MeasurementKind = "interval"
+	MeasurementKindSample     MeasurementKind = "sample"
+)
+
+// Valid indicates whether the value is a known member of the MeasurementKind enum.
+func (e MeasurementKind) Valid() bool {
+	switch e {
+	case MeasurementKindCumulative:
+		return true
+	case MeasurementKindDailyValue:
+		return true
+	case MeasurementKindInterval:
+		return true
+	case MeasurementKindSample:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProvenanceEntity.
+const (
+	ProvenanceEntityGroup       ProvenanceEntity = "group"
+	ProvenanceEntityMeasurement ProvenanceEntity = "measurement"
+	ProvenanceEntitySleep       ProvenanceEntity = "sleep"
+	ProvenanceEntityWorkout     ProvenanceEntity = "workout"
+)
+
+// Valid indicates whether the value is a known member of the ProvenanceEntity enum.
+func (e ProvenanceEntity) Valid() bool {
+	switch e {
+	case ProvenanceEntityGroup:
+		return true
+	case ProvenanceEntityMeasurement:
+		return true
+	case ProvenanceEntitySleep:
+		return true
+	case ProvenanceEntityWorkout:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ResolvedValueStatus.
 const (
 	Calculated ResolvedValueStatus = "calculated"
@@ -134,6 +200,54 @@ func (e Scope) Valid() bool {
 	}
 }
 
+// Defines values for SleepSessionTotalsBasis.
+const (
+	SleepSessionTotalsBasisProvider SleepSessionTotalsBasis = "provider"
+	SleepSessionTotalsBasisStages   SleepSessionTotalsBasis = "stages"
+)
+
+// Valid indicates whether the value is a known member of the SleepSessionTotalsBasis enum.
+func (e SleepSessionTotalsBasis) Valid() bool {
+	switch e {
+	case SleepSessionTotalsBasisProvider:
+		return true
+	case SleepSessionTotalsBasisStages:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SleepStageStage.
+const (
+	AsleepUnspecified SleepStageStage = "asleep_unspecified"
+	Awake             SleepStageStage = "awake"
+	Deep              SleepStageStage = "deep"
+	InBed             SleepStageStage = "in_bed"
+	Light             SleepStageStage = "light"
+	Rem               SleepStageStage = "rem"
+)
+
+// Valid indicates whether the value is a known member of the SleepStageStage enum.
+func (e SleepStageStage) Valid() bool {
+	switch e {
+	case AsleepUnspecified:
+		return true
+	case Awake:
+		return true
+	case Deep:
+		return true
+	case InBed:
+		return true
+	case Light:
+		return true
+	case Rem:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SourcesDrilldownSourcesRuleStatus.
 const (
 	Excluded  SourcesDrilldownSourcesRuleStatus = "excluded"
@@ -155,8 +269,30 @@ func (e SourcesDrilldownSourcesRuleStatus) Valid() bool {
 	}
 }
 
+// Defines values for WorkoutSegmentKind.
+const (
+	WorkoutSegmentKindInterval WorkoutSegmentKind = "interval"
+	WorkoutSegmentKindLap      WorkoutSegmentKind = "lap"
+	WorkoutSegmentKindSet      WorkoutSegmentKind = "set"
+)
+
+// Valid indicates whether the value is a known member of the WorkoutSegmentKind enum.
+func (e WorkoutSegmentKind) Valid() bool {
+	switch e {
+	case WorkoutSegmentKindInterval:
+		return true
+	case WorkoutSegmentKindLap:
+		return true
+	case WorkoutSegmentKindSet:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListBloodPressureParamsInclude.
 const (
+	ListBloodPressureParamsIncludeDeleted    ListBloodPressureParamsInclude = "deleted"
 	ListBloodPressureParamsIncludeProvenance ListBloodPressureParamsInclude = "provenance"
 	ListBloodPressureParamsIncludeSegments   ListBloodPressureParamsInclude = "segments"
 	ListBloodPressureParamsIncludeStages     ListBloodPressureParamsInclude = "stages"
@@ -166,6 +302,8 @@ const (
 // Valid indicates whether the value is a known member of the ListBloodPressureParamsInclude enum.
 func (e ListBloodPressureParamsInclude) Valid() bool {
 	switch e {
+	case ListBloodPressureParamsIncludeDeleted:
+		return true
 	case ListBloodPressureParamsIncludeProvenance:
 		return true
 	case ListBloodPressureParamsIncludeSegments:
@@ -217,16 +355,16 @@ func (e DeleteDocumentParamsDerived) Valid() bool {
 
 // Defines values for ListGroupsParamsKind.
 const (
-	BodyComposition ListGroupsParamsKind = "body_composition"
-	BpReading       ListGroupsParamsKind = "bp_reading"
+	ListGroupsParamsKindBodyComposition ListGroupsParamsKind = "body_composition"
+	ListGroupsParamsKindBpReading       ListGroupsParamsKind = "bp_reading"
 )
 
 // Valid indicates whether the value is a known member of the ListGroupsParamsKind enum.
 func (e ListGroupsParamsKind) Valid() bool {
 	switch e {
-	case BodyComposition:
+	case ListGroupsParamsKindBodyComposition:
 		return true
-	case BpReading:
+	case ListGroupsParamsKindBpReading:
 		return true
 	default:
 		return false
@@ -235,6 +373,7 @@ func (e ListGroupsParamsKind) Valid() bool {
 
 // Defines values for ListGroupsParamsInclude.
 const (
+	ListGroupsParamsIncludeDeleted    ListGroupsParamsInclude = "deleted"
 	ListGroupsParamsIncludeProvenance ListGroupsParamsInclude = "provenance"
 	ListGroupsParamsIncludeSegments   ListGroupsParamsInclude = "segments"
 	ListGroupsParamsIncludeStages     ListGroupsParamsInclude = "stages"
@@ -244,6 +383,8 @@ const (
 // Valid indicates whether the value is a known member of the ListGroupsParamsInclude enum.
 func (e ListGroupsParamsInclude) Valid() bool {
 	switch e {
+	case ListGroupsParamsIncludeDeleted:
+		return true
 	case ListGroupsParamsIncludeProvenance:
 		return true
 	case ListGroupsParamsIncludeSegments:
@@ -259,22 +400,22 @@ func (e ListGroupsParamsInclude) Valid() bool {
 
 // Defines values for ListMeasurementsParamsKind.
 const (
-	Cumulative ListMeasurementsParamsKind = "cumulative"
-	DailyValue ListMeasurementsParamsKind = "daily_value"
-	Interval   ListMeasurementsParamsKind = "interval"
-	Sample     ListMeasurementsParamsKind = "sample"
+	ListMeasurementsParamsKindCumulative ListMeasurementsParamsKind = "cumulative"
+	ListMeasurementsParamsKindDailyValue ListMeasurementsParamsKind = "daily_value"
+	ListMeasurementsParamsKindInterval   ListMeasurementsParamsKind = "interval"
+	ListMeasurementsParamsKindSample     ListMeasurementsParamsKind = "sample"
 )
 
 // Valid indicates whether the value is a known member of the ListMeasurementsParamsKind enum.
 func (e ListMeasurementsParamsKind) Valid() bool {
 	switch e {
-	case Cumulative:
+	case ListMeasurementsParamsKindCumulative:
 		return true
-	case DailyValue:
+	case ListMeasurementsParamsKindDailyValue:
 		return true
-	case Interval:
+	case ListMeasurementsParamsKindInterval:
 		return true
-	case Sample:
+	case ListMeasurementsParamsKindSample:
 		return true
 	default:
 		return false
@@ -283,6 +424,7 @@ func (e ListMeasurementsParamsKind) Valid() bool {
 
 // Defines values for ListMeasurementsParamsInclude.
 const (
+	ListMeasurementsParamsIncludeDeleted    ListMeasurementsParamsInclude = "deleted"
 	ListMeasurementsParamsIncludeProvenance ListMeasurementsParamsInclude = "provenance"
 	ListMeasurementsParamsIncludeSegments   ListMeasurementsParamsInclude = "segments"
 	ListMeasurementsParamsIncludeStages     ListMeasurementsParamsInclude = "stages"
@@ -292,6 +434,8 @@ const (
 // Valid indicates whether the value is a known member of the ListMeasurementsParamsInclude enum.
 func (e ListMeasurementsParamsInclude) Valid() bool {
 	switch e {
+	case ListMeasurementsParamsIncludeDeleted:
+		return true
 	case ListMeasurementsParamsIncludeProvenance:
 		return true
 	case ListMeasurementsParamsIncludeSegments:
@@ -305,8 +449,33 @@ func (e ListMeasurementsParamsInclude) Valid() bool {
 	}
 }
 
+// Defines values for GetProvenanceParamsEntity.
+const (
+	GetProvenanceParamsEntityGroup       GetProvenanceParamsEntity = "group"
+	GetProvenanceParamsEntityMeasurement GetProvenanceParamsEntity = "measurement"
+	GetProvenanceParamsEntitySleep       GetProvenanceParamsEntity = "sleep"
+	GetProvenanceParamsEntityWorkout     GetProvenanceParamsEntity = "workout"
+)
+
+// Valid indicates whether the value is a known member of the GetProvenanceParamsEntity enum.
+func (e GetProvenanceParamsEntity) Valid() bool {
+	switch e {
+	case GetProvenanceParamsEntityGroup:
+		return true
+	case GetProvenanceParamsEntityMeasurement:
+		return true
+	case GetProvenanceParamsEntitySleep:
+		return true
+	case GetProvenanceParamsEntityWorkout:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListSleepParamsInclude.
 const (
+	ListSleepParamsIncludeDeleted    ListSleepParamsInclude = "deleted"
 	ListSleepParamsIncludeProvenance ListSleepParamsInclude = "provenance"
 	ListSleepParamsIncludeSegments   ListSleepParamsInclude = "segments"
 	ListSleepParamsIncludeStages     ListSleepParamsInclude = "stages"
@@ -316,6 +485,8 @@ const (
 // Valid indicates whether the value is a known member of the ListSleepParamsInclude enum.
 func (e ListSleepParamsInclude) Valid() bool {
 	switch e {
+	case ListSleepParamsIncludeDeleted:
+		return true
 	case ListSleepParamsIncludeProvenance:
 		return true
 	case ListSleepParamsIncludeSegments:
@@ -331,6 +502,7 @@ func (e ListSleepParamsInclude) Valid() bool {
 
 // Defines values for GetSleepParamsInclude.
 const (
+	GetSleepParamsIncludeDeleted    GetSleepParamsInclude = "deleted"
 	GetSleepParamsIncludeProvenance GetSleepParamsInclude = "provenance"
 	GetSleepParamsIncludeSegments   GetSleepParamsInclude = "segments"
 	GetSleepParamsIncludeStages     GetSleepParamsInclude = "stages"
@@ -340,6 +512,8 @@ const (
 // Valid indicates whether the value is a known member of the GetSleepParamsInclude enum.
 func (e GetSleepParamsInclude) Valid() bool {
 	switch e {
+	case GetSleepParamsIncludeDeleted:
+		return true
 	case GetSleepParamsIncludeProvenance:
 		return true
 	case GetSleepParamsIncludeSegments:
@@ -355,6 +529,7 @@ func (e GetSleepParamsInclude) Valid() bool {
 
 // Defines values for ListWorkoutsParamsInclude.
 const (
+	ListWorkoutsParamsIncludeDeleted    ListWorkoutsParamsInclude = "deleted"
 	ListWorkoutsParamsIncludeProvenance ListWorkoutsParamsInclude = "provenance"
 	ListWorkoutsParamsIncludeSegments   ListWorkoutsParamsInclude = "segments"
 	ListWorkoutsParamsIncludeStages     ListWorkoutsParamsInclude = "stages"
@@ -364,6 +539,8 @@ const (
 // Valid indicates whether the value is a known member of the ListWorkoutsParamsInclude enum.
 func (e ListWorkoutsParamsInclude) Valid() bool {
 	switch e {
+	case ListWorkoutsParamsIncludeDeleted:
+		return true
 	case ListWorkoutsParamsIncludeProvenance:
 		return true
 	case ListWorkoutsParamsIncludeSegments:
@@ -379,6 +556,7 @@ func (e ListWorkoutsParamsInclude) Valid() bool {
 
 // Defines values for GetWorkoutParamsInclude.
 const (
+	GetWorkoutParamsIncludeDeleted    GetWorkoutParamsInclude = "deleted"
 	GetWorkoutParamsIncludeProvenance GetWorkoutParamsInclude = "provenance"
 	GetWorkoutParamsIncludeSegments   GetWorkoutParamsInclude = "segments"
 	GetWorkoutParamsIncludeStages     GetWorkoutParamsInclude = "stages"
@@ -388,6 +566,8 @@ const (
 // Valid indicates whether the value is a known member of the GetWorkoutParamsInclude enum.
 func (e GetWorkoutParamsInclude) Valid() bool {
 	switch e {
+	case GetWorkoutParamsIncludeDeleted:
+		return true
 	case GetWorkoutParamsIncludeProvenance:
 		return true
 	case GetWorkoutParamsIncludeSegments:
@@ -433,8 +613,25 @@ type BloodPressurePage struct {
 	Readings   []BloodPressureReading `json:"readings"`
 }
 
-// BloodPressureReading Open object.
-type BloodPressureReading = map[string]interface{}
+// BloodPressureReading A bp_reading group with its components side by side; systolic and diastolic in mmHg, pulse in bpm.
+type BloodPressureReading struct {
+	Context   json.RawMessage `json:"context"`
+	Diastolic *float64        `json:"diastolic"`
+
+	// ID Group id.
+	ID         string             `json:"id"`
+	LocalDate  openapi_types.Date `json:"local_date"`
+	MeasuredAt time.Time          `json:"measured_at"`
+
+	// Provenance Version and provenance columns of a canonical row; GET /provenance/{entity}/{id} has the full trace.
+	Provenance RecordProvenance `json:"provenance"`
+	Pulse      *float64         `json:"pulse"`
+
+	// Source Where a canonical row came from. device and origin are the values the device and origin filters take.
+	Source      SourceRef `json:"source"`
+	Systolic    *float64  `json:"systolic"`
+	TzOffsetMin *int      `json:"tz_offset_min"`
+}
 
 // Connection Connection with health; never credentials. Open object.
 type Connection = map[string]interface{}
@@ -464,6 +661,9 @@ type CreatedAPIKey struct {
 	// Token Shown in this response only.
 	Token string `json:"token"`
 }
+
+// DeviceID defines model for DeviceID.
+type DeviceID = string
 
 // DeviceRef defines model for DeviceRef.
 type DeviceRef struct {
@@ -526,8 +726,39 @@ type ExtractionRow = map[string]interface{}
 // ExtractionRowPatch Open object.
 type ExtractionRowPatch = map[string]interface{}
 
-// Group Measurement group (bp_reading
-type Group = map[string]interface{}
+// Group Measurement group (bp_reading, body_composition) with its components.
+type Group struct {
+	Components []GroupComponent `json:"components"`
+
+	// Context Provider detail such as arm or position.
+	Context    json.RawMessage    `json:"context"`
+	ID         string             `json:"id"`
+	Kind       GroupKind          `json:"kind"`
+	LocalDate  openapi_types.Date `json:"local_date"`
+	MeasuredAt time.Time          `json:"measured_at"`
+
+	// Provenance Version and provenance columns of a canonical row; GET /provenance/{entity}/{id} has the full trace.
+	Provenance RecordProvenance `json:"provenance"`
+
+	// Source Where a canonical row came from. device and origin are the values the device and origin filters take.
+	Source      SourceRef `json:"source"`
+	TzOffsetMin *int      `json:"tz_offset_min"`
+}
+
+// GroupKind defines model for Group.Kind.
+type GroupKind string
+
+// GroupComponent A measurement belonging to the group, in the version that belongs to this group version.
+type GroupComponent struct {
+	// ID Measurement id.
+	ID           string   `json:"id"`
+	Metric       string   `json:"metric"`
+	QualityFlags int      `json:"quality_flags"`
+	SourceUnit   *string  `json:"source_unit"`
+	SourceValue  *float64 `json:"source_value"`
+	Unit         string   `json:"unit"`
+	Value        float64  `json:"value"`
+}
 
 // GroupPage defines model for GroupPage.
 type GroupPage struct {
@@ -573,8 +804,44 @@ type LoginRequest struct {
 // ManualMeasurementInput Open object.
 type ManualMeasurementInput = map[string]interface{}
 
-// Measurement Normalized measurement (docs/architecture/data-model.md#measurements). Open object.
-type Measurement = map[string]interface{}
+// Measurement Normalized measurement (docs/architecture/data-model.md#measurements).
+type Measurement struct {
+	// EndAt Exclusive; null for samples.
+	EndAt *time.Time `json:"end_at"`
+
+	// GroupID Measurement group (blood-pressure reading
+	GroupID   *string            `json:"group_id"`
+	ID        string             `json:"id"`
+	Kind      MeasurementKind    `json:"kind"`
+	LocalDate openapi_types.Date `json:"local_date"`
+
+	// Metric Metric code.
+	Metric string `json:"metric"`
+
+	// Provenance Version and provenance columns of a canonical row; GET /provenance/{entity}/{id} has the full trace.
+	Provenance RecordProvenance `json:"provenance"`
+
+	// QualityFlags Bitset: 1 manual_entry, 2 motion_context, 4 implausible, 8 relayed, 16 migrated_without_raw, 32 prorated_source.
+	QualityFlags int `json:"quality_flags"`
+
+	// Source Where a canonical row came from. device and origin are the values the device and origin filters take.
+	Source     SourceRef `json:"source"`
+	SourceUnit *string   `json:"source_unit"`
+
+	// SourceValue Original value
+	SourceValue *float64  `json:"source_value"`
+	StartAt     time.Time `json:"start_at"`
+	TzOffsetMin *int      `json:"tz_offset_min"`
+
+	// Unit Canonical unit code.
+	Unit string `json:"unit"`
+
+	// Value In the metric's canonical unit.
+	Value float64 `json:"value"`
+}
+
+// MeasurementKind defines model for Measurement.Kind.
+type MeasurementKind string
 
 // MeasurementPage defines model for MeasurementPage.
 type MeasurementPage struct {
@@ -631,8 +898,125 @@ type Problem struct {
 	Type      string  `json:"type"`
 }
 
-// Provenance Provenance trace (internal/provenance). Open object.
-type Provenance = map[string]interface{}
+// Provenance Provenance trace of one canonical row (internal/provenance): the row and every earlier and later version linked through superseded_by, oldest first. Raw bodies are never returned.
+type Provenance struct {
+	Earlier []ProvenanceVersion `json:"earlier"`
+	Entity  ProvenanceEntity    `json:"entity"`
+	Later   []ProvenanceVersion `json:"later"`
+	Row     ProvenanceVersion   `json:"row"`
+}
+
+// ProvenanceEntity defines model for Provenance.Entity.
+type ProvenanceEntity string
+
+// ProvenanceBatch defines model for ProvenanceBatch.
+type ProvenanceBatch struct {
+	ID              openapi_types.UUID `json:"id"`
+	MigrationSource *string            `json:"migration_source"`
+	ReceivedAt      time.Time          `json:"received_at"`
+	SourceKind      string             `json:"source_kind"`
+}
+
+// ProvenanceClient defines model for ProvenanceClient.
+type ProvenanceClient struct {
+	ID   openapi_types.UUID `json:"id"`
+	Kind string             `json:"kind"`
+	Name string             `json:"name"`
+}
+
+// ProvenanceDeletion defines model for ProvenanceDeletion.
+type ProvenanceDeletion struct {
+	FetchedAt *time.Time `json:"fetched_at"`
+	RawID     string     `json:"raw_id"`
+}
+
+// ProvenanceNormalizer defines model for ProvenanceNormalizer.
+type ProvenanceNormalizer struct {
+	GitSha  string `json:"git_sha"`
+	Name    string `json:"name"`
+	Version int    `json:"version"`
+}
+
+// ProvenanceRaw defines model for ProvenanceRaw.
+type ProvenanceRaw struct {
+	ContentSha256 string    `json:"content_sha256"`
+	ContentType   string    `json:"content_type"`
+	ExternalKey   string    `json:"external_key"`
+	FetchedAt     time.Time `json:"fetched_at"`
+	ID            string    `json:"id"`
+
+	// RequestMeta Sanitized request.
+	RequestMeta      json.RawMessage `json:"request_meta"`
+	ShapeFingerprint string          `json:"shape_fingerprint"`
+	SizeBytes        int64           `json:"size_bytes"`
+	Status           string          `json:"status"`
+	StoredAt         time.Time       `json:"stored_at"`
+	Stream           string          `json:"stream"`
+	Version          int             `json:"version"`
+}
+
+// ProvenanceVersion defines model for ProvenanceVersion.
+type ProvenanceVersion struct {
+	// Batch Null for rows migrated without raw.
+	Batch *ProvenanceBatch `json:"batch"`
+
+	// Client Pushing client; null for in-process syncs.
+	Client         *ProvenanceClient `json:"client"`
+	ConnectionID   ConnectionID      `json:"connection_id"`
+	ConnectionMode string            `json:"connection_mode"`
+
+	// CorrectedAt When this version replaced its predecessor.
+	CorrectedAt *time.Time `json:"corrected_at"`
+	DeletedAt   *time.Time `json:"deleted_at"`
+
+	// DeletedBy The raw payload that carried the upstream deletion.
+	DeletedBy    *ProvenanceDeletion  `json:"deleted_by"`
+	FetchedAt    *time.Time           `json:"fetched_at"`
+	ID           string               `json:"id"`
+	IngestedAt   time.Time            `json:"ingested_at"`
+	NormalizedAt time.Time            `json:"normalized_at"`
+	Normalizer   ProvenanceNormalizer `json:"normalizer"`
+	Provider     string               `json:"provider"`
+
+	// Raw Raw payload metadata; null for rows migrated without raw.
+	Raw *ProvenanceRaw `json:"raw"`
+
+	// Record The stored row's columns, plus metric, unit, device and origin codes and its stages, segments or components.
+	Record       json.RawMessage `json:"record"`
+	SupersededAt *time.Time      `json:"superseded_at"`
+	SupersededBy *string         `json:"superseded_by"`
+}
+
+// RawRef The row's raw payload; with include=provenance, when the row has one.
+type RawRef struct {
+	BatchID     openapi_types.UUID `json:"batch_id"`
+	ExternalKey string             `json:"external_key"`
+	FetchedAt   time.Time          `json:"fetched_at"`
+	SourceKind  string             `json:"source_kind"`
+	Stream      string             `json:"stream"`
+	Version     int                `json:"version"`
+}
+
+// RecordProvenance Version and provenance columns of a canonical row; GET /provenance/{entity}/{id} has the full trace.
+type RecordProvenance struct {
+	DeletedAt      *time.Time `json:"deleted_at"`
+	DeletedByRawID *string    `json:"deleted_by_raw_id"`
+	IngestedAt     time.Time  `json:"ingested_at"`
+	NormalizedAt   time.Time  `json:"normalized_at"`
+
+	// Normalizer name@version
+	Normalizer string `json:"normalizer"`
+
+	// Raw The row's raw payload; with include=provenance, when the row has one.
+	Raw *RawRef `json:"raw,omitempty"`
+
+	// RawPayloadID Null only for rows migrated without raw.
+	RawPayloadID *string    `json:"raw_payload_id"`
+	SupersededAt *time.Time `json:"superseded_at"`
+
+	// SupersededBy Id of the version that replaced this one.
+	SupersededBy *string `json:"superseded_by"`
+}
 
 // ResolutionPreview Open object; properties are added with the endpoint.
 type ResolutionPreview = map[string]interface{}
@@ -761,8 +1145,64 @@ type SleepPage struct {
 	Sleep      []SleepSession `json:"sleep"`
 }
 
-// SleepSession Open object.
-type SleepSession = map[string]interface{}
+// SleepSession One sleep session as the source reported it.
+type SleepSession struct {
+	AsleepS   *int               `json:"asleep_s"`
+	AwakeS    *int               `json:"awake_s"`
+	DeepS     *int               `json:"deep_s"`
+	EndAt     time.Time          `json:"end_at"`
+	HasStages bool               `json:"has_stages"`
+	ID        openapi_types.UUID `json:"id"`
+	IsNap     bool               `json:"is_nap"`
+	LatencyS  *int               `json:"latency_s"`
+	LightS    *int               `json:"light_s"`
+
+	// Provenance Version and provenance columns of a canonical row; GET /provenance/{entity}/{id} has the full trace.
+	Provenance RecordProvenance `json:"provenance"`
+	RemS       *int             `json:"rem_s"`
+
+	// SleepDate Local date of waking up.
+	SleepDate openapi_types.Date `json:"sleep_date"`
+
+	// Source Where a canonical row came from. device and origin are the values the device and origin filters take.
+	Source SourceRef `json:"source"`
+
+	// Stages With include=stages, and always on GET /sleep/{id}.
+	Stages  *[]SleepStage `json:"stages,omitempty"`
+	StartAt time.Time     `json:"start_at"`
+
+	// TotalsBasis Whether the *_s totals are provider-reported or summed from stages.
+	TotalsBasis SleepSessionTotalsBasis `json:"totals_basis"`
+	TzOffsetMin *int                    `json:"tz_offset_min"`
+}
+
+// SleepSessionTotalsBasis Whether the *_s totals are provider-reported or summed from stages.
+type SleepSessionTotalsBasis string
+
+// SleepStage defines model for SleepStage.
+type SleepStage struct {
+	EndAt   time.Time       `json:"end_at"`
+	Stage   SleepStageStage `json:"stage"`
+	StartAt time.Time       `json:"start_at"`
+}
+
+// SleepStageStage defines model for SleepStage.Stage.
+type SleepStageStage string
+
+// SourceRef Where a canonical row came from. device and origin are the values the device and origin filters take.
+type SourceRef struct {
+	ConnectionID ConnectionID `json:"connection_id"`
+	DedupeKey    string       `json:"dedupe_key"`
+	Device       *DeviceID    `json:"device"`
+	DeviceType   *string      `json:"device_type"`
+	ExternalID   *string      `json:"external_id"`
+
+	// Origin Origin key
+	Origin *string `json:"origin"`
+
+	// Provider Provider code.
+	Provider string `json:"provider"`
+}
 
 // SourcesDrilldown defines model for SourcesDrilldown.
 type SourcesDrilldown struct {
@@ -837,8 +1277,34 @@ type Window struct {
 	Start     *time.Time          `json:"start,omitempty"`
 }
 
-// Workout Open object.
-type Workout = map[string]interface{}
+// Workout One workout as the source reported it.
+type Workout struct {
+	AvgHrBpm   *float64  `json:"avg_hr_bpm"`
+	DistanceM  *float64  `json:"distance_m"`
+	EndAt      time.Time `json:"end_at"`
+	EnergyKcal *float64  `json:"energy_kcal"`
+
+	// FileSha256 Original activity file (FIT
+	FileSha256 *string            `json:"file_sha256"`
+	ID         openapi_types.UUID `json:"id"`
+	LocalDate  openapi_types.Date `json:"local_date"`
+	MaxHrBpm   *float64           `json:"max_hr_bpm"`
+
+	// Provenance Version and provenance columns of a canonical row; GET /provenance/{entity}/{id} has the full trace.
+	Provenance    RecordProvenance `json:"provenance"`
+	ProviderSport *string          `json:"provider_sport"`
+
+	// Segments With include=segments, and always on GET /workouts/{id}.
+	Segments *[]WorkoutSegment `json:"segments,omitempty"`
+
+	// Source Where a canonical row came from. device and origin are the values the device and origin filters take.
+	Source SourceRef `json:"source"`
+
+	// Sport Canonical sport.
+	Sport       string    `json:"sport"`
+	StartAt     time.Time `json:"start_at"`
+	TzOffsetMin *int      `json:"tz_offset_min"`
+}
 
 // WorkoutPage defines model for WorkoutPage.
 type WorkoutPage struct {
@@ -848,6 +1314,18 @@ type WorkoutPage struct {
 	NextCursor *string   `json:"next_cursor,omitempty"`
 	Workouts   []Workout `json:"workouts"`
 }
+
+// WorkoutSegment defines model for WorkoutSegment.
+type WorkoutSegment struct {
+	Data    json.RawMessage    `json:"data"`
+	EndAt   *time.Time         `json:"end_at"`
+	Kind    WorkoutSegmentKind `json:"kind"`
+	Seq     int                `json:"seq"`
+	StartAt time.Time          `json:"start_at"`
+}
+
+// WorkoutSegmentKind defines model for WorkoutSegment.Kind.
+type WorkoutSegmentKind string
 
 // ConnectionFilter defines model for ConnectionFilter.
 type ConnectionFilter = []ConnectionID
@@ -859,7 +1337,7 @@ type ConnectionIDPath = ConnectionID
 type Cursor = string
 
 // DeviceFilter defines model for DeviceFilter.
-type DeviceFilter = []string
+type DeviceFilter = []DeviceID
 
 // End defines model for End.
 type End = time.Time
@@ -936,13 +1414,19 @@ type ListBloodPressureParams struct {
 	// End Exclusive end instant (RFC 3339 with offset).
 	End *End `form:"end,omitempty" json:"end,omitempty"`
 
+	// StartDate First local date, inclusive.
+	StartDate *StartDate `form:"start_date,omitempty" json:"start_date,omitempty"`
+
+	// EndDate Last local date, inclusive.
+	EndDate *EndDate `form:"end_date,omitempty" json:"end_date,omitempty"`
+
 	// Provider Provider code; repeatable.
 	Provider *ProviderFilter `form:"provider,omitempty" json:"provider,omitempty"`
 
 	// Connection Connection id; repeatable.
 	Connection *ConnectionFilter `form:"connection,omitempty" json:"connection,omitempty"`
 
-	// Device Device id; repeatable.
+	// Device Device id (dev_…); repeatable.
 	Device *DeviceFilter `form:"device,omitempty" json:"device,omitempty"`
 
 	// Origin Origin key (e.g. a HealthKit bundle id); repeatable.
@@ -1051,13 +1535,19 @@ type ListGroupsParams struct {
 	// End Exclusive end instant (RFC 3339 with offset).
 	End *End `form:"end,omitempty" json:"end,omitempty"`
 
+	// StartDate First local date, inclusive.
+	StartDate *StartDate `form:"start_date,omitempty" json:"start_date,omitempty"`
+
+	// EndDate Last local date, inclusive.
+	EndDate *EndDate `form:"end_date,omitempty" json:"end_date,omitempty"`
+
 	// Provider Provider code; repeatable.
 	Provider *ProviderFilter `form:"provider,omitempty" json:"provider,omitempty"`
 
 	// Connection Connection id; repeatable.
 	Connection *ConnectionFilter `form:"connection,omitempty" json:"connection,omitempty"`
 
-	// Device Device id; repeatable.
+	// Device Device id (dev_…); repeatable.
 	Device *DeviceFilter `form:"device,omitempty" json:"device,omitempty"`
 
 	// Origin Origin key (e.g. a HealthKit bundle id); repeatable.
@@ -1113,6 +1603,12 @@ type ListMeasurementsParams struct {
 	// End Exclusive end instant (RFC 3339 with offset).
 	End *End `form:"end,omitempty" json:"end,omitempty"`
 
+	// StartDate First local date, inclusive.
+	StartDate *StartDate `form:"start_date,omitempty" json:"start_date,omitempty"`
+
+	// EndDate Last local date, inclusive.
+	EndDate *EndDate `form:"end_date,omitempty" json:"end_date,omitempty"`
+
 	// Metric Metric code; repeatable.
 	Metric *MetricFilter `form:"metric,omitempty" json:"metric,omitempty"`
 
@@ -1122,7 +1618,7 @@ type ListMeasurementsParams struct {
 	// Connection Connection id; repeatable.
 	Connection *ConnectionFilter `form:"connection,omitempty" json:"connection,omitempty"`
 
-	// Device Device id; repeatable.
+	// Device Device id (dev_…); repeatable.
 	Device *DeviceFilter `form:"device,omitempty" json:"device,omitempty"`
 
 	// Origin Origin key (e.g. a HealthKit bundle id); repeatable.
@@ -1158,6 +1654,9 @@ type ListOverridesParams struct {
 	// Cursor Opaque next_cursor from the previous page of the same query.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
+
+// GetProvenanceParamsEntity defines parameters for GetProvenance.
+type GetProvenanceParamsEntity string
 
 // GetResolvedDailyParams defines parameters for GetResolvedDaily.
 type GetResolvedDailyParams struct {
@@ -1201,6 +1700,12 @@ type GetResolvedWorkoutsParams struct {
 
 // ListSleepParams defines parameters for ListSleep.
 type ListSleepParams struct {
+	// Start Inclusive start instant (RFC 3339 with offset).
+	Start *Start `form:"start,omitempty" json:"start,omitempty"`
+
+	// End Exclusive end instant (RFC 3339 with offset).
+	End *End `form:"end,omitempty" json:"end,omitempty"`
+
 	// StartDate First local date, inclusive.
 	StartDate *StartDate `form:"start_date,omitempty" json:"start_date,omitempty"`
 
@@ -1213,7 +1718,7 @@ type ListSleepParams struct {
 	// Connection Connection id; repeatable.
 	Connection *ConnectionFilter `form:"connection,omitempty" json:"connection,omitempty"`
 
-	// Device Device id; repeatable.
+	// Device Device id (dev_…); repeatable.
 	Device *DeviceFilter `form:"device,omitempty" json:"device,omitempty"`
 
 	// Origin Origin key (e.g. a HealthKit bundle id); repeatable.
@@ -1249,13 +1754,19 @@ type ListWorkoutsParams struct {
 	// End Exclusive end instant (RFC 3339 with offset).
 	End *End `form:"end,omitempty" json:"end,omitempty"`
 
+	// StartDate First local date, inclusive.
+	StartDate *StartDate `form:"start_date,omitempty" json:"start_date,omitempty"`
+
+	// EndDate Last local date, inclusive.
+	EndDate *EndDate `form:"end_date,omitempty" json:"end_date,omitempty"`
+
 	// Provider Provider code; repeatable.
 	Provider *ProviderFilter `form:"provider,omitempty" json:"provider,omitempty"`
 
 	// Connection Connection id; repeatable.
 	Connection *ConnectionFilter `form:"connection,omitempty" json:"connection,omitempty"`
 
-	// Device Device id; repeatable.
+	// Device Device id (dev_…); repeatable.
 	Device *DeviceFilter `form:"device,omitempty" json:"device,omitempty"`
 
 	// Origin Origin key (e.g. a HealthKit bundle id); repeatable.
@@ -1282,6 +1793,12 @@ type GetWorkoutParams struct {
 
 // GetWorkoutParamsInclude defines parameters for GetWorkout.
 type GetWorkoutParamsInclude string
+
+// OauthCallbackParams defines parameters for OauthCallback.
+type OauthCallbackParams struct {
+	State *string `form:"state,omitempty" json:"state,omitempty"`
+	Code  *string `form:"code,omitempty" json:"code,omitempty"`
+}
 
 // CreateAnalyteAliasJSONRequestBody defines body for CreateAnalyteAlias for application/json ContentType.
 type CreateAnalyteAliasJSONRequestBody = AnalyteAlias
@@ -1396,7 +1913,7 @@ type ServerInterface interface {
 	// UpdateConnection Update a connection
 	// (PATCH /api/v1/connections/{id})
 	UpdateConnection(w http.ResponseWriter, r *http.Request, id ConnectionIDPath)
-	// BeginConnectionAuth Start interactive authorization (OAuth redirect or credential prompt)
+	// BeginConnectionAuth Reauthorize a connection (OAuth redirect or credential prompt)
 	// (POST /api/v1/connections/{id}/auth/begin)
 	BeginConnectionAuth(w http.ResponseWriter, r *http.Request, id ConnectionIDPath)
 	// ContinueConnectionAuth Continue interactive authorization (e.g. an MFA code)
@@ -1503,7 +2020,10 @@ type ServerInterface interface {
 	RevokeOverride(w http.ResponseWriter, r *http.Request, id ID)
 	// GetProvenance Trace a record back to its raw payload, batch and normalizer
 	// (GET /api/v1/provenance/{entity}/{id})
-	GetProvenance(w http.ResponseWriter, r *http.Request, entity string, id ID)
+	GetProvenance(w http.ResponseWriter, r *http.Request, entity GetProvenanceParamsEntity, id ID)
+	// BeginProviderAuth Connect an account of a provider (OAuth redirect)
+	// (POST /api/v1/providers/{provider}/auth/begin)
+	BeginProviderAuth(w http.ResponseWriter, r *http.Request, provider string)
 	// PreviewResolution Resolve a draft rule over a range without writing anything
 	// (POST /api/v1/resolution/preview)
 	PreviewResolution(w http.ResponseWriter, r *http.Request)
@@ -1564,6 +2084,9 @@ type ServerInterface interface {
 	// GetWorkout Get one workout
 	// (GET /api/v1/workouts/{id})
 	GetWorkout(w http.ResponseWriter, r *http.Request, id ID, params GetWorkoutParams)
+	// OauthCallback OAuth redirect target; completes the authorization and redirects to the UI
+	// (GET /oauth/{provider}/callback)
+	OauthCallback(w http.ResponseWriter, r *http.Request, provider string, params OauthCallbackParams)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -1772,6 +2295,32 @@ func (siw *ServerInterfaceWrapper) ListBloodPressure(w http.ResponseWriter, r *h
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "end"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "end", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "start_date" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "start_date", r.URL.Query(), &params.StartDate, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "start_date"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "start_date", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "end_date" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "end_date", r.URL.Query(), &params.EndDate, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "end_date"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "end_date", Err: err})
 		}
 		return
 	}
@@ -2855,6 +3404,32 @@ func (siw *ServerInterfaceWrapper) ListGroups(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// ------------- Optional query parameter "start_date" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "start_date", r.URL.Query(), &params.StartDate, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "start_date"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "start_date", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "end_date" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "end_date", r.URL.Query(), &params.EndDate, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "end_date"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "end_date", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "provider" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "provider", r.URL.Query(), &params.Provider, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
@@ -3149,6 +3724,32 @@ func (siw *ServerInterfaceWrapper) ListMeasurements(w http.ResponseWriter, r *ht
 		return
 	}
 
+	// ------------- Optional query parameter "start_date" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "start_date", r.URL.Query(), &params.StartDate, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "start_date"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "start_date", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "end_date" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "end_date", r.URL.Query(), &params.EndDate, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "end_date"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "end_date", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "metric" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "metric", r.URL.Query(), &params.Metric, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
@@ -3437,7 +4038,7 @@ func (siw *ServerInterfaceWrapper) GetProvenance(w http.ResponseWriter, r *http.
 	_ = err
 
 	// ------------- Path parameter "entity" -------------
-	var entity string
+	var entity GetProvenanceParamsEntity
 
 	err = runtime.BindStyledParameterWithOptions("simple", "entity", r.PathValue("entity"), &entity, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
 	if err != nil {
@@ -3456,6 +4057,32 @@ func (siw *ServerInterfaceWrapper) GetProvenance(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetProvenance(w, r, entity, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// BeginProviderAuth operation middleware
+func (siw *ServerInterfaceWrapper) BeginProviderAuth(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", r.PathValue("provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BeginProviderAuth(w, r, provider)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3866,6 +4493,32 @@ func (siw *ServerInterfaceWrapper) ListSleep(w http.ResponseWriter, r *http.Requ
 	// Parameter object where we will unmarshal all parameters from the context
 	var params ListSleepParams
 
+	// ------------- Optional query parameter "start" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "start", r.URL.Query(), &params.Start, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "start"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "start", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "end" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "end", r.URL.Query(), &params.End, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "end"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "end", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "start_date" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "start_date", r.URL.Query(), &params.StartDate, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
@@ -4127,6 +4780,32 @@ func (siw *ServerInterfaceWrapper) ListWorkouts(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// ------------- Optional query parameter "start_date" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "start_date", r.URL.Query(), &params.StartDate, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "start_date"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "start_date", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "end_date" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "end_date", r.URL.Query(), &params.EndDate, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "end_date"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "end_date", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "provider" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "provider", r.URL.Query(), &params.Provider, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
@@ -4262,6 +4941,61 @@ func (siw *ServerInterfaceWrapper) GetWorkout(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetWorkout(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// OauthCallback operation middleware
+func (siw *ServerInterfaceWrapper) OauthCallback(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", r.PathValue("provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params OauthCallbackParams
+
+	// ------------- Optional query parameter "state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "state", r.URL.Query(), &params.State, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "state"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "code" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "code", r.URL.Query(), &params.Code, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "code"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "code", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.OauthCallback(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4425,6 +5159,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/connections/{id}", wrapper.GetConnection)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/connections/{id}", wrapper.UpdateConnection)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/connections/{id}/auth/begin", wrapper.BeginConnectionAuth)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/providers/{provider}/auth/begin", wrapper.BeginProviderAuth)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/connections/{id}/auth/continue", wrapper.ContinueConnectionAuth)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/connections/{id}/sync", wrapper.SyncConnection)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/connections/{id}/backfills", wrapper.CreateBackfill)
@@ -4464,6 +5199,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/settings", wrapper.UpdateSettings)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/timezone-periods", wrapper.ListTimezonePeriods)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/timezone-periods", wrapper.CreateTimezonePeriod)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/oauth/{provider}/callback", wrapper.OauthCallback)
 
 	return m
 }
@@ -5676,6 +6412,20 @@ func (response BeginConnectionAuth409ApplicationProblemPlusJSONResponse) VisitBe
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginConnectionAuth503ApplicationProblemPlusJSONResponse Problem
+
+func (response BeginConnectionAuth503ApplicationProblemPlusJSONResponse) VisitBeginConnectionAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -8147,8 +8897,8 @@ func (response RevokeOverride409ApplicationProblemPlusJSONResponse) VisitRevokeO
 }
 
 type GetProvenanceRequestObject struct {
-	Entity string `json:"entity"`
-	ID     ID     `json:"id"`
+	Entity GetProvenanceParamsEntity `json:"entity"`
+	ID     ID                        `json:"id"`
 }
 
 type GetProvenanceResponseObject interface {
@@ -8209,6 +8959,72 @@ func (response GetProvenance404ApplicationProblemPlusJSONResponse) VisitGetProve
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderAuthRequestObject struct {
+	Provider string `json:"provider"`
+}
+
+type BeginProviderAuthResponseObject interface {
+	VisitBeginProviderAuthResponse(w http.ResponseWriter) error
+}
+
+type BeginProviderAuth200JSONResponse AuthStep
+
+func (response BeginProviderAuth200JSONResponse) VisitBeginProviderAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderAuth401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response BeginProviderAuth401ApplicationProblemPlusJSONResponse) VisitBeginProviderAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderAuth403ApplicationProblemPlusJSONResponse Problem
+
+func (response BeginProviderAuth403ApplicationProblemPlusJSONResponse) VisitBeginProviderAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderAuth503ApplicationProblemPlusJSONResponse Problem
+
+func (response BeginProviderAuth503ApplicationProblemPlusJSONResponse) VisitBeginProviderAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -9185,6 +10001,20 @@ func (response GetSleep404ApplicationProblemPlusJSONResponse) VisitGetSleepRespo
 	return err
 }
 
+type GetSleep422ApplicationProblemPlusJSONResponse Problem
+
+func (response GetSleep422ApplicationProblemPlusJSONResponse) VisitGetSleepResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetSystemStatusRequestObject struct {
 }
 
@@ -9553,6 +10383,45 @@ func (response GetWorkout404ApplicationProblemPlusJSONResponse) VisitGetWorkoutR
 	return err
 }
 
+type GetWorkout422ApplicationProblemPlusJSONResponse Problem
+
+func (response GetWorkout422ApplicationProblemPlusJSONResponse) VisitGetWorkoutResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type OauthCallbackRequestObject struct {
+	Provider string `json:"provider"`
+	Params   OauthCallbackParams
+}
+
+type OauthCallbackResponseObject interface {
+	VisitOauthCallbackResponse(w http.ResponseWriter) error
+}
+
+type OauthCallback204Response struct {
+}
+
+func (response OauthCallback204Response) VisitOauthCallbackResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type OauthCallback303Response struct {
+}
+
+func (response OauthCallback303Response) VisitOauthCallbackResponse(w http.ResponseWriter) error {
+	w.WriteHeader(303)
+	return nil
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// ListAnalyteAliases List analyte aliases
@@ -9606,7 +10475,7 @@ type StrictServerInterface interface {
 	// UpdateConnection Update a connection
 	// (PATCH /api/v1/connections/{id})
 	UpdateConnection(ctx context.Context, request UpdateConnectionRequestObject) (UpdateConnectionResponseObject, error)
-	// BeginConnectionAuth Start interactive authorization (OAuth redirect or credential prompt)
+	// BeginConnectionAuth Reauthorize a connection (OAuth redirect or credential prompt)
 	// (POST /api/v1/connections/{id}/auth/begin)
 	BeginConnectionAuth(ctx context.Context, request BeginConnectionAuthRequestObject) (BeginConnectionAuthResponseObject, error)
 	// ContinueConnectionAuth Continue interactive authorization (e.g. an MFA code)
@@ -9714,6 +10583,9 @@ type StrictServerInterface interface {
 	// GetProvenance Trace a record back to its raw payload, batch and normalizer
 	// (GET /api/v1/provenance/{entity}/{id})
 	GetProvenance(ctx context.Context, request GetProvenanceRequestObject) (GetProvenanceResponseObject, error)
+	// BeginProviderAuth Connect an account of a provider (OAuth redirect)
+	// (POST /api/v1/providers/{provider}/auth/begin)
+	BeginProviderAuth(ctx context.Context, request BeginProviderAuthRequestObject) (BeginProviderAuthResponseObject, error)
 	// PreviewResolution Resolve a draft rule over a range without writing anything
 	// (POST /api/v1/resolution/preview)
 	PreviewResolution(ctx context.Context, request PreviewResolutionRequestObject) (PreviewResolutionResponseObject, error)
@@ -9774,6 +10646,9 @@ type StrictServerInterface interface {
 	// GetWorkout Get one workout
 	// (GET /api/v1/workouts/{id})
 	GetWorkout(ctx context.Context, request GetWorkoutRequestObject) (GetWorkoutResponseObject, error)
+	// OauthCallback OAuth redirect target; completes the authorization and redirects to the UI
+	// (GET /oauth/{provider}/callback)
+	OauthCallback(ctx context.Context, request OauthCallbackRequestObject) (OauthCallbackResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -11249,7 +12124,7 @@ func (sh *strictHandler) RevokeOverride(w http.ResponseWriter, r *http.Request, 
 }
 
 // GetProvenance operation middleware
-func (sh *strictHandler) GetProvenance(w http.ResponseWriter, r *http.Request, entity string, id ID) {
+func (sh *strictHandler) GetProvenance(w http.ResponseWriter, r *http.Request, entity GetProvenanceParamsEntity, id ID) {
 	var request GetProvenanceRequestObject
 
 	request.Entity = entity
@@ -11268,6 +12143,32 @@ func (sh *strictHandler) GetProvenance(w http.ResponseWriter, r *http.Request, e
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetProvenanceResponseObject); ok {
 		if err := validResponse.VisitGetProvenanceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// BeginProviderAuth operation middleware
+func (sh *strictHandler) BeginProviderAuth(w http.ResponseWriter, r *http.Request, provider string) {
+	var request BeginProviderAuthRequestObject
+
+	request.Provider = provider
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.BeginProviderAuth(ctx, request.(BeginProviderAuthRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "BeginProviderAuth")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(BeginProviderAuthResponseObject); ok {
+		if err := validResponse.VisitBeginProviderAuthResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -11810,6 +12711,33 @@ func (sh *strictHandler) GetWorkout(w http.ResponseWriter, r *http.Request, id I
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetWorkoutResponseObject); ok {
 		if err := validResponse.VisitGetWorkoutResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// OauthCallback operation middleware
+func (sh *strictHandler) OauthCallback(w http.ResponseWriter, r *http.Request, provider string, params OauthCallbackParams) {
+	var request OauthCallbackRequestObject
+
+	request.Provider = provider
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.OauthCallback(ctx, request.(OauthCallbackRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "OauthCallback")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(OauthCallbackResponseObject); ok {
+		if err := validResponse.VisitOauthCallbackResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
