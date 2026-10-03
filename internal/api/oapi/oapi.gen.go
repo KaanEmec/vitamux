@@ -1773,6 +1773,9 @@ type RuleVersion struct {
 	Metric string  `json:"metric"`
 	Note   *string `json:"note"`
 
+	// Reason Built-ins only: why the ladder is ordered this way (docs/resolution-defaults.md).
+	Reason *string `json:"reason,omitempty"`
+
 	// Ref rule:<metric>:<n> for the owner's versions, builtin:<metric>:<n> for built-ins.
 	Ref string `json:"ref"`
 

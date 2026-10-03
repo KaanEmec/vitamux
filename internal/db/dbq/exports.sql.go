@@ -135,7 +135,7 @@ func (q *Queries) ExportClients(ctx context.Context, arg ExportClientsParams) ([
 }
 
 const exportConnections = `-- name: ExportConnections :many
-SELECT id, to_jsonb(t)::jsonb AS row FROM connections t
+SELECT id, (to_jsonb(t) - 'hook_token_hash')::jsonb AS row FROM connections t
 WHERE user_id = $1 AND id > $2::uuid ORDER BY id LIMIT $3
 `
 
@@ -150,6 +150,7 @@ type ExportConnectionsRow struct {
 	Row json.RawMessage
 }
 
+// Without the webhook token hash: notifications are subscribed again after re-authorization.
 func (q *Queries) ExportConnections(ctx context.Context, arg ExportConnectionsParams) ([]ExportConnectionsRow, error) {
 	rows, err := q.db.Query(ctx, exportConnections, arg.UserID, arg.After, arg.Lim)
 	if err != nil {

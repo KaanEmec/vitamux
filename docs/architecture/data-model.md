@@ -57,7 +57,8 @@ erDiagram
 | Canonical | `metric_catalog` · `units` · `normalizer_versions` · `measurements` (below) · `measurement_groups` (`kind` bp_reading/body_composition, `measured_at`, `context` jsonb) · `sleep_sessions` (`sleep_date` = local wake date, `is_nap`, stage totals, `totals_basis`, `has_stages`) · `sleep_stages` (awake/light/deep/rem/asleep_unspecified/in_bed) · `workouts` (canonical and provider sport, distance, energy, HR, `file_blob_sha256`) · `workout_segments` (lap/set/interval, `data` jsonb) |
 | Resolution | `resolution_rules`, `active_rules`, `manual_overrides`, `resolution_dirty`, `resolved_cache`, `source_hourly_aggregates` ([resolution.md](resolution.md)) |
 | Documents | `documents`, `document_keys`, `extraction_runs`, `lab_extracted_rows`, `extraction_row_edits`, `lab_reports`, `lab_results`, `lab_result_revisions`, `analytes`, `analyte_aliases` ([lab-documents.md](lab-documents.md)) |
-| Imports | `import_runs`, `import_items` (unique `(source, item_key, checksum)`) — used by Apple export and migration importers |
+| Imports | `import_runs`, `import_items` (unique `(source, item_key, checksum)`) — used by Apple export, migration and NDJSON importers |
+| Exports | `exports` (job, zip blob, expiry, hashed one-time download token). A new table with owner data must be added to `internal/export/tables.go` ([api.md](api.md#exports)) |
 
 Device fields used by rule selectors:
 

@@ -1999,6 +1999,8 @@ export interface components {
              * @description Null for built-ins.
              */
             created_at: string | null;
+            /** @description Built-ins only: why the ladder is ordered this way (docs/resolution-defaults.md). */
+            reason?: string;
         };
         RuleVersionInput: {
             /** @description The typed rule (docs/architecture/resolution.md#rule-specification); its metric must be the path's. A sum across sources needs acknowledged_warnings in the spec, else 409 rule_warning_unacknowledged. */

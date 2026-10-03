@@ -2890,6 +2890,7 @@ components:
         note: {type: [string, 'null']}
         created_by: {type: [string, 'null'], description: Audit actor; null for built-ins.}
         created_at: {type: [string, 'null'], format: date-time, description: Null for built-ins.}
+        reason: {type: string, description: 'Built-ins only: why the ladder is ordered this way (docs/resolution-defaults.md).'}
     RuleVersionInput:
       type: object
       additionalProperties: false

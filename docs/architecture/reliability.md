@@ -71,3 +71,4 @@ Re-running a job or re-importing a file changes nothing.
 - `vitamux restore --from DIR` restores into an empty DB and copies blobs. It verifies the manifest, blob references, and `vitamux resolve verify`, and refuses on any checksum mismatch.
 - The master key is never in the bundle and must be backed up separately.
 - A restore drill runs in CI on synthetic data.
+- Backup vs export: a backup is the whole instance (secrets, jobs, sealed documents) for disaster recovery and needs the master key. An [export](api.md#exports) is the owner's data as portable NDJSON without secrets, readable by other tools and importable into a fresh or existing instance of the same schema version; it is not a backup.
