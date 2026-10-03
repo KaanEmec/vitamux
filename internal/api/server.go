@@ -17,6 +17,7 @@ import (
 	"github.com/KaanEmec/vitamux/internal/connectors/withings"
 	"github.com/KaanEmec/vitamux/internal/crypto"
 	"github.com/KaanEmec/vitamux/internal/db"
+	"github.com/KaanEmec/vitamux/internal/documents/extract"
 	"github.com/KaanEmec/vitamux/internal/version"
 )
 
@@ -52,6 +53,8 @@ type Options struct {
 	Connectors *connectors.Runtime
 	// Withings handles Withings notification callbacks; nil answers 404.
 	Withings *withings.Notifications
+	// Extract starts and lists document extractions; nil answers 503.
+	Extract *extract.Service
 }
 
 // NewHandler builds the root HTTP handler: the route table behind the middleware chain.
@@ -99,7 +102,12 @@ func newRouter(log *slog.Logger, ui fs.FS, opts Options) (*router, error) {
 	rt.webhookRoutes()
 	rt.exportRoutes()
 	rt.documentRoutes()
+	rt.extractionRoutes()
 	rt.analyteRoutes()
+	rt.ruleRoutes()
+	rt.connectionRoutes()
+	rt.configRoutes()
+	rt.manualRoutes()
 	return rt, nil
 }
 

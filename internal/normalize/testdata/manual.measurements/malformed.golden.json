@@ -1,0 +1,6 @@
+{
+  "synthetic": true,
+  "normalizer": "manual.measurements",
+  "version": 1,
+  "error": "manual entry: malformed body"
+}

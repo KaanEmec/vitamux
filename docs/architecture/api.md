@@ -34,12 +34,12 @@
 | Resolved | `GET /resolved/daily`, `/resolved/series?metric&start&end&window`, `/resolved/sleep`, `/resolved/workouts`, `/resolved/{metric}/{window_key}/sources`; `POST /resolution/preview` (draft rule × range; no writes) |
 | Rules and overrides | `GET /rules`, `GET /rules/{metric}/versions`, `POST /rules/{metric}/versions`, `POST /rules/{metric}/activate`, `GET/POST /overrides`, `POST /overrides/{id}/revoke` |
 | Coverage and health | `GET /coverage?start_date&end_date&metric`, `GET /system/status`, `GET /system/version`, `GET /jobs` |
-| Connections | `GET/POST /connections`, `GET/PATCH/DELETE /connections/{id}` (`?data=keep\|delete`), `POST …/auth/begin\|continue`, `POST /providers/{provider}/auth/begin` ([OAuth flow](connectors.md#oauth-connection-flow)), `POST …/sync`, `POST …/backfills`, `GET …/runs`, `GET …/streams`, `POST …/streams/{s}/reset-cursor` |
-| Manual data | `POST /measurements/manual` (provider `manual`, audited) |
+| Connections | `GET/POST /connections` (POST: push connections only), `GET/PATCH/DELETE /connections/{id}` (PATCH pauses/resumes; `?data=keep` disconnects, `?data=delete` also removes its raw payloads, canonical rows, cursors, schedules and jobs, 409 while one of its jobs runs), `POST …/auth/begin\|continue`, `POST /providers/{provider}/auth/begin` ([OAuth flow](connectors.md#oauth-connection-flow)), `POST …/sync` (one job per stream, coalesced with a pending one), `GET/POST …/backfills`, `GET …/backfills/{id}`, `POST …/backfills/{id}/retry\|cancel`, `GET …/runs`, `GET …/streams`, `POST …/streams/{s}/reset-cursor`, `GET /schedules`, `PATCH /schedules/{id}` |
+| Manual data | `POST /measurements/manual`: stored as a raw payload (stream `manual.measurements`) of the owner's provider-`manual` connection and normalized by `normalize.Manual` (flag `manual_entry`; grouped metrics such as weight become a one-component reading), audited |
 | Devices | `POST /devices/pairing-codes`, `GET /devices`, `POST /devices/{id}/request-anchor-reset`, `POST /devices/{id}/revoke` |
 | Documents and labs | `POST/GET /documents`, `GET /documents/{id}[/file]`, `DELETE /documents/{id}?derived=keep\|delete`, `POST /documents/{id}/extractions`, `GET /extractions/{id}`, `PATCH /extractions/{id}/rows/{row}`, `POST /extractions/{id}/confirm`, `GET /lab-results`, `GET /lab-results/{id}/history`, `GET/POST /analytes/aliases`, `DELETE /analytes/aliases/{id}` |
 | Exports | `POST /exports`, `GET /exports/{id}`, `GET /exports/{id}/download` |
-| Auth and settings | `POST /auth/login\|logout`, `GET /auth/session`, `POST /auth/totp/enroll\|confirm\|disable`, `GET/POST /api-keys`, `DELETE /api-keys/{id}`, `GET/PATCH /settings`, `GET/POST /timezone-periods` |
+| Auth and settings | `POST /auth/login\|logout`, `GET /auth/session`, `POST /auth/totp/enroll\|confirm\|disable`, `GET/POST /api-keys`, `DELETE /api-keys/{id}`, `GET/PATCH /settings` (`withings.notifications`), `GET/POST /timezone-periods`, `PATCH/DELETE /timezone-periods/{id}` |
 
 ## Implementing owner endpoints
 

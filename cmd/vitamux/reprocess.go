@@ -33,7 +33,7 @@ It queues a job for the running server; --wait prints the result when the job fi
 
 // normalizers is every normalizer this build ships. Connectors (E08, E15) add theirs here.
 func normalizers() (*normalize.Registry, error) {
-	return normalize.NewRegistry(withings.Normalizer{})
+	return normalize.NewRegistry(withings.Normalizer{}, normalize.Manual{})
 }
 
 func reprocess(args []string, stdout, stderr io.Writer) int {

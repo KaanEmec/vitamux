@@ -296,6 +296,10 @@ func Retain(ctx context.Context, q *dbq.Queries, sum []byte) error {
 	return addRef(ctx, q, sum, 1)
 }
 
+// LockShared takes the writers' side of the blob lock until commit, for a bulk reference change
+// made in SQL (Retain and Release take it themselves).
+func LockShared(ctx context.Context, q *dbq.Queries) error { return q.LockBlobsShared(ctx, lockKey) }
+
 // Release drops a reference, in the transaction that deletes the referencing row.
 func Release(ctx context.Context, q *dbq.Queries, sum []byte) error {
 	return addRef(ctx, q, sum, -1)

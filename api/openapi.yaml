@@ -235,6 +235,7 @@ paths:
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
 
   /api/v1/groups:
     get:
@@ -878,6 +879,7 @@ paths:
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
         '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
     delete:
       tags: [connections]
@@ -889,6 +891,10 @@ paths:
         - name: data
           in: query
           required: true
+          description: >
+            keep deletes the credentials and disables the connection; its data stays.
+            delete also removes its raw payloads, canonical rows, cursors, schedules and jobs
+            (refused with 409 while one of its jobs runs).
           schema: {type: string, enum: [keep, delete]}
       responses:
         '204':
@@ -896,7 +902,9 @@ paths:
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
         '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
 
   /api/v1/connections/{id}/auth/begin:
     post:
@@ -976,6 +984,7 @@ paths:
       tags: [connections]
       operationId: syncConnection
       summary: Queue a manual sync (coalesced with a pending one)
+      description: One sync job per stream of the connector. A request while one is queued or running answers that job, so repeated clicks queue nothing new.
       security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
@@ -985,13 +994,35 @@ paths:
           description: Queued.
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/Job'}
+              schema: {$ref: '#/components/schemas/SyncQueued'}
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
         '404': {$ref: '#/components/responses/Problem'}
         '409': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
 
   /api/v1/connections/{id}/backfills:
+    get:
+      tags: [connections]
+      operationId: listBackfills
+      summary: List a connection's backfills, newest first
+      security: [{session: []}, {apiKey: ['read:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ConnectionIDPath'
+      responses:
+        '200':
+          description: Backfills.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [backfills]
+                properties:
+                  backfills: {type: array, items: {$ref: '#/components/schemas/Backfill'}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
     post:
       tags: [connections]
       operationId: createBackfill
@@ -1007,15 +1038,83 @@ paths:
             schema: {$ref: '#/components/schemas/BackfillInput'}
       responses:
         '202':
-          description: Queued.
+          description: Queued; one job per unit.
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/Job'}
+              schema: {$ref: '#/components/schemas/Backfill'}
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
         '404': {$ref: '#/components/responses/Problem'}
         '409': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/connections/{id}/backfills/{backfill_id}:
+    get:
+      tags: [connections]
+      operationId: getBackfill
+      summary: Get a backfill with its units
+      security: [{session: []}, {apiKey: ['read:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ConnectionIDPath'
+        - $ref: '#/components/parameters/BackfillIDPath'
+      responses:
+        '200':
+          description: The backfill.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Backfill'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/connections/{id}/backfills/{backfill_id}/retry:
+    post:
+      tags: [connections]
+      operationId: retryBackfill
+      summary: Requeue a backfill's failed (or unfinished) units
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ConnectionIDPath'
+        - $ref: '#/components/parameters/BackfillIDPath'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/BackfillRetryInput'}
+      responses:
+        '200':
+          description: The backfill after the retry.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Backfill'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/connections/{id}/backfills/{backfill_id}/cancel:
+    post:
+      tags: [connections]
+      operationId: cancelBackfill
+      summary: Cancel a running or failed backfill (fetched data stays)
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ConnectionIDPath'
+        - $ref: '#/components/parameters/BackfillIDPath'
+      responses:
+        '200':
+          description: The cancelled backfill.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Backfill'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
 
   /api/v1/connections/{id}/runs:
     get:
@@ -1072,6 +1171,10 @@ paths:
           in: path
           required: true
           schema: {type: string}
+      description: >
+        The next incremental sync starts over from the connector's initial window; stored data is
+        kept and re-fetched records deduplicate. In-process connections only, and not while one
+        of the connection's jobs runs (409).
       responses:
         '200':
           description: The stream after reset.
@@ -1081,6 +1184,57 @@ paths:
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
         '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/schedules:
+    get:
+      tags: [connections]
+      operationId: listSchedules
+      summary: List sync schedules
+      security: [{session: []}, {apiKey: ['read:config']}]
+      parameters:
+        - name: connection
+          in: query
+          required: false
+          description: Only this connection's schedules.
+          schema: {$ref: '#/components/schemas/ConnectionID'}
+      responses:
+        '200':
+          description: Schedules.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [schedules]
+                properties:
+                  schedules: {type: array, items: {$ref: '#/components/schemas/Schedule'}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/schedules/{id}:
+    patch:
+      tags: [connections]
+      operationId: updateSchedule
+      summary: Change a schedule's interval, lookback or enabled flag
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SchedulePatch'}
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Schedule'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
 
   # ---------------------------------------------------------------- devices
   /api/v1/devices:
@@ -1263,16 +1417,42 @@ paths:
         '503': {$ref: '#/components/responses/Problem'}
 
   /api/v1/documents/{id}/extractions:
+    get:
+      tags: [documents]
+      operationId: listExtractions
+      summary: List a document's extraction runs, newest first (never the raw provider response)
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: The runs.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [extractions]
+                properties:
+                  extractions: {type: array, items: {$ref: '#/components/schemas/Extraction'}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
     post:
       tags: [documents]
       operationId: createExtraction
       summary: Start an extraction run (may send the PDF to the configured external extractor)
+      description: >-
+        Queues an `extract_document` job (ADR-0013). An external provider must be configured and enabled
+        (`documents.external_ai.<provider>.enabled`), else 403 `forbidden`; the body must carry `consent` naming the
+        same provider and its configured model, else 409 `consent_required`. `fake` needs neither. A run already
+        queued or running answers 409 `conflict`. Idempotency-Key is accepted.
       security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
       parameters:
         - $ref: '#/components/parameters/ID'
         - $ref: '#/components/parameters/IdempotencyKeyOptional'
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema: {$ref: '#/components/schemas/ExtractionInput'}
@@ -1287,6 +1467,7 @@ paths:
         '404': {$ref: '#/components/responses/Problem'}
         '409': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
 
   /api/v1/extractions/{id}:
     get:
@@ -1459,6 +1640,9 @@ paths:
       tags: [exports]
       operationId: createExport
       summary: Start an export job
+      description: >
+        Needs the admin scope: an export holds every health row, raw payload, rule and audit
+        event at once. 409 while another export is queued or running.
       security: [{session: [], csrf: []}, {apiKey: [admin]}]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKeyOptional'
@@ -1501,6 +1685,7 @@ paths:
       tags: [exports]
       operationId: downloadExport
       summary: Download the export zip with its one-time, short-lived token
+      description: The token comes from getExport, works once and expires after 10 minutes (403 otherwise).
       security: [{session: []}, {apiKey: [admin]}]
       parameters:
         - $ref: '#/components/parameters/ID'
@@ -1733,6 +1918,7 @@ paths:
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
 
   /api/v1/timezone-periods:
     get:
@@ -1761,7 +1947,7 @@ paths:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/TimezonePeriod'}
+            schema: {$ref: '#/components/schemas/TimezonePeriodInput'}
       responses:
         '201':
           description: Created.
@@ -1772,6 +1958,44 @@ paths:
         '403': {$ref: '#/components/responses/Problem'}
         '409': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/timezone-periods/{id}:
+    patch:
+      tags: [settings]
+      operationId: updateTimezonePeriod
+      summary: Change a timezone period's zone or start (local dates are recomputed)
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/TimezonePeriodInput'}
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TimezonePeriod'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+    delete:
+      tags: [settings]
+      operationId: deleteTimezonePeriod
+      summary: Remove a timezone period (the previous one extends; local dates are recomputed)
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '204':
+          description: Removed.
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
 
   # ---------------------------------------------------------------- provider callbacks (not under /api)
   /oauth/{provider}/callback:
@@ -1887,6 +2111,11 @@ components:
       in: path
       required: true
       schema: {$ref: '#/components/schemas/ConnectionID'}
+    BackfillIDPath:
+      name: backfill_id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
     MetricPath:
       name: metric
       in: path
@@ -2263,8 +2492,8 @@ components:
       type: object
       required: [format]
       properties:
-        scope: {type: object, description: What to export; everything when omitted. Properties are added with the endpoint.}
-        format: {type: string, enum: [ndjson, csv]}
+        scope: {type: object, description: Reserved for partial exports; only an empty object (everything) is accepted.}
+        format: {type: string, enum: [ndjson, csv], description: 'ndjson: one NDJSON file per table; csv: the same plus measurements.csv.'}
         include_raw: {type: boolean, default: false}
     Export:
       type: object
@@ -2900,8 +3129,54 @@ components:
           required: [documents]
           properties:
             documents: {type: array, items: {$ref: '#/components/schemas/Document'}}
-    ExtractionInput: {type: object, description: Extractor choice and consent to send externally. Open object.}
-    Extraction: {type: object, description: Open object.}
+    ExtractionInput:
+      type: object
+      description: Extractor choice and the owner's consent to send the PDF to it (ADR-0013).
+      additionalProperties: false
+      required: [provider]
+      properties:
+        provider: {type: string, enum: [fake, gemini, openai, openai_compatible]}
+        consent:
+          oneOf:
+            - {$ref: '#/components/schemas/ExtractionConsent'}
+            - {type: 'null'}
+    ExtractionConsent:
+      type: object
+      description: Required for external providers; provider and model must match the configured ones, which the UI shows before asking.
+      additionalProperties: false
+      required: [provider, model, acknowledged_at]
+      properties:
+        provider: {type: string}
+        model: {type: string}
+        acknowledged_at: {type: string, format: date-time}
+    Extraction:
+      type: object
+      description: One extraction run. The raw provider response is stored encrypted and never returned.
+      required: [id, document_id, status, provider, model, external, consent, schema_version, prompt_version, provider_request_id,
+        document, usage, warnings, error_class, row_count, created_by, created_at, started_at, finished_at]
+      properties:
+        id: {type: string, pattern: '^ext_[0-9a-f]{32}$'}
+        document_id: {type: string, pattern: '^doc_[0-9a-f]{32}$'}
+        status: {type: string, enum: [queued, running, succeeded, failed, confirmed], description: 'queued with an error_class: the last attempt failed and will be retried.'}
+        provider: {type: string}
+        model: {type: [string, 'null'], description: Model the provider reported (or the configured one).}
+        external: {type: boolean, description: True when the PDF was sent off the host.}
+        consent:
+          oneOf:
+            - {$ref: '#/components/schemas/ExtractionConsent'}
+            - {type: 'null'}
+        schema_version: {type: string}
+        prompt_version: {type: string}
+        provider_request_id: {type: [string, 'null']}
+        document: {type: object, description: 'Document-level fields as extracted (laboratory, specimen_type, dates, page_count); empty until succeeded.', x-go-type: json.RawMessage}
+        usage: {type: object, description: Token counts the provider reported., x-go-type: json.RawMessage}
+        warnings: {type: array, items: {type: string}, description: Document-level extractor warnings.}
+        error_class: {type: [string, 'null'], description: 'Why the run failed (or the last attempt): provider_disabled, consent_mismatch, auth, rejected, rate_limited, transient, too_large, refused, invalid_output, unknown_document, provider_unavailable, abandoned.'}
+        row_count: {type: integer, minimum: 0}
+        created_by: {type: string}
+        created_at: {type: string, format: date-time}
+        started_at: {type: [string, 'null'], format: date-time}
+        finished_at: {type: [string, 'null'], format: date-time}
     ExtractionRow: {type: object, description: Open object.}
     ExtractionRowPatch: {type: object, description: Open object.}
     LabResult: {type: object, description: Open object.}

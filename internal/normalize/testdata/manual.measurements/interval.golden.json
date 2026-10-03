@@ -1,0 +1,25 @@
+{
+  "synthetic": true,
+  "normalizer": "manual.measurements",
+  "version": 1,
+  "output": {
+    "measurements": [
+      {
+        "metric": "steps",
+        "kind": "interval",
+        "start": "2026-09-14T09:00:00-04:00",
+        "end": "2026-09-14T10:00:00-04:00",
+        "zone": {
+          "offset_min": -240
+        },
+        "value": 4200,
+        "unit": "count",
+        "flags": 1,
+        "key": {
+          "record_type": "entry",
+          "external_id": "interval"
+        }
+      }
+    ]
+  }
+}

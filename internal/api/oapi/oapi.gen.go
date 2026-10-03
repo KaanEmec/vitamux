@@ -39,6 +39,123 @@ func (e AnalyteAliasSource) Valid() bool {
 	}
 }
 
+// Defines values for BackfillStatus.
+const (
+	BackfillStatusCancelled BackfillStatus = "cancelled"
+	BackfillStatusDone      BackfillStatus = "done"
+	BackfillStatusFailed    BackfillStatus = "failed"
+	BackfillStatusRunning   BackfillStatus = "running"
+)
+
+// Valid indicates whether the value is a known member of the BackfillStatus enum.
+func (e BackfillStatus) Valid() bool {
+	switch e {
+	case BackfillStatusCancelled:
+		return true
+	case BackfillStatusDone:
+		return true
+	case BackfillStatusFailed:
+		return true
+	case BackfillStatusRunning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BackfillUnitStatus.
+const (
+	BackfillUnitStatusDone    BackfillUnitStatus = "done"
+	BackfillUnitStatusFailed  BackfillUnitStatus = "failed"
+	BackfillUnitStatusPending BackfillUnitStatus = "pending"
+	BackfillUnitStatusRunning BackfillUnitStatus = "running"
+)
+
+// Valid indicates whether the value is a known member of the BackfillUnitStatus enum.
+func (e BackfillUnitStatus) Valid() bool {
+	switch e {
+	case BackfillUnitStatusDone:
+		return true
+	case BackfillUnitStatusFailed:
+		return true
+	case BackfillUnitStatusPending:
+		return true
+	case BackfillUnitStatusRunning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConnectionMode.
+const (
+	InProcess ConnectionMode = "in_process"
+	Push      ConnectionMode = "push"
+	Remote    ConnectionMode = "remote"
+)
+
+// Valid indicates whether the value is a known member of the ConnectionMode enum.
+func (e ConnectionMode) Valid() bool {
+	switch e {
+	case InProcess:
+		return true
+	case Push:
+		return true
+	case Remote:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConnectionStatus.
+const (
+	ConnectionStatusActive      ConnectionStatus = "active"
+	ConnectionStatusDegraded    ConnectionStatus = "degraded"
+	ConnectionStatusDisabled    ConnectionStatus = "disabled"
+	ConnectionStatusError       ConnectionStatus = "error"
+	ConnectionStatusNeedsReauth ConnectionStatus = "needs_reauth"
+	ConnectionStatusPaused      ConnectionStatus = "paused"
+)
+
+// Valid indicates whether the value is a known member of the ConnectionStatus enum.
+func (e ConnectionStatus) Valid() bool {
+	switch e {
+	case ConnectionStatusActive:
+		return true
+	case ConnectionStatusDegraded:
+		return true
+	case ConnectionStatusDisabled:
+		return true
+	case ConnectionStatusError:
+		return true
+	case ConnectionStatusNeedsReauth:
+		return true
+	case ConnectionStatusPaused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConnectionPatchStatus.
+const (
+	ConnectionPatchStatusActive ConnectionPatchStatus = "active"
+	ConnectionPatchStatusPaused ConnectionPatchStatus = "paused"
+)
+
+// Valid indicates whether the value is a known member of the ConnectionPatchStatus enum.
+func (e ConnectionPatchStatus) Valid() bool {
+	switch e {
+	case ConnectionPatchStatusActive:
+		return true
+	case ConnectionPatchStatusPaused:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DocumentStatus.
 const (
 	DocumentStatusConfirmed   DocumentStatus = "confirmed"
@@ -86,22 +203,22 @@ func (e ExportFormat) Valid() bool {
 
 // Defines values for ExportStatus.
 const (
-	Done    ExportStatus = "done"
-	Failed  ExportStatus = "failed"
-	Queued  ExportStatus = "queued"
-	Running ExportStatus = "running"
+	ExportStatusDone    ExportStatus = "done"
+	ExportStatusFailed  ExportStatus = "failed"
+	ExportStatusQueued  ExportStatus = "queued"
+	ExportStatusRunning ExportStatus = "running"
 )
 
 // Valid indicates whether the value is a known member of the ExportStatus enum.
 func (e ExportStatus) Valid() bool {
 	switch e {
-	case Done:
+	case ExportStatusDone:
 		return true
-	case Failed:
+	case ExportStatusFailed:
 		return true
-	case Queued:
+	case ExportStatusQueued:
 		return true
-	case Running:
+	case ExportStatusRunning:
 		return true
 	default:
 		return false
@@ -126,6 +243,57 @@ func (e ExportRequestFormat) Valid() bool {
 	}
 }
 
+// Defines values for ExtractionStatus.
+const (
+	ExtractionStatusConfirmed ExtractionStatus = "confirmed"
+	ExtractionStatusFailed    ExtractionStatus = "failed"
+	ExtractionStatusQueued    ExtractionStatus = "queued"
+	ExtractionStatusRunning   ExtractionStatus = "running"
+	ExtractionStatusSucceeded ExtractionStatus = "succeeded"
+)
+
+// Valid indicates whether the value is a known member of the ExtractionStatus enum.
+func (e ExtractionStatus) Valid() bool {
+	switch e {
+	case ExtractionStatusConfirmed:
+		return true
+	case ExtractionStatusFailed:
+		return true
+	case ExtractionStatusQueued:
+		return true
+	case ExtractionStatusRunning:
+		return true
+	case ExtractionStatusSucceeded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExtractionInputProvider.
+const (
+	Fake             ExtractionInputProvider = "fake"
+	Gemini           ExtractionInputProvider = "gemini"
+	Openai           ExtractionInputProvider = "openai"
+	OpenaiCompatible ExtractionInputProvider = "openai_compatible"
+)
+
+// Valid indicates whether the value is a known member of the ExtractionInputProvider enum.
+func (e ExtractionInputProvider) Valid() bool {
+	switch e {
+	case Fake:
+		return true
+	case Gemini:
+		return true
+	case Openai:
+		return true
+	case OpenaiCompatible:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GroupKind.
 const (
 	GroupKindBodyComposition GroupKind = "body_composition"
@@ -138,6 +306,69 @@ func (e GroupKind) Valid() bool {
 	case GroupKindBodyComposition:
 		return true
 	case GroupKindBpReading:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Health.
+const (
+	HealthDegraded    Health = "degraded"
+	HealthDisabled    Health = "disabled"
+	HealthFailing     Health = "failing"
+	HealthNeedsReauth Health = "needs_reauth"
+	HealthOk          Health = "ok"
+	HealthPaused      Health = "paused"
+	HealthStale       Health = "stale"
+)
+
+// Valid indicates whether the value is a known member of the Health enum.
+func (e Health) Valid() bool {
+	switch e {
+	case HealthDegraded:
+		return true
+	case HealthDisabled:
+		return true
+	case HealthFailing:
+		return true
+	case HealthNeedsReauth:
+		return true
+	case HealthOk:
+		return true
+	case HealthPaused:
+		return true
+	case HealthStale:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JobStatus.
+const (
+	JobStatusCancelled JobStatus = "cancelled"
+	JobStatusDead      JobStatus = "dead"
+	JobStatusFailed    JobStatus = "failed"
+	JobStatusQueued    JobStatus = "queued"
+	JobStatusRunning   JobStatus = "running"
+	JobStatusSucceeded JobStatus = "succeeded"
+)
+
+// Valid indicates whether the value is a known member of the JobStatus enum.
+func (e JobStatus) Valid() bool {
+	switch e {
+	case JobStatusCancelled:
+		return true
+	case JobStatusDead:
+		return true
+	case JobStatusFailed:
+		return true
+	case JobStatusQueued:
+		return true
+	case JobStatusRunning:
+		return true
+	case JobStatusSucceeded:
 		return true
 	default:
 		return false
@@ -162,6 +393,81 @@ func (e MeasurementKind) Valid() bool {
 	case MeasurementKindInterval:
 		return true
 	case MeasurementKindSample:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OverrideAction.
+const (
+	OverrideActionExcludeInput OverrideAction = "exclude_input"
+	OverrideActionForceSource  OverrideAction = "force_source"
+	OverrideActionSetValue     OverrideAction = "set_value"
+)
+
+// Valid indicates whether the value is a known member of the OverrideAction enum.
+func (e OverrideAction) Valid() bool {
+	switch e {
+	case OverrideActionExcludeInput:
+		return true
+	case OverrideActionForceSource:
+		return true
+	case OverrideActionSetValue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OverrideInputAction.
+const (
+	OverrideInputActionExcludeInput OverrideInputAction = "exclude_input"
+	OverrideInputActionForceSource  OverrideInputAction = "force_source"
+	OverrideInputActionSetValue     OverrideInputAction = "set_value"
+)
+
+// Valid indicates whether the value is a known member of the OverrideInputAction enum.
+func (e OverrideInputAction) Valid() bool {
+	switch e {
+	case OverrideInputActionExcludeInput:
+		return true
+	case OverrideInputActionForceSource:
+		return true
+	case OverrideInputActionSetValue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OverrideWindowKind.
+const (
+	Bucket       OverrideWindowKind = "bucket"
+	Hour         OverrideWindowKind = "hour"
+	Latest       OverrideWindowKind = "latest"
+	LocalDay     OverrideWindowKind = "local_day"
+	LocalNight   OverrideWindowKind = "local_night"
+	Reading      OverrideWindowKind = "reading"
+	SleepEpisode OverrideWindowKind = "sleep_episode"
+)
+
+// Valid indicates whether the value is a known member of the OverrideWindowKind enum.
+func (e OverrideWindowKind) Valid() bool {
+	switch e {
+	case Bucket:
+		return true
+	case Hour:
+		return true
+	case Latest:
+		return true
+	case LocalDay:
+		return true
+	case LocalNight:
+		return true
+	case Reading:
+		return true
+	case SleepEpisode:
 		return true
 	default:
 		return false
@@ -213,6 +519,24 @@ func (e ResolvedValueStatus) Valid() bool {
 	case NoData:
 		return true
 	case Overridden:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ScheduleMode.
+const (
+	Correction  ScheduleMode = "correction"
+	Incremental ScheduleMode = "incremental"
+)
+
+// Valid indicates whether the value is a known member of the ScheduleMode enum.
+func (e ScheduleMode) Valid() bool {
+	switch e {
+	case Correction:
+		return true
+	case Incremental:
 		return true
 	default:
 		return false
@@ -309,6 +633,24 @@ func (e SourcesDrilldownSourcesRuleStatus) Valid() bool {
 	case NotInRule:
 		return true
 	case Used:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StreamStatus.
+const (
+	StreamStatusDegraded StreamStatus = "degraded"
+	StreamStatusOk       StreamStatus = "ok"
+)
+
+// Valid indicates whether the value is a known member of the StreamStatus enum.
+func (e StreamStatus) Valid() bool {
+	switch e {
+	case StreamStatusDegraded:
+		return true
+	case StreamStatusOk:
 		return true
 	default:
 		return false
@@ -661,11 +1003,61 @@ type AnalyteAliasInput struct {
 // AuthContinueInput Open object.
 type AuthContinueInput = map[string]interface{}
 
-// AuthStep Next interactive auth step (redirect URL
-type AuthStep = map[string]interface{}
+// AuthStep Next interactive auth step.
+type AuthStep struct {
+	RedirectURL string `json:"redirect_url"`
+}
 
-// BackfillInput Open object.
-type BackfillInput = map[string]interface{}
+// Backfill defines model for Backfill.
+type Backfill struct {
+	ConnectionID ConnectionID       `json:"connection_id"`
+	CreatedAt    time.Time          `json:"created_at"`
+	End          time.Time          `json:"end"`
+	FinishedAt   *time.Time         `json:"finished_at"`
+	ID           openapi_types.UUID `json:"id"`
+	Start        time.Time          `json:"start"`
+	Status       BackfillStatus     `json:"status"`
+	Stream       string             `json:"stream"`
+	UnitCounts   struct {
+		Done    int `json:"done"`
+		Failed  int `json:"failed"`
+		Pending int `json:"pending"`
+		Running int `json:"running"`
+	} `json:"unit_counts"`
+
+	// Units Only on GET of one backfill.
+	Units *[]BackfillUnit `json:"units,omitempty"`
+}
+
+// BackfillStatus defines model for Backfill.Status.
+type BackfillStatus string
+
+// BackfillInput defines model for BackfillInput.
+type BackfillInput struct {
+	// End Exclusive; now when omitted.
+	End    *time.Time `json:"end,omitempty"`
+	Start  time.Time  `json:"start"`
+	Stream string     `json:"stream"`
+}
+
+// BackfillRetryInput defines model for BackfillRetryInput.
+type BackfillRetryInput struct {
+	// UnitStart Retry only the unit starting here; all failed units when omitted.
+	UnitStart *time.Time `json:"unit_start,omitempty"`
+}
+
+// BackfillUnit defines model for BackfillUnit.
+type BackfillUnit struct {
+	Attempts   int                `json:"attempts"`
+	End        time.Time          `json:"end"`
+	ErrorClass *string            `json:"error_class"`
+	Start      time.Time          `json:"start"`
+	Status     BackfillUnitStatus `json:"status"`
+	UpdatedAt  time.Time          `json:"updated_at"`
+}
+
+// BackfillUnitStatus defines model for BackfillUnit.Status.
+type BackfillUnitStatus string
 
 // BloodPressurePage defines model for BloodPressurePage.
 type BloodPressurePage struct {
@@ -696,17 +1088,50 @@ type BloodPressureReading struct {
 	TzOffsetMin *int      `json:"tz_offset_min"`
 }
 
-// Connection Connection with health; never credentials. Open object.
-type Connection = map[string]interface{}
+// Connection A connection with its derived health; never credentials.
+type Connection struct {
+	ConsecutiveFailures int       `json:"consecutive_failures"`
+	CreatedAt           time.Time `json:"created_at"`
+
+	// Health Derived health (internal/connectors/health.go).
+	Health         Health         `json:"health"`
+	HealthReason   *string        `json:"health_reason"`
+	ID             ConnectionID   `json:"id"`
+	LastErrorClass *string        `json:"last_error_class"`
+	LastSuccessAt  *time.Time     `json:"last_success_at"`
+	Mode           ConnectionMode `json:"mode"`
+
+	// Official False for an unofficial API; null when no connector is registered (push sources).
+	Official *bool `json:"official"`
+
+	// Provider Provider code.
+	Provider  string           `json:"provider"`
+	Status    ConnectionStatus `json:"status"`
+	UpdatedAt time.Time        `json:"updated_at"`
+}
+
+// ConnectionMode defines model for Connection.Mode.
+type ConnectionMode string
+
+// ConnectionStatus defines model for Connection.Status.
+type ConnectionStatus string
 
 // ConnectionID defines model for ConnectionID.
 type ConnectionID = string
 
-// ConnectionInput Open object.
-type ConnectionInput = map[string]interface{}
+// ConnectionInput A push connection (clients upload to it). Providers with a server-side connector connect through POST /providers/{provider}/auth/begin.
+type ConnectionInput struct {
+	Provider string `json:"provider"`
+}
 
-// ConnectionPatch Open object.
-type ConnectionPatch = map[string]interface{}
+// ConnectionPatch defines model for ConnectionPatch.
+type ConnectionPatch struct {
+	// Status Pause or resume; only between active/degraded and paused.
+	Status *ConnectionPatchStatus `json:"status,omitempty"`
+}
+
+// ConnectionPatchStatus Pause or resume; only between active/degraded and paused.
+type ConnectionPatchStatus string
 
 // Coverage Open object; properties are added with the endpoint.
 type Coverage = map[string]interface{}
@@ -786,21 +1211,72 @@ type ExportStatus string
 
 // ExportRequest defines model for ExportRequest.
 type ExportRequest struct {
+	// Format ndjson: one NDJSON file per table; csv: the same plus measurements.csv.
 	Format     ExportRequestFormat `json:"format"`
 	IncludeRaw *bool               `json:"include_raw,omitempty"`
 
-	// Scope What to export; everything when omitted. Properties are added with the endpoint.
+	// Scope Reserved for partial exports; only an empty object (everything) is accepted.
 	Scope *map[string]interface{} `json:"scope,omitempty"`
 }
 
-// ExportRequestFormat defines model for ExportRequest.Format.
+// ExportRequestFormat ndjson: one NDJSON file per table; csv: the same plus measurements.csv.
 type ExportRequestFormat string
 
-// Extraction Open object.
-type Extraction = map[string]interface{}
+// Extraction One extraction run. The raw provider response is stored encrypted and never returned.
+type Extraction struct {
+	Consent   *ExtractionConsent `json:"consent"`
+	CreatedAt time.Time          `json:"created_at"`
+	CreatedBy string             `json:"created_by"`
 
-// ExtractionInput Extractor choice and consent to send externally. Open object.
-type ExtractionInput = map[string]interface{}
+	// Document Document-level fields as extracted (laboratory, specimen_type, dates, page_count); empty until succeeded.
+	Document   json.RawMessage `json:"document"`
+	DocumentID string          `json:"document_id"`
+
+	// ErrorClass Why the run failed (or the last attempt): provider_disabled, consent_mismatch, auth, rejected, rate_limited, transient, too_large, refused, invalid_output, unknown_document, provider_unavailable, abandoned.
+	ErrorClass *string `json:"error_class"`
+
+	// External True when the PDF was sent off the host.
+	External   bool       `json:"external"`
+	FinishedAt *time.Time `json:"finished_at"`
+	ID         string     `json:"id"`
+
+	// Model Model the provider reported (or the configured one).
+	Model             *string    `json:"model"`
+	PromptVersion     string     `json:"prompt_version"`
+	Provider          string     `json:"provider"`
+	ProviderRequestID *string    `json:"provider_request_id"`
+	RowCount          int        `json:"row_count"`
+	SchemaVersion     string     `json:"schema_version"`
+	StartedAt         *time.Time `json:"started_at"`
+
+	// Status queued with an error_class: the last attempt failed and will be retried.
+	Status ExtractionStatus `json:"status"`
+
+	// Usage Token counts the provider reported.
+	Usage json.RawMessage `json:"usage"`
+
+	// Warnings Document-level extractor warnings.
+	Warnings []string `json:"warnings"`
+}
+
+// ExtractionStatus queued with an error_class: the last attempt failed and will be retried.
+type ExtractionStatus string
+
+// ExtractionConsent Required for external providers; provider and model must match the configured ones, which the UI shows before asking.
+type ExtractionConsent struct {
+	AcknowledgedAt time.Time `json:"acknowledged_at"`
+	Model          string    `json:"model"`
+	Provider       string    `json:"provider"`
+}
+
+// ExtractionInput Extractor choice and the owner's consent to send the PDF to it (ADR-0013).
+type ExtractionInput struct {
+	Consent  *ExtractionConsent      `json:"consent,omitempty"`
+	Provider ExtractionInputProvider `json:"provider"`
+}
+
+// ExtractionInputProvider defines model for ExtractionInput.Provider.
+type ExtractionInputProvider string
 
 // ExtractionRow Open object.
 type ExtractionRow = map[string]interface{}
@@ -851,8 +1327,31 @@ type GroupPage struct {
 	NextCursor *string `json:"next_cursor,omitempty"`
 }
 
-// Job Open object; properties are added with the endpoint.
-type Job = map[string]interface{}
+// Health Derived health (internal/connectors/health.go).
+type Health string
+
+// Job A background job (docs/architecture/reliability.md#job-queue).
+type Job struct {
+	Attempts     int                `json:"attempts"`
+	ConnectionID *ConnectionID      `json:"connection_id"`
+	CreatedAt    time.Time          `json:"created_at"`
+	FinishedAt   *time.Time         `json:"finished_at"`
+	ID           openapi_types.UUID `json:"id"`
+	Kind         string             `json:"kind"`
+	MaxAttempts  int                `json:"max_attempts"`
+
+	// Payload Job parameters; never secrets or health values.
+	Payload json.RawMessage `json:"payload"`
+
+	// Priority Lower runs first.
+	Priority  int        `json:"priority"`
+	RunAt     time.Time  `json:"run_at"`
+	StartedAt *time.Time `json:"started_at"`
+	Status    JobStatus  `json:"status"`
+}
+
+// JobStatus defines model for Job.Status.
+type JobStatus string
 
 // JobPage defines model for JobPage.
 type JobPage struct {
@@ -883,8 +1382,21 @@ type LoginRequest struct {
 	Username     string  `json:"username"`
 }
 
-// ManualMeasurementInput Open object.
-type ManualMeasurementInput = map[string]interface{}
+// ManualMeasurementInput A value the owner entered. It is stored as a raw payload of the owner's manual connection and normalized like any source (provider manual, quality flag manual_entry). A sample without end_at, an interval with it. Grouped metrics (blood-pressure components) are not accepted here.
+type ManualMeasurementInput struct {
+	// EndAt Exclusive end of an interval.
+	EndAt *time.Time `json:"end_at,omitempty"`
+
+	// Metric Metric code.
+	Metric string `json:"metric"`
+
+	// StartAt Its offset sets the local date.
+	StartAt time.Time `json:"start_at"`
+
+	// Unit Unit code of value; converted to the canonical unit.
+	Unit  string  `json:"unit"`
+	Value float64 `json:"value"`
+}
 
 // Measurement Normalized measurement (docs/architecture/data-model.md#measurements).
 type Measurement struct {
@@ -937,11 +1449,51 @@ type MeasurementPage struct {
 // Metric Catalogue metric (docs/architecture/metric-catalog.md). Open object.
 type Metric = map[string]interface{}
 
-// Override Open object.
-type Override = map[string]interface{}
+// Override A manual override (docs/architecture/resolution.md#manual-overrides). Only the fields of its action are set.
+type Override struct {
+	Action OverrideAction `json:"action"`
 
-// OverrideInput Open object.
-type OverrideInput = map[string]interface{}
+	// Active False once revoked.
+	Active    bool      `json:"active"`
+	CreatedAt time.Time `json:"created_at"`
+	CreatedBy string    `json:"created_by"`
+
+	// Group force_source: the rule group id.
+	Group *string            `json:"group"`
+	ID    openapi_types.UUID `json:"id"`
+
+	// InputID exclude_input: the measurement id.
+	InputID *string `json:"input_id"`
+
+	// Metric Rule metric (catalogue code or family).
+	Metric    string     `json:"metric"`
+	Note      *string    `json:"note"`
+	RevokedAt *time.Time `json:"revoked_at"`
+	RevokedBy *string    `json:"revoked_by"`
+	Unit      *string    `json:"unit"`
+
+	// Value set_value: the value in the canonical unit.
+	Value  *float64       `json:"value"`
+	Window OverrideWindow `json:"window"`
+}
+
+// OverrideAction defines model for Override.Action.
+type OverrideAction string
+
+// OverrideInput exclude_input needs input_id, force_source group, set_value value, unit and note.
+type OverrideInput struct {
+	Action  OverrideInputAction `json:"action"`
+	Group   *string             `json:"group,omitempty"`
+	InputID *string             `json:"input_id,omitempty"`
+	Metric  string              `json:"metric"`
+	Note    *string             `json:"note,omitempty"`
+	Unit    *string             `json:"unit,omitempty"`
+	Value   *float64            `json:"value,omitempty"`
+	Window  OverrideWindow      `json:"window"`
+}
+
+// OverrideInputAction defines model for OverrideInput.Action.
+type OverrideInputAction string
 
 // OverridePage defines model for OverridePage.
 type OverridePage struct {
@@ -951,6 +1503,19 @@ type OverridePage struct {
 	NextCursor *string    `json:"next_cursor,omitempty"`
 	Overrides  []Override `json:"overrides"`
 }
+
+// OverrideWindow defines model for OverrideWindow.
+type OverrideWindow struct {
+	// Key The window key of a resolved result.
+	Key  string             `json:"key"`
+	Kind OverrideWindowKind `json:"kind"`
+
+	// LocalDate The local date the window belongs to.
+	LocalDate openapi_types.Date `json:"local_date"`
+}
+
+// OverrideWindowKind defines model for OverrideWindow.Kind.
+type OverrideWindowKind string
 
 // PageInfo defines model for PageInfo.
 type PageInfo struct {
@@ -1171,11 +1736,12 @@ type ResolvedValue struct {
 // ResolvedValueStatus defines model for ResolvedValue.Status.
 type ResolvedValueStatus string
 
-// Rule Open object.
-type Rule = map[string]interface{}
+// Rule A rule version, the owner's or a built-in (docs/architecture/resolution.md#rule-specification).
+type Rule = RuleVersion
 
 // RuleActivation defines model for RuleActivation.
 type RuleActivation struct {
+	// AcknowledgeWarnings Ignored; acknowledgements are part of the rule spec (acknowledged_warnings).
 	AcknowledgeWarnings *[]string `json:"acknowledge_warnings,omitempty"`
 	Version             int       `json:"version"`
 }
@@ -1188,14 +1754,60 @@ type RuleRef struct {
 	Version  int     `json:"version"`
 }
 
-// RuleVersion Open object.
-type RuleVersion = map[string]interface{}
+// RuleVersion A rule version, the owner's or a built-in (docs/architecture/resolution.md#rule-specification).
+type RuleVersion struct {
+	// Active The rule in effect for the metric.
+	Active bool `json:"active"`
 
-// RuleVersionInput Typed rule (docs/architecture/resolution.md). Open object.
-type RuleVersionInput = map[string]interface{}
+	// BasedOn The built-in this version copied.
+	BasedOn *string `json:"based_on"`
+	Builtin bool    `json:"builtin"`
 
-// Run Open object.
-type Run = map[string]interface{}
+	// CreatedAt Null for built-ins.
+	CreatedAt *time.Time `json:"created_at"`
+
+	// CreatedBy Audit actor; null for built-ins.
+	CreatedBy *string `json:"created_by"`
+
+	// Metric Catalogue code or rule family (sleep
+	Metric string  `json:"metric"`
+	Note   *string `json:"note"`
+
+	// Ref rule:<metric>:<n> for the owner's versions, builtin:<metric>:<n> for built-ins.
+	Ref string `json:"ref"`
+
+	// Spec The typed rule (schemas/resolution-rule.v1.json).
+	Spec    json.RawMessage `json:"spec"`
+	Version int             `json:"version"`
+}
+
+// RuleVersionInput defines model for RuleVersionInput.
+type RuleVersionInput struct {
+	// Activate Also make it the active version.
+	Activate *bool   `json:"activate,omitempty"`
+	Note     *string `json:"note,omitempty"`
+
+	// Spec The typed rule (docs/architecture/resolution.md#rule-specification); its metric must be the path's. A sum across sources needs acknowledged_warnings in the spec, else 409 rule_warning_unacknowledged.
+	Spec json.RawMessage `json:"spec"`
+}
+
+// Run One job execution.
+type Run struct {
+	Attempt    int     `json:"attempt"`
+	ErrorClass *string `json:"error_class"`
+
+	// ErrorMessage Sanitized.
+	ErrorMessage *string            `json:"error_message"`
+	FinishedAt   *time.Time         `json:"finished_at"`
+	ID           string             `json:"id"`
+	JobID        openapi_types.UUID `json:"job_id"`
+	Kind         string             `json:"kind"`
+
+	// Outcome Null while running.
+	Outcome   *string         `json:"outcome"`
+	StartedAt time.Time       `json:"started_at"`
+	Stats     json.RawMessage `json:"stats"`
+}
 
 // RunPage defines model for RunPage.
 type RunPage struct {
@@ -1204,6 +1816,28 @@ type RunPage struct {
 	// NextCursor Present when has_more is true.
 	NextCursor *string `json:"next_cursor,omitempty"`
 	Runs       []Run   `json:"runs"`
+}
+
+// Schedule defines model for Schedule.
+type Schedule struct {
+	ConnectionID    ConnectionID       `json:"connection_id"`
+	Enabled         bool               `json:"enabled"`
+	ID              openapi_types.UUID `json:"id"`
+	IntervalSeconds int                `json:"interval_seconds"`
+	LookbackSeconds int                `json:"lookback_seconds"`
+	Mode            ScheduleMode       `json:"mode"`
+	NextRunAt       time.Time          `json:"next_run_at"`
+	Stream          string             `json:"stream"`
+}
+
+// ScheduleMode defines model for Schedule.Mode.
+type ScheduleMode string
+
+// SchedulePatch Merge patch; omitted fields keep their value.
+type SchedulePatch struct {
+	Enabled         *bool `json:"enabled,omitempty"`
+	IntervalSeconds *int  `json:"interval_seconds,omitempty"`
+	LookbackSeconds *int  `json:"lookback_seconds,omitempty"`
 }
 
 // Scope defines model for Scope.
@@ -1215,8 +1849,11 @@ type Session struct {
 	User      User   `json:"user"`
 }
 
-// Settings Open object.
-type Settings = map[string]interface{}
+// Settings Owner settings. PATCH changes only the keys it sends.
+type Settings struct {
+	// WithingsNotifications Withings notification subscriptions (polling runs either way); needs VITAMUX_PUBLIC_URL.
+	WithingsNotifications *bool `json:"withings.notifications,omitempty"`
+}
 
 // SleepPage defines model for SleepPage.
 type SleepPage struct {
@@ -1321,8 +1958,31 @@ type SourcesDrilldown struct {
 // SourcesDrilldownSourcesRuleStatus defines model for SourcesDrilldown.Sources.RuleStatus.
 type SourcesDrilldownSourcesRuleStatus string
 
-// Stream Open object.
-type Stream = map[string]interface{}
+// Stream A connection's stream with its sync state. The cursor itself is not shown.
+type Stream struct {
+	HasCursor bool `json:"has_cursor"`
+
+	// Health Derived health (internal/connectors/health.go).
+	Health       Health  `json:"health"`
+	HealthReason *string `json:"health_reason"`
+
+	// HighWatermark Newest source time seen.
+	HighWatermark *time.Time   `json:"high_watermark"`
+	Name          string       `json:"name"`
+	Schedules     []Schedule   `json:"schedules"`
+	Status        StreamStatus `json:"status"`
+	StatusReason  *string      `json:"status_reason"`
+	UpdatedAt     *time.Time   `json:"updated_at"`
+}
+
+// StreamStatus defines model for Stream.Status.
+type StreamStatus string
+
+// SyncQueued defines model for SyncQueued.
+type SyncQueued struct {
+	// Jobs One sync job per stream; a pending one is reused.
+	Jobs []Job `json:"jobs"`
+}
 
 // SystemStatus Open object; properties are added with the endpoint.
 type SystemStatus = map[string]interface{}
@@ -1339,8 +1999,24 @@ type TOTPEnrollment struct {
 	Secret     string `json:"secret"`
 }
 
-// TimezonePeriod Open object.
-type TimezonePeriod = map[string]interface{}
+// TimezonePeriod defines model for TimezonePeriod.
+type TimezonePeriod struct {
+	ID openapi_types.UUID `json:"id"`
+
+	// Tz IANA timezone.
+	Tz        string    `json:"tz"`
+	ValidFrom time.Time `json:"valid_from"`
+
+	// ValidTo Start of the next period; null for the current one.
+	ValidTo *time.Time `json:"valid_to"`
+}
+
+// TimezonePeriodInput defines model for TimezonePeriodInput.
+type TimezonePeriodInput struct {
+	// Tz IANA timezone.
+	Tz        string    `json:"tz"`
+	ValidFrom time.Time `json:"valid_from"`
+}
 
 // User defines model for User.
 type User struct {
@@ -1408,6 +2084,9 @@ type WorkoutSegment struct {
 
 // WorkoutSegmentKind defines model for WorkoutSegment.Kind.
 type WorkoutSegmentKind string
+
+// BackfillIDPath defines model for BackfillIDPath.
+type BackfillIDPath = openapi_types.UUID
 
 // ConnectionFilter defines model for ConnectionFilter.
 type ConnectionFilter = []ConnectionID
@@ -1529,6 +2208,7 @@ type ListBloodPressureParamsInclude string
 
 // DeleteConnectionParams defines parameters for DeleteConnection.
 type DeleteConnectionParams struct {
+	// Data keep deletes the credentials and disables the connection; its data stays. delete also removes its raw payloads, canonical rows, cursors, schedules and jobs (refused with 409 while one of its jobs runs).
 	Data DeleteConnectionParamsData `form:"data" json:"data"`
 }
 
@@ -1780,6 +2460,12 @@ type GetResolvedWorkoutsParams struct {
 	EndDate EndDateRequired `form:"end_date" json:"end_date"`
 }
 
+// ListSchedulesParams defines parameters for ListSchedules.
+type ListSchedulesParams struct {
+	// Connection Only this connection's schedules.
+	Connection *ConnectionID `form:"connection,omitempty" json:"connection,omitempty"`
+}
+
 // ListSleepParams defines parameters for ListSleep.
 type ListSleepParams struct {
 	// Start Inclusive start instant (RFC 3339 with offset).
@@ -1917,6 +2603,9 @@ type ContinueConnectionAuthJSONRequestBody = AuthContinueInput
 // CreateBackfillJSONRequestBody defines body for CreateBackfill for application/json ContentType.
 type CreateBackfillJSONRequestBody = BackfillInput
 
+// RetryBackfillJSONRequestBody defines body for RetryBackfill for application/json ContentType.
+type RetryBackfillJSONRequestBody = BackfillRetryInput
+
 // UploadDocumentMultipartRequestBody defines body for UploadDocument for multipart/form-data ContentType.
 type UploadDocumentMultipartRequestBody UploadDocumentMultipartBody
 
@@ -1944,11 +2633,17 @@ type ActivateRuleJSONRequestBody = RuleActivation
 // CreateRuleVersionJSONRequestBody defines body for CreateRuleVersion for application/json ContentType.
 type CreateRuleVersionJSONRequestBody = RuleVersionInput
 
+// UpdateScheduleJSONRequestBody defines body for UpdateSchedule for application/json ContentType.
+type UpdateScheduleJSONRequestBody = SchedulePatch
+
 // UpdateSettingsJSONRequestBody defines body for UpdateSettings for application/json ContentType.
 type UpdateSettingsJSONRequestBody = Settings
 
 // CreateTimezonePeriodJSONRequestBody defines body for CreateTimezonePeriod for application/json ContentType.
-type CreateTimezonePeriodJSONRequestBody = TimezonePeriod
+type CreateTimezonePeriodJSONRequestBody = TimezonePeriodInput
+
+// UpdateTimezonePeriodJSONRequestBody defines body for UpdateTimezonePeriod for application/json ContentType.
+type UpdateTimezonePeriodJSONRequestBody = TimezonePeriodInput
 
 // WithingsNotifyFormdataRequestBody defines body for WithingsNotify for application/x-www-form-urlencoded ContentType.
 type WithingsNotifyFormdataRequestBody WithingsNotifyFormdataBody
@@ -2015,9 +2710,21 @@ type ServerInterface interface {
 	// ContinueConnectionAuth Continue interactive authorization (e.g. an MFA code)
 	// (POST /api/v1/connections/{id}/auth/continue)
 	ContinueConnectionAuth(w http.ResponseWriter, r *http.Request, id ConnectionIDPath)
+	// ListBackfills List a connection's backfills, newest first
+	// (GET /api/v1/connections/{id}/backfills)
+	ListBackfills(w http.ResponseWriter, r *http.Request, id ConnectionIDPath)
 	// CreateBackfill Start a bounded, resumable backfill
 	// (POST /api/v1/connections/{id}/backfills)
 	CreateBackfill(w http.ResponseWriter, r *http.Request, id ConnectionIDPath, params CreateBackfillParams)
+	// GetBackfill Get a backfill with its units
+	// (GET /api/v1/connections/{id}/backfills/{backfill_id})
+	GetBackfill(w http.ResponseWriter, r *http.Request, id ConnectionIDPath, backfillID BackfillIDPath)
+	// CancelBackfill Cancel a running or failed backfill (fetched data stays)
+	// (POST /api/v1/connections/{id}/backfills/{backfill_id}/cancel)
+	CancelBackfill(w http.ResponseWriter, r *http.Request, id ConnectionIDPath, backfillID BackfillIDPath)
+	// RetryBackfill Requeue a backfill's failed (or unfinished) units
+	// (POST /api/v1/connections/{id}/backfills/{backfill_id}/retry)
+	RetryBackfill(w http.ResponseWriter, r *http.Request, id ConnectionIDPath, backfillID BackfillIDPath)
 	// ListConnectionRuns List sync and backfill runs of a connection
 	// (GET /api/v1/connections/{id}/runs)
 	ListConnectionRuns(w http.ResponseWriter, r *http.Request, id ConnectionIDPath, params ListConnectionRunsParams)
@@ -2057,6 +2764,9 @@ type ServerInterface interface {
 	// GetDocument Get one document
 	// (GET /api/v1/documents/{id})
 	GetDocument(w http.ResponseWriter, r *http.Request, id ID)
+	// ListExtractions List a document's extraction runs, newest first (never the raw provider response)
+	// (GET /api/v1/documents/{id}/extractions)
+	ListExtractions(w http.ResponseWriter, r *http.Request, id ID)
 	// CreateExtraction Start an extraction run (may send the PDF to the configured external extractor)
 	// (POST /api/v1/documents/{id}/extractions)
 	CreateExtraction(w http.ResponseWriter, r *http.Request, id ID, params CreateExtractionParams)
@@ -2150,6 +2860,12 @@ type ServerInterface interface {
 	// CreateRuleVersion Save a new rule version (not yet active)
 	// (POST /api/v1/rules/{metric}/versions)
 	CreateRuleVersion(w http.ResponseWriter, r *http.Request, metric MetricPath)
+	// ListSchedules List sync schedules
+	// (GET /api/v1/schedules)
+	ListSchedules(w http.ResponseWriter, r *http.Request, params ListSchedulesParams)
+	// UpdateSchedule Change a schedule's interval, lookback or enabled flag
+	// (PATCH /api/v1/schedules/{id})
+	UpdateSchedule(w http.ResponseWriter, r *http.Request, id ID)
 	// GetSettings Owner settings
 	// (GET /api/v1/settings)
 	GetSettings(w http.ResponseWriter, r *http.Request)
@@ -2174,6 +2890,12 @@ type ServerInterface interface {
 	// CreateTimezonePeriod Add a timezone period (local dates are recomputed)
 	// (POST /api/v1/timezone-periods)
 	CreateTimezonePeriod(w http.ResponseWriter, r *http.Request)
+	// DeleteTimezonePeriod Remove a timezone period (the previous one extends; local dates are recomputed)
+	// (DELETE /api/v1/timezone-periods/{id})
+	DeleteTimezonePeriod(w http.ResponseWriter, r *http.Request, id ID)
+	// UpdateTimezonePeriod Change a timezone period's zone or start (local dates are recomputed)
+	// (PATCH /api/v1/timezone-periods/{id})
+	UpdateTimezonePeriod(w http.ResponseWriter, r *http.Request, id ID)
 	// ListWorkouts List workouts
 	// (GET /api/v1/workouts)
 	ListWorkouts(w http.ResponseWriter, r *http.Request, params ListWorkoutsParams)
@@ -2729,6 +3451,32 @@ func (siw *ServerInterfaceWrapper) ContinueConnectionAuth(w http.ResponseWriter,
 	handler.ServeHTTP(w, r)
 }
 
+// ListBackfills operation middleware
+func (siw *ServerInterfaceWrapper) ListBackfills(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConnectionIDPath
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListBackfills(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateBackfill operation middleware
 func (siw *ServerInterfaceWrapper) CreateBackfill(w http.ResponseWriter, r *http.Request) {
 
@@ -2770,6 +3518,111 @@ func (siw *ServerInterfaceWrapper) CreateBackfill(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateBackfill(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetBackfill operation middleware
+func (siw *ServerInterfaceWrapper) GetBackfill(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConnectionIDPath
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "backfill_id" -------------
+	var backfillID BackfillIDPath
+
+	err = runtime.BindStyledParameterWithOptions("simple", "backfill_id", r.PathValue("backfill_id"), &backfillID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "backfill_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBackfill(w, r, id, backfillID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CancelBackfill operation middleware
+func (siw *ServerInterfaceWrapper) CancelBackfill(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConnectionIDPath
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "backfill_id" -------------
+	var backfillID BackfillIDPath
+
+	err = runtime.BindStyledParameterWithOptions("simple", "backfill_id", r.PathValue("backfill_id"), &backfillID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "backfill_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CancelBackfill(w, r, id, backfillID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RetryBackfill operation middleware
+func (siw *ServerInterfaceWrapper) RetryBackfill(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConnectionIDPath
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "backfill_id" -------------
+	var backfillID BackfillIDPath
+
+	err = runtime.BindStyledParameterWithOptions("simple", "backfill_id", r.PathValue("backfill_id"), &backfillID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "backfill_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RetryBackfill(w, r, id, backfillID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3203,6 +4056,32 @@ func (siw *ServerInterfaceWrapper) GetDocument(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetDocument(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListExtractions operation middleware
+func (siw *ServerInterfaceWrapper) ListExtractions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListExtractions(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4584,6 +5463,65 @@ func (siw *ServerInterfaceWrapper) CreateRuleVersion(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// ListSchedules operation middleware
+func (siw *ServerInterfaceWrapper) ListSchedules(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListSchedulesParams
+
+	// ------------- Optional query parameter "connection" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection", r.URL.Query(), &params.Connection, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSchedules(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateSchedule operation middleware
+func (siw *ServerInterfaceWrapper) UpdateSchedule(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateSchedule(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetSettings operation middleware
 func (siw *ServerInterfaceWrapper) GetSettings(w http.ResponseWriter, r *http.Request) {
 
@@ -4864,6 +5802,58 @@ func (siw *ServerInterfaceWrapper) CreateTimezonePeriod(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateTimezonePeriod(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteTimezonePeriod operation middleware
+func (siw *ServerInterfaceWrapper) DeleteTimezonePeriod(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteTimezonePeriod(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateTimezonePeriod operation middleware
+func (siw *ServerInterfaceWrapper) UpdateTimezonePeriod(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateTimezonePeriod(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5342,10 +6332,16 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/providers/{provider}/auth/begin", wrapper.BeginProviderAuth)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/connections/{id}/auth/continue", wrapper.ContinueConnectionAuth)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/connections/{id}/sync", wrapper.SyncConnection)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/connections/{id}/backfills", wrapper.ListBackfills)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/connections/{id}/backfills", wrapper.CreateBackfill)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/connections/{id}/backfills/{backfill_id}", wrapper.GetBackfill)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/connections/{id}/backfills/{backfill_id}/retry", wrapper.RetryBackfill)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/connections/{id}/backfills/{backfill_id}/cancel", wrapper.CancelBackfill)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/connections/{id}/runs", wrapper.ListConnectionRuns)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/connections/{id}/streams", wrapper.ListConnectionStreams)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/connections/{id}/streams/{stream}/reset-cursor", wrapper.ResetStreamCursor)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/schedules", wrapper.ListSchedules)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/schedules/{id}", wrapper.UpdateSchedule)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/devices", wrapper.ListDevices)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/devices/pairing-codes", wrapper.CreatePairingCode)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/devices/{id}/request-anchor-reset", wrapper.RequestDeviceAnchorReset)
@@ -5355,6 +6351,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/documents/{id}", wrapper.DeleteDocument)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/documents/{id}", wrapper.GetDocument)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/documents/{id}/file", wrapper.GetDocumentFile)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/documents/{id}/extractions", wrapper.ListExtractions)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/documents/{id}/extractions", wrapper.CreateExtraction)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/extractions/{id}", wrapper.GetExtraction)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/extractions/{id}/rows/{row}", wrapper.UpdateExtractionRow)
@@ -5380,6 +6377,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/settings", wrapper.UpdateSettings)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/timezone-periods", wrapper.ListTimezonePeriods)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/timezone-periods", wrapper.CreateTimezonePeriod)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/timezone-periods/{id}", wrapper.DeleteTimezonePeriod)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/timezone-periods/{id}", wrapper.UpdateTimezonePeriod)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/oauth/{provider}/callback", wrapper.OauthCallback)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/webhooks/withings/{hook_token}", wrapper.WithingsNotifyProbe)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/webhooks/withings/{hook_token}", wrapper.WithingsNotify)
@@ -6432,6 +7431,20 @@ func (response DeleteConnection404ApplicationProblemPlusJSONResponse) VisitDelet
 	return err
 }
 
+type DeleteConnection409ApplicationProblemPlusJSONResponse Problem
+
+func (response DeleteConnection409ApplicationProblemPlusJSONResponse) VisitDeleteConnectionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteConnection422ApplicationProblemPlusJSONResponse Problem
 
 func (response DeleteConnection422ApplicationProblemPlusJSONResponse) VisitDeleteConnectionResponse(w http.ResponseWriter) error {
@@ -6442,6 +7455,20 @@ func (response DeleteConnection422ApplicationProblemPlusJSONResponse) VisitDelet
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteConnection503ApplicationProblemPlusJSONResponse Problem
+
+func (response DeleteConnection503ApplicationProblemPlusJSONResponse) VisitDeleteConnectionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -6575,6 +7602,20 @@ func (response UpdateConnection404ApplicationProblemPlusJSONResponse) VisitUpdat
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConnection409ApplicationProblemPlusJSONResponse Problem
+
+func (response UpdateConnection409ApplicationProblemPlusJSONResponse) VisitUpdateConnectionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -6782,6 +7823,88 @@ func (response ContinueConnectionAuth422ApplicationProblemPlusJSONResponse) Visi
 	return err
 }
 
+type ListBackfillsRequestObject struct {
+	ID ConnectionIDPath `json:"id"`
+}
+
+type ListBackfillsResponseObject interface {
+	VisitListBackfillsResponse(w http.ResponseWriter) error
+}
+
+type ListBackfills200JSONResponse struct {
+	Backfills []Backfill `json:"backfills"`
+}
+
+func (response ListBackfills200JSONResponse) VisitListBackfillsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBackfills401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response ListBackfills401ApplicationProblemPlusJSONResponse) VisitListBackfillsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBackfills403ApplicationProblemPlusJSONResponse Problem
+
+func (response ListBackfills403ApplicationProblemPlusJSONResponse) VisitListBackfillsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBackfills404ApplicationProblemPlusJSONResponse Problem
+
+func (response ListBackfills404ApplicationProblemPlusJSONResponse) VisitListBackfillsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBackfills503ApplicationProblemPlusJSONResponse Problem
+
+func (response ListBackfills503ApplicationProblemPlusJSONResponse) VisitListBackfillsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateBackfillRequestObject struct {
 	ID     ConnectionIDPath `json:"id"`
 	Params CreateBackfillParams
@@ -6792,7 +7915,7 @@ type CreateBackfillResponseObject interface {
 	VisitCreateBackfillResponse(w http.ResponseWriter) error
 }
 
-type CreateBackfill202JSONResponse Job
+type CreateBackfill202JSONResponse Backfill
 
 func (response CreateBackfill202JSONResponse) VisitCreateBackfillResponse(w http.ResponseWriter) error {
 
@@ -6874,6 +7997,292 @@ func (response CreateBackfill422ApplicationProblemPlusJSONResponse) VisitCreateB
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBackfill503ApplicationProblemPlusJSONResponse Problem
+
+func (response CreateBackfill503ApplicationProblemPlusJSONResponse) VisitCreateBackfillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBackfillRequestObject struct {
+	ID         ConnectionIDPath `json:"id"`
+	BackfillID BackfillIDPath   `json:"backfill_id"`
+}
+
+type GetBackfillResponseObject interface {
+	VisitGetBackfillResponse(w http.ResponseWriter) error
+}
+
+type GetBackfill200JSONResponse Backfill
+
+func (response GetBackfill200JSONResponse) VisitGetBackfillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBackfill401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response GetBackfill401ApplicationProblemPlusJSONResponse) VisitGetBackfillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBackfill403ApplicationProblemPlusJSONResponse Problem
+
+func (response GetBackfill403ApplicationProblemPlusJSONResponse) VisitGetBackfillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBackfill404ApplicationProblemPlusJSONResponse Problem
+
+func (response GetBackfill404ApplicationProblemPlusJSONResponse) VisitGetBackfillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBackfill503ApplicationProblemPlusJSONResponse Problem
+
+func (response GetBackfill503ApplicationProblemPlusJSONResponse) VisitGetBackfillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelBackfillRequestObject struct {
+	ID         ConnectionIDPath `json:"id"`
+	BackfillID BackfillIDPath   `json:"backfill_id"`
+}
+
+type CancelBackfillResponseObject interface {
+	VisitCancelBackfillResponse(w http.ResponseWriter) error
+}
+
+type CancelBackfill200JSONResponse Backfill
+
+func (response CancelBackfill200JSONResponse) VisitCancelBackfillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelBackfill401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response CancelBackfill401ApplicationProblemPlusJSONResponse) VisitCancelBackfillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelBackfill403ApplicationProblemPlusJSONResponse Problem
+
+func (response CancelBackfill403ApplicationProblemPlusJSONResponse) VisitCancelBackfillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelBackfill404ApplicationProblemPlusJSONResponse Problem
+
+func (response CancelBackfill404ApplicationProblemPlusJSONResponse) VisitCancelBackfillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelBackfill409ApplicationProblemPlusJSONResponse Problem
+
+func (response CancelBackfill409ApplicationProblemPlusJSONResponse) VisitCancelBackfillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelBackfill503ApplicationProblemPlusJSONResponse Problem
+
+func (response CancelBackfill503ApplicationProblemPlusJSONResponse) VisitCancelBackfillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RetryBackfillRequestObject struct {
+	ID         ConnectionIDPath `json:"id"`
+	BackfillID BackfillIDPath   `json:"backfill_id"`
+	Body       *RetryBackfillJSONRequestBody
+}
+
+type RetryBackfillResponseObject interface {
+	VisitRetryBackfillResponse(w http.ResponseWriter) error
+}
+
+type RetryBackfill200JSONResponse Backfill
+
+func (response RetryBackfill200JSONResponse) VisitRetryBackfillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RetryBackfill401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response RetryBackfill401ApplicationProblemPlusJSONResponse) VisitRetryBackfillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RetryBackfill403ApplicationProblemPlusJSONResponse Problem
+
+func (response RetryBackfill403ApplicationProblemPlusJSONResponse) VisitRetryBackfillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RetryBackfill404ApplicationProblemPlusJSONResponse Problem
+
+func (response RetryBackfill404ApplicationProblemPlusJSONResponse) VisitRetryBackfillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RetryBackfill409ApplicationProblemPlusJSONResponse Problem
+
+func (response RetryBackfill409ApplicationProblemPlusJSONResponse) VisitRetryBackfillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RetryBackfill503ApplicationProblemPlusJSONResponse Problem
+
+func (response RetryBackfill503ApplicationProblemPlusJSONResponse) VisitRetryBackfillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -7094,6 +8503,20 @@ func (response ResetStreamCursor404ApplicationProblemPlusJSONResponse) VisitRese
 	return err
 }
 
+type ResetStreamCursor409ApplicationProblemPlusJSONResponse Problem
+
+func (response ResetStreamCursor409ApplicationProblemPlusJSONResponse) VisitResetStreamCursorResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type SyncConnectionRequestObject struct {
 	ID     ConnectionIDPath `json:"id"`
 	Params SyncConnectionParams
@@ -7103,7 +8526,7 @@ type SyncConnectionResponseObject interface {
 	VisitSyncConnectionResponse(w http.ResponseWriter) error
 }
 
-type SyncConnection202JSONResponse Job
+type SyncConnection202JSONResponse SyncQueued
 
 func (response SyncConnection202JSONResponse) VisitSyncConnectionResponse(w http.ResponseWriter) error {
 
@@ -7171,6 +8594,20 @@ func (response SyncConnection409ApplicationProblemPlusJSONResponse) VisitSyncCon
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SyncConnection503ApplicationProblemPlusJSONResponse Problem
+
+func (response SyncConnection503ApplicationProblemPlusJSONResponse) VisitSyncConnectionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -7823,6 +9260,88 @@ func (response GetDocument503ApplicationProblemPlusJSONResponse) VisitGetDocumen
 	return err
 }
 
+type ListExtractionsRequestObject struct {
+	ID ID `json:"id"`
+}
+
+type ListExtractionsResponseObject interface {
+	VisitListExtractionsResponse(w http.ResponseWriter) error
+}
+
+type ListExtractions200JSONResponse struct {
+	Extractions []Extraction `json:"extractions"`
+}
+
+func (response ListExtractions200JSONResponse) VisitListExtractionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListExtractions401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response ListExtractions401ApplicationProblemPlusJSONResponse) VisitListExtractionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListExtractions403ApplicationProblemPlusJSONResponse Problem
+
+func (response ListExtractions403ApplicationProblemPlusJSONResponse) VisitListExtractionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListExtractions404ApplicationProblemPlusJSONResponse Problem
+
+func (response ListExtractions404ApplicationProblemPlusJSONResponse) VisitListExtractionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListExtractions503ApplicationProblemPlusJSONResponse Problem
+
+func (response ListExtractions503ApplicationProblemPlusJSONResponse) VisitListExtractionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateExtractionRequestObject struct {
 	ID     ID `json:"id"`
 	Params CreateExtractionParams
@@ -7915,6 +9434,20 @@ func (response CreateExtraction422ApplicationProblemPlusJSONResponse) VisitCreat
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateExtraction503ApplicationProblemPlusJSONResponse Problem
+
+func (response CreateExtraction503ApplicationProblemPlusJSONResponse) VisitCreateExtractionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -8875,6 +10408,20 @@ func (response CreateManualMeasurement422ApplicationProblemPlusJSONResponse) Vis
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateManualMeasurement503ApplicationProblemPlusJSONResponse Problem
+
+func (response CreateManualMeasurement503ApplicationProblemPlusJSONResponse) VisitCreateManualMeasurementResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -10079,6 +11626,155 @@ func (response CreateRuleVersion422ApplicationProblemPlusJSONResponse) VisitCrea
 	return err
 }
 
+type ListSchedulesRequestObject struct {
+	Params ListSchedulesParams
+}
+
+type ListSchedulesResponseObject interface {
+	VisitListSchedulesResponse(w http.ResponseWriter) error
+}
+
+type ListSchedules200JSONResponse struct {
+	Schedules []Schedule `json:"schedules"`
+}
+
+func (response ListSchedules200JSONResponse) VisitListSchedulesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSchedules401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response ListSchedules401ApplicationProblemPlusJSONResponse) VisitListSchedulesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSchedules403ApplicationProblemPlusJSONResponse Problem
+
+func (response ListSchedules403ApplicationProblemPlusJSONResponse) VisitListSchedulesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSchedules422ApplicationProblemPlusJSONResponse Problem
+
+func (response ListSchedules422ApplicationProblemPlusJSONResponse) VisitListSchedulesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateScheduleRequestObject struct {
+	ID   ID `json:"id"`
+	Body *UpdateScheduleJSONRequestBody
+}
+
+type UpdateScheduleResponseObject interface {
+	VisitUpdateScheduleResponse(w http.ResponseWriter) error
+}
+
+type UpdateSchedule200JSONResponse Schedule
+
+func (response UpdateSchedule200JSONResponse) VisitUpdateScheduleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSchedule401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response UpdateSchedule401ApplicationProblemPlusJSONResponse) VisitUpdateScheduleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSchedule403ApplicationProblemPlusJSONResponse Problem
+
+func (response UpdateSchedule403ApplicationProblemPlusJSONResponse) VisitUpdateScheduleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSchedule404ApplicationProblemPlusJSONResponse Problem
+
+func (response UpdateSchedule404ApplicationProblemPlusJSONResponse) VisitUpdateScheduleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSchedule422ApplicationProblemPlusJSONResponse Problem
+
+func (response UpdateSchedule422ApplicationProblemPlusJSONResponse) VisitUpdateScheduleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetSettingsRequestObject struct {
 }
 
@@ -10192,6 +11888,20 @@ func (response UpdateSettings422ApplicationProblemPlusJSONResponse) VisitUpdateS
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSettings503ApplicationProblemPlusJSONResponse Problem
+
+func (response UpdateSettings503ApplicationProblemPlusJSONResponse) VisitUpdateSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -10578,6 +12288,161 @@ func (response CreateTimezonePeriod422ApplicationProblemPlusJSONResponse) VisitC
 	return err
 }
 
+type DeleteTimezonePeriodRequestObject struct {
+	ID ID `json:"id"`
+}
+
+type DeleteTimezonePeriodResponseObject interface {
+	VisitDeleteTimezonePeriodResponse(w http.ResponseWriter) error
+}
+
+type DeleteTimezonePeriod204Response struct {
+}
+
+func (response DeleteTimezonePeriod204Response) VisitDeleteTimezonePeriodResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteTimezonePeriod401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response DeleteTimezonePeriod401ApplicationProblemPlusJSONResponse) VisitDeleteTimezonePeriodResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteTimezonePeriod403ApplicationProblemPlusJSONResponse Problem
+
+func (response DeleteTimezonePeriod403ApplicationProblemPlusJSONResponse) VisitDeleteTimezonePeriodResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteTimezonePeriod404ApplicationProblemPlusJSONResponse Problem
+
+func (response DeleteTimezonePeriod404ApplicationProblemPlusJSONResponse) VisitDeleteTimezonePeriodResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTimezonePeriodRequestObject struct {
+	ID   ID `json:"id"`
+	Body *UpdateTimezonePeriodJSONRequestBody
+}
+
+type UpdateTimezonePeriodResponseObject interface {
+	VisitUpdateTimezonePeriodResponse(w http.ResponseWriter) error
+}
+
+type UpdateTimezonePeriod200JSONResponse TimezonePeriod
+
+func (response UpdateTimezonePeriod200JSONResponse) VisitUpdateTimezonePeriodResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTimezonePeriod401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response UpdateTimezonePeriod401ApplicationProblemPlusJSONResponse) VisitUpdateTimezonePeriodResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTimezonePeriod403ApplicationProblemPlusJSONResponse Problem
+
+func (response UpdateTimezonePeriod403ApplicationProblemPlusJSONResponse) VisitUpdateTimezonePeriodResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTimezonePeriod404ApplicationProblemPlusJSONResponse Problem
+
+func (response UpdateTimezonePeriod404ApplicationProblemPlusJSONResponse) VisitUpdateTimezonePeriodResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTimezonePeriod409ApplicationProblemPlusJSONResponse Problem
+
+func (response UpdateTimezonePeriod409ApplicationProblemPlusJSONResponse) VisitUpdateTimezonePeriodResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTimezonePeriod422ApplicationProblemPlusJSONResponse Problem
+
+func (response UpdateTimezonePeriod422ApplicationProblemPlusJSONResponse) VisitUpdateTimezonePeriodResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListWorkoutsRequestObject struct {
 	Params ListWorkoutsParams
 }
@@ -10907,9 +12772,21 @@ type StrictServerInterface interface {
 	// ContinueConnectionAuth Continue interactive authorization (e.g. an MFA code)
 	// (POST /api/v1/connections/{id}/auth/continue)
 	ContinueConnectionAuth(ctx context.Context, request ContinueConnectionAuthRequestObject) (ContinueConnectionAuthResponseObject, error)
+	// ListBackfills List a connection's backfills, newest first
+	// (GET /api/v1/connections/{id}/backfills)
+	ListBackfills(ctx context.Context, request ListBackfillsRequestObject) (ListBackfillsResponseObject, error)
 	// CreateBackfill Start a bounded, resumable backfill
 	// (POST /api/v1/connections/{id}/backfills)
 	CreateBackfill(ctx context.Context, request CreateBackfillRequestObject) (CreateBackfillResponseObject, error)
+	// GetBackfill Get a backfill with its units
+	// (GET /api/v1/connections/{id}/backfills/{backfill_id})
+	GetBackfill(ctx context.Context, request GetBackfillRequestObject) (GetBackfillResponseObject, error)
+	// CancelBackfill Cancel a running or failed backfill (fetched data stays)
+	// (POST /api/v1/connections/{id}/backfills/{backfill_id}/cancel)
+	CancelBackfill(ctx context.Context, request CancelBackfillRequestObject) (CancelBackfillResponseObject, error)
+	// RetryBackfill Requeue a backfill's failed (or unfinished) units
+	// (POST /api/v1/connections/{id}/backfills/{backfill_id}/retry)
+	RetryBackfill(ctx context.Context, request RetryBackfillRequestObject) (RetryBackfillResponseObject, error)
 	// ListConnectionRuns List sync and backfill runs of a connection
 	// (GET /api/v1/connections/{id}/runs)
 	ListConnectionRuns(ctx context.Context, request ListConnectionRunsRequestObject) (ListConnectionRunsResponseObject, error)
@@ -10949,6 +12826,9 @@ type StrictServerInterface interface {
 	// GetDocument Get one document
 	// (GET /api/v1/documents/{id})
 	GetDocument(ctx context.Context, request GetDocumentRequestObject) (GetDocumentResponseObject, error)
+	// ListExtractions List a document's extraction runs, newest first (never the raw provider response)
+	// (GET /api/v1/documents/{id}/extractions)
+	ListExtractions(ctx context.Context, request ListExtractionsRequestObject) (ListExtractionsResponseObject, error)
 	// CreateExtraction Start an extraction run (may send the PDF to the configured external extractor)
 	// (POST /api/v1/documents/{id}/extractions)
 	CreateExtraction(ctx context.Context, request CreateExtractionRequestObject) (CreateExtractionResponseObject, error)
@@ -11042,6 +12922,12 @@ type StrictServerInterface interface {
 	// CreateRuleVersion Save a new rule version (not yet active)
 	// (POST /api/v1/rules/{metric}/versions)
 	CreateRuleVersion(ctx context.Context, request CreateRuleVersionRequestObject) (CreateRuleVersionResponseObject, error)
+	// ListSchedules List sync schedules
+	// (GET /api/v1/schedules)
+	ListSchedules(ctx context.Context, request ListSchedulesRequestObject) (ListSchedulesResponseObject, error)
+	// UpdateSchedule Change a schedule's interval, lookback or enabled flag
+	// (PATCH /api/v1/schedules/{id})
+	UpdateSchedule(ctx context.Context, request UpdateScheduleRequestObject) (UpdateScheduleResponseObject, error)
 	// GetSettings Owner settings
 	// (GET /api/v1/settings)
 	GetSettings(ctx context.Context, request GetSettingsRequestObject) (GetSettingsResponseObject, error)
@@ -11066,6 +12952,12 @@ type StrictServerInterface interface {
 	// CreateTimezonePeriod Add a timezone period (local dates are recomputed)
 	// (POST /api/v1/timezone-periods)
 	CreateTimezonePeriod(ctx context.Context, request CreateTimezonePeriodRequestObject) (CreateTimezonePeriodResponseObject, error)
+	// DeleteTimezonePeriod Remove a timezone period (the previous one extends; local dates are recomputed)
+	// (DELETE /api/v1/timezone-periods/{id})
+	DeleteTimezonePeriod(ctx context.Context, request DeleteTimezonePeriodRequestObject) (DeleteTimezonePeriodResponseObject, error)
+	// UpdateTimezonePeriod Change a timezone period's zone or start (local dates are recomputed)
+	// (PATCH /api/v1/timezone-periods/{id})
+	UpdateTimezonePeriod(ctx context.Context, request UpdateTimezonePeriodRequestObject) (UpdateTimezonePeriodResponseObject, error)
 	// ListWorkouts List workouts
 	// (GET /api/v1/workouts)
 	ListWorkouts(ctx context.Context, request ListWorkoutsRequestObject) (ListWorkoutsResponseObject, error)
@@ -11675,6 +13567,32 @@ func (sh *strictHandler) ContinueConnectionAuth(w http.ResponseWriter, r *http.R
 	}
 }
 
+// ListBackfills operation middleware
+func (sh *strictHandler) ListBackfills(w http.ResponseWriter, r *http.Request, id ConnectionIDPath) {
+	var request ListBackfillsRequestObject
+
+	request.ID = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListBackfills(ctx, request.(ListBackfillsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListBackfills")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListBackfillsResponseObject); ok {
+		if err := validResponse.VisitListBackfillsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // CreateBackfill operation middleware
 func (sh *strictHandler) CreateBackfill(w http.ResponseWriter, r *http.Request, id ConnectionIDPath, params CreateBackfillParams) {
 	var request CreateBackfillRequestObject
@@ -11702,6 +13620,97 @@ func (sh *strictHandler) CreateBackfill(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateBackfillResponseObject); ok {
 		if err := validResponse.VisitCreateBackfillResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetBackfill operation middleware
+func (sh *strictHandler) GetBackfill(w http.ResponseWriter, r *http.Request, id ConnectionIDPath, backfillID BackfillIDPath) {
+	var request GetBackfillRequestObject
+
+	request.ID = id
+	request.BackfillID = backfillID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetBackfill(ctx, request.(GetBackfillRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetBackfill")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetBackfillResponseObject); ok {
+		if err := validResponse.VisitGetBackfillResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CancelBackfill operation middleware
+func (sh *strictHandler) CancelBackfill(w http.ResponseWriter, r *http.Request, id ConnectionIDPath, backfillID BackfillIDPath) {
+	var request CancelBackfillRequestObject
+
+	request.ID = id
+	request.BackfillID = backfillID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CancelBackfill(ctx, request.(CancelBackfillRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CancelBackfill")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CancelBackfillResponseObject); ok {
+		if err := validResponse.VisitCancelBackfillResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RetryBackfill operation middleware
+func (sh *strictHandler) RetryBackfill(w http.ResponseWriter, r *http.Request, id ConnectionIDPath, backfillID BackfillIDPath) {
+	var request RetryBackfillRequestObject
+
+	request.ID = id
+	request.BackfillID = backfillID
+
+	var body RetryBackfillJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RetryBackfill(ctx, request.(RetryBackfillRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RetryBackfill")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RetryBackfillResponseObject); ok {
+		if err := validResponse.VisitRetryBackfillResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -12057,6 +14066,32 @@ func (sh *strictHandler) GetDocument(w http.ResponseWriter, r *http.Request, id 
 	}
 }
 
+// ListExtractions operation middleware
+func (sh *strictHandler) ListExtractions(w http.ResponseWriter, r *http.Request, id ID) {
+	var request ListExtractionsRequestObject
+
+	request.ID = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListExtractions(ctx, request.(ListExtractionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListExtractions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListExtractionsResponseObject); ok {
+		if err := validResponse.VisitListExtractionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // CreateExtraction operation middleware
 func (sh *strictHandler) CreateExtraction(w http.ResponseWriter, r *http.Request, id ID, params CreateExtractionParams) {
 	var request CreateExtractionRequestObject
@@ -12066,13 +14101,10 @@ func (sh *strictHandler) CreateExtraction(w http.ResponseWriter, r *http.Request
 
 	var body CreateExtractionJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		if !errors.Is(err, io.EOF) {
-			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-			return
-		}
-	} else {
-		request.Body = &body
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
 	}
+	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.CreateExtraction(ctx, request.(CreateExtractionRequestObject))
@@ -12917,6 +14949,65 @@ func (sh *strictHandler) CreateRuleVersion(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// ListSchedules operation middleware
+func (sh *strictHandler) ListSchedules(w http.ResponseWriter, r *http.Request, params ListSchedulesParams) {
+	var request ListSchedulesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListSchedules(ctx, request.(ListSchedulesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListSchedules")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListSchedulesResponseObject); ok {
+		if err := validResponse.VisitListSchedulesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateSchedule operation middleware
+func (sh *strictHandler) UpdateSchedule(w http.ResponseWriter, r *http.Request, id ID) {
+	var request UpdateScheduleRequestObject
+
+	request.ID = id
+
+	var body UpdateScheduleJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateSchedule(ctx, request.(UpdateScheduleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateSchedule")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateScheduleResponseObject); ok {
+		if err := validResponse.VisitUpdateScheduleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetSettings operation middleware
 func (sh *strictHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
 	var request GetSettingsRequestObject
@@ -13121,6 +15212,65 @@ func (sh *strictHandler) CreateTimezonePeriod(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateTimezonePeriodResponseObject); ok {
 		if err := validResponse.VisitCreateTimezonePeriodResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteTimezonePeriod operation middleware
+func (sh *strictHandler) DeleteTimezonePeriod(w http.ResponseWriter, r *http.Request, id ID) {
+	var request DeleteTimezonePeriodRequestObject
+
+	request.ID = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteTimezonePeriod(ctx, request.(DeleteTimezonePeriodRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteTimezonePeriod")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteTimezonePeriodResponseObject); ok {
+		if err := validResponse.VisitDeleteTimezonePeriodResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateTimezonePeriod operation middleware
+func (sh *strictHandler) UpdateTimezonePeriod(w http.ResponseWriter, r *http.Request, id ID) {
+	var request UpdateTimezonePeriodRequestObject
+
+	request.ID = id
+
+	var body UpdateTimezonePeriodJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateTimezonePeriod(ctx, request.(UpdateTimezonePeriodRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateTimezonePeriod")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateTimezonePeriodResponseObject); ok {
+		if err := validResponse.VisitUpdateTimezonePeriodResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

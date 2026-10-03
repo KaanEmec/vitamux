@@ -75,7 +75,7 @@ Code: `internal/connectors/auth.go` (`Runtime.BeginAuth`, `CompleteAuth`, `Disco
 2. `GET /oauth/{provider}/callback` (public; `HEAD` → 204, no side effects) verifies the HMAC with the cookie, then deletes the row in one statement: single use, and refused when expired, for another provider, or after its session ended. Only then does the connector exchange the code.
 3. `account_key` = SHA-256 of the provider account id. A new account gets a connection; the same account again (reconnect) reuses its connection (`UNIQUE (user, provider, account_key)`) and gets fresh credentials; a reauthorization must sign in to the connection's own account (otherwise nothing changes). The connection becomes `active`, default schedules are ensured, a first manual sync is queued, and the event is audited.
 4. The callback redirects to `/connections?connected=<provider>` or `/connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable`.
-5. Disconnect (`DELETE /api/v1/connections/{id}?data=keep`) deletes the credentials and sets `disabled`; data, cursors and schedules stay, and connecting the same account again revives the connection.
+5. Disconnect (`DELETE /api/v1/connections/{id}?data=keep`) deletes the credentials and sets `disabled`; data, cursors and schedules stay, and connecting the same account again revives the connection. `?data=delete` removes the connection with its data instead ([api.md](api.md#owner-endpoints-apiv1)).
 
 ## Push ingest contract
 

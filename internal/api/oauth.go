@@ -7,15 +7,15 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/google/uuid"
-
 	"github.com/KaanEmec/vitamux/internal/auth"
 	"github.com/KaanEmec/vitamux/internal/connectors"
 	"github.com/KaanEmec/vitamux/internal/db"
+	"github.com/KaanEmec/vitamux/internal/ingest"
 )
 
 // OAuth connection flow (docs/architecture/connectors.md#oauth-connection-flow): begin for a
-// new account (by provider) or to reauthorize a connection. Begin needs the owner session,
+// new account (by provider) or to reauthorize a connection (conn_ id); disconnecting is
+// DELETE /connections/{id} in connections.go. Begin needs the owner session,
 // because the state is bound to it. The provider callback is a public
 // route: the session cookie (SameSite=Strict) does not come back on the provider's redirect,
 // so the signed single-use state and the browser-binding cookie authorize it.
@@ -23,7 +23,6 @@ func (rt *router) oauthRoutes() {
 	rt.handle("POST /api/v1/providers/{provider}/auth/begin", session, rt.authBegin)
 	rt.handle("POST /api/v1/connections/{id}/auth/begin", session, rt.authBegin)
 	rt.handle("GET /oauth/{provider}/callback", public, rt.oauthCallback)
-	rt.handle("DELETE /api/v1/connections/{id}", scope(auth.WriteConfig), rt.disconnect)
 }
 
 // oauthCookie binds a pending authorization to the browser that began it. SameSite=Lax so the
@@ -44,7 +43,7 @@ func (rt *router) authBegin(w http.ResponseWriter, r *http.Request) {
 	}
 	req := connectors.AuthRequest{Provider: r.PathValue("provider")}
 	if v := r.PathValue("id"); v != "" {
-		id, err := uuid.Parse(v)
+		id, err := ingest.ParseConnectionID(v)
 		if err != nil {
 			writeProblem(w, r, CodeNotFound, "no such connection")
 			return
@@ -114,31 +113,4 @@ func (rt *router) oauthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	http.Redirect(w, r, "/connections?"+v.Encode(), http.StatusSeeOther)
-}
-
-// disconnect is DELETE /connections/{id} with data=keep (the default): credentials are
-// deleted and the connection disabled; its data stays. data=delete comes with E10.
-func (rt *router) disconnect(w http.ResponseWriter, r *http.Request) {
-	if rt.opts.Connectors == nil {
-		writeProblem(w, r, CodeUnavailable, "connections are unavailable: the master key or data directory is missing")
-		return
-	}
-	if d := r.URL.Query().Get("data"); d != "" && d != "keep" {
-		writeProblem(w, r, CodeValidationFailed, "only data=keep is supported", FieldError{Pointer: "/data", Detail: "must be keep"})
-		return
-	}
-	id, err := uuid.Parse(r.PathValue("id"))
-	if err != nil {
-		writeProblem(w, r, CodeNotFound, "no such connection")
-		return
-	}
-	p := auth.PrincipalFrom(r.Context())
-	switch err := rt.opts.Connectors.Disconnect(r.Context(), p.UserID, id, p.Actor()); {
-	case errors.Is(err, db.ErrNotFound):
-		writeProblem(w, r, CodeNotFound, "no such connection")
-	case err != nil:
-		rt.internal(w, r, "disconnect", err)
-	default:
-		w.WriteHeader(http.StatusNoContent)
-	}
 }

@@ -655,7 +655,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Queue a manual sync (coalesced with a pending one) */
+        /**
+         * Queue a manual sync (coalesced with a pending one)
+         * @description One sync job per stream of the connector. A request while one is queued or running answers that job, so repeated clicks queue nothing new.
+         */
         post: operations["syncConnection"];
         delete?: never;
         options?: never;
@@ -670,10 +673,62 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** List a connection's backfills, newest first */
+        get: operations["listBackfills"];
         put?: never;
         /** Start a bounded, resumable backfill */
         post: operations["createBackfill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connections/{id}/backfills/{backfill_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a backfill with its units */
+        get: operations["getBackfill"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connections/{id}/backfills/{backfill_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Requeue a backfill's failed (or unfinished) units */
+        post: operations["retryBackfill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connections/{id}/backfills/{backfill_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a running or failed backfill (fetched data stays) */
+        post: operations["cancelBackfill"];
         delete?: never;
         options?: never;
         head?: never;
@@ -723,12 +778,49 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Reset a stream's sync cursor */
+        /**
+         * Reset a stream's sync cursor
+         * @description The next incremental sync starts over from the connector's initial window; stored data is kept and re-fetched records deduplicate. In-process connections only, and not while one of the connection's jobs runs (409).
+         */
         post: operations["resetStreamCursor"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/schedules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List sync schedules */
+        get: operations["listSchedules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/schedules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change a schedule's interval, lookback or enabled flag */
+        patch: operations["updateSchedule"];
         trace?: never;
     };
     "/api/v1/devices": {
@@ -862,9 +954,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** List a document's extraction runs, newest first (never the raw provider response) */
+        get: operations["listExtractions"];
         put?: never;
-        /** Start an extraction run (may send the PDF to the configured external extractor) */
+        /**
+         * Start an extraction run (may send the PDF to the configured external extractor)
+         * @description Queues an `extract_document` job (ADR-0013). An external provider must be configured and enabled (`documents.external_ai.<provider>.enabled`), else 403 `forbidden`; the body must carry `consent` naming the same provider and its configured model, else 409 `consent_required`. `fake` needs neither. A run already queued or running answers 409 `conflict`. Idempotency-Key is accepted.
+         */
         post: operations["createExtraction"];
         delete?: never;
         options?: never;
@@ -1001,7 +1097,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Start an export job */
+        /**
+         * Start an export job
+         * @description Needs the admin scope: an export holds every health row, raw payload, rule and audit event at once. 409 while another export is queued or running.
+         */
         post: operations["createExport"];
         delete?: never;
         options?: never;
@@ -1033,7 +1132,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Download the export zip with its one-time, short-lived token */
+        /**
+         * Download the export zip with its one-time, short-lived token
+         * @description The token comes from getExport, works once and expires after 10 minutes (403 otherwise).
+         */
         get: operations["downloadExport"];
         put?: never;
         post?: never;
@@ -1217,6 +1319,24 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/timezone-periods/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a timezone period (the previous one extends; local dates are recomputed) */
+        delete: operations["deleteTimezonePeriod"];
+        options?: never;
+        head?: never;
+        /** Change a timezone period's zone or start (local dates are recomputed) */
+        patch: operations["updateTimezonePeriod"];
         trace?: never;
     };
     "/oauth/{provider}/callback": {
@@ -1437,15 +1557,43 @@ export interface components {
         SystemStatus: Record<string, never>;
         /** @description Open object; properties are added with the endpoint. */
         Coverage: Record<string, never>;
-        /** @description Open object; properties are added with the endpoint. */
-        Job: Record<string, never>;
+        /** @description A background job (docs/architecture/reliability.md#job-queue). */
+        Job: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            /** @enum {string} */
+            status: "queued" | "running" | "succeeded" | "failed" | "dead" | "cancelled";
+            connection_id: components["schemas"]["ConnectionID"] | null;
+            /** @description Lower runs first. */
+            priority: number;
+            attempts: number;
+            max_attempts: number;
+            /** @description Job parameters; never secrets or health values. */
+            payload: Record<string, never>;
+            /** Format: date-time */
+            run_at: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            started_at: string | null;
+            /** Format: date-time */
+            finished_at: string | null;
+        };
+        SyncQueued: {
+            /** @description One sync job per stream; a pending one is reused. */
+            jobs: components["schemas"]["Job"][];
+        };
         JobPage: components["schemas"]["PageInfo"] & {
             jobs: components["schemas"]["Job"][];
         };
         ExportRequest: {
-            /** @description What to export; everything when omitted. Properties are added with the endpoint. */
+            /** @description Reserved for partial exports; only an empty object (everything) is accepted. */
             scope?: Record<string, never>;
-            /** @enum {string} */
+            /**
+             * @description ndjson: one NDJSON file per table; csv: the same plus measurements.csv.
+             * @enum {string}
+             */
             format: "ndjson" | "csv";
             /** @default false */
             include_raw: boolean;
@@ -1587,8 +1735,25 @@ export interface components {
         MeasurementPage: components["schemas"]["PageInfo"] & {
             measurements: components["schemas"]["Measurement"][];
         };
-        /** @description Open object. */
-        ManualMeasurementInput: Record<string, never>;
+        /** @description A value the owner entered. It is stored as a raw payload of the owner's manual connection and normalized like any source (provider manual, quality flag manual_entry). A sample without end_at, an interval with it. Grouped metrics (blood-pressure components) are not accepted here. */
+        ManualMeasurementInput: {
+            /** @description Metric code. */
+            metric: string;
+            /** Format: double */
+            value: number;
+            /** @description Unit code of value; converted to the canonical unit. */
+            unit: string;
+            /**
+             * Format: date-time
+             * @description Its offset sets the local date.
+             */
+            start_at: string;
+            /**
+             * Format: date-time
+             * @description Exclusive end of an interval.
+             */
+            end_at?: string;
+        };
         /** @description Measurement group (bp_reading, body_composition) with its components. */
         Group: {
             id: string;
@@ -1811,42 +1976,256 @@ export interface components {
             /** Format: date-time */
             fetched_at: string | null;
         };
-        /** @description Open object. */
-        Rule: Record<string, never>;
-        /** @description Open object. */
-        RuleVersion: Record<string, never>;
-        /** @description Typed rule (docs/architecture/resolution.md). Open object. */
-        RuleVersionInput: Record<string, never>;
+        Rule: components["schemas"]["RuleVersion"];
+        /** @description A rule version, the owner's or a built-in (docs/architecture/resolution.md#rule-specification). */
+        RuleVersion: {
+            /** @description rule:<metric>:<n> for the owner's versions, builtin:<metric>:<n> for built-ins. */
+            ref: string;
+            /** @description Catalogue code or rule family (sleep */
+            metric: string;
+            version: number;
+            builtin: boolean;
+            /** @description The rule in effect for the metric. */
+            active: boolean;
+            /** @description The typed rule (schemas/resolution-rule.v1.json). */
+            spec: Record<string, never>;
+            /** @description The built-in this version copied. */
+            based_on: string | null;
+            note: string | null;
+            /** @description Audit actor; null for built-ins. */
+            created_by: string | null;
+            /**
+             * Format: date-time
+             * @description Null for built-ins.
+             */
+            created_at: string | null;
+        };
+        RuleVersionInput: {
+            /** @description The typed rule (docs/architecture/resolution.md#rule-specification); its metric must be the path's. A sum across sources needs acknowledged_warnings in the spec, else 409 rule_warning_unacknowledged. */
+            spec: Record<string, never>;
+            note?: string;
+            /**
+             * @description Also make it the active version.
+             * @default false
+             */
+            activate: boolean;
+        };
         RuleActivation: {
             version: number;
+            /** @description Ignored; acknowledgements are part of the rule spec (acknowledged_warnings). */
             acknowledge_warnings?: string[];
         };
-        /** @description Open object. */
-        Override: Record<string, never>;
-        /** @description Open object. */
-        OverrideInput: Record<string, never>;
+        /** @description A manual override (docs/architecture/resolution.md#manual-overrides). Only the fields of its action are set. */
+        Override: {
+            /** Format: uuid */
+            id: string;
+            /** @description Rule metric (catalogue code or family). */
+            metric: string;
+            window: components["schemas"]["OverrideWindow"];
+            /** @enum {string} */
+            action: "exclude_input" | "force_source" | "set_value";
+            /** @description exclude_input: the measurement id. */
+            input_id: string | null;
+            /** @description force_source: the rule group id. */
+            group: string | null;
+            /**
+             * Format: double
+             * @description set_value: the value in the canonical unit.
+             */
+            value: number | null;
+            unit: string | null;
+            note: string | null;
+            /** @description False once revoked. */
+            active: boolean;
+            created_by: string;
+            /** Format: date-time */
+            created_at: string;
+            revoked_by: string | null;
+            /** Format: date-time */
+            revoked_at: string | null;
+        };
+        OverrideWindow: {
+            /** @enum {string} */
+            kind: "bucket" | "hour" | "local_day" | "local_night" | "sleep_episode" | "latest" | "reading";
+            /** @description The window key of a resolved result. */
+            key: string;
+            /**
+             * Format: date
+             * @description The local date the window belongs to.
+             */
+            local_date: string;
+        };
+        /** @description exclude_input needs input_id, force_source group, set_value value, unit and note. */
+        OverrideInput: {
+            metric: string;
+            window: components["schemas"]["OverrideWindow"];
+            /** @enum {string} */
+            action: "exclude_input" | "force_source" | "set_value";
+            input_id?: string;
+            group?: string;
+            /** Format: double */
+            value?: number;
+            unit?: string;
+            note?: string;
+        };
         OverridePage: components["schemas"]["PageInfo"] & {
             overrides: components["schemas"]["Override"][];
         };
-        /** @description Connection with health; never credentials. Open object. */
-        Connection: Record<string, never>;
-        /** @description Open object. */
-        ConnectionInput: Record<string, never>;
-        /** @description Open object. */
-        ConnectionPatch: Record<string, never>;
-        /** @description Next interactive auth step (redirect URL */
-        AuthStep: Record<string, never>;
+        /** @description A connection with its derived health; never credentials. */
+        Connection: {
+            id: components["schemas"]["ConnectionID"];
+            /** @description Provider code. */
+            provider: string;
+            /** @enum {string} */
+            mode: "in_process" | "push" | "remote";
+            /** @enum {string} */
+            status: "active" | "degraded" | "needs_reauth" | "paused" | "error" | "disabled";
+            /** @description False for an unofficial API; null when no connector is registered (push sources). */
+            official: boolean | null;
+            health: components["schemas"]["Health"];
+            health_reason: string | null;
+            /** Format: date-time */
+            last_success_at: string | null;
+            last_error_class: string | null;
+            consecutive_failures: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /**
+         * @description Derived health (internal/connectors/health.go).
+         * @enum {string}
+         */
+        Health: "ok" | "degraded" | "failing" | "needs_reauth" | "paused" | "disabled" | "stale";
+        /** @description A push connection (clients upload to it). Providers with a server-side connector connect through POST /providers/{provider}/auth/begin. */
+        ConnectionInput: {
+            provider: string;
+        };
+        ConnectionPatch: {
+            /**
+             * @description Pause or resume; only between active/degraded and paused.
+             * @enum {string}
+             */
+            status?: "active" | "paused";
+        };
+        /** @description Next interactive auth step. */
+        AuthStep: {
+            redirect_url: string;
+        };
         /** @description Open object. */
         AuthContinueInput: Record<string, never>;
-        /** @description Open object. */
-        BackfillInput: Record<string, never>;
-        /** @description Open object. */
-        Run: Record<string, never>;
+        BackfillInput: {
+            stream: string;
+            /** Format: date-time */
+            start: string;
+            /**
+             * Format: date-time
+             * @description Exclusive; now when omitted.
+             */
+            end?: string;
+        };
+        Backfill: {
+            /** Format: uuid */
+            id: string;
+            connection_id: components["schemas"]["ConnectionID"];
+            stream: string;
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+            /** @enum {string} */
+            status: "running" | "done" | "failed" | "cancelled";
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            finished_at: string | null;
+            unit_counts: {
+                pending: number;
+                running: number;
+                done: number;
+                failed: number;
+            };
+            /** @description Only on GET of one backfill. */
+            units?: components["schemas"]["BackfillUnit"][];
+        };
+        BackfillUnit: {
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+            /** @enum {string} */
+            status: "pending" | "running" | "done" | "failed";
+            attempts: number;
+            error_class: string | null;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        BackfillRetryInput: {
+            /**
+             * Format: date-time
+             * @description Retry only the unit starting here; all failed units when omitted.
+             */
+            unit_start?: string;
+        };
+        /** @description One job execution. */
+        Run: {
+            id: string;
+            /** Format: uuid */
+            job_id: string;
+            kind: string;
+            attempt: number;
+            /** Format: date-time */
+            started_at: string;
+            /** Format: date-time */
+            finished_at: string | null;
+            /** @description Null while running. */
+            outcome: string | null;
+            error_class: string | null;
+            /** @description Sanitized. */
+            error_message: string | null;
+            stats: Record<string, never>;
+        };
         RunPage: components["schemas"]["PageInfo"] & {
             runs: components["schemas"]["Run"][];
         };
-        /** @description Open object. */
-        Stream: Record<string, never>;
+        /** @description A connection's stream with its sync state. The cursor itself is not shown. */
+        Stream: {
+            name: string;
+            health: components["schemas"]["Health"];
+            health_reason: string | null;
+            /** @enum {string} */
+            status: "ok" | "degraded";
+            status_reason: string | null;
+            has_cursor: boolean;
+            /**
+             * Format: date-time
+             * @description Newest source time seen.
+             */
+            high_watermark: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+            schedules: components["schemas"]["Schedule"][];
+        };
+        Schedule: {
+            /** Format: uuid */
+            id: string;
+            connection_id: components["schemas"]["ConnectionID"];
+            stream: string;
+            /** @enum {string} */
+            mode: "incremental" | "correction";
+            interval_seconds: number;
+            lookback_seconds: number;
+            enabled: boolean;
+            /** Format: date-time */
+            next_run_at: string;
+        };
+        /** @description Merge patch; omitted fields keep their value. */
+        SchedulePatch: {
+            interval_seconds?: number;
+            lookback_seconds?: number;
+            enabled?: boolean;
+        };
         /** @description Open object. */
         PairedDevice: Record<string, never>;
         /** @description Open object. */
@@ -1875,10 +2254,54 @@ export interface components {
         DocumentPage: components["schemas"]["PageInfo"] & {
             documents: components["schemas"]["Document"][];
         };
-        /** @description Extractor choice and consent to send externally. Open object. */
-        ExtractionInput: Record<string, never>;
-        /** @description Open object. */
-        Extraction: Record<string, never>;
+        /** @description Extractor choice and the owner's consent to send the PDF to it (ADR-0013). */
+        ExtractionInput: {
+            /** @enum {string} */
+            provider: "fake" | "gemini" | "openai" | "openai_compatible";
+            consent?: components["schemas"]["ExtractionConsent"] | null;
+        };
+        /** @description Required for external providers; provider and model must match the configured ones, which the UI shows before asking. */
+        ExtractionConsent: {
+            provider: string;
+            model: string;
+            /** Format: date-time */
+            acknowledged_at: string;
+        };
+        /** @description One extraction run. The raw provider response is stored encrypted and never returned. */
+        Extraction: {
+            id: string;
+            document_id: string;
+            /**
+             * @description queued with an error_class: the last attempt failed and will be retried.
+             * @enum {string}
+             */
+            status: "queued" | "running" | "succeeded" | "failed" | "confirmed";
+            provider: string;
+            /** @description Model the provider reported (or the configured one). */
+            model: string | null;
+            /** @description True when the PDF was sent off the host. */
+            external: boolean;
+            consent: components["schemas"]["ExtractionConsent"] | null;
+            schema_version: string;
+            prompt_version: string;
+            provider_request_id: string | null;
+            /** @description Document-level fields as extracted (laboratory, specimen_type, dates, page_count); empty until succeeded. */
+            document: Record<string, never>;
+            /** @description Token counts the provider reported. */
+            usage: Record<string, never>;
+            /** @description Document-level extractor warnings. */
+            warnings: string[];
+            /** @description Why the run failed (or the last attempt): provider_disabled, consent_mismatch, auth, rejected, rate_limited, transient, too_large, refused, invalid_output, unknown_document, provider_unavailable, abandoned. */
+            error_class: string | null;
+            row_count: number;
+            created_by: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            started_at: string | null;
+            /** Format: date-time */
+            finished_at: string | null;
+        };
         /** @description Open object. */
         ExtractionRow: Record<string, never>;
         /** @description Open object. */
@@ -1904,10 +2327,30 @@ export interface components {
             /** @description Analyte code from docs/analytes.md. */
             analyte: string;
         };
-        /** @description Open object. */
-        Settings: Record<string, never>;
-        /** @description Open object. */
-        TimezonePeriod: Record<string, never>;
+        /** @description Owner settings. PATCH changes only the keys it sends. */
+        Settings: {
+            /** @description Withings notification subscriptions (polling runs either way); needs VITAMUX_PUBLIC_URL. */
+            "withings.notifications"?: boolean;
+        };
+        TimezonePeriod: {
+            /** Format: uuid */
+            id: string;
+            /** @description IANA timezone. */
+            tz: string;
+            /** Format: date-time */
+            valid_from: string;
+            /**
+             * Format: date-time
+             * @description Start of the next period; null for the current one.
+             */
+            valid_to: string | null;
+        };
+        TimezonePeriodInput: {
+            /** @description IANA timezone. */
+            tz: string;
+            /** Format: date-time */
+            valid_from: string;
+        };
         sha256: string;
         /** @description Connection the client token is scoped to: conn_ + the UUID as 32 lowercase hex characters. */
         connection_id: string;
@@ -2044,6 +2487,7 @@ export interface components {
         BatchID: components["schemas"]["BatchID"];
         ID: string;
         ConnectionIDPath: components["schemas"]["ConnectionID"];
+        BackfillIDPath: string;
         MetricPath: string;
         MetricCodePath: string;
         /** @description Page size. Endpoints may cap it lower than 10,000. */
@@ -2324,6 +2768,7 @@ export interface operations {
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     listGroups: {
@@ -3146,6 +3591,7 @@ export interface operations {
     deleteConnection: {
         parameters: {
             query: {
+                /** @description keep deletes the credentials and disables the connection; its data stays. delete also removes its raw payloads, canonical rows, cursors, schedules and jobs (refused with 409 while one of its jobs runs). */
                 data: "keep" | "delete";
             };
             header?: never;
@@ -3166,7 +3612,9 @@ export interface operations {
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     updateConnection: {
@@ -3196,6 +3644,7 @@ export interface operations {
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
         };
     };
@@ -3302,13 +3751,42 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Job"];
+                    "application/json": components["schemas"]["SyncQueued"];
                 };
             };
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    listBackfills: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ConnectionIDPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Backfills. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        backfills: components["schemas"]["Backfill"][];
+                    };
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     createBackfill: {
@@ -3329,13 +3807,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Queued. */
+            /** @description Queued; one job per unit. */
             202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Job"];
+                    "application/json": components["schemas"]["Backfill"];
                 };
             };
             401: components["responses"]["Problem"];
@@ -3343,6 +3821,94 @@ export interface operations {
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    getBackfill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ConnectionIDPath"];
+                backfill_id: components["parameters"]["BackfillIDPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The backfill. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Backfill"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    retryBackfill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ConnectionIDPath"];
+                backfill_id: components["parameters"]["BackfillIDPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["BackfillRetryInput"];
+            };
+        };
+        responses: {
+            /** @description The backfill after the retry. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Backfill"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    cancelBackfill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ConnectionIDPath"];
+                backfill_id: components["parameters"]["BackfillIDPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The cancelled backfill. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Backfill"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     listConnectionRuns: {
@@ -3427,6 +3993,65 @@ export interface operations {
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    listSchedules: {
+        parameters: {
+            query?: {
+                /** @description Only this connection's schedules. */
+                connection?: components["schemas"]["ConnectionID"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Schedules. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        schedules: components["schemas"]["Schedule"][];
+                    };
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    updateSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulePatch"];
+            };
+        };
+        responses: {
+            /** @description Updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Schedule"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
         };
     };
     listDevices: {
@@ -3670,6 +4295,34 @@ export interface operations {
             503: components["responses"]["Problem"];
         };
     };
+    listExtractions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The runs. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        extractions: components["schemas"]["Extraction"][];
+                    };
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
     createExtraction: {
         parameters: {
             query?: never;
@@ -3682,7 +4335,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
                 "application/json": components["schemas"]["ExtractionInput"];
             };
@@ -3702,6 +4355,7 @@ export interface operations {
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     getExtraction: {
@@ -4287,6 +4941,7 @@ export interface operations {
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     listTimezonePeriods: {
@@ -4322,7 +4977,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["TimezonePeriod"];
+                "application/json": components["schemas"]["TimezonePeriodInput"];
             };
         };
         responses: {
@@ -4337,6 +4992,60 @@ export interface operations {
             };
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    deleteTimezonePeriod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    updateTimezonePeriod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TimezonePeriodInput"];
+            };
+        };
+        responses: {
+            /** @description Updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimezonePeriod"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
         };
