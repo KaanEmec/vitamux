@@ -1,0 +1,74 @@
+/* Design tokens. Components use these custom properties, never raw colours or sizes.
+   Light by default; dark follows prefers-color-scheme. */
+:root {
+	color-scheme: light dark;
+
+	--font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+	--font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	--text-xs: 0.75rem;
+	--text-sm: 0.875rem;
+	--text-md: 1rem;
+	--text-lg: 1.25rem;
+	--text-xl: 1.5rem;
+	--leading: 1.5;
+
+	--space-1: 0.25rem;
+	--space-2: 0.5rem;
+	--space-3: 0.75rem;
+	--space-4: 1rem;
+	--space-5: 1.5rem;
+	--space-6: 2rem;
+	--space-8: 3rem;
+
+	--radius-sm: 4px;
+	--radius-md: 8px;
+	--sidebar-width: 13rem;
+	--content-max: 72rem;
+
+	--color-bg: #f7f8f8;
+	--color-surface: #ffffff;
+	--color-surface-2: #eef1f1;
+	--color-border: #d5dbdb;
+	--color-text: #172121;
+	--color-text-muted: #556565;
+	--color-accent: #0f766e;
+	--color-accent-hover: #115e59;
+	--color-on-accent: #ffffff;
+	--color-focus: #2563eb;
+
+	/* Status colours always pair with a distinct icon shape (StatusIcon). */
+	--color-ok: #15803d;
+	--color-warn: #b45309;
+	--color-error: #b91c1c;
+	--color-info: #1d4ed8;
+	--color-neutral: #6b7280;
+	--color-error-bg: #fdecec;
+	--color-info-bg: #e8eefc;
+
+	--shadow-1: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--color-bg: #0f1616;
+		--color-surface: #172020;
+		--color-surface-2: #1f2a2a;
+		--color-border: #334242;
+		--color-text: #e6eded;
+		--color-text-muted: #9fb0b0;
+		--color-accent: #2dd4bf;
+		--color-accent-hover: #5eead4;
+		--color-on-accent: #042f2c;
+		--color-focus: #93c5fd;
+
+		--color-ok: #4ade80;
+		--color-warn: #fbbf24;
+		--color-error: #f87171;
+		--color-info: #93c5fd;
+		--color-neutral: #9ca3af;
+		--color-error-bg: #3a1a1a;
+		--color-info-bg: #172544;
+
+		--shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
+	}
+}

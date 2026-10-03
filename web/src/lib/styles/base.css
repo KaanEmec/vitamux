@@ -1,0 +1,139 @@
+/* Element defaults and the few shared classes (.btn, .field, .card, .visually-hidden).
+   Component-specific styling stays in the component's <style> block. */
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	font-family: var(--font-sans);
+	font-size: var(--text-md);
+	line-height: var(--leading);
+	color: var(--color-text);
+	background: var(--color-bg);
+}
+
+h1,
+h2,
+h3 {
+	line-height: 1.25;
+	margin: 0 0 var(--space-3);
+}
+h1 {
+	font-size: var(--text-xl);
+}
+h2 {
+	font-size: var(--text-lg);
+}
+
+a {
+	color: var(--color-accent);
+}
+
+:focus-visible {
+	outline: 2px solid var(--color-focus);
+	outline-offset: 2px;
+}
+
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+.muted {
+	color: var(--color-text-muted);
+}
+
+.card {
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	padding: var(--space-5);
+	box-shadow: var(--shadow-1);
+}
+
+/* Buttons: .btn (secondary), .btn.primary, .btn.link (looks like a link). */
+.btn {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-2) var(--space-4);
+	font: inherit;
+	color: var(--color-text);
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+}
+.btn:hover {
+	background: var(--color-surface-2);
+}
+.btn.primary {
+	color: var(--color-on-accent);
+	background: var(--color-accent);
+	border-color: var(--color-accent);
+}
+.btn.primary:hover {
+	background: var(--color-accent-hover);
+}
+.btn.link {
+	padding: 0;
+	color: var(--color-accent);
+	background: none;
+	border: 0;
+	text-decoration: underline;
+}
+.btn:disabled {
+	opacity: 0.6;
+	cursor: progress;
+}
+
+/* Form fields: see components/TextField.svelte. */
+.field {
+	display: grid;
+	gap: var(--space-1);
+	margin-bottom: var(--space-4);
+}
+.field label {
+	font-weight: 600;
+	font-size: var(--text-sm);
+}
+.field input {
+	padding: var(--space-2) var(--space-3);
+	font: inherit;
+	color: var(--color-text);
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-sm);
+}
+.field input[aria-invalid='true'] {
+	border-color: var(--color-error);
+}
+.field .error {
+	color: var(--color-error);
+	font-size: var(--text-sm);
+}
+.field .hint {
+	color: var(--color-text-muted);
+	font-size: var(--text-sm);
+}
+
+/* SvelteKit's route announcer hides itself with an inline style attribute, which the
+   strict CSP (style-src 'self') blocks; hide it here so it stays screen-reader only. */
+#svelte-announcer {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}

@@ -29,6 +29,8 @@ jobs:
       - run: npm run check
       - run: npm run lint
       - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test # E2E against the built SPA with a stubbed API (web/e2e)
       - uses: actions/upload-artifact@v4
         with:
           name: web-build

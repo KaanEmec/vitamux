@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "imports": {
+    "#lib": "./src/lib",
+    "#lib/*": "./src/lib/*"
+  },
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
@@ -10,10 +14,12 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "lint": "eslint .",
     "openapi": "openapi-typescript ../api/openapi.yaml -o src/lib/api/schema.d.ts",
-    "lint:api": "npx --yes @stoplight/spectral-cli@6.17.0 lint --fail-severity=warn --ruleset ../.spectral.yaml ../api/openapi.yaml"
+    "lint:api": "npx --yes @stoplight/spectral-cli@6.17.0 lint --fail-severity=warn --ruleset ../.spectral.yaml ../api/openapi.yaml",
+    "test:e2e": "vite build && playwright test"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@playwright/test": "1.63.0",
     "@sveltejs/adapter-static": "4.0.0",
     "@sveltejs/kit": "3.0.0",
     "@sveltejs/vite-plugin-svelte": "7.3.1",
@@ -32,5 +38,8 @@
     "openapi-typescript": {
       "typescript": "$typescript"
     }
+  },
+  "dependencies": {
+    "openapi-fetch": "0.17.0"
   }
 }
