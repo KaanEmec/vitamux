@@ -1469,6 +1469,29 @@ paths:
         '422': {$ref: '#/components/responses/Problem'}
         '503': {$ref: '#/components/responses/Problem'}
 
+  /api/v1/extractors:
+    get:
+      tags: [documents]
+      operationId: listExtractors
+      summary: Extraction providers this server has configured, with the model consent must name
+      description: >-
+        `fake` is always listed. An external provider is listed once the admin configured it; `enabled` is the owner's
+        setting `documents.external_ai.<provider>.enabled` (always true for `fake`). The consent dialog names `model`.
+      security: [{session: []}, {apiKey: ['read:config']}]
+      responses:
+        '200':
+          description: The providers, in a fixed order.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [extractors]
+                properties:
+                  extractors: {type: array, items: {$ref: '#/components/schemas/Extractor'}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
+
   /api/v1/extractions/{id}:
     get:
       tags: [documents]
@@ -3185,6 +3208,16 @@ components:
         provider: {type: string}
         model: {type: string}
         acknowledged_at: {type: string, format: date-time}
+    Extractor:
+      type: object
+      description: A configured extraction provider (lab-documents.md#privacy-controls).
+      additionalProperties: false
+      required: [id, external, model, enabled]
+      properties:
+        id: {type: string, enum: [fake, gemini, openai, openai_compatible]}
+        external: {type: boolean, description: True when extraction sends the PDF off the host (needs enablement and consent).}
+        model: {type: [string, 'null'], description: The configured model that consent must name; null for fake.}
+        enabled: {type: boolean, description: Whether the owner enabled it; always true for fake.}
     Extraction:
       type: object
       description: One extraction run. The raw provider response is stored encrypted and never returned.

@@ -968,6 +968,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/extractors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Extraction providers this server has configured, with the model consent must name
+         * @description `fake` is always listed. An external provider is listed once the admin configured it; `enabled` is the owner's setting `documents.external_ai.<provider>.enabled` (always true for `fake`). The consent dialog names `model`.
+         */
+        get: operations["listExtractors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/extractions/{id}": {
         parameters: {
             query?: never;
@@ -2297,6 +2317,17 @@ export interface components {
             model: string;
             /** Format: date-time */
             acknowledged_at: string;
+        };
+        /** @description A configured extraction provider (lab-documents.md#privacy-controls). */
+        Extractor: {
+            /** @enum {string} */
+            id: "fake" | "gemini" | "openai" | "openai_compatible";
+            /** @description True when extraction sends the PDF off the host (needs enablement and consent). */
+            external: boolean;
+            /** @description The configured model that consent must name; null for fake. */
+            model: string | null;
+            /** @description Whether the owner enabled it; always true for fake. */
+            enabled: boolean;
         };
         /** @description One extraction run. The raw provider response is stored encrypted and never returned. */
         Extraction: {
@@ -4563,6 +4594,31 @@ export interface operations {
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    listExtractors: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The providers, in a fixed order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        extractors: components["schemas"]["Extractor"][];
+                    };
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
         };
     };

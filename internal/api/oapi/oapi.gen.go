@@ -272,22 +272,22 @@ func (e ExtractionStatus) Valid() bool {
 
 // Defines values for ExtractionInputProvider.
 const (
-	Fake             ExtractionInputProvider = "fake"
-	Gemini           ExtractionInputProvider = "gemini"
-	Openai           ExtractionInputProvider = "openai"
-	OpenaiCompatible ExtractionInputProvider = "openai_compatible"
+	ExtractionInputProviderFake             ExtractionInputProvider = "fake"
+	ExtractionInputProviderGemini           ExtractionInputProvider = "gemini"
+	ExtractionInputProviderOpenai           ExtractionInputProvider = "openai"
+	ExtractionInputProviderOpenaiCompatible ExtractionInputProvider = "openai_compatible"
 )
 
 // Valid indicates whether the value is a known member of the ExtractionInputProvider enum.
 func (e ExtractionInputProvider) Valid() bool {
 	switch e {
-	case Fake:
+	case ExtractionInputProviderFake:
 		return true
-	case Gemini:
+	case ExtractionInputProviderGemini:
 		return true
-	case Openai:
+	case ExtractionInputProviderOpenai:
 		return true
-	case OpenaiCompatible:
+	case ExtractionInputProviderOpenaiCompatible:
 		return true
 	default:
 		return false
@@ -333,6 +333,30 @@ func (e ExtractionRowEditAction) Valid() bool {
 	case Edit:
 		return true
 	case Reject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExtractorID.
+const (
+	ExtractorIDFake             ExtractorID = "fake"
+	ExtractorIDGemini           ExtractorID = "gemini"
+	ExtractorIDOpenai           ExtractorID = "openai"
+	ExtractorIDOpenaiCompatible ExtractorID = "openai_compatible"
+)
+
+// Valid indicates whether the value is a known member of the ExtractorID enum.
+func (e ExtractorID) Valid() bool {
+	switch e {
+	case ExtractorIDFake:
+		return true
+	case ExtractorIDGemini:
+		return true
+	case ExtractorIDOpenai:
+		return true
+	case ExtractorIDOpenaiCompatible:
 		return true
 	default:
 		return false
@@ -1401,6 +1425,22 @@ type ExtractionRowEditAction string
 
 // ExtractionRowPatch Merge patch of an extracted row; every field is optional and null clears it.
 type ExtractionRowPatch = json.RawMessage
+
+// Extractor A configured extraction provider (lab-documents.md#privacy-controls).
+type Extractor struct {
+	// Enabled Whether the owner enabled it; always true for fake.
+	Enabled bool `json:"enabled"`
+
+	// External True when extraction sends the PDF off the host (needs enablement and consent).
+	External bool        `json:"external"`
+	ID       ExtractorID `json:"id"`
+
+	// Model The configured model that consent must name; null for fake.
+	Model *string `json:"model"`
+}
+
+// ExtractorID defines model for Extractor.ID.
+type ExtractorID string
 
 // Group Measurement group (bp_reading, body_composition) with its components.
 type Group struct {
@@ -2991,6 +3031,9 @@ type ServerInterface interface {
 	// UnconfirmExtraction Delete the lab results confirmed from a run and return it to review (audited)
 	// (POST /api/v1/extractions/{id}/unconfirm)
 	UnconfirmExtraction(w http.ResponseWriter, r *http.Request, id ID)
+	// ListExtractors Extraction providers this server has configured, with the model consent must name
+	// (GET /api/v1/extractors)
+	ListExtractors(w http.ResponseWriter, r *http.Request)
 	// ListGroups List measurement groups (blood-pressure readings, weigh-ins)
 	// (GET /api/v1/groups)
 	ListGroups(w http.ResponseWriter, r *http.Request, params ListGroupsParams)
@@ -4580,6 +4623,20 @@ func (siw *ServerInterfaceWrapper) UnconfirmExtraction(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UnconfirmExtraction(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListExtractors operation middleware
+func (siw *ServerInterfaceWrapper) ListExtractors(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListExtractors(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6579,6 +6636,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/documents/{id}/file", wrapper.GetDocumentFile)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/documents/{id}/extractions", wrapper.ListExtractions)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/documents/{id}/extractions", wrapper.CreateExtraction)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/extractors", wrapper.ListExtractors)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/extractions/{id}", wrapper.GetExtraction)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/extractions/{id}/rows/{row}", wrapper.UpdateExtractionRow)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/extractions/{id}/confirm", wrapper.ConfirmExtraction)
@@ -10321,6 +10379,73 @@ func (response UnconfirmExtraction409ApplicationProblemPlusJSONResponse) VisitUn
 	return err
 }
 
+type ListExtractorsRequestObject struct {
+}
+
+type ListExtractorsResponseObject interface {
+	VisitListExtractorsResponse(w http.ResponseWriter) error
+}
+
+type ListExtractors200JSONResponse struct {
+	Extractors []Extractor `json:"extractors"`
+}
+
+func (response ListExtractors200JSONResponse) VisitListExtractorsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListExtractors401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response ListExtractors401ApplicationProblemPlusJSONResponse) VisitListExtractorsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListExtractors403ApplicationProblemPlusJSONResponse Problem
+
+func (response ListExtractors403ApplicationProblemPlusJSONResponse) VisitListExtractorsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListExtractors503ApplicationProblemPlusJSONResponse Problem
+
+func (response ListExtractors503ApplicationProblemPlusJSONResponse) VisitListExtractorsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListGroupsRequestObject struct {
 	Params ListGroupsParams
 }
@@ -13163,6 +13288,9 @@ type StrictServerInterface interface {
 	// UnconfirmExtraction Delete the lab results confirmed from a run and return it to review (audited)
 	// (POST /api/v1/extractions/{id}/unconfirm)
 	UnconfirmExtraction(ctx context.Context, request UnconfirmExtractionRequestObject) (UnconfirmExtractionResponseObject, error)
+	// ListExtractors Extraction providers this server has configured, with the model consent must name
+	// (GET /api/v1/extractors)
+	ListExtractors(ctx context.Context, request ListExtractorsRequestObject) (ListExtractorsResponseObject, error)
 	// ListGroups List measurement groups (blood-pressure readings, weigh-ins)
 	// (GET /api/v1/groups)
 	ListGroups(ctx context.Context, request ListGroupsRequestObject) (ListGroupsResponseObject, error)
@@ -14653,6 +14781,30 @@ func (sh *strictHandler) UnconfirmExtraction(w http.ResponseWriter, r *http.Requ
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UnconfirmExtractionResponseObject); ok {
 		if err := validResponse.VisitUnconfirmExtractionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListExtractors operation middleware
+func (sh *strictHandler) ListExtractors(w http.ResponseWriter, r *http.Request) {
+	var request ListExtractorsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListExtractors(ctx, request.(ListExtractorsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListExtractors")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListExtractorsResponseObject); ok {
+		if err := validResponse.VisitListExtractorsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

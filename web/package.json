@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "openapi-fetch": "0.17.0",
+    "pdfjs-dist": "6.4.299",
     "uplot": "1.6.32"
   }
 }

@@ -3,7 +3,7 @@
 ## Technology
 
 - SvelteKit with `adapter-static`, SSR off, TypeScript. Built in CI and embedded in `vitamux` with `go:embed`; Node is needed only at build time.
-- Generated OpenAPI client; `uPlot` for series (a 14,400-point day must render quickly); `pdf.js` lazy-loaded for lab review. No component framework.
+- Generated OpenAPI client; `uPlot` for series (a 14,400-point day must render quickly); `pdf.js` lazy-loaded for lab review (dynamic import in `lib/lab/PdfViewer.svelte`, no WebAssembly; the row outline is an SVG over the canvas). No component framework.
 - Budget: ≤ 300 KiB gzip initial JS, excluding the lazy chunks. Strict CSP (no inline scripts).
 - Accessibility: keyboard navigation, labelled controls, status shown by shape and colour (never colour alone). Responsive, but not a mobile app.
 
@@ -26,7 +26,7 @@ Alternatives rejected: htmx (the rule builder, charts, and PDF review need real 
    - **All sources** drilldown: chart overlay, included/excluded table, provenance links, override actions;
    - sleep hypnogram comparison; workout clusters.
 4. **Rules**: metric catalogue with a 90-day per-source coverage heatmap; guided builder; version history, diff, activate.
-5. **Lab results**: upload, consent dialog, review (PDF + rows), confirmed results by analyte ([lab-documents.md](lab-documents.md)).
+5. **Lab results**: upload, consent dialog naming provider and model, review (`lab/documents/[id]`: PDF page with the row outlined beside the row editor), confirmed results by analyte with history, delete keeping or deleting results ([lab-documents.md](lab-documents.md)).
 6. **Settings**: profile and timezone periods, devices (Apple pairing, origins), API keys, AI providers, retention, backups and export, security (password, TOTP, sessions), system status.
 
 ## Rule builder

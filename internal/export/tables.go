@@ -21,6 +21,7 @@ var refTables = []refTable{
 	{"providers", (*dbq.Queries).ExportProviders},
 	{"units", (*dbq.Queries).ExportUnits},
 	{"metric_catalog", (*dbq.Queries).ExportMetricCatalog},
+	{"analytes", (*dbq.Queries).ExportAnalytes},
 }
 
 // table is one exported table, listed in import (foreign key) order. A new table holding
@@ -58,6 +59,10 @@ func all(e *exporter, rows []json.RawMessage, err error) (int64, error) {
 }
 
 func owned(im *importer, r row) (bool, error) { im.own(r); return true, nil }
+
+// notImported drops every row of a table that is exported to read only; noInsert is then never reached.
+func notImported(*importer, row) (bool, error)  { return false, nil }
+func noInsert(*importer, []byte) (int64, error) { return 0, nil }
 
 func execrows(f func(*dbq.Queries, context.Context, json.RawMessage) (int64, error)) func(*importer, []byte) (int64, error) {
 	return func(im *importer, rows []byte) (int64, error) { return f(im.q, im.ctx, rows) }
@@ -385,6 +390,97 @@ var tables = []table{
 		insert: execrows((*dbq.Queries).ImportManualOverrides),
 	},
 	{
+		// Lab documents (E12): metadata only. The PDF, its filename and the document key are
+		// never exported, so imported documents are tombstones whose confirmed results stay, as
+		// after a delete with derived=keep (docs/architecture/lab-documents.md#storage).
+		name: "documents",
+		export: func(e *exporter) (int64, error) {
+			return uuidKeyed(e, func(after uuid.UUID) ([]dbq.ExportDocumentsRow, error) {
+				return e.q.ExportDocuments(e.ctx, dbq.ExportDocumentsParams{UserID: e.user, After: after, Lim: pageSize})
+			}, func(r dbq.ExportDocumentsRow) (uuid.UUID, json.RawMessage) { return r.ID, r.Row })
+		},
+		patch: func(im *importer, r row) (bool, error) {
+			im.own(r)
+			r["status"], r["retention_until"] = json.RawMessage(`"deleted"`), jsonNull
+			if r.null("deleted_at") {
+				r["deleted_at"] = im.now
+			}
+			return true, nil
+		},
+		insert: execrows((*dbq.Queries).ImportDocuments),
+	},
+	{
+		// Runs, rows and their review trail (without the sealed raw response) are exported to
+		// read but not imported: a tombstoned document keeps no runs.
+		name: "extraction_runs",
+		export: func(e *exporter) (int64, error) {
+			return uuidKeyed(e, func(after uuid.UUID) ([]dbq.ExportExtractionRunsRow, error) {
+				return e.q.ExportExtractionRuns(e.ctx, dbq.ExportExtractionRunsParams{UserID: e.user, After: after, Lim: pageSize})
+			}, func(r dbq.ExportExtractionRunsRow) (uuid.UUID, json.RawMessage) { return r.ID, r.Row })
+		},
+		patch: notImported, insert: noInsert,
+	},
+	{
+		name: "lab_extracted_rows",
+		export: func(e *exporter) (int64, error) {
+			return intKeyed(e, func(after int64) ([]dbq.ExportLabExtractedRowsRow, error) {
+				return e.q.ExportLabExtractedRows(e.ctx, dbq.ExportLabExtractedRowsParams{UserID: e.user, After: after, Lim: pageSize})
+			}, func(r dbq.ExportLabExtractedRowsRow) (int64, json.RawMessage) { return r.ID, r.Row })
+		},
+		patch: notImported, insert: noInsert,
+	},
+	{
+		name: "extraction_row_edits",
+		export: func(e *exporter) (int64, error) {
+			return intKeyed(e, func(after int64) ([]dbq.ExportExtractionRowEditsRow, error) {
+				return e.q.ExportExtractionRowEdits(e.ctx, dbq.ExportExtractionRowEditsParams{UserID: e.user, After: after, Lim: pageSize})
+			}, func(r dbq.ExportExtractionRowEditsRow) (int64, json.RawMessage) { return r.ID, r.Row })
+		},
+		patch: notImported, insert: noInsert,
+	},
+	{
+		name: "lab_reports",
+		export: func(e *exporter) (int64, error) {
+			return uuidKeyed(e, func(after uuid.UUID) ([]dbq.ExportLabReportsRow, error) {
+				return e.q.ExportLabReports(e.ctx, dbq.ExportLabReportsParams{UserID: e.user, After: after, Lim: pageSize})
+			}, func(r dbq.ExportLabReportsRow) (uuid.UUID, json.RawMessage) { return r.ID, r.Row })
+		},
+		patch:  func(im *importer, r row) (bool, error) { im.own(r); r["run_id"] = jsonNull; return true, nil },
+		insert: execrows((*dbq.Queries).ImportLabReports),
+	},
+	{
+		name: "lab_results",
+		export: func(e *exporter) (int64, error) {
+			return uuidKeyed(e, func(after uuid.UUID) ([]dbq.ExportLabResultsRow, error) {
+				return e.q.ExportLabResults(e.ctx, dbq.ExportLabResultsParams{UserID: e.user, After: after, Lim: pageSize})
+			}, func(r dbq.ExportLabResultsRow) (uuid.UUID, json.RawMessage) { return r.ID, r.Row })
+		},
+		patch:  func(im *importer, r row) (bool, error) { im.own(r); r["source_row_id"] = jsonNull; return true, nil },
+		insert: execrows((*dbq.Queries).ImportLabResults),
+	},
+	{
+		name: "lab_result_revisions",
+		export: func(e *exporter) (int64, error) {
+			return intKeyed(e, func(after int64) ([]dbq.ExportLabResultRevisionsRow, error) {
+				return e.q.ExportLabResultRevisions(e.ctx, dbq.ExportLabResultRevisionsParams{UserID: e.user, After: after, Lim: pageSize})
+			}, func(r dbq.ExportLabResultRevisionsRow) (int64, json.RawMessage) { return r.ID, r.Row })
+		},
+		patch:  func(*importer, row) (bool, error) { return true, nil },
+		insert: execrows((*dbq.Queries).ImportLabResultRevisions),
+	},
+	{
+		// The owner's aliases; analyte ids are checked through the analytes reference file.
+		// Revisions and aliases are inserted with new ids (see labexport.sql).
+		name: "analyte_aliases",
+		export: func(e *exporter) (int64, error) {
+			return intKeyed(e, func(after int64) ([]dbq.ExportAnalyteAliasesRow, error) {
+				return e.q.ExportAnalyteAliases(e.ctx, dbq.ExportAnalyteAliasesParams{UserID: &e.user, After: after, Lim: pageSize})
+			}, func(r dbq.ExportAnalyteAliasesRow) (int64, json.RawMessage) { return r.ID, r.Row })
+		},
+		patch:  owned,
+		insert: execrows((*dbq.Queries).ImportAnalyteAliases),
+	},
+	{
 		// Imported into an empty instance only (see importer.run).
 		name: "audit_events", seq: "audit_events_id_seq",
 		export: func(e *exporter) (int64, error) {
@@ -419,12 +515,9 @@ var withoutFile = map[string]string{ //nolint:unused // checked by TestEveryTabl
 	"provider_rate_state": "operational",
 	"resolution_dirty":    "derived: the importer marks imported days",
 	"exports":             "the exports themselves",
-	// Lab documents (E12) hold sealed PDFs and keys; exporting them is a follow-up.
-	"documents": "lab documents: not exported yet", "document_keys": "lab documents: not exported yet",
-	"extraction_runs": "lab documents: not exported yet", "lab_extracted_rows": "lab documents: not exported yet",
-	"extraction_row_edits": "lab documents: not exported yet", "lab_reports": "lab documents: not exported yet",
-	"lab_results": "lab documents: not exported yet", "lab_result_revisions": "lab documents: not exported yet",
-	"analytes": "seeded catalogue", "analyte_aliases": "lab documents: not exported yet",
+	"document_keys":       "secrets: lab PDFs, filenames and raw extractor responses stay sealed and are never exported",
+	// Rebuildable resolution state (J09.9).
+	"resolved_cache": "derived: recomputed on read", "source_hourly_aggregates": "derived: rebuilt from resolution_dirty",
 }
 
 const zeroHash = "0000000000000000000000000000000000000000000000000000000000000000"
