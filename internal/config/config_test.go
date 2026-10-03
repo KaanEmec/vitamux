@@ -135,3 +135,14 @@ func TestMetricsAddr(t *testing.T) {
 		}
 	}
 }
+
+func TestWithingsClient(t *testing.T) {
+	c, err := load(envOf(map[string]string{"VITAMUX_WITHINGS_CLIENT_ID": "synthetic-client", "VITAMUX_WITHINGS_CLIENT_SECRET_FILE": "/run/secrets/w"}),
+		filesOf(map[string]string{"/run/secrets/w": "SENTINEL-SECRET\n"}))
+	if err != nil || c.WithingsClientID != "synthetic-client" || c.WithingsClientSecret.Value() != "SENTINEL-SECRET" {
+		t.Fatalf("got %v", err)
+	}
+	if _, err := load(envOf(map[string]string{"VITAMUX_WITHINGS_CLIENT_ID": "synthetic-client"}), filesOf(nil)); err == nil {
+		t.Fatal("id without secret accepted")
+	}
+}

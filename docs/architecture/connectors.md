@@ -29,10 +29,12 @@ type Connector interface {
     Plan(ctx context.Context, c Conn, req PlanRequest) ([]WorkUnit, error) // incremental|correction|backfill|manual
     Fetch(ctx context.Context, c Conn, cred Credentials, u WorkUnit, out *RawSink) (FetchResult, error) // one page
 }
-type Authenticator interface { // only if AuthKind needs it
-    Begin(ctx context.Context, c Conn, in AuthInput) (AuthStep, error)                         // redirect URL or challenge (J08.2)
-    Continue(ctx context.Context, c Conn, st AuthState, in AuthInput) (AuthStep, *Credentials, error) // (J08.2)
+type Authenticator interface { // AuthKind OAuth2 or InteractiveMFA
     Refresh(ctx context.Context, c Conn, cred Credentials) (Credentials, error)
+}
+type Interactive interface { // the bootstrap, e.g. the OAuth authorization-code flow
+    Begin(ctx context.Context, in AuthInput) (AuthStep, error)                // consent URL; no provider call
+    Continue(ctx context.Context, c Conn, in AuthInput) (Authorized, error) // callback → credentials + provider account id
 }
 type FetchResult struct { NextCursor json.RawMessage; HighWatermark time.Time; Done bool; RetryAfter time.Duration }
 ```
@@ -64,6 +66,16 @@ The core does these so connectors stay small:
 7. **Manual sync**: a high-priority job with a dedupe key (double-clicks enqueue once).
 8. **Schema drift**: shape fingerprint = hash of sorted JSON key paths and value kinds. Extra fields → warning; missing or retyped required fields → drift.
 9. **Health**: last success, last error class, consecutive failures, stream lag. Connection states: `active | degraded | needs_reauth | paused | error | disabled`.
+
+## OAuth connection flow
+
+Code: `internal/connectors/auth.go` (`Runtime.BeginAuth`, `CompleteAuth`, `Disconnect`, reusable `StateSigner`), routes in `internal/api/oauth.go`.
+
+1. `POST /api/v1/providers/{provider}/auth/begin` (new account) or `POST /api/v1/connections/{id}/auth/begin` (reauthorize), owner session only. It stores an `oauth_states` row (user, session, provider, connection, 10 min expiry) and answers `{"redirect_url"}` with a `state` = row id + HMAC (`session-signing` key) over the id and a random browser binding, which is also set as cookie `vitamux_oauth` (`HttpOnly; SameSite=Lax; Path=/oauth/`). The session cookie is `SameSite=Strict`, so it does not come back on the provider's redirect; the binding cookie does.
+2. `GET /oauth/{provider}/callback` (public; `HEAD` → 204, no side effects) verifies the HMAC with the cookie, then deletes the row in one statement: single use, and refused when expired, for another provider, or after its session ended. Only then does the connector exchange the code.
+3. `account_key` = SHA-256 of the provider account id. A new account gets a connection; the same account again (reconnect) reuses its connection (`UNIQUE (user, provider, account_key)`) and gets fresh credentials; a reauthorization must sign in to the connection's own account (otherwise nothing changes). The connection becomes `active`, default schedules are ensured, a first manual sync is queued, and the event is audited.
+4. The callback redirects to `/connections?connected=<provider>` or `/connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable`.
+5. Disconnect (`DELETE /api/v1/connections/{id}?data=keep`) deletes the credentials and sets `disabled`; data, cursors and schedules stay, and connecting the same account again revives the connection.
 
 ## Push ingest contract
 
@@ -128,17 +140,19 @@ Code: `internal/normalize` (interface, `Registry`, `Output.Validate`, `RegisterV
 
 ## Withings connector (reference pattern)
 
-- Official OAuth2, in-process. Each self-hoster registers their own Withings developer app; client id and secret come from secret files. Callback: `${VITAMUX_PUBLIC_URL}/oauth/withings/callback` (GET exchange; HEAD → 204).
+Verified API facts and the exact mapping: [providers/withings.md](../providers/withings.md).
+
+- Official OAuth2, in-process ([OAuth connection flow](#oauth-connection-flow)). Each self-hoster registers their own Withings developer app; `VITAMUX_WITHINGS_CLIENT_ID` and `VITAMUX_WITHINGS_CLIENT_SECRET_FILE`. Callback: `${VITAMUX_PUBLIC_URL}/oauth/withings/callback`.
 - Stream `withings.measures` (MVP):
-  - BP systolic/diastolic/pulse, weight, and body composition;
-  - incremental via `getmeas lastupdate`; backfill in date chunks with paging; default hourly poll.
+  - BP systolic/diastolic/pulse, weight, body composition and the other getmeas types of the catalogue;
+  - incremental via `getmeas lastupdate` (hourly), a daily 7-day correction by date, backfill in 30-day units, `offset`/`more` paging; 120 requests per minute;
+  - raw: one record per measure group (`measuregrp:<grpid>`).
 - Normalizer:
-  - measure groups → `bp_reading` / `body_composition` groups; value = `value × 10^unit`;
-  - manual-entry attribution → `manual_entry` flag;
+  - measure groups → `bp_reading` / `body_composition` groups, other types plain samples; value = `value × 10^unit`;
+  - manual-entry attribution (`attrib` 2, 4) → `manual_entry` flag;
   - unknown meastype → warning (raw kept).
-- Rotating refresh tokens use the single-flight refresh.
-- Notifications are optional: subscribe with `/webhooks/withings/{hook_token}`. A POST only enqueues a deduplicated window sync. Polling stays on.
-- Withings facts are assumptions until J08.1 verifies them against current docs ([project.md](project.md#assumptions-to-verify)).
+- Rotating refresh tokens (3 h access, the old refresh token dies once the new access token is used) use the single-flight refresh.
+- Notifications are optional: subscribe with `/webhooks/withings/{hook_token}` (`appli` 1, 2, 4). A POST only enqueues a deduplicated window sync. Polling stays on.
 
 ## Remote sidecar mode
 

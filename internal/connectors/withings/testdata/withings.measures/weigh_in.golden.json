@@ -1,0 +1,102 @@
+{
+  "synthetic": true,
+  "normalizer": "withings.measures",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "synthetic-scale-01",
+        "type": "scale",
+        "manufacturer": "Withings",
+        "model": "Body Cardio"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "heart_rate",
+        "kind": "sample",
+        "start": "2025-01-01T06:17:00Z",
+        "value": 61,
+        "unit": "bpm",
+        "device": "synthetic-scale-01",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "133305960671872",
+          "component": "heart_rate"
+        }
+      },
+      {
+        "metric": "pulse_wave_velocity",
+        "kind": "sample",
+        "start": "2025-01-01T06:17:00Z",
+        "value": 7.2,
+        "unit": "m/s",
+        "device": "synthetic-scale-01",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "133305960671872",
+          "component": "pulse_wave_velocity"
+        }
+      }
+    ],
+    "groups": [
+      {
+        "kind": "body_composition",
+        "measured_at": "2025-01-01T06:17:00Z",
+        "context": {
+          "attrib": 0
+        },
+        "device": "synthetic-scale-01",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "133305960671872",
+          "component": "body_composition"
+        },
+        "components": [
+          {
+            "metric": "weight",
+            "kind": "sample",
+            "start": "2025-01-01T06:17:00Z",
+            "value": 79.95,
+            "unit": "kg"
+          },
+          {
+            "metric": "body_fat_ratio",
+            "kind": "sample",
+            "start": "2025-01-01T06:17:00Z",
+            "value": 23,
+            "unit": "%"
+          },
+          {
+            "metric": "fat_mass",
+            "kind": "sample",
+            "start": "2025-01-01T06:17:00Z",
+            "value": 18.39,
+            "unit": "kg"
+          },
+          {
+            "metric": "muscle_mass",
+            "kind": "sample",
+            "start": "2025-01-01T06:17:00Z",
+            "value": 36,
+            "unit": "kg"
+          },
+          {
+            "metric": "bone_mass",
+            "kind": "sample",
+            "start": "2025-01-01T06:17:00Z",
+            "value": 3.1,
+            "unit": "kg"
+          },
+          {
+            "metric": "hydration",
+            "kind": "sample",
+            "start": "2025-01-01T06:17:00Z",
+            "value": 44,
+            "unit": "kg"
+          }
+        ]
+      }
+    ]
+  }
+}

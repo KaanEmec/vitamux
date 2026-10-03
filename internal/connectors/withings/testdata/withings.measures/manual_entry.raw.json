@@ -1,0 +1,1 @@
+{"synthetic": true, "timezone": "Europe/Berlin", "measuregrp": {"grpid": 98765000000001, "attrib": 2, "date": 1735740000, "created": 1735740060, "modified": 1735740060, "category": 1, "deviceid": null, "hash_deviceid": null, "measures": [{"value": 812, "type": 1, "unit": -1}, {"value": 128, "type": 10, "unit": 0}, {"value": 82, "type": 9, "unit": 0}], "comment": null}}

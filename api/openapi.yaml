@@ -185,10 +185,17 @@ paths:
       tags: [source-data]
       operationId: listMeasurements
       summary: List normalized measurements
+      description: >
+        Active rows by default, ordered by (start_at, id); include=superseded adds earlier
+        versions and include=deleted adds rows deleted upstream. start/end filter start_at,
+        start_date/end_date the local date. include=provenance adds the raw payload's fetch
+        metadata.
       security: [{session: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/Start'
         - $ref: '#/components/parameters/End'
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
         - $ref: '#/components/parameters/MetricFilter'
         - $ref: '#/components/parameters/ProviderFilter'
         - $ref: '#/components/parameters/ConnectionFilter'
@@ -234,6 +241,9 @@ paths:
       tags: [source-data]
       operationId: listGroups
       summary: List measurement groups (blood-pressure readings, weigh-ins)
+      description: >
+        Groups with their components, ordered by (measured_at, id). Filters and include work as
+        on /measurements.
       security: [{session: []}, {apiKey: ['read:health']}]
       parameters:
         - name: kind
@@ -242,6 +252,8 @@ paths:
           schema: {type: string, enum: [bp_reading, body_composition]}
         - $ref: '#/components/parameters/Start'
         - $ref: '#/components/parameters/End'
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
         - $ref: '#/components/parameters/ProviderFilter'
         - $ref: '#/components/parameters/ConnectionFilter'
         - $ref: '#/components/parameters/DeviceFilter'
@@ -264,10 +276,15 @@ paths:
       tags: [source-data]
       operationId: listBloodPressure
       summary: List blood-pressure readings
+      description: >
+        bp_reading groups with their components side by side, ordered by (measured_at, id).
+        Filters and include work as on /measurements.
       security: [{session: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/Start'
         - $ref: '#/components/parameters/End'
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
         - $ref: '#/components/parameters/ProviderFilter'
         - $ref: '#/components/parameters/ConnectionFilter'
         - $ref: '#/components/parameters/DeviceFilter'
@@ -290,8 +307,14 @@ paths:
       tags: [source-data]
       operationId: listSleep
       summary: List sleep sessions
+      description: >
+        Ordered by (start_at, id). start_date/end_date filter sleep_date (the local wake date),
+        start/end filter start_at. include=stages adds the stages; other filters and include
+        work as on /measurements.
       security: [{session: []}, {apiKey: ['read:health']}]
       parameters:
+        - $ref: '#/components/parameters/Start'
+        - $ref: '#/components/parameters/End'
         - $ref: '#/components/parameters/StartDate'
         - $ref: '#/components/parameters/EndDate'
         - $ref: '#/components/parameters/ProviderFilter'
@@ -316,6 +339,7 @@ paths:
       tags: [source-data]
       operationId: getSleep
       summary: Get one sleep session
+      description: Any version, superseded or deleted included, always with its stages.
       security: [{session: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/ID'
@@ -329,16 +353,22 @@ paths:
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
         '404': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
 
   /api/v1/workouts:
     get:
       tags: [source-data]
       operationId: listWorkouts
       summary: List workouts
+      description: >
+        Ordered by (start_at, id). include=segments adds the laps, sets or intervals; other
+        filters and include work as on /measurements.
       security: [{session: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/Start'
         - $ref: '#/components/parameters/End'
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
         - $ref: '#/components/parameters/ProviderFilter'
         - $ref: '#/components/parameters/ConnectionFilter'
         - $ref: '#/components/parameters/DeviceFilter'
@@ -361,6 +391,7 @@ paths:
       tags: [source-data]
       operationId: getWorkout
       summary: Get one workout
+      description: Any version, superseded or deleted included, always with its segments.
       security: [{session: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/ID'
@@ -374,6 +405,7 @@ paths:
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
         '404': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
 
   /api/v1/provenance/{entity}/{id}:
     get:
@@ -385,8 +417,8 @@ paths:
         - name: entity
           in: path
           required: true
-          description: Record type, e.g. measurement, group, sleep, workout, lab_result.
-          schema: {type: string}
+          description: Record type.
+          schema: {type: string, enum: [measurement, group, sleep, workout]}
         - $ref: '#/components/parameters/ID'
       responses:
         '200':
@@ -870,8 +902,12 @@ paths:
     post:
       tags: [connections]
       operationId: beginConnectionAuth
-      summary: Start interactive authorization (OAuth redirect or credential prompt)
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      summary: Reauthorize a connection (OAuth redirect or credential prompt)
+      description: >
+        OAuth: answers {"redirect_url"} and sets the short-lived browser-binding cookie that the
+        provider callback needs (docs/architecture/connectors.md#oauth-connection-flow). Owner
+        session only, since the state is bound to it.
+      security: [{session: [], csrf: []}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
       responses:
@@ -884,6 +920,31 @@ paths:
         '403': {$ref: '#/components/responses/Problem'}
         '404': {$ref: '#/components/responses/Problem'}
         '409': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/providers/{provider}/auth/begin:
+    post:
+      tags: [connections]
+      operationId: beginProviderAuth
+      summary: Connect an account of a provider (OAuth redirect)
+      description: >
+        Like beginConnectionAuth, for an account not connected yet. The callback creates the
+        connection, or reuses the existing one when the same provider account connects again.
+      security: [{session: [], csrf: []}]
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: {type: string, pattern: '^[a-z][a-z0-9_]*$'}
+      responses:
+        '200':
+          description: Next step.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AuthStep'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
 
   /api/v1/connections/{id}/auth/continue:
     post:
@@ -1680,6 +1741,28 @@ paths:
         '409': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
 
+  # ---------------------------------------------------------------- provider callbacks (not under /api)
+  /oauth/{provider}/callback:
+    get:
+      tags: [connections]
+      operationId: oauthCallback
+      summary: OAuth redirect target; completes the authorization and redirects to the UI
+      description: >
+        Authorized by the signed, single-use `state` and the browser-binding cookie, not by the
+        session. Always answers 303 to /connections?connected=<provider> or
+        /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable.
+        HEAD answers 204 without side effects.
+      security: []
+      parameters:
+        - {name: provider, in: path, required: true, schema: {type: string}}
+        - {name: state, in: query, schema: {type: string}}
+        - {name: code, in: query, schema: {type: string}}
+      responses:
+        '204':
+          description: HEAD probe.
+        '303':
+          description: Back to the UI with the outcome.
+
 components:
   securitySchemes:
     session:
@@ -1813,8 +1896,8 @@ components:
       name: device
       in: query
       required: false
-      description: Device id; repeatable.
-      schema: {type: array, items: {type: string}}
+      description: Device id (dev_…); repeatable.
+      schema: {type: array, items: {$ref: '#/components/schemas/DeviceID'}}
     OriginFilter:
       name: origin
       in: query
@@ -1834,7 +1917,7 @@ components:
       description: Comma-separated expansions.
       style: form
       explode: false
-      schema: {type: array, items: {type: string, enum: [provenance, stages, segments, superseded]}}
+      schema: {type: array, items: {type: string, enum: [provenance, stages, segments, superseded, deleted]}}
 
   responses:
     Problem:
@@ -1872,6 +1955,9 @@ components:
     ConnectionID:
       type: string
       pattern: '^conn_[0-9a-f]{32}$'
+    DeviceID:
+      type: string
+      pattern: '^dev_[0-9a-f]{32}$'
     Scope:
       type: string
       enum: ['read:health', 'read:config', 'write:config', 'write:documents', admin]
@@ -2150,7 +2236,67 @@ components:
 
     # ------------------------------------------------ open objects: properties are added with each endpoint
     Metric: {type: object, description: Catalogue metric (docs/architecture/metric-catalog.md). Open object.}
-    Measurement: {type: object, description: Normalized measurement (docs/architecture/data-model.md#measurements). Open object.}
+    Measurement:
+      type: object
+      description: Normalized measurement (docs/architecture/data-model.md#measurements).
+      additionalProperties: false
+      required: [id, metric, kind, start_at, end_at, tz_offset_min, local_date, value, unit, source_value, source_unit, quality_flags, group_id, source, provenance]
+      properties:
+        id: {type: string}
+        metric: {type: string, description: Metric code.}
+        kind: {type: string, enum: [sample, interval, cumulative, daily_value]}
+        start_at: {type: string, format: date-time}
+        end_at: {type: [string, 'null'], format: date-time, description: Exclusive; null for samples.}
+        tz_offset_min: {type: [integer, 'null']}
+        local_date: {type: string, format: date}
+        value: {type: number, format: double, description: In the metric's canonical unit.}
+        unit: {type: string, description: Canonical unit code.}
+        source_value: {type: [number, 'null'], format: double, description: Original value, only when unit conversion changed it.}
+        source_unit: {type: [string, 'null']}
+        quality_flags: {type: integer, minimum: 0, description: 'Bitset: 1 manual_entry, 2 motion_context, 4 implausible, 8 relayed, 16 migrated_without_raw, 32 prorated_source.'}
+        group_id: {type: [string, 'null'], description: Measurement group (blood-pressure reading, weigh-in) this row is a component of.}
+        source: {$ref: '#/components/schemas/SourceRef'}
+        provenance: {$ref: '#/components/schemas/RecordProvenance'}
+    SourceRef:
+      type: object
+      description: Where a canonical row came from. device and origin are the values the device and origin filters take.
+      additionalProperties: false
+      required: [provider, connection_id, device, device_type, origin, external_id, dedupe_key]
+      properties:
+        provider: {type: string, description: Provider code.}
+        connection_id: {$ref: '#/components/schemas/ConnectionID'}
+        device: {oneOf: [{$ref: '#/components/schemas/DeviceID'}, {type: 'null'}]}
+        device_type: {type: [string, 'null']}
+        origin: {type: [string, 'null'], description: Origin key, e.g. a HealthKit bundle id.}
+        external_id: {type: [string, 'null']}
+        dedupe_key: {type: string, pattern: '^[0-9a-f]{32}$'}
+    RecordProvenance:
+      type: object
+      description: Version and provenance columns of a canonical row; GET /provenance/{entity}/{id} has the full trace.
+      additionalProperties: false
+      required: [raw_payload_id, normalizer, ingested_at, normalized_at, superseded_at, superseded_by, deleted_at, deleted_by_raw_id]
+      properties:
+        raw_payload_id: {type: [string, 'null'], description: Null only for rows migrated without raw.}
+        normalizer: {type: string, description: 'name@version'}
+        ingested_at: {type: string, format: date-time}
+        normalized_at: {type: string, format: date-time}
+        superseded_at: {type: [string, 'null'], format: date-time}
+        superseded_by: {type: [string, 'null'], description: Id of the version that replaced this one.}
+        deleted_at: {type: [string, 'null'], format: date-time}
+        deleted_by_raw_id: {type: [string, 'null']}
+        raw: {$ref: '#/components/schemas/RawRef'}
+    RawRef:
+      type: object
+      description: The row's raw payload; with include=provenance, when the row has one.
+      additionalProperties: false
+      required: [stream, external_key, version, fetched_at, batch_id, source_kind]
+      properties:
+        stream: {type: string}
+        external_key: {type: string}
+        version: {type: integer}
+        fetched_at: {type: string, format: date-time}
+        batch_id: {type: string, format: uuid}
+        source_kind: {type: string}
     MeasurementPage:
       allOf:
         - $ref: '#/components/schemas/PageInfo'
@@ -2159,7 +2305,34 @@ components:
           properties:
             measurements: {type: array, items: {$ref: '#/components/schemas/Measurement'}}
     ManualMeasurementInput: {type: object, description: Open object.}
-    Group: {type: object, description: Measurement group (bp_reading, body_composition). Open object.}
+    Group:
+      type: object
+      description: Measurement group (bp_reading, body_composition) with its components.
+      additionalProperties: false
+      required: [id, kind, measured_at, tz_offset_min, local_date, context, components, source, provenance]
+      properties:
+        id: {type: string}
+        kind: {type: string, enum: [bp_reading, body_composition]}
+        measured_at: {type: string, format: date-time}
+        tz_offset_min: {type: [integer, 'null']}
+        local_date: {type: string, format: date}
+        context: {type: object, description: Provider detail such as arm or position., x-go-type: json.RawMessage}
+        components: {type: array, items: {$ref: '#/components/schemas/GroupComponent'}}
+        source: {$ref: '#/components/schemas/SourceRef'}
+        provenance: {$ref: '#/components/schemas/RecordProvenance'}
+    GroupComponent:
+      type: object
+      description: A measurement belonging to the group, in the version that belongs to this group version.
+      additionalProperties: false
+      required: [id, metric, value, unit, source_value, source_unit, quality_flags]
+      properties:
+        id: {type: string, description: Measurement id.}
+        metric: {type: string}
+        value: {type: number, format: double}
+        unit: {type: string}
+        source_value: {type: [number, 'null'], format: double}
+        source_unit: {type: [string, 'null']}
+        quality_flags: {type: integer, minimum: 0}
     GroupPage:
       allOf:
         - $ref: '#/components/schemas/PageInfo'
@@ -2167,7 +2340,22 @@ components:
           required: [groups]
           properties:
             groups: {type: array, items: {$ref: '#/components/schemas/Group'}}
-    BloodPressureReading: {type: object, description: Open object.}
+    BloodPressureReading:
+      type: object
+      description: A bp_reading group with its components side by side; systolic and diastolic in mmHg, pulse in bpm.
+      additionalProperties: false
+      required: [id, measured_at, tz_offset_min, local_date, systolic, diastolic, pulse, context, source, provenance]
+      properties:
+        id: {type: string, description: Group id.}
+        measured_at: {type: string, format: date-time}
+        tz_offset_min: {type: [integer, 'null']}
+        local_date: {type: string, format: date}
+        systolic: {type: [number, 'null'], format: double}
+        diastolic: {type: [number, 'null'], format: double}
+        pulse: {type: [number, 'null'], format: double}
+        context: {type: object, x-go-type: json.RawMessage}
+        source: {$ref: '#/components/schemas/SourceRef'}
+        provenance: {$ref: '#/components/schemas/RecordProvenance'}
     BloodPressurePage:
       allOf:
         - $ref: '#/components/schemas/PageInfo'
@@ -2175,7 +2363,40 @@ components:
           required: [readings]
           properties:
             readings: {type: array, items: {$ref: '#/components/schemas/BloodPressureReading'}}
-    SleepSession: {type: object, description: Open object.}
+    SleepSession:
+      type: object
+      description: One sleep session as the source reported it.
+      additionalProperties: false
+      required: [id, start_at, end_at, tz_offset_min, sleep_date, is_nap, has_stages, totals_basis, asleep_s, deep_s, light_s, rem_s, awake_s, latency_s, source, provenance]
+      properties:
+        id: {type: string, format: uuid}
+        start_at: {type: string, format: date-time}
+        end_at: {type: string, format: date-time}
+        tz_offset_min: {type: [integer, 'null']}
+        sleep_date: {type: string, format: date, description: Local date of waking up.}
+        is_nap: {type: boolean}
+        has_stages: {type: boolean}
+        totals_basis: {type: string, enum: [provider, stages], description: Whether the *_s totals are provider-reported or summed from stages.}
+        asleep_s: {type: [integer, 'null']}
+        deep_s: {type: [integer, 'null']}
+        light_s: {type: [integer, 'null']}
+        rem_s: {type: [integer, 'null']}
+        awake_s: {type: [integer, 'null']}
+        latency_s: {type: [integer, 'null']}
+        stages:
+          type: array
+          description: With include=stages, and always on GET /sleep/{id}.
+          items: {$ref: '#/components/schemas/SleepStage'}
+        source: {$ref: '#/components/schemas/SourceRef'}
+        provenance: {$ref: '#/components/schemas/RecordProvenance'}
+    SleepStage:
+      type: object
+      additionalProperties: false
+      required: [stage, start_at, end_at]
+      properties:
+        stage: {type: string, enum: [awake, light, deep, rem, asleep_unspecified, in_bed]}
+        start_at: {type: string, format: date-time}
+        end_at: {type: string, format: date-time}
     SleepPage:
       allOf:
         - $ref: '#/components/schemas/PageInfo'
@@ -2183,7 +2404,40 @@ components:
           required: [sleep]
           properties:
             sleep: {type: array, items: {$ref: '#/components/schemas/SleepSession'}}
-    Workout: {type: object, description: Open object.}
+    Workout:
+      type: object
+      description: One workout as the source reported it.
+      additionalProperties: false
+      required: [id, start_at, end_at, tz_offset_min, local_date, sport, provider_sport, distance_m, energy_kcal, avg_hr_bpm, max_hr_bpm, file_sha256, source, provenance]
+      properties:
+        id: {type: string, format: uuid}
+        start_at: {type: string, format: date-time}
+        end_at: {type: string, format: date-time}
+        tz_offset_min: {type: [integer, 'null']}
+        local_date: {type: string, format: date}
+        sport: {type: string, description: Canonical sport.}
+        provider_sport: {type: [string, 'null']}
+        distance_m: {type: [number, 'null'], format: double}
+        energy_kcal: {type: [number, 'null'], format: double}
+        avg_hr_bpm: {type: [number, 'null'], format: double}
+        max_hr_bpm: {type: [number, 'null'], format: double}
+        file_sha256: {type: [string, 'null'], description: Original activity file (FIT, GPX) in the blob store, if any.}
+        segments:
+          type: array
+          description: With include=segments, and always on GET /workouts/{id}.
+          items: {$ref: '#/components/schemas/WorkoutSegment'}
+        source: {$ref: '#/components/schemas/SourceRef'}
+        provenance: {$ref: '#/components/schemas/RecordProvenance'}
+    WorkoutSegment:
+      type: object
+      additionalProperties: false
+      required: [seq, kind, start_at, end_at, data]
+      properties:
+        seq: {type: integer}
+        kind: {type: string, enum: [lap, set, interval]}
+        start_at: {type: string, format: date-time}
+        end_at: {type: [string, 'null'], format: date-time}
+        data: {type: object, x-go-type: json.RawMessage}
     WorkoutPage:
       allOf:
         - $ref: '#/components/schemas/PageInfo'
@@ -2191,7 +2445,98 @@ components:
           required: [workouts]
           properties:
             workouts: {type: array, items: {$ref: '#/components/schemas/Workout'}}
-    Provenance: {type: object, description: Provenance trace (internal/provenance). Open object.}
+    Provenance:
+      type: object
+      description: >
+        Provenance trace of one canonical row (internal/provenance): the row and every earlier
+        and later version linked through superseded_by, oldest first. Raw bodies are never
+        returned.
+      additionalProperties: false
+      required: [entity, row, earlier, later]
+      properties:
+        entity: {type: string, enum: [measurement, group, sleep, workout]}
+        row: {$ref: '#/components/schemas/ProvenanceVersion'}
+        earlier: {type: array, items: {$ref: '#/components/schemas/ProvenanceVersion'}}
+        later: {type: array, items: {$ref: '#/components/schemas/ProvenanceVersion'}}
+    ProvenanceVersion:
+      type: object
+      additionalProperties: false
+      required: [id, superseded_by, record, provider, connection_id, connection_mode, client, batch, raw, normalizer, fetched_at, ingested_at, normalized_at, corrected_at, superseded_at, deleted_at, deleted_by]
+      properties:
+        id: {type: string}
+        superseded_by: {type: [string, 'null']}
+        record: {type: object, description: 'The stored row''s columns, plus metric, unit, device and origin codes and its stages, segments or components.', x-go-type: json.RawMessage}
+        provider: {type: string}
+        connection_id: {$ref: '#/components/schemas/ConnectionID'}
+        connection_mode: {type: string}
+        client:
+          description: Pushing client; null for in-process syncs.
+          oneOf: [{$ref: '#/components/schemas/ProvenanceClient'}, {type: 'null'}]
+        batch:
+          description: Null for rows migrated without raw.
+          oneOf: [{$ref: '#/components/schemas/ProvenanceBatch'}, {type: 'null'}]
+        raw:
+          description: Raw payload metadata; null for rows migrated without raw.
+          oneOf: [{$ref: '#/components/schemas/ProvenanceRaw'}, {type: 'null'}]
+        normalizer: {$ref: '#/components/schemas/ProvenanceNormalizer'}
+        fetched_at: {type: [string, 'null'], format: date-time}
+        ingested_at: {type: string, format: date-time}
+        normalized_at: {type: string, format: date-time}
+        corrected_at: {type: [string, 'null'], format: date-time, description: When this version replaced its predecessor.}
+        superseded_at: {type: [string, 'null'], format: date-time}
+        deleted_at: {type: [string, 'null'], format: date-time}
+        deleted_by:
+          description: The raw payload that carried the upstream deletion.
+          oneOf: [{$ref: '#/components/schemas/ProvenanceDeletion'}, {type: 'null'}]
+    ProvenanceClient:
+      type: object
+      additionalProperties: false
+      required: [id, kind, name]
+      properties:
+        id: {type: string, format: uuid}
+        kind: {type: string}
+        name: {type: string}
+    ProvenanceBatch:
+      type: object
+      additionalProperties: false
+      required: [id, source_kind, migration_source, received_at]
+      properties:
+        id: {type: string, format: uuid}
+        source_kind: {type: string}
+        migration_source: {type: [string, 'null']}
+        received_at: {type: string, format: date-time}
+    ProvenanceRaw:
+      type: object
+      additionalProperties: false
+      required: [id, stream, external_key, version, content_sha256, content_type, size_bytes, fetched_at, stored_at, request_meta, shape_fingerprint, status]
+      properties:
+        id: {type: string}
+        stream: {type: string}
+        external_key: {type: string}
+        version: {type: integer}
+        content_sha256: {type: string}
+        content_type: {type: string}
+        size_bytes: {type: integer, format: int64}
+        fetched_at: {type: string, format: date-time}
+        stored_at: {type: string, format: date-time}
+        request_meta: {description: Sanitized request., x-go-type: json.RawMessage}
+        shape_fingerprint: {type: string}
+        status: {type: string}
+    ProvenanceNormalizer:
+      type: object
+      additionalProperties: false
+      required: [name, version, git_sha]
+      properties:
+        name: {type: string}
+        version: {type: integer}
+        git_sha: {type: string}
+    ProvenanceDeletion:
+      type: object
+      additionalProperties: false
+      required: [raw_id, fetched_at]
+      properties:
+        raw_id: {type: string}
+        fetched_at: {type: [string, 'null'], format: date-time}
     Rule: {type: object, description: Open object.}
     RuleVersion: {type: object, description: Open object.}
     RuleVersionInput: {type: object, description: Typed rule (docs/architecture/resolution.md). Open object.}

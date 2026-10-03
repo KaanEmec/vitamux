@@ -1,0 +1,61 @@
+{
+  "synthetic": true,
+  "normalizer": "withings.measures",
+  "version": 1,
+  "output": {
+    "groups": [
+      {
+        "kind": "bp_reading",
+        "measured_at": "2025-01-01T14:00:00Z",
+        "context": {
+          "attrib": 2
+        },
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000001",
+          "component": "bp_reading"
+        },
+        "components": [
+          {
+            "metric": "bp_systolic",
+            "kind": "sample",
+            "start": "2025-01-01T14:00:00Z",
+            "value": 128,
+            "unit": "mmHg",
+            "flags": 1
+          },
+          {
+            "metric": "bp_diastolic",
+            "kind": "sample",
+            "start": "2025-01-01T14:00:00Z",
+            "value": 82,
+            "unit": "mmHg",
+            "flags": 1
+          }
+        ]
+      },
+      {
+        "kind": "body_composition",
+        "measured_at": "2025-01-01T14:00:00Z",
+        "context": {
+          "attrib": 2
+        },
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000001",
+          "component": "body_composition"
+        },
+        "components": [
+          {
+            "metric": "weight",
+            "kind": "sample",
+            "start": "2025-01-01T14:00:00Z",
+            "value": 81.2,
+            "unit": "kg",
+            "flags": 1
+          }
+        ]
+      }
+    ]
+  }
+}

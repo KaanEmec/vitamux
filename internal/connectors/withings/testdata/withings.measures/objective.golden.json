@@ -1,0 +1,13 @@
+{
+  "synthetic": true,
+  "normalizer": "withings.measures",
+  "version": 1,
+  "output": {
+    "warnings": [
+      {
+        "code": "category_skipped",
+        "detail": "category 2"
+      }
+    ]
+  }
+}

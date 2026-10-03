@@ -1,0 +1,53 @@
+{
+  "synthetic": true,
+  "normalizer": "withings.measures",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "synthetic-bp-monitor-01",
+        "type": "bp_monitor",
+        "manufacturer": "Withings",
+        "model": "BPM Connect"
+      }
+    ],
+    "groups": [
+      {
+        "kind": "bp_reading",
+        "measured_at": "2025-01-01T06:05:00Z",
+        "context": {
+          "attrib": 0
+        },
+        "device": "synthetic-bp-monitor-01",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "45749091610532",
+          "component": "bp_reading"
+        },
+        "components": [
+          {
+            "metric": "bp_systolic",
+            "kind": "sample",
+            "start": "2025-01-01T06:05:00Z",
+            "value": 132,
+            "unit": "mmHg"
+          },
+          {
+            "metric": "bp_diastolic",
+            "kind": "sample",
+            "start": "2025-01-01T06:05:00Z",
+            "value": 76,
+            "unit": "mmHg"
+          },
+          {
+            "metric": "bp_pulse",
+            "kind": "sample",
+            "start": "2025-01-01T06:05:00Z",
+            "value": 78,
+            "unit": "bpm"
+          }
+        ]
+      }
+    ]
+  }
+}

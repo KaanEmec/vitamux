@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,6 +29,8 @@ type Config struct {
 	Registry *Registry
 	HTTP     *httpx.Client // base provider client; nil = httpx defaults
 	Log      *slog.Logger
+	// PublicURL is VITAMUX_PUBLIC_URL, the base of OAuth callbacks; nil disables interactive auth.
+	PublicURL *url.URL
 }
 
 // Runtime runs sync jobs for registered connectors: credentials, rate limits, raw-first
@@ -39,6 +42,8 @@ type Runtime struct {
 	creds   credStore
 	clients providerClients
 	log     *slog.Logger
+
+	publicURL *url.URL
 
 	beforeCommit func() error // tests: fail a commit after its raw rows and cursor were written
 }
@@ -58,7 +63,7 @@ func New(cfg Config) *Runtime {
 		reg = &Registry{}
 	}
 	return &Runtime{
-		db: cfg.DB, blobs: cfg.Blobs, reg: reg, log: log,
+		db: cfg.DB, blobs: cfg.Blobs, reg: reg, log: log, publicURL: cfg.PublicURL,
 		creds:   credStore{db: cfg.DB, keys: cfg.Keys},
 		clients: providerClients{base: base, m: map[string]*HTTPClient{}},
 	}

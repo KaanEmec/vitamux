@@ -16,6 +16,7 @@ import (
 
 	"github.com/KaanEmec/vitamux/internal/blob"
 	"github.com/KaanEmec/vitamux/internal/config"
+	"github.com/KaanEmec/vitamux/internal/connectors/withings"
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/ingest"
 	"github.com/KaanEmec/vitamux/internal/jobs"
@@ -32,7 +33,7 @@ It queues a job for the running server; --wait prints the result when the job fi
 
 // normalizers is every normalizer this build ships. Connectors (E08, E15) add theirs here.
 func normalizers() (*normalize.Registry, error) {
-	return normalize.NewRegistry()
+	return normalize.NewRegistry(withings.Normalizer{})
 }
 
 func reprocess(args []string, stdout, stderr io.Writer) int {

@@ -22,6 +22,7 @@ import (
 	"github.com/KaanEmec/vitamux/internal/blob"
 	"github.com/KaanEmec/vitamux/internal/config"
 	"github.com/KaanEmec/vitamux/internal/connectors"
+	"github.com/KaanEmec/vitamux/internal/connectors/withings"
 	"github.com/KaanEmec/vitamux/internal/crypto"
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/jobs"
@@ -131,13 +132,15 @@ func serve(stderr io.Writer) int {
 		scheduler.Daily(blob.KindSweep)
 	}
 	runner.Register(normalize.KindRecomputeLocalDates, normalize.RecomputeJob(db.New(pool), log))
-	syncRegistry, err := connectors.NewRegistry() // provider connectors are added as arguments
+	syncRegistry, err := connectors.NewRegistry( // provider connectors are added as arguments
+		withings.New(withings.Config{ClientID: cfg.WithingsClientID, ClientSecret: cfg.WithingsClientSecret.Value()}))
 	if err != nil {
 		log.Error("connector registry", "err", err)
 		return 1
 	}
+	var syncRuntime *connectors.Runtime
 	if blobs != nil { // syncs need the blob store and the master key
-		syncRuntime := connectors.New(connectors.Config{DB: db.New(pool), Blobs: blobs, Keys: keys, Registry: syncRegistry, Log: log})
+		syncRuntime = connectors.New(connectors.Config{DB: db.New(pool), Blobs: blobs, Keys: keys, Registry: syncRegistry, Log: log, PublicURL: cfg.PublicURL})
 		runner.Register(jobs.KindSync, syncRuntime.Handle)
 		runner.Register(connectors.KindBackfillUnit, syncRuntime.HandleBackfillUnit)
 	}
@@ -153,6 +156,7 @@ func serve(stderr io.Writer) int {
 		DB:             db.New(pool),
 		Blobs:          blobs,
 		Keys:           keys,
+		Connectors:     syncRuntime,
 		ReadyChecks: []api.ReadyCheck{
 			{Name: "database", Check: pool.Ping},
 			{Name: "schema", Check: func(ctx context.Context) error { return db.CheckSchema(ctx, pool) }},

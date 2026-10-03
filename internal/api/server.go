@@ -13,6 +13,7 @@ import (
 	"github.com/KaanEmec/vitamux/internal/api/oapi"
 	"github.com/KaanEmec/vitamux/internal/auth"
 	"github.com/KaanEmec/vitamux/internal/blob"
+	"github.com/KaanEmec/vitamux/internal/connectors"
 	"github.com/KaanEmec/vitamux/internal/crypto"
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/version"
@@ -46,6 +47,8 @@ type Options struct {
 	Blobs *blob.Store
 	// Keys signs pagination cursors. Nil uses a per-process key.
 	Keys *crypto.Keyring
+	// Connectors runs OAuth connection flows; nil answers 503.
+	Connectors *connectors.Runtime
 }
 
 // NewHandler builds the root HTTP handler: the route table behind the middleware chain.
@@ -88,6 +91,8 @@ func newRouter(log *slog.Logger, ui fs.FS, opts Options) (*router, error) {
 	rt.authRoutes()
 	rt.systemRoutes()
 	rt.ingestRoutes()
+	rt.oauthRoutes()
+	rt.sourceRoutes()
 	return rt, nil
 }
 

@@ -21,6 +21,7 @@ The output is canonical truth: what normalization should end up with, using only
 | `groups.ndjson` | `bp_reading` and `body_composition` groups with their component values |
 | `sleep.ndjson` | sessions with stages; `null` totals mean the source does not report them |
 | `revisions.ndjson` | later corrections and deletions of earlier records (originals stay in the other files) |
+| `withings/getmeas-*.json` | the Withings groups as getmeas responses (provider wire format; see [withings.md](../docs/providers/withings.md#fixtures)) |
 
 A provider-shaped writer (Withings in J08.1, HealthKit in E15) implements `ShapeWriter` and renders the same world as raw wire format.
 

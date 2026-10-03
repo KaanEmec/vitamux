@@ -43,6 +43,10 @@ type Config struct {
 	DatabaseURL    Secret
 	// MigrateDatabaseURL connects `vitamux migrate`; it falls back to DatabaseURL.
 	MigrateDatabaseURL Secret
+	// WithingsClientID and WithingsClientSecret are the owner's Withings application
+	// (docs/providers/withings.md#app-registration-and-callback); both or neither.
+	WithingsClientID     string
+	WithingsClientSecret Secret
 }
 
 // Secret holds a sensitive value that never prints itself.
@@ -150,6 +154,13 @@ func load(env Lookup, readFile ReadFile) (Config, error) {
 		mig = db
 	}
 	c.MigrateDatabaseURL = mig
+
+	c.WithingsClientID = get("WITHINGS_CLIENT_ID", "")
+	if c.WithingsClientSecret, err = secret(env, readFile, "WITHINGS_CLIENT_SECRET", c.Env); err != nil {
+		errs = append(errs, err)
+	} else if (c.WithingsClientID == "") != !c.WithingsClientSecret.IsSet() {
+		errs = append(errs, fmt.Errorf("set both %sWITHINGS_CLIENT_ID and %sWITHINGS_CLIENT_SECRET_FILE, or neither", prefix, prefix))
+	}
 
 	return c, errors.Join(errs...)
 }
