@@ -31,6 +31,9 @@ type ShapeWriter interface {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "labpdf" { // synthetic lab report PDFs, labpdf.go
+		os.Exit(labpdfMain(os.Args[2:]))
+	}
 	seed := flag.Uint64("seed", 42, "PRNG seed")
 	out := flag.String("out", "fixtures/generated", "output directory")
 	start := flag.String("start", "2025-01-01", "first local date (YYYY-MM-DD)")

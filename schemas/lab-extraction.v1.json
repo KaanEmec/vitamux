@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Vitamux lab report extraction v1",
+  "description": "Output of a lab-report extractor (docs/architecture/lab-documents.md#extracted-row-schema-v1): a verbatim transcription of what is printed, nothing inferred. Every key is required; null means not printed or unreadable. Only additive, optional changes within v1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "document", "rows", "warnings"],
+  "properties": {
+    "schema": {"const": "vitamux.lab.extraction/1"},
+    "synthetic": {"description": "true only in generated fixtures; extractors omit it.", "type": "boolean"},
+    "document": {
+      "description": "Header fields printed once for the whole report. Patient identifiers are never transcribed.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["laboratory", "specimen_type", "collected_at", "collected_at_text", "reported_at", "reported_at_text", "page_count"],
+      "properties": {
+        "laboratory": {"$ref": "#/$defs/laboratory"},
+        "specimen_type": {"$ref": "#/$defs/specimen_type"},
+        "collected_at": {"$ref": "#/$defs/local_datetime"},
+        "collected_at_text": {"$ref": "#/$defs/date_text"},
+        "reported_at": {"$ref": "#/$defs/local_datetime"},
+        "reported_at_text": {"$ref": "#/$defs/date_text"},
+        "page_count": {"description": "Number of pages in the document.", "type": "integer", "minimum": 1, "maximum": 50}
+      }
+    },
+    "rows": {
+      "description": "One entry per printed result line, in reading order.",
+      "type": "array",
+      "maxItems": 500,
+      "items": {"$ref": "#/$defs/row"}
+    },
+    "warnings": {
+      "description": "Document-level transcription problems.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"enum": ["page_unreadable", "low_quality_image", "possibly_truncated", "not_lab_report", "multiple_reports", "dates_not_found"]}
+    }
+  },
+  "$defs": {
+    "row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["page", "row_index", "analyte_label", "value_text", "value_numeric", "comparator", "unit_text", "reference_range_text", "ref_low", "ref_high", "printed_flag", "specimen_type", "collected_at", "reported_at", "laboratory", "evidence_text", "bbox", "confidence", "warnings"],
+      "properties": {
+        "page": {"description": "1-based page number.", "type": "integer", "minimum": 1, "maximum": 50},
+        "row_index": {"description": "0-based position of this row in rows.", "type": "integer", "minimum": 0},
+        "analyte_label": {"description": "Test name exactly as printed, including any method or specimen words.", "$ref": "#/$defs/text200"},
+        "value_text": {"description": "Result cell exactly as printed, e.g. '5,2', '< 0.3', 'Negative', '1:160'.", "$ref": "#/$defs/opt_text200"},
+        "value_numeric": {"description": "The number in value_text with '.' as decimal separator and no comparator; null when value_text has no single number.", "type": ["number", "null"]},
+        "comparator": {"description": "Comparator printed in value_text; a printed '≤' or '≥' becomes '<=' or '>='.", "enum": ["<", ">", "<=", ">=", null]},
+        "unit_text": {"description": "Unit exactly as printed; null when none is printed.", "type": ["string", "null"], "minLength": 1, "maxLength": 64},
+        "reference_range_text": {"description": "Reference interval exactly as printed.", "$ref": "#/$defs/opt_text200"},
+        "ref_low": {"description": "Lower bound printed in reference_range_text, if any.", "type": ["number", "null"]},
+        "ref_high": {"description": "Upper bound printed in reference_range_text, if any.", "type": ["number", "null"]},
+        "printed_flag": {"description": "Flag symbol or word printed beside the result, copied verbatim (e.g. 'H', 'L', '*'); null when none is printed.", "type": ["string", "null"], "minLength": 1, "maxLength": 32},
+        "specimen_type": {"$ref": "#/$defs/specimen_type"},
+        "collected_at": {"$ref": "#/$defs/local_datetime"},
+        "reported_at": {"$ref": "#/$defs/local_datetime"},
+        "laboratory": {"$ref": "#/$defs/laboratory"},
+        "evidence_text": {"description": "The printed text of the row, verbatim, cells separated by single spaces.", "type": "string", "minLength": 1, "maxLength": 1000},
+        "bbox": {
+          "description": "Row area on the page as fractions of page width and height, origin top left.",
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["x0", "y0", "x1", "y1"],
+          "properties": {
+            "x0": {"$ref": "#/$defs/fraction"},
+            "y0": {"$ref": "#/$defs/fraction"},
+            "x1": {"$ref": "#/$defs/fraction"},
+            "y1": {"$ref": "#/$defs/fraction"}
+          }
+        },
+        "confidence": {"description": "Transcription certainty from 0 to 1. A hint only.", "$ref": "#/$defs/fraction"},
+        "warnings": {
+          "description": "Transcription problems in this row. A field named by an unreadable_* warning is null.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"enum": ["unreadable_label", "unreadable_value", "unreadable_unit", "unreadable_range", "unreadable_flag", "uncertain_reading", "handwritten", "crossed_out", "split_across_pages", "footnote", "multiple_values"]}
+        }
+      }
+    },
+    "text200": {"type": "string", "minLength": 1, "maxLength": 200},
+    "opt_text200": {"type": ["string", "null"], "minLength": 1, "maxLength": 200},
+    "fraction": {"type": "number", "minimum": 0, "maximum": 1},
+    "laboratory": {"description": "Laboratory name as printed.", "$ref": "#/$defs/opt_text200"},
+    "specimen_type": {"description": "Specimen as printed, e.g. 'Serum', 'EDTA blood', 'Urine'.", "type": ["string", "null"], "minLength": 1, "maxLength": 64},
+    "local_datetime": {
+      "description": "Printed date (and time) as ISO 8601 local time without offset. On rows: the value printed for that row, otherwise the document value.",
+      "type": ["string", "null"],
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])(T([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?)?$"
+    },
+    "date_text": {"description": "The same date exactly as printed.", "type": ["string", "null"], "minLength": 1, "maxLength": 64}
+  }
+}

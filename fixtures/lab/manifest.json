@@ -1,0 +1,377 @@
+{
+  "synthetic": true,
+  "generator": "fixturegen labpdf",
+  "seed": 42,
+  "schema": "vitamux.lab.extraction/1",
+  "reports": [
+    {
+      "id": "lab-01",
+      "pdf": "lab-01.pdf",
+      "sha256": "a60e288e5ec2e6a62518c5b9992504f90d268edb45165bd2f52d8f8598fea18b",
+      "pages": 1,
+      "text_layer": true,
+      "layout": "table",
+      "page_size": "letter",
+      "features": [
+        "us_units",
+        "flag_column_before_unit",
+        "comparator_gt",
+        "out_of_range_flag",
+        "us_date"
+      ],
+      "analytes": [
+        "glucose",
+        "bun",
+        "creatinine",
+        "egfr",
+        "sodium",
+        "potassium",
+        "chloride",
+        "calcium",
+        "alt",
+        "ast",
+        "bilirubin_total",
+        "albumin",
+        "uric_acid"
+      ]
+    },
+    {
+      "id": "lab-02",
+      "pdf": "lab-02.pdf",
+      "sha256": "1b969d33d225406768fb3f1c98c3ed1330fbb2d08f79df72f2d125d8981d6548",
+      "pages": 1,
+      "text_layer": true,
+      "layout": "table",
+      "page_size": "a4",
+      "features": [
+        "si_units",
+        "flag_column_last",
+        "comparator_lt",
+        "upper_limit_only_range",
+        "out_of_range_flag"
+      ],
+      "analytes": [
+        "glucose",
+        "urea",
+        "creatinine",
+        "sodium",
+        "potassium",
+        "calcium",
+        "magnesium",
+        "phosphate",
+        "uric_acid",
+        "bilirubin_total",
+        "alt",
+        "ggt",
+        "crp"
+      ]
+    },
+    {
+      "id": "lab-03",
+      "pdf": "lab-03.pdf",
+      "sha256": "883243d426571c7d8c7b55ef7b459114070e0ee4325e8440ec83ad954a01d322",
+      "pages": 1,
+      "text_layer": true,
+      "layout": "inline",
+      "page_size": "letter",
+      "features": [
+        "inline_layout",
+        "us_units",
+        "lpa_mass_unit",
+        "hba1c_percent",
+        "lower_limit_only_range",
+        "no_space_comparator"
+      ],
+      "analytes": [
+        "cholesterol_total",
+        "triglycerides",
+        "hdl_c",
+        "ldl_c",
+        "non_hdl_c",
+        "apob",
+        "lpa_mass",
+        "hba1c",
+        "hs_crp"
+      ]
+    },
+    {
+      "id": "lab-04",
+      "pdf": "lab-04.pdf",
+      "sha256": "3d835e6fc7b33b625b6189d85601d84398ee1343bf9acc6e657f3be986dc6929",
+      "pages": 1,
+      "text_layer": true,
+      "layout": "table",
+      "page_size": "a4",
+      "features": [
+        "si_units",
+        "lpa_molar_unit",
+        "hba1c_mmol_mol",
+        "hba1c_percent",
+        "unknown_analyte"
+      ],
+      "analytes": [
+        "cholesterol_total",
+        "ldl_c",
+        "hdl_c",
+        "triglycerides",
+        "apob",
+        "lpa_molar",
+        null,
+        "glucose",
+        "hba1c",
+        "hba1c"
+      ]
+    },
+    {
+      "id": "lab-05",
+      "pdf": "lab-05.pdf",
+      "sha256": "24ab2da070f8f427d4aebaa45644c449bf52f28f6c38ed72e5b3c5b4235edc88",
+      "pages": 2,
+      "text_layer": true,
+      "layout": "table",
+      "page_size": "a4",
+      "features": [
+        "multi_page",
+        "haematology",
+        "out_of_range_flag",
+        "percent_and_absolute"
+      ],
+      "analytes": [
+        "wbc",
+        "rbc",
+        "hemoglobin",
+        "hematocrit",
+        "mcv",
+        "mch",
+        "mchc",
+        "rdw_cv",
+        "platelets",
+        "mpv",
+        "neutrophils_abs",
+        "neutrophils_pct",
+        "lymphocytes_abs",
+        "lymphocytes_pct",
+        "monocytes_abs",
+        "eosinophils_abs",
+        "basophils_abs",
+        "esr"
+      ]
+    },
+    {
+      "id": "lab-06",
+      "pdf": "lab-06.pdf",
+      "sha256": "d9118915e37351ba3c2cfdaae09d4258fe70e2ec649894acf05ae2e02175d168",
+      "pages": 1,
+      "text_layer": true,
+      "layout": "stacked",
+      "page_size": "letter",
+      "features": [
+        "stacked_layout",
+        "d_dimer_feu",
+        "comparator_le",
+        "le_range",
+        "no_unit_row"
+      ],
+      "analytes": [
+        "d_dimer",
+        "fibrinogen",
+        "pt",
+        "inr",
+        "aptt",
+        "hs_crp",
+        "il6",
+        "ferritin",
+        "homocysteine"
+      ]
+    },
+    {
+      "id": "lab-07",
+      "pdf": "lab-07.pdf",
+      "sha256": "da9b2d1373c34f56af9c0387ac63b6178236f4782c5b923d496e195c40441f08",
+      "pages": 1,
+      "text_layer": true,
+      "layout": "inline",
+      "page_size": "a4",
+      "features": [
+        "inline_layout",
+        "ambiguous_date",
+        "comparator_gt",
+        "above_measuring_range",
+        "en_dash_range"
+      ],
+      "analytes": [
+        "tsh",
+        "free_t4",
+        "free_t3",
+        "anti_tpo",
+        "vitamin_b12",
+        "testosterone_total",
+        "shbg",
+        "cortisol",
+        "vitamin_d_25oh",
+        "prolactin"
+      ]
+    },
+    {
+      "id": "lab-08",
+      "pdf": "lab-08.pdf",
+      "sha256": "e78220ca18c92ecdc65d46dd058cdc1ab1b4805c81ab970d74f788cea6209e2e",
+      "pages": 1,
+      "text_layer": true,
+      "layout": "table",
+      "page_size": "a4",
+      "features": [
+        "german_labels",
+        "decimal_comma",
+        "de_date",
+        "hba1c_mmol_mol",
+        "hba1c_percent",
+        "unknown_analyte",
+        "plus_flag"
+      ],
+      "analytes": [
+        "glucose",
+        "creatinine",
+        "egfr",
+        "uric_acid",
+        "ggt",
+        null,
+        "cholesterol_total",
+        "ldl_c",
+        "hdl_c",
+        "triglycerides",
+        "hba1c",
+        "hba1c",
+        "tsh",
+        "ferritin"
+      ]
+    },
+    {
+      "id": "lab-09",
+      "pdf": "lab-09.pdf",
+      "sha256": "43f4b1dc929eee0dc18535a7d9c5fe3d1c5a47b108d4aa59fb463037345a5635",
+      "pages": 3,
+      "text_layer": true,
+      "layout": "table",
+      "page_size": "a4",
+      "features": [
+        "multi_page",
+        "three_pages",
+        "us_units",
+        "comparator_lt"
+      ],
+      "analytes": [
+        "iron",
+        "transferrin",
+        "transferrin_saturation",
+        "ferritin",
+        "vitamin_d_25oh",
+        "vitamin_b12",
+        "folate_serum",
+        "zinc",
+        "magnesium",
+        "tsh",
+        "free_t4",
+        "cortisol",
+        "testosterone_total",
+        "estradiol",
+        "dhea_s",
+        "igf1",
+        "insulin",
+        "c_peptide",
+        "psa_total",
+        "nt_probnp",
+        "troponin_i_hs",
+        "ck",
+        "ldh",
+        "amylase",
+        "lipase",
+        "cystatin_c"
+      ]
+    },
+    {
+      "id": "lab-10",
+      "pdf": "lab-10.pdf",
+      "sha256": "c24fcde5b40453d08c1b1bb2d6d175e2f5c112b640ee43a4fb938b6c1e29984f",
+      "pages": 1,
+      "text_layer": false,
+      "layout": "table",
+      "page_size": "a4",
+      "features": [
+        "scanned_no_text_layer",
+        "unreadable_cell",
+        "ascii_units"
+      ],
+      "analytes": [
+        "iron",
+        "transferrin",
+        "transferrin_saturation",
+        "ferritin",
+        "vitamin_d_25oh",
+        "vitamin_b12",
+        "folate_serum",
+        "zinc"
+      ]
+    },
+    {
+      "id": "lab-11",
+      "pdf": "lab-11.pdf",
+      "sha256": "e8b085f6ca0eb0e10fb68de7fc8f0e5ff3a1a27bf47196ae4a8aec1af6e18afa",
+      "pages": 1,
+      "text_layer": true,
+      "layout": "table",
+      "page_size": "letter",
+      "features": [
+        "qualitative_results",
+        "titre",
+        "row_specimen",
+        "unknown_analyte",
+        "le_range",
+        "asterisk_flag"
+      ],
+      "analytes": [
+        "urine_color",
+        "urine_clarity",
+        "urine_specific_gravity",
+        "urine_ph",
+        "urine_protein",
+        "urine_glucose",
+        "urine_ketones",
+        "urine_blood",
+        "urine_wbc",
+        "ana",
+        "ana",
+        "rf",
+        null
+      ]
+    },
+    {
+      "id": "lab-12",
+      "pdf": "lab-12.pdf",
+      "sha256": "f85f8b1ac263bba8c92dc1e215df7c1ab955759ed74641b2abe0e6733406c8a2",
+      "pages": 1,
+      "text_layer": true,
+      "layout": "twocol",
+      "page_size": "a4",
+      "features": [
+        "two_panel_layout",
+        "si_units",
+        "no_flag_column"
+      ],
+      "analytes": [
+        "alt",
+        "ast",
+        "alp",
+        "ggt",
+        "bilirubin_total",
+        "albumin",
+        "total_protein",
+        "creatinine",
+        "urea",
+        "sodium",
+        "potassium",
+        "cystatin_c"
+      ]
+    }
+  ]
+}

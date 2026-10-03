@@ -28,7 +28,9 @@ type Extractor interface {
 
 ## Extracted row schema (v1)
 
-`page`, `row_index`, `analyte_label` (verbatim), `value_text`, `value_numeric`, `comparator` (`< > <= >=`), `unit_text`, `reference_range_text`, `ref_low`, `ref_high`, `abnormal_flag_printed` (verbatim), `specimen_type`, `collected_at`, `reported_at`, `laboratory`, `evidence_text`, `bbox?`, `confidence` (a hint only), `warnings[]`.
+`page`, `row_index`, `analyte_label` (verbatim), `value_text`, `value_numeric`, `comparator` (`< > <= >=`), `unit_text`, `reference_range_text`, `ref_low`, `ref_high`, `printed_flag` (verbatim), `specimen_type`, `collected_at`, `reported_at`, `laboratory`, `evidence_text`, `bbox` (page fractions, or null), `confidence` (a hint only), `warnings[]`.
+
+Contract: [`schemas/lab-extraction.v1.json`](../../schemas/lab-extraction.v1.json) (`vitamux.lab.extraction/1`; Go: `documents.DecodeExtraction`), with document-level `laboratory`, `specimen_type`, dates as ISO local time plus the printed text, `page_count` and `warnings[]`. Every key is present; null means not printed or unreadable (`unreadable_*` warning). Dates whose day and month order is ambiguous stay null with the text kept. Patient identifiers are never extracted. Prompt: [`prompts/lab-extraction/v1.md`](../../prompts/lab-extraction/v1.md), transcription only, reviewed per version ([REVIEW.md](../../prompts/lab-extraction/REVIEW.md)). Test corpus: [fixtures/README.md#lab-reports](../../fixtures/README.md#lab-reports).
 
 ## Validation
 

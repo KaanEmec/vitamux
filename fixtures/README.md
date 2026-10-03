@@ -52,3 +52,13 @@ Numbers refer to [resolution#edge-cases](../docs/architecture/resolution.md#edge
 | 15 | Today is partial | any slice ending mid-year; no special data |
 
 Also covered: high-frequency (6 s) and minute heart rate, irregular watch samples, gaps, BP twice a day, weigh-ins about every other day, naps.
+
+## Lab reports
+
+```
+go run ./tools/fixturegen labpdf     # -seed 42 -out fixtures/generated/lab -truth fixtures/lab
+```
+
+Twelve synthetic blood-test reports from invented labs and `SYNTHETIC PATIENT nn` placeholders (date of birth `0000-00-00`), with values drawn from the seed within the printed range, a few pushed outside it so printed flags appear. The PDFs (hand-written PDF 1.4, Helvetica text layer, `.synthetic` sidecars) go to the git-ignored `fixtures/generated/lab/`. Committed in `fixtures/lab/`: one ground truth per report in the extraction contract ([lab-documents#extracted-row-schema-v1](../docs/architecture/lab-documents.md#extracted-row-schema-v1)) and `manifest.json` with each PDF's sha256, layout, features and the [analyte-catalog](../docs/architecture/analyte-catalog.md) code per row (`null` = unknown analyte). `tools/fixturegen/labpdf_test.go` regenerates and compares, so the manifest pins the PDFs.
+
+Coverage: table, inline, stacked and two-panel layouts; Letter and A4; mg/dL and SI units, HbA1c in % and mmol/mol, Lp(a) in mg/dL and nmol/L, D-dimer in µg/mL FEU; comparators `<`, `>`, `≤` in results and ranges; upper- or lower-only ranges; German labels with decimal comma; US, ISO, German and ambiguous `dd/mm` dates; qualitative results and a titre; row-level specimen; multi-page (2 and 3 pages); `lab-10` is scanned (1-bit image, no text layer) with one smudged, unreadable result; unknown analytes in `lab-04`, `lab-08`, `lab-11`.
