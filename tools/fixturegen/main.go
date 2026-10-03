@@ -16,9 +16,10 @@ import (
 )
 
 // ShapeWriter receives the generated world one record at a time, so a year of 6 s heart rate
-// streams never sits in memory. The canonical NDJSON writer is the only implementation today;
+// streams never sits in memory. The canonical NDJSON writer is the truth;
 // provider-shaped writers (Withings in J08.1, HealthKit in E15) implement the same interface
 // to render the same world as that provider's raw wire format for normalizer golden tests.
+// withingsWriter (withings.go) is the Withings one.
 type ShapeWriter interface {
 	Source(Source) error
 	Measurement(Measurement) error
@@ -52,9 +53,13 @@ func generate(out string, seed uint64, start string, days, hrStep int) error {
 	if err != nil {
 		return err
 	}
-	g := &gen{seed: seed, hrStep: hrStep, out: []ShapeWriter{w}}
+	ww, err := newWithingsWriter(out)
+	if err != nil {
+		return err
+	}
+	g := &gen{seed: seed, hrStep: hrStep, out: []ShapeWriter{w, ww}}
 	if err := g.run(dayIndex(first), days); err != nil {
 		return err
 	}
-	return w.Close()
+	return errors.Join(w.Close(), ww.Close())
 }
