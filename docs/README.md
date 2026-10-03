@@ -45,6 +45,7 @@ Precedence when documents disagree: `CLAUDE.md` (product brief) > ADRs in `docs/
 | [lab-documents.md](architecture/lab-documents.md) | PDF storage, extraction providers, review, privacy | E12 |
 | [frontend.md](architecture/frontend.md) | UI stack, navigation, rule builder | E11 |
 | [project.md](architecture/project.md) | License, testing, releases, resource budget, deferred features, risks, assumptions, open questions | Release, CI, planning |
+| [resource-budget.md](resource-budget.md) | Measured RSS, CPU and disk on the one-year dataset against the budget; deviations; how to re-measure | Resource claims, sizing, release checks |
 | [deploy/compose.md](deploy/compose.md) | Release and Coolify Compose files: hardening policy, files and permissions | Deploying, container or Compose changes |
 | [operations/backup.md](operations/backup.md) | Backup contents, scheduled backups, off-host encryption, restore steps, drill | Backups, restore, disaster recovery |
 | [release-checklist.md](release-checklist.md) | Tagging an rc, artifacts, clean installs, changelog, final tag | Releasing |

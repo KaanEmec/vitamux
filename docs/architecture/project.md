@@ -33,16 +33,16 @@
 
 ## Resource budget
 
-Targets, verified in J04.4 and J14.3:
+Targets, verified in J04.4 and J14.3 ([measured results and deviations](../resource-budget.md)):
 
 | Profile | Idle RAM | Peak RAM | CPU | Disk |
 | --- | --- | --- | --- | --- |
-| Core (`vitamux` ≤ 80 MiB + postgres ≤ 270 MiB, `shared_buffers=128MB`) | ≤ 350 MiB | ≤ 900 MiB | 1 vCPU enough; idle < 2 % of a core | Images ≈ 0.5 GB; data 1–3 GB/yr |
+| Core (`vitamux` ≤ 100 MiB + postgres ≤ 270 MiB, `shared_buffers=128MB`) | ≤ 370 MiB | ≤ 900 MiB for routine work (bulk: see below) | 1 vCPU enough (unverified; measured on 2); idle < 2 % of a core | Images ≈ 0.5 GB; data 1–3 GB/yr |
 | Core + one optional sidecar | + ≤ 150 MiB | ≤ 1.2 GiB | 2 vCPU recommended for backfills | + backups at 2–3× data |
 
 Compose limits: `vitamux` 512 MiB, `postgres` 1 GiB, sidecars 256 MiB.
 
-Memory stays bounded through batching: normalize 5,000 rows per transaction, COPY in chunks of 10,000, streaming exports.
+Memory stays bounded through batching: normalize 5,000 rows per transaction, COPY in chunks of 10,000, streaming exports. Measured exceptions (J14.3): a full-year `rebuild_aggregates` and a cold 90-day dashboard of ten metrics load every row of their range and need 1.4–2.1 GiB, more than the 512 MiB limit; they are open deviations (D1, D2 in the report), not part of the budget.
 
 ## Deferred features
 
