@@ -145,11 +145,14 @@ func scanFile(path string) ([]Violation, error) {
 	defer func() { _ = f.Close() }()
 	r := bufio.NewReaderSize(f, 1<<16)
 
+	// Schema-constrained files (e.g. rule specs) cannot carry a field: a `.synthetic` file in
+	// their directory marks every file in it. Content rules still apply.
+	marked := sidecar(filepath.Join(filepath.Dir(path), ".synthetic"))
+
 	head, _ := r.Peek(sniffBytes)
 	if bytes.IndexByte(head, 0) >= 0 {
 		// Binary (PDF, FIT, zip, ...): content is not scanned; a `<file>.synthetic` sidecar carries the marker.
-		side, err := os.ReadFile(path + ".synthetic") //nolint:gosec // see above
-		if err != nil || !markerRe.Match(side) {
+		if !marked && !sidecar(path+".synthetic") {
 			return []Violation{{path, 0, RuleMarker}}, nil
 		}
 		return nil, nil
@@ -162,20 +165,26 @@ func scanFile(path string) ([]Violation, error) {
 		if err != nil {
 			return nil, err
 		}
-		if !jsonMarker(body) {
+		if !marked && !jsonMarker(body) {
 			vs = append(vs, Violation{path, 0, RuleMarker})
 		}
-		return append(vs, scanLines(path, bytes.NewReader(body))...), nil
+		return append(vs, scanLines(path, bytes.NewReader(body), true)...), nil
 	}
-	return append(vs, scanLines(path, r)...), nil
+	return append(vs, scanLines(path, r, marked)...), nil
 }
 
-// scanLines applies the marker rule for line-oriented files and the pattern rules to every line.
-func scanLines(path string, src io.Reader) []Violation {
+// sidecar reports whether path exists and carries the marker.
+func sidecar(path string) bool {
+	b, err := os.ReadFile(path) //nolint:gosec // paths come from walking the repository
+	return err == nil && markerRe.Match(b)
+}
+
+// scanLines applies the marker rule (unless marked already) and the pattern rules to every line.
+func scanLines(path string, src io.Reader, marked bool) []Violation {
 	var vs []Violation
 	ext := strings.ToLower(filepath.Ext(path))
-	lineMarker := ext != ".json" // JSON documents are checked by field before this
-	found := !lineMarker
+	lineMarker := !marked
+	found := marked
 	r := bufio.NewReaderSize(src, 1<<16)
 	for n := 1; ; n++ {
 		b, err := r.ReadBytes('\n')

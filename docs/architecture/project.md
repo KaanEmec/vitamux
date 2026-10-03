@@ -22,7 +22,7 @@
 ## Synthetic fixtures policy
 
 - All fixtures come from `tools/fixturegen` (deterministic seed) and carry a `synthetic: true` header.
-- A CI guard runs gitleaks plus `tools/fixtureguard` (`make fixture-guard`), which scans every `fixtures/` and `testdata/` directory. Marker per file type: `.json` top-level `"synthetic": true`; `.ndjson`/`.jsonl` first line is a JSON object with `"synthetic": true`; any other text file (YAML key, `# synthetic: true`, `<!-- synthetic: true -->`) carries `synthetic: true` within its first 5 lines; binary files (PDF, FIT, zip) need a `<file>.synthetic` sidecar containing `synthetic: true` and are not content-scanned. Emails must use reserved domains (`example.com`, `*.test`, …); phone numbers and token-like strings are rejected, and synthetic credential values must contain `synthetic`. A line may opt out with `fixtureguard:allow`. Findings print `path:line: rule` without the matched text.
+- A CI guard runs gitleaks plus `tools/fixtureguard` (`make fixture-guard`), which scans every `fixtures/` and `testdata/` directory. Marker per file type: `.json` top-level `"synthetic": true`; `.ndjson`/`.jsonl` first line is a JSON object with `"synthetic": true`; any other text file (YAML key, `# synthetic: true`, `<!-- synthetic: true -->`) carries `synthetic: true` within its first 5 lines; binary files (PDF, FIT, zip) need a `<file>.synthetic` sidecar containing `synthetic: true` and are not content-scanned; a `.synthetic` file in a directory marks every file in it (for schema-constrained JSON such as rule specs). Emails must use reserved domains (`example.com`, `*.test`, …); phone numbers and token-like strings are rejected, and synthetic credential values must contain `synthetic`. A line may opt out with `fixtureguard:allow`. Findings print `path:line: rule` without the matched text.
 - Never commit real values, even "anonymized".
 
 ## Versioning and releases
@@ -70,7 +70,7 @@ Memory stays bounded through batching: normalize 5,000 rows per transaction, COP
 
 | Assumption | Verified in |
 | --- | --- |
-| Withings: rotating refresh tokens, short-lived access tokens, `getmeas` `lastupdate` and paging, meastype codes, `value×10^unit`, notify `appli` codes, HEAD-validated callbacks, rate limits | J08.1 |
+| ~~Withings: rotating refresh tokens, short-lived access tokens, `getmeas` `lastupdate` and paging, meastype codes, `value×10^unit`, notify `appli` codes, HEAD-validated callbacks, rate limits~~ Verified 2026-10-03: [providers/withings.md](../providers/withings.md#assumptions-checked) | J08.1 |
 | HealthKit: hidden read-denial, `earliestPermittedSampleDate`, background-delivery entitlement and per-type frequencies, sleep category values | J15.1 |
 | Storage and performance estimates in [data-model.md](data-model.md#volume-and-partitioning) | J04.4 |
 
