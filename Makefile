@@ -8,10 +8,10 @@ COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 LDFLAGS := -s -w -X github.com/KaanEmec/vitamux/internal/version.Version=$(VERSION) -X github.com/KaanEmec/vitamux/internal/version.Commit=$(COMMIT)
 COMPOSE := docker compose -f deploy/compose/compose.dev.yaml
 
-.PHONY: help dev services migrate services-down web-install web-build build test test-integration sqlc openapi lint fixtures fixture-guard golden fuzz notices notices-check image clean
+.PHONY: help dev services migrate services-down web-install web-build build test test-integration test-e2e-stack sqlc openapi lint fixtures fixture-guard golden fuzz notices notices-check image clean
 
 help: ## Show targets
-	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
+	@grep -hE '^[a-z0-9-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
 
 dev: migrate web-install ## Run PostgreSQL, the Go server (live reload) and Vite
 	@test -f .env || { echo "missing .env — run: cp .env.example .env"; exit 1; }
@@ -42,6 +42,9 @@ test: ## Unit tests (offline)
 
 test-integration: services ## Integration tests against dev PostgreSQL
 	go test -tags integration ./...
+
+test-e2e-stack: services web-build ## Real-stack Playwright smoke on a throwaway database (needs psql, chromium)
+	scripts/e2e-stack.sh
 
 sqlc: ## Regenerate internal/db/dbq from migrations and queries
 	go tool sqlc generate

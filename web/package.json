@@ -15,9 +15,11 @@
     "lint": "eslint .",
     "openapi": "openapi-typescript ../api/openapi.yaml -o src/lib/api/schema.d.ts",
     "lint:api": "npx --yes @stoplight/spectral-cli@6.17.0 lint --fail-severity=warn --ruleset ../.spectral.yaml ../api/openapi.yaml",
+    "budget": "node scripts/bundle-budget.mjs",
     "test:e2e": "vite build && playwright test"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.63.0",
     "@sveltejs/adapter-static": "4.0.0",

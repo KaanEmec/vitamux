@@ -8,9 +8,9 @@ Read first: [frontend#navigation](../../architecture/frontend.md#navigation), [f
 **Outputs:** SvelteKit sections Today, Connections, Data, Rules, Settings; Playwright suite.
 
 ## Acceptance
-- E2E covers the critical flows.
-- axe: no serious violations.
-- Initial JS ≤ 300 KiB gzip.
+- [x] E2E covers the critical flows (48 stubbed-API specs plus a real-stack smoke).
+- [x] axe: no serious violations (0 serious or critical on every section page, light and dark; [J11.6](J11.6-ui-quality.md)).
+- [x] Initial JS ≤ 300 KiB gzip (largest route 78.5 KiB, typical 49 to 54 KiB).
 
 ## Jobs
 | Job | Title | Depends on | Gate |

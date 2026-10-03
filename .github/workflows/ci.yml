@@ -29,8 +29,9 @@ jobs:
       - run: npm run check
       - run: npm run lint
       - run: npm run build
+      - run: npm run budget # initial JS <= 300 KiB gzip on every route (web/scripts/bundle-budget.mjs)
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test # E2E against the built SPA with a stubbed API (web/e2e)
+      - run: npx playwright test # E2E and axe (serious/critical fail) against the built SPA with a stubbed API (web/e2e)
       - uses: actions/upload-artifact@v4
         with:
           name: web-build
@@ -95,6 +96,20 @@ jobs:
           sudo apt-get install -y --no-install-recommends postgresql-client-${{ matrix.postgres }}
           echo "/usr/lib/postgresql/${{ matrix.postgres }}/bin" >> "$GITHUB_PATH"
       - run: go test -tags integration ./...
+      # One Playwright smoke against a real `vitamux serve` (embedded SPA, throwaway database, generated owner).
+      - uses: actions/setup-node@v4
+        if: matrix.postgres == '18'
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Real-stack E2E smoke (web/e2e-stack)
+        if: matrix.postgres == '18'
+        run: |
+          npm --prefix web ci
+          npm --prefix web run build
+          (cd web && npx playwright install --with-deps chromium)
+          scripts/e2e-stack.sh
 
   image:
     runs-on: ubuntu-latest

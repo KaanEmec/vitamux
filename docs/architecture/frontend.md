@@ -15,7 +15,8 @@ Alternatives rejected: htmx (the rule builder, charts, and PDF review need real 
 - Sections are routes under `src/routes/(app)/` (listed in `src/lib/nav.ts`), whose layout is the shell and the session guard; `/login` sits outside it. A page sets `<title>X · Vitamux</title>` and one `<h1>`.
 - API calls go through `api` in `src/lib/api/client.ts` (`openapi-fetch` over the generated `schema.d.ts`). It adds `X-CSRF-Token` on mutations, sends any other 401 to `/login?next=…&reason=expired`, and turns every failure into a `Problem`. Show it with `ProblemAlert`; map field errors to inputs with `fieldErrors` and `TextField`.
 - Styling uses the custom properties in `src/lib/styles/tokens.css` and the few shared classes in `base.css`. Status uses `StatusIcon` (shape plus colour). No inline `style` attributes, which the CSP blocks.
-- E2E: `npm run test:e2e` builds and runs Playwright (`web/e2e`) against `vite preview`. The API is stubbed with `page.route` (`e2e/fake-api.ts`), and CSP violations fail the test.
+- E2E: `npm run test:e2e` builds and runs Playwright (`web/e2e`) against `vite preview`. The API is stubbed with `page.route` (`e2e/fake-api.ts`), and CSP violations fail the test. `e2e/a11y.spec.ts` runs axe over every section page (serious or critical fails). `make test-e2e-stack` runs one smoke against a real server on a throwaway database (`scripts/e2e-stack.sh`, `web/e2e-stack`).
+- Gates in CI (`web` job): `npm run check` (svelte-check, warnings fail), eslint, `npm run budget` (`scripts/bundle-budget.mjs`, per-route initial JS), Playwright.
 
 ## Navigation
 
