@@ -20,6 +20,29 @@ type ActiveRule struct {
 	ActivatedAt time.Time
 }
 
+// Lab analytes owned by internal/documents/analytes. No reference ranges: ranges come from the printed report.
+type Analyte struct {
+	ID   int16
+	Code string
+	Name string
+	// Null when values are kept as printed only. Conversions are owned by code.
+	CanonicalUnit *string
+	// Only from a verified loinc.org lookup, never guessed.
+	Loinc *string
+}
+
+// Printed labels mapped to analytes: seeded rows (user_id null, read-only by convention) and owner aliases, which take precedence.
+type AnalyteAlias struct {
+	ID        int64
+	AnalyteID int16
+	Label     string
+	// analytes.LabelKey(label): lower case, punctuation runs collapsed to one space.
+	LabelKey  string
+	UserID    *uuid.UUID
+	CreatedBy *string
+	CreatedAt time.Time
+}
+
 // Personal access tokens `vmx_pat_<id>_<secret>`: the id is the lookup prefix, only the secret's SHA-256 is stored.
 type ApiKey struct {
 	ID         uuid.UUID
@@ -149,6 +172,35 @@ type Device struct {
 	CreatedAt       time.Time
 }
 
+// Uploaded lab PDFs. A deleted document stays as a tombstone (no hash, blob or filename) so kept lab results still name their source.
+type Document struct {
+	ID     uuid.UUID
+	UserID uuid.UUID
+	Status string
+	// SHA-256 of the PDF; a re-upload of the same content links to the live document.
+	Sha256 []byte
+	// Blob holding the PDF sealed with the document key (internal/documents format), so its hash says nothing about the PDF.
+	BlobSha256 []byte
+	// Original filename sealed with the document key; null when none was given.
+	FilenameCiphertext []byte
+	SizeBytes          int64
+	PageCount          int32
+	UploadedAt         time.Time
+	UploadedBy         string
+	// uploaded_at + documents.retention_days at the time of the last policy change; the document_retention job deletes the original after it.
+	RetentionUntil *time.Time
+	DeletedAt      *time.Time
+}
+
+// Per-document AES-256-GCM data key, sealed with the master key (purpose documents, AAD document_keys:<document id>). Deleting the row crypto-shreds the document.
+type DocumentKey struct {
+	DocumentID uuid.UUID
+	Ciphertext []byte
+	// Master key id of ciphertext, for rotation.
+	KeyID     string
+	CreatedAt time.Time
+}
+
 // Export zips (blob_sha256 holds a blob reference); deleted with their blob after expires_at.
 type Export struct {
 	ID         uuid.UUID
@@ -165,6 +217,45 @@ type Export struct {
 	TokenHash      []byte
 	TokenExpiresAt *time.Time
 	TokenUsedAt    *time.Time
+}
+
+// Append-only review trail of each extracted row.
+type ExtractionRowEdit struct {
+	ID     int64
+	RowID  int64
+	Action string
+	// {"field": {"from": old, "to": new}} for edits.
+	Changes   json.RawMessage
+	Actor     string
+	CreatedAt time.Time
+}
+
+// One extraction attempt of a document. Re-extraction adds a run; runs can be compared. Deleted with the document original.
+type ExtractionRun struct {
+	ID         uuid.UUID
+	DocumentID uuid.UUID
+	UserID     uuid.UUID
+	JobID      *uuid.UUID
+	Status     string
+	Provider   string
+	Model      *string
+	External   bool
+	// {provider, model, acknowledged_at} the owner gave for an external provider.
+	Consent           []byte
+	SchemaVersion     string
+	PromptVersion     string
+	ProviderRequestID *string
+	// Raw provider response, sealed with the document key before Put.
+	ResponseBlobSha256 []byte
+	// Document-level fields the extractor read (laboratory, dates).
+	DocMeta    json.RawMessage
+	Usage      json.RawMessage
+	Warnings   []string
+	ErrorClass *string
+	CreatedBy  string
+	CreatedAt  time.Time
+	StartedAt  *time.Time
+	FinishedAt *time.Time
 }
 
 // First successful response per (client, Idempotency-Key), replayed for the same request; another request with the key is a conflict.
@@ -261,6 +352,100 @@ type KnownRelayOrigin struct {
 	// LIKE pattern matched against data_origins.origin_key.
 	OriginPattern     string
 	RelayedProviderID int16
+}
+
+// Extracted row schema v1 (lab-documents.md#extracted-row-schema-v1), verbatim from the extractor and edited in review.
+type LabExtractedRow struct {
+	ID                  int64
+	RunID               uuid.UUID
+	RowIndex            int32
+	Page                *int32
+	AnalyteLabel        string
+	ValueText           *string
+	ValueNumeric        *float64
+	Comparator          *string
+	UnitText            *string
+	ReferenceRangeText  *string
+	RefLow              *float64
+	RefHigh             *float64
+	AbnormalFlagPrinted *string
+	SpecimenType        *string
+	// ISO 8601 local time without offset, as extracted; the owner's timezone applies at confirmation.
+	CollectedAt  *string
+	ReportedAt   *string
+	Laboratory   *string
+	EvidenceText *string
+	Bbox         []byte
+	// Extractor hint only; never a reason to skip review.
+	Confidence *float32
+	Warnings   []string
+	// From analyte_aliases; a suggestion until the owner confirms.
+	SuggestedAnalyteID *int16
+	ReviewStatus       string
+	ReviewedAt         *time.Time
+}
+
+// A confirmed extraction. Extractor versions are copied from the run so they survive deleting the original.
+type LabReport struct {
+	ID            uuid.UUID
+	UserID        uuid.UUID
+	DocumentID    uuid.UUID
+	RunID         *uuid.UUID
+	Laboratory    *string
+	ReportedAt    *time.Time
+	Provider      string
+	Model         *string
+	SchemaVersion string
+	PromptVersion string
+	ConfirmedBy   string
+	ConfirmedAt   time.Time
+}
+
+// Confirmed lab values. The printed label, value text, unit, range and flag are always kept; no interpretation is stored.
+type LabResult struct {
+	ID          uuid.UUID
+	UserID      uuid.UUID
+	ReportID    uuid.UUID
+	SourceRowID *int64
+	// Null for an unknown analyte, which stays confirmable with its printed values.
+	AnalyteID     *int16
+	OriginalLabel string
+	ValueText     string
+	ValueNumeric  *float64
+	Comparator    *string
+	// Printed unit; null means the owner confirmed the value as unitless.
+	UnitText            *string
+	ReferenceRangeText  *string
+	RefLow              *float64
+	RefHigh             *float64
+	AbnormalFlagPrinted *string
+	SpecimenType        *string
+	// Only when the analyte has a conversion for unit_text (internal/documents/analytes); never computed otherwise.
+	CanonicalValue *float64
+	CanonicalUnit  *string
+	// Factor and offset applied (canonical = value * factor + offset), so conventions such as insulin µIU/mL stay traceable.
+	ConversionFactor *float64
+	ConversionOffset *float64
+	CatalogVersion   *int32
+	CollectedAt      *time.Time
+	// Collection date in the owner's timezone.
+	CollectedDate time.Time
+	Page          *int32
+	EvidenceText  *string
+	Revision      int32
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+// Append-only: the values of lab_results revision N before an edit made it N + 1.
+type LabResultRevision struct {
+	ID        int64
+	ResultID  uuid.UUID
+	Revision  int32
+	Snapshot  json.RawMessage
+	Reason    *string
+	ChangedBy string
+	ChangedAt time.Time
 }
 
 // Owner corrections scoped to (metric, window kind, window key). Never delete: a revoke sets revoked_at and the row stays as history.

@@ -809,7 +809,10 @@ export interface paths {
         /** List documents */
         get: operations["listDocuments"];
         put?: never;
-        /** Upload a blood-test PDF (at most 20 MiB) */
+        /**
+         * Upload a blood-test PDF (at most 20 MiB and 50 pages)
+         * @description Send the PDF as the `file` part of a multipart form (its filename is stored encrypted) or as a raw `application/pdf` body. Encrypted, oversized, too-long and non-PDF files are refused: 413 `payload_too_large`, or 422 `validation_failed` whose `errors[0].detail` is the reason (`not_pdf`, `empty`, `encrypted`, `too_many_pages`, `malformed`). Content the owner already stored links to the existing document (200).
+         */
         post: operations["uploadDocument"];
         delete?: never;
         options?: never;
@@ -967,6 +970,23 @@ export interface paths {
         /** Map a printed label to an analyte */
         post: operations["createAnalyteAlias"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytes/aliases/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove an owner alias (seeded aliases cannot be removed) */
+        delete: operations["deleteAnalyteAlias"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1831,8 +1851,27 @@ export interface components {
         PairedDevice: Record<string, never>;
         /** @description Open object. */
         PairingCode: Record<string, never>;
-        /** @description Open object. */
-        Document: Record<string, never>;
+        /** @description A stored lab PDF. A deleted document keeps only its id, status, sizes and times. */
+        Document: {
+            id: string;
+            /** @enum {string} */
+            status: "uploaded" | "extracting" | "needs_review" | "confirmed" | "deleted";
+            /** @description SHA-256 of the PDF; null once deleted. */
+            sha256: string | null;
+            /** @description Original filename; null when none was given or once deleted. */
+            filename: string | null;
+            size_bytes: number;
+            page_count: number;
+            /** Format: date-time */
+            uploaded_at: string;
+            /**
+             * Format: date-time
+             * @description When the retention policy deletes the original; null keeps it.
+             */
+            retention_until: string | null;
+            /** Format: date-time */
+            deleted_at: string | null;
+        };
         DocumentPage: components["schemas"]["PageInfo"] & {
             documents: components["schemas"]["Document"][];
         };
@@ -1849,8 +1888,22 @@ export interface components {
         LabResultPage: components["schemas"]["PageInfo"] & {
             lab_results: components["schemas"]["LabResult"][];
         };
-        /** @description Open object. */
-        AnalyteAlias: Record<string, never>;
+        /** @description A printed label mapped to an analyte (docs/analytes.md). Owner aliases take precedence over seeded ones. */
+        AnalyteAlias: {
+            id: string;
+            label: string;
+            /** @description Analyte code. */
+            analyte: string;
+            /** @enum {string} */
+            source: "seed" | "owner";
+            /** Format: date-time */
+            created_at: string;
+        };
+        AnalyteAliasInput: {
+            label: string;
+            /** @description Analyte code from docs/analytes.md. */
+            analyte: string;
+        };
         /** @description Open object. */
         Settings: Record<string, never>;
         /** @description Open object. */
@@ -3494,6 +3547,7 @@ export interface operations {
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     uploadDocument: {
@@ -3508,9 +3562,19 @@ export interface operations {
                 "multipart/form-data": {
                     file: string;
                 };
+                "application/pdf": string;
             };
         };
         responses: {
+            /** @description Already stored; the existing document. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Document"];
+                };
+            };
             /** @description Stored. */
             201: {
                 headers: {
@@ -3522,9 +3586,9 @@ export interface operations {
             };
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
-            409: components["responses"]["Problem"];
             413: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     getDocument: {
@@ -3550,6 +3614,7 @@ export interface operations {
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     deleteDocument: {
@@ -3576,6 +3641,7 @@ export interface operations {
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     getDocumentFile: {
@@ -3601,6 +3667,7 @@ export interface operations {
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     createExtraction: {
@@ -3813,7 +3880,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AnalyteAlias"];
+                "application/json": components["schemas"]["AnalyteAliasInput"];
             };
         };
         responses: {
@@ -3830,6 +3897,30 @@ export interface operations {
             403: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+        };
+    };
+    deleteAnalyteAlias: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
         };
     };
     createExport: {

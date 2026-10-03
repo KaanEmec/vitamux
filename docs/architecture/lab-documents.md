@@ -4,9 +4,11 @@ Extraction is structured data entry with mandatory human confirmation. The produ
 
 ## Storage
 
-- Accept PDF only: magic bytes `%PDF-` plus a pure-Go structure check. Defaults: ≤ 20 MiB, ≤ 50 pages. Encrypted PDFs are rejected. No server-side rendering.
-- Each document gets a random AES-256-GCM data key, wrapped by the master key (`document_keys`). Deletion destroys the wrapped key (crypto-shred), then the blob. Old backups keep the key until they rotate out (documented).
-- Metadata: sha256 (a duplicate upload links to the existing document), size, encrypted original filename, `uploaded_at`, `retention_until`, status `uploaded → extracting → needs_review → confirmed | deleted`.
+- Accept PDF only: magic bytes `%PDF-` plus a pure-Go structure check (`documents.Validate`). Defaults: ≤ 20 MiB, ≤ 50 pages. Encrypted PDFs are rejected. No server-side rendering. A refused upload answers 413 `payload_too_large`, or 422 with the reason (`not_pdf`, `empty`, `encrypted`, `too_many_pages`, `malformed`) in `errors[0].detail`.
+- The check is a scan, not a parser: `/Encrypt` anywhere rejects; pages are `/Type /Page` objects in the body and in FlateDecode object streams (inflated up to 64 MiB). A page repeated by an incremental update counts twice, and object streams with other filters are not read.
+- Each document gets a random AES-256-GCM data key, wrapped by the master key (`document_keys`, purpose `documents`, AAD `document_keys:<id>`; `vitamux keys rotate` rewraps it). The PDF, the original filename, and anything else holding document content (raw extractor responses: `Store.Seal`) are sealed with the data key before they are stored, so the blob hash says nothing about the PDF.
+- Deletion destroys the wrapped key (crypto-shred), tombstones the row (no hash, blob or filename), drops extraction runs and releases the blobs for the next sweep. `derived=keep` keeps confirmed lab results, which copy the versions and evidence they need; `derived=delete` removes them too (also later, on the tombstone). The audit event holds counts only. Old backups, and PostgreSQL pages not yet vacuumed, keep the wrapped key until they rotate out.
+- Metadata: sha256 (a re-upload of the same content links to the live document), size, encrypted original filename, `uploaded_at`, `retention_until`, status `uploaded → extracting → needs_review → confirmed | deleted`.
 
 ## Extraction provider interface
 
@@ -56,4 +58,4 @@ Deterministic checks after extraction:
 - External providers are off by default. Enabling one requires an API-key secret file and `documents.external_ai.<provider>.enabled=true`. Each extraction also requires `consent {provider, model, acknowledged_at}` matching the configuration. Missing consent → `409 consent_required`; a disabled provider → `403`.
 - Stored: prompt and schema versions, model id, provider request id, timestamps. Never logged: keys, document bytes, responses.
 - PDF text is untrusted input (prompt injection). The model has no tools, output must match the schema, and a human reviews everything.
-- Retention: `documents.retention_days` (default keep) and optional "delete original after confirmation". Deletion modes: `derived=keep|delete`.
+- Retention: owner settings `documents.retention_days` (default keep) and `documents.delete_original_after_confirmation`, set through `documents.SetPolicy`, which applies the period to every live document's `retention_until`. The daily `document_retention` job deletes due originals with `derived=keep`. Deletion modes: `derived=keep|delete`.

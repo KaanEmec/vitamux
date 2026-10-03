@@ -17,7 +17,8 @@ Precedence when documents disagree: `CLAUDE.md` (product brief) > ADRs in `docs/
 | [data-model.md](architecture/data-model.md) | Tables, IDs, dedupe keys, corrections, measurements, metric catalogue, volume, retention | Migrations, writers, queries |
 | [metric-catalog.md](architecture/metric-catalog.md) | Metric code rules, decisions, and codes not yet implemented (HealthKit and Withings mappings, provider scores, events) | Adding catalogue codes |
 | [metrics.md](metrics.md) | Generated: implemented metric codes, units, conversions, windows, strategies | Catalogue, normalizers, rules |
-| [analyte-catalog.md](architecture/analyte-catalog.md) | Lab analyte codes, canonical units, conversion factors | Lab review, analyte seed |
+| [analyte-catalog.md](architecture/analyte-catalog.md) | Lab analyte code, unit, conversion and alias rules | Adding analytes |
+| [analytes.md](analytes.md) | Generated: implemented analyte codes, canonical units, conversions, refused units, aliases | Lab review, conversions |
 | [resolution-defaults.md](architecture/resolution-defaults.md) | Suggested built-in rules per metric, brand evidence tiers, sources | Built-in defaults (J09.2), rule UI |
 | [resolution-defaults.md](resolution-defaults.md) | Generated: the built-in rules that ship, their groups and coverage | Rules, rule UI |
 | [resolution.md](architecture/resolution.md) | Rule schema, windows, aggregation, strategies, sleep alignment, overrides, results, cache | Resolution engine, rule UI |

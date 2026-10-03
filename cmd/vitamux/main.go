@@ -25,6 +25,8 @@ import (
 	"github.com/KaanEmec/vitamux/internal/connectors/withings"
 	"github.com/KaanEmec/vitamux/internal/crypto"
 	"github.com/KaanEmec/vitamux/internal/db"
+	"github.com/KaanEmec/vitamux/internal/documents"
+	"github.com/KaanEmec/vitamux/internal/export"
 	"github.com/KaanEmec/vitamux/internal/jobs"
 	"github.com/KaanEmec/vitamux/internal/metrics"
 	"github.com/KaanEmec/vitamux/internal/normalize"
@@ -44,6 +46,7 @@ Commands:
   admin     administrative tasks (E03)
   keys      rotate (re-seal values under the current master key)
   reprocess re-normalize stored raw payloads after a normalizer change
+  import    ndjson [--merge] EXPORT (load a Vitamux export zip)
   version   print version information
 `
 
@@ -73,6 +76,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return keys(args[1:], stdout, stderr)
 	case "reprocess":
 		return reprocess(args[1:], stdout, stderr)
+	case "import":
+		return importCmd(args[1:], stdout, stderr)
 	case "help", "-h", "--help":
 		fmt.Fprint(stdout, usage)
 		return 0
@@ -133,8 +138,10 @@ func serve(stderr io.Writer) int {
 	if blobs != nil {
 		runner.Register(blob.KindSweep, blob.SweepJob(db.New(pool), blobs, log))
 		scheduler.Daily(blob.KindSweep)
+		runner.Register(export.Kind, export.Handler(db.New(pool), blobs))
 	}
 	runner.Register(normalize.KindRecomputeLocalDates, normalize.RecomputeJob(db.New(pool), log))
+	documents.Register(runner, scheduler, db.New(pool), blobs, keys, log) // no-op without blobs and key
 	withingsConn := withings.New(withings.Config{ClientID: cfg.WithingsClientID, ClientSecret: cfg.WithingsClientSecret.Value()})
 	syncRegistry, err := connectors.NewRegistry(withingsConn) // provider connectors are added as arguments
 	if err != nil {

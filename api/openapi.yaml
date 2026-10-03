@@ -1166,10 +1166,16 @@ paths:
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
     post:
       tags: [documents]
       operationId: uploadDocument
-      summary: Upload a blood-test PDF (at most 20 MiB)
+      summary: Upload a blood-test PDF (at most 20 MiB and 50 pages)
+      description: >-
+        Send the PDF as the `file` part of a multipart form (its filename is stored encrypted) or as a raw
+        `application/pdf` body. Encrypted, oversized, too-long and non-PDF files are refused: 413 `payload_too_large`,
+        or 422 `validation_failed` whose `errors[0].detail` is the reason (`not_pdf`, `empty`, `encrypted`,
+        `too_many_pages`, `malformed`). Content the owner already stored links to the existing document (200).
       security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
       requestBody:
         required: true
@@ -1180,7 +1186,14 @@ paths:
               required: [file]
               properties:
                 file: {type: string, contentMediaType: application/pdf}
+          application/pdf:
+            schema: {type: string, contentMediaType: application/pdf}
       responses:
+        '200':
+          description: Already stored; the existing document.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Document'}
         '201':
           description: Stored.
           content:
@@ -1188,9 +1201,9 @@ paths:
               schema: {$ref: '#/components/schemas/Document'}
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
-        '409': {$ref: '#/components/responses/Problem'}
         '413': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
 
   /api/v1/documents/{id}:
     get:
@@ -1209,6 +1222,7 @@ paths:
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
         '404': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
     delete:
       tags: [documents]
       operationId: deleteDocument
@@ -1227,6 +1241,7 @@ paths:
         '403': {$ref: '#/components/responses/Problem'}
         '404': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
 
   /api/v1/documents/{id}/file:
     get:
@@ -1245,6 +1260,7 @@ paths:
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
         '404': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
 
   /api/v1/documents/{id}/extractions:
     post:
@@ -1409,7 +1425,7 @@ paths:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/AnalyteAlias'}
+            schema: {$ref: '#/components/schemas/AnalyteAliasInput'}
       responses:
         '201':
           description: Created.
@@ -1420,6 +1436,22 @@ paths:
         '403': {$ref: '#/components/responses/Problem'}
         '409': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/analytes/aliases/{id}:
+    delete:
+      tags: [documents]
+      operationId: deleteAnalyteAlias
+      summary: Remove an owner alias (seeded aliases cannot be removed)
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '204':
+          description: Removed.
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
 
   # ---------------------------------------------------------------- exports
   /api/v1/exports:
@@ -2196,7 +2228,28 @@ components:
       description: Open object; properties are added with the endpoint.
     Job:
       type: object
-      description: Open object; properties are added with the endpoint.
+      description: A background job (docs/architecture/reliability.md#job-queue).
+      additionalProperties: false
+      required: [id, kind, status, connection_id, priority, attempts, max_attempts, payload, run_at, created_at, started_at, finished_at]
+      properties:
+        id: {type: string, format: uuid}
+        kind: {type: string}
+        status: {type: string, enum: [queued, running, succeeded, failed, dead, cancelled]}
+        connection_id: {oneOf: [{$ref: '#/components/schemas/ConnectionID'}, {type: 'null'}]}
+        priority: {type: integer, description: Lower runs first.}
+        attempts: {type: integer, minimum: 0}
+        max_attempts: {type: integer, minimum: 1}
+        payload: {type: object, description: Job parameters; never secrets or health values., x-go-type: json.RawMessage}
+        run_at: {type: string, format: date-time}
+        created_at: {type: string, format: date-time}
+        started_at: {type: [string, 'null'], format: date-time}
+        finished_at: {type: [string, 'null'], format: date-time}
+    SyncQueued:
+      type: object
+      additionalProperties: false
+      required: [jobs]
+      properties:
+        jobs: {type: array, items: {$ref: '#/components/schemas/Job'}, description: One sync job per stream; a pending one is reused.}
     JobPage:
       allOf:
         - $ref: '#/components/schemas/PageInfo'
@@ -2343,7 +2396,21 @@ components:
           required: [measurements]
           properties:
             measurements: {type: array, items: {$ref: '#/components/schemas/Measurement'}}
-    ManualMeasurementInput: {type: object, description: Open object.}
+    ManualMeasurementInput:
+      type: object
+      description: >
+        A value the owner entered. It is stored as a raw payload of the owner's manual connection
+        and normalized like any source (provider manual, quality flag manual_entry). A sample
+        without end_at, an interval with it. Grouped metrics (blood-pressure components) are not
+        accepted here.
+      additionalProperties: false
+      required: [metric, value, unit, start_at]
+      properties:
+        metric: {type: string, description: Metric code.}
+        value: {type: number, format: double}
+        unit: {type: string, description: Unit code of value; converted to the canonical unit.}
+        start_at: {type: string, format: date-time, description: Its offset sets the local date.}
+        end_at: {type: string, format: date-time, description: Exclusive end of an interval.}
     Group:
       type: object
       description: Measurement group (bp_reading, body_composition) with its components.
@@ -2576,17 +2643,86 @@ components:
       properties:
         raw_id: {type: string}
         fetched_at: {type: [string, 'null'], format: date-time}
-    Rule: {type: object, description: Open object.}
-    RuleVersion: {type: object, description: Open object.}
-    RuleVersionInput: {type: object, description: Typed rule (docs/architecture/resolution.md). Open object.}
+    Rule:
+      $ref: '#/components/schemas/RuleVersion'
+    RuleVersion:
+      type: object
+      description: A rule version, the owner's or a built-in (docs/architecture/resolution.md#rule-specification).
+      additionalProperties: false
+      required: [ref, metric, version, builtin, active, spec, based_on, note, created_by, created_at]
+      properties:
+        ref: {type: string, description: 'rule:<metric>:<n> for the owner''s versions, builtin:<metric>:<n> for built-ins.'}
+        metric: {type: string, description: Catalogue code or rule family (sleep, blood_pressure).}
+        version: {type: integer, minimum: 1}
+        builtin: {type: boolean}
+        active: {type: boolean, description: The rule in effect for the metric.}
+        spec: {type: object, description: The typed rule (schemas/resolution-rule.v1.json)., x-go-type: json.RawMessage}
+        based_on: {type: [string, 'null'], description: The built-in this version copied.}
+        note: {type: [string, 'null']}
+        created_by: {type: [string, 'null'], description: Audit actor; null for built-ins.}
+        created_at: {type: [string, 'null'], format: date-time, description: Null for built-ins.}
+    RuleVersionInput:
+      type: object
+      additionalProperties: false
+      required: [spec]
+      properties:
+        spec:
+          type: object
+          description: >
+            The typed rule (docs/architecture/resolution.md#rule-specification); its metric must be
+            the path's. A sum across sources needs acknowledged_warnings in the spec, else 409
+            rule_warning_unacknowledged.
+          x-go-type: json.RawMessage
+        note: {type: string, maxLength: 500}
+        activate: {type: boolean, default: false, description: Also make it the active version.}
     RuleActivation:
       type: object
       required: [version]
       properties:
         version: {type: integer, minimum: 1}
-        acknowledge_warnings: {type: array, items: {type: string}}
-    Override: {type: object, description: Open object.}
-    OverrideInput: {type: object, description: Open object.}
+        acknowledge_warnings: {type: array, items: {type: string}, description: Ignored; acknowledgements are part of the rule spec (acknowledged_warnings).}
+    Override:
+      type: object
+      description: A manual override (docs/architecture/resolution.md#manual-overrides). Only the fields of its action are set.
+      additionalProperties: false
+      required: [id, metric, window, action, input_id, group, value, unit, note, active, created_by, created_at, revoked_by, revoked_at]
+      properties:
+        id: {type: string, format: uuid}
+        metric: {type: string, description: Rule metric (catalogue code or family).}
+        window: {$ref: '#/components/schemas/OverrideWindow'}
+        action: {type: string, enum: [exclude_input, force_source, set_value]}
+        input_id: {type: [string, 'null'], description: 'exclude_input: the measurement id.'}
+        group: {type: [string, 'null'], description: 'force_source: the rule group id.'}
+        value: {type: [number, 'null'], format: double, description: 'set_value: the value in the canonical unit.'}
+        unit: {type: [string, 'null']}
+        note: {type: [string, 'null']}
+        active: {type: boolean, description: False once revoked.}
+        created_by: {type: string}
+        created_at: {type: string, format: date-time}
+        revoked_by: {type: [string, 'null']}
+        revoked_at: {type: [string, 'null'], format: date-time}
+    OverrideWindow:
+      type: object
+      additionalProperties: false
+      required: [kind, key, local_date]
+      properties:
+        kind: {type: string, enum: [bucket, hour, local_day, local_night, sleep_episode, latest, reading]}
+        key: {type: string, minLength: 1, description: The window key of a resolved result.}
+        local_date: {type: string, format: date, description: The local date the window belongs to.}
+    OverrideInput:
+      type: object
+      description: 'exclude_input needs input_id, force_source group, set_value value, unit and note.'
+      additionalProperties: false
+      required: [metric, window, action]
+      properties:
+        metric: {type: string}
+        window: {$ref: '#/components/schemas/OverrideWindow'}
+        action: {type: string, enum: [exclude_input, force_source, set_value]}
+        input_id: {type: string, pattern: '^[0-9]+$'}
+        group: {type: string}
+        value: {type: number, format: double}
+        unit: {type: string}
+        note: {type: string, maxLength: 1000}
     OverridePage:
       allOf:
         - $ref: '#/components/schemas/PageInfo'
@@ -2594,13 +2730,110 @@ components:
           required: [overrides]
           properties:
             overrides: {type: array, items: {$ref: '#/components/schemas/Override'}}
-    Connection: {type: object, description: Connection with health; never credentials. Open object.}
-    ConnectionInput: {type: object, description: Open object.}
-    ConnectionPatch: {type: object, description: Open object.}
-    AuthStep: {type: object, description: Next interactive auth step (redirect URL, prompt, or done). Open object.}
+    Connection:
+      type: object
+      description: A connection with its derived health; never credentials.
+      additionalProperties: false
+      required: [id, provider, mode, status, official, health, health_reason, last_success_at, last_error_class, consecutive_failures, created_at, updated_at]
+      properties:
+        id: {$ref: '#/components/schemas/ConnectionID'}
+        provider: {type: string, description: Provider code.}
+        mode: {type: string, enum: [in_process, push, remote]}
+        status: {type: string, enum: [active, degraded, needs_reauth, paused, error, disabled]}
+        official: {type: [boolean, 'null'], description: False for an unofficial API; null when no connector is registered (push sources).}
+        health: {$ref: '#/components/schemas/Health'}
+        health_reason: {type: [string, 'null']}
+        last_success_at: {type: [string, 'null'], format: date-time}
+        last_error_class: {type: [string, 'null']}
+        consecutive_failures: {type: integer, minimum: 0}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    Health:
+      type: string
+      description: Derived health (internal/connectors/health.go).
+      enum: [ok, degraded, failing, needs_reauth, paused, disabled, stale]
+    ConnectionInput:
+      type: object
+      description: A push connection (clients upload to it). Providers with a server-side connector connect through POST /providers/{provider}/auth/begin.
+      additionalProperties: false
+      required: [provider]
+      properties:
+        provider: {type: string, pattern: '^[a-z][a-z0-9_]*$'}
+    ConnectionPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        status: {type: string, enum: [active, paused], description: Pause or resume; only between active/degraded and paused.}
+    AuthStep:
+      type: object
+      description: Next interactive auth step.
+      required: [redirect_url]
+      properties:
+        redirect_url: {type: string}
     AuthContinueInput: {type: object, description: Open object.}
-    BackfillInput: {type: object, description: Open object.}
-    Run: {type: object, description: Open object.}
+    BackfillInput:
+      type: object
+      additionalProperties: false
+      required: [stream, start]
+      properties:
+        stream: {type: string}
+        start: {type: string, format: date-time}
+        end: {type: string, format: date-time, description: Exclusive; now when omitted.}
+    Backfill:
+      type: object
+      additionalProperties: false
+      required: [id, connection_id, stream, start, end, status, created_at, finished_at, unit_counts]
+      properties:
+        id: {type: string, format: uuid}
+        connection_id: {$ref: '#/components/schemas/ConnectionID'}
+        stream: {type: string}
+        start: {type: string, format: date-time}
+        end: {type: string, format: date-time}
+        status: {type: string, enum: [running, done, failed, cancelled]}
+        created_at: {type: string, format: date-time}
+        finished_at: {type: [string, 'null'], format: date-time}
+        unit_counts:
+          type: object
+          additionalProperties: false
+          required: [pending, running, done, failed]
+          properties:
+            pending: {type: integer, minimum: 0}
+            running: {type: integer, minimum: 0}
+            done: {type: integer, minimum: 0}
+            failed: {type: integer, minimum: 0}
+        units: {type: array, items: {$ref: '#/components/schemas/BackfillUnit'}, description: Only on GET of one backfill.}
+    BackfillUnit:
+      type: object
+      additionalProperties: false
+      required: [start, end, status, attempts, error_class, updated_at]
+      properties:
+        start: {type: string, format: date-time}
+        end: {type: string, format: date-time}
+        status: {type: string, enum: [pending, running, done, failed]}
+        attempts: {type: integer, minimum: 0}
+        error_class: {type: [string, 'null']}
+        updated_at: {type: string, format: date-time}
+    BackfillRetryInput:
+      type: object
+      additionalProperties: false
+      properties:
+        unit_start: {type: string, format: date-time, description: Retry only the unit starting here; all failed units when omitted.}
+    Run:
+      type: object
+      description: One job execution.
+      additionalProperties: false
+      required: [id, job_id, kind, attempt, started_at, finished_at, outcome, error_class, error_message, stats]
+      properties:
+        id: {type: string}
+        job_id: {type: string, format: uuid}
+        kind: {type: string}
+        attempt: {type: integer, minimum: 1}
+        started_at: {type: string, format: date-time}
+        finished_at: {type: [string, 'null'], format: date-time}
+        outcome: {type: [string, 'null'], description: Null while running.}
+        error_class: {type: [string, 'null']}
+        error_message: {type: [string, 'null'], description: Sanitized.}
+        stats: {type: object, x-go-type: json.RawMessage}
     RunPage:
       allOf:
         - $ref: '#/components/schemas/PageInfo'
@@ -2608,10 +2841,58 @@ components:
           required: [runs]
           properties:
             runs: {type: array, items: {$ref: '#/components/schemas/Run'}}
-    Stream: {type: object, description: Open object.}
+    Stream:
+      type: object
+      description: A connection's stream with its sync state. The cursor itself is not shown.
+      additionalProperties: false
+      required: [name, health, health_reason, status, status_reason, has_cursor, high_watermark, updated_at, schedules]
+      properties:
+        name: {type: string}
+        health: {$ref: '#/components/schemas/Health'}
+        health_reason: {type: [string, 'null']}
+        status: {type: string, enum: [ok, degraded]}
+        status_reason: {type: [string, 'null']}
+        has_cursor: {type: boolean}
+        high_watermark: {type: [string, 'null'], format: date-time, description: Newest source time seen.}
+        updated_at: {type: [string, 'null'], format: date-time}
+        schedules: {type: array, items: {$ref: '#/components/schemas/Schedule'}}
+    Schedule:
+      type: object
+      additionalProperties: false
+      required: [id, connection_id, stream, mode, interval_seconds, lookback_seconds, enabled, next_run_at]
+      properties:
+        id: {type: string, format: uuid}
+        connection_id: {$ref: '#/components/schemas/ConnectionID'}
+        stream: {type: string}
+        mode: {type: string, enum: [incremental, correction]}
+        interval_seconds: {type: integer, minimum: 60}
+        lookback_seconds: {type: integer, minimum: 0}
+        enabled: {type: boolean}
+        next_run_at: {type: string, format: date-time}
+    SchedulePatch:
+      type: object
+      description: Merge patch; omitted fields keep their value.
+      additionalProperties: false
+      properties:
+        interval_seconds: {type: integer, minimum: 60}
+        lookback_seconds: {type: integer, minimum: 0}
+        enabled: {type: boolean}
     PairedDevice: {type: object, description: Open object.}
     PairingCode: {type: object, description: Open object.}
-    Document: {type: object, description: Open object.}
+    Document:
+      type: object
+      description: A stored lab PDF. A deleted document keeps only its id, status, sizes and times.
+      required: [id, status, sha256, filename, size_bytes, page_count, uploaded_at, retention_until, deleted_at]
+      properties:
+        id: {type: string, pattern: '^doc_[0-9a-f]{32}$'}
+        status: {type: string, enum: [uploaded, extracting, needs_review, confirmed, deleted]}
+        sha256: {type: [string, 'null'], pattern: '^[0-9a-f]{64}$', description: SHA-256 of the PDF; null once deleted.}
+        filename: {type: [string, 'null'], description: Original filename; null when none was given or once deleted.}
+        size_bytes: {type: integer, minimum: 1}
+        page_count: {type: integer, minimum: 1}
+        uploaded_at: {type: string, format: date-time}
+        retention_until: {type: [string, 'null'], format: date-time, description: When the retention policy deletes the original; null keeps it.}
+        deleted_at: {type: [string, 'null'], format: date-time}
     DocumentPage:
       allOf:
         - $ref: '#/components/schemas/PageInfo'
@@ -2631,6 +2912,41 @@ components:
           required: [lab_results]
           properties:
             lab_results: {type: array, items: {$ref: '#/components/schemas/LabResult'}}
-    AnalyteAlias: {type: object, description: Open object.}
-    Settings: {type: object, description: Open object.}
-    TimezonePeriod: {type: object, description: Open object.}
+    AnalyteAlias:
+      type: object
+      description: A printed label mapped to an analyte (docs/analytes.md). Owner aliases take precedence over seeded ones.
+      required: [id, label, analyte, source, created_at]
+      properties:
+        id: {type: string, pattern: '^[0-9]+$'}
+        label: {type: string}
+        analyte: {type: string, pattern: '^[a-z][a-z0-9_]*$', description: Analyte code.}
+        source: {type: string, enum: [seed, owner]}
+        created_at: {type: string, format: date-time}
+    AnalyteAliasInput:
+      type: object
+      required: [label, analyte]
+      properties:
+        label: {type: string, minLength: 1, maxLength: 200}
+        analyte: {type: string, pattern: '^[a-z][a-z0-9_]*$', description: Analyte code from docs/analytes.md.}
+    Settings:
+      type: object
+      description: Owner settings. PATCH changes only the keys it sends.
+      additionalProperties: false
+      properties:
+        withings.notifications: {type: boolean, description: Withings notification subscriptions (polling runs either way); needs VITAMUX_PUBLIC_URL.}
+    TimezonePeriod:
+      type: object
+      additionalProperties: false
+      required: [id, tz, valid_from, valid_to]
+      properties:
+        id: {type: string, format: uuid}
+        tz: {type: string, description: IANA timezone.}
+        valid_from: {type: string, format: date-time}
+        valid_to: {type: [string, 'null'], format: date-time, description: Start of the next period; null for the current one.}
+    TimezonePeriodInput:
+      type: object
+      additionalProperties: false
+      required: [tz, valid_from]
+      properties:
+        tz: {type: string, description: IANA timezone.}
+        valid_from: {type: string, format: date-time}

@@ -14,11 +14,57 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/oapi-codegen/runtime"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
+
+// Defines values for AnalyteAliasSource.
+const (
+	Owner AnalyteAliasSource = "owner"
+	Seed  AnalyteAliasSource = "seed"
+)
+
+// Valid indicates whether the value is a known member of the AnalyteAliasSource enum.
+func (e AnalyteAliasSource) Valid() bool {
+	switch e {
+	case Owner:
+		return true
+	case Seed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DocumentStatus.
+const (
+	DocumentStatusConfirmed   DocumentStatus = "confirmed"
+	DocumentStatusDeleted     DocumentStatus = "deleted"
+	DocumentStatusExtracting  DocumentStatus = "extracting"
+	DocumentStatusNeedsReview DocumentStatus = "needs_review"
+	DocumentStatusUploaded    DocumentStatus = "uploaded"
+)
+
+// Valid indicates whether the value is a known member of the DocumentStatus enum.
+func (e DocumentStatus) Valid() bool {
+	switch e {
+	case DocumentStatusConfirmed:
+		return true
+	case DocumentStatusDeleted:
+		return true
+	case DocumentStatusExtracting:
+		return true
+	case DocumentStatusNeedsReview:
+		return true
+	case DocumentStatusUploaded:
+		return true
+	default:
+		return false
+	}
+}
 
 // Defines values for ExportFormat.
 const (
@@ -592,8 +638,25 @@ type APIKey struct {
 	Scopes     []Scope            `json:"scopes"`
 }
 
-// AnalyteAlias Open object.
-type AnalyteAlias = map[string]interface{}
+// AnalyteAlias A printed label mapped to an analyte (docs/analytes.md). Owner aliases take precedence over seeded ones.
+type AnalyteAlias struct {
+	// Analyte Analyte code.
+	Analyte   string             `json:"analyte"`
+	CreatedAt time.Time          `json:"created_at"`
+	ID        string             `json:"id"`
+	Label     string             `json:"label"`
+	Source    AnalyteAliasSource `json:"source"`
+}
+
+// AnalyteAliasSource defines model for AnalyteAlias.Source.
+type AnalyteAliasSource string
+
+// AnalyteAliasInput defines model for AnalyteAliasInput.
+type AnalyteAliasInput struct {
+	// Analyte Analyte code from docs/analytes.md.
+	Analyte string `json:"analyte"`
+	Label   string `json:"label"`
+}
 
 // AuthContinueInput Open object.
 type AuthContinueInput = map[string]interface{}
@@ -670,8 +733,27 @@ type DeviceRef struct {
 	Type *string `json:"type,omitempty"`
 }
 
-// Document Open object.
-type Document = map[string]interface{}
+// Document A stored lab PDF. A deleted document keeps only its id, status, sizes and times.
+type Document struct {
+	DeletedAt *time.Time `json:"deleted_at"`
+
+	// Filename Original filename; null when none was given or once deleted.
+	Filename  *string `json:"filename"`
+	ID        string  `json:"id"`
+	PageCount int     `json:"page_count"`
+
+	// RetentionUntil When the retention policy deletes the original; null keeps it.
+	RetentionUntil *time.Time `json:"retention_until"`
+
+	// Sha256 SHA-256 of the PDF; null once deleted.
+	Sha256     *string        `json:"sha256"`
+	SizeBytes  int            `json:"size_bytes"`
+	Status     DocumentStatus `json:"status"`
+	UploadedAt time.Time      `json:"uploaded_at"`
+}
+
+// DocumentStatus defines model for Document.Status.
+type DocumentStatus string
 
 // DocumentPage defines model for DocumentPage.
 type DocumentPage struct {
@@ -1809,7 +1891,7 @@ type WithingsNotifyFormdataBody struct {
 }
 
 // CreateAnalyteAliasJSONRequestBody defines body for CreateAnalyteAlias for application/json ContentType.
-type CreateAnalyteAliasJSONRequestBody = AnalyteAlias
+type CreateAnalyteAliasJSONRequestBody = AnalyteAliasInput
 
 // CreateAPIKeyJSONRequestBody defines body for CreateAPIKey for application/json ContentType.
 type CreateAPIKeyJSONRequestBody CreateAPIKeyJSONBody
@@ -1879,6 +1961,9 @@ type ServerInterface interface {
 	// CreateAnalyteAlias Map a printed label to an analyte
 	// (POST /api/v1/analytes/aliases)
 	CreateAnalyteAlias(w http.ResponseWriter, r *http.Request)
+	// DeleteAnalyteAlias Remove an owner alias (seeded aliases cannot be removed)
+	// (DELETE /api/v1/analytes/aliases/{id})
+	DeleteAnalyteAlias(w http.ResponseWriter, r *http.Request, id ID)
 	// ListAPIKeys List API keys
 	// (GET /api/v1/api-keys)
 	ListAPIKeys(w http.ResponseWriter, r *http.Request)
@@ -1963,7 +2048,7 @@ type ServerInterface interface {
 	// ListDocuments List documents
 	// (GET /api/v1/documents)
 	ListDocuments(w http.ResponseWriter, r *http.Request, params ListDocumentsParams)
-	// UploadDocument Upload a blood-test PDF (at most 20 MiB)
+	// UploadDocument Upload a blood-test PDF (at most 20 MiB and 50 pages)
 	// (POST /api/v1/documents)
 	UploadDocument(w http.ResponseWriter, r *http.Request)
 	// DeleteDocument Delete a document, keeping or deleting derived lab results
@@ -2134,6 +2219,32 @@ func (siw *ServerInterfaceWrapper) CreateAnalyteAlias(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateAnalyteAlias(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAnalyteAlias operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAnalyteAlias(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAnalyteAlias(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5252,6 +5363,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/lab-results/{id}/history", wrapper.GetLabResultHistory)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/analytes/aliases", wrapper.ListAnalyteAliases)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/analytes/aliases", wrapper.CreateAnalyteAlias)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/analytes/aliases/{id}", wrapper.DeleteAnalyteAlias)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/exports", wrapper.CreateExport)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/exports/{id}", wrapper.GetExport)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/exports/{id}/download", wrapper.DownloadExport)
@@ -5406,6 +5518,80 @@ func (response CreateAnalyteAlias422ApplicationProblemPlusJSONResponse) VisitCre
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAnalyteAliasRequestObject struct {
+	ID ID `json:"id"`
+}
+
+type DeleteAnalyteAliasResponseObject interface {
+	VisitDeleteAnalyteAliasResponse(w http.ResponseWriter) error
+}
+
+type DeleteAnalyteAlias204Response struct {
+}
+
+func (response DeleteAnalyteAlias204Response) VisitDeleteAnalyteAliasResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteAnalyteAlias401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response DeleteAnalyteAlias401ApplicationProblemPlusJSONResponse) VisitDeleteAnalyteAliasResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAnalyteAlias403ApplicationProblemPlusJSONResponse Problem
+
+func (response DeleteAnalyteAlias403ApplicationProblemPlusJSONResponse) VisitDeleteAnalyteAliasResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAnalyteAlias404ApplicationProblemPlusJSONResponse Problem
+
+func (response DeleteAnalyteAlias404ApplicationProblemPlusJSONResponse) VisitDeleteAnalyteAliasResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAnalyteAlias409ApplicationProblemPlusJSONResponse Problem
+
+func (response DeleteAnalyteAlias409ApplicationProblemPlusJSONResponse) VisitDeleteAnalyteAliasResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -7345,12 +7531,41 @@ func (response ListDocuments422ApplicationProblemPlusJSONResponse) VisitListDocu
 	return err
 }
 
+type ListDocuments503ApplicationProblemPlusJSONResponse Problem
+
+func (response ListDocuments503ApplicationProblemPlusJSONResponse) VisitListDocumentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UploadDocumentRequestObject struct {
-	Body *multipart.Reader
+	Body          io.Reader
+	MultipartBody *multipart.Reader
 }
 
 type UploadDocumentResponseObject interface {
 	VisitUploadDocumentResponse(w http.ResponseWriter) error
+}
+
+type UploadDocument200JSONResponse Document
+
+func (response UploadDocument200JSONResponse) VisitUploadDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type UploadDocument201JSONResponse Document
@@ -7397,20 +7612,6 @@ func (response UploadDocument403ApplicationProblemPlusJSONResponse) VisitUploadD
 	return err
 }
 
-type UploadDocument409ApplicationProblemPlusJSONResponse Problem
-
-func (response UploadDocument409ApplicationProblemPlusJSONResponse) VisitUploadDocumentResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/problem+json")
-	w.WriteHeader(409)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
 type UploadDocument413ApplicationProblemPlusJSONResponse Problem
 
 func (response UploadDocument413ApplicationProblemPlusJSONResponse) VisitUploadDocumentResponse(w http.ResponseWriter) error {
@@ -7435,6 +7636,20 @@ func (response UploadDocument422ApplicationProblemPlusJSONResponse) VisitUploadD
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadDocument503ApplicationProblemPlusJSONResponse Problem
+
+func (response UploadDocument503ApplicationProblemPlusJSONResponse) VisitUploadDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -7514,6 +7729,20 @@ func (response DeleteDocument422ApplicationProblemPlusJSONResponse) VisitDeleteD
 	return err
 }
 
+type DeleteDocument503ApplicationProblemPlusJSONResponse Problem
+
+func (response DeleteDocument503ApplicationProblemPlusJSONResponse) VisitDeleteDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetDocumentRequestObject struct {
 	ID ID `json:"id"`
 }
@@ -7576,6 +7805,20 @@ func (response GetDocument404ApplicationProblemPlusJSONResponse) VisitGetDocumen
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDocument503ApplicationProblemPlusJSONResponse Problem
+
+func (response GetDocument503ApplicationProblemPlusJSONResponse) VisitGetDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -7744,6 +7987,20 @@ func (response GetDocumentFile404ApplicationProblemPlusJSONResponse) VisitGetDoc
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDocumentFile503ApplicationProblemPlusJSONResponse Problem
+
+func (response GetDocumentFile503ApplicationProblemPlusJSONResponse) VisitGetDocumentFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -10596,6 +10853,9 @@ type StrictServerInterface interface {
 	// CreateAnalyteAlias Map a printed label to an analyte
 	// (POST /api/v1/analytes/aliases)
 	CreateAnalyteAlias(ctx context.Context, request CreateAnalyteAliasRequestObject) (CreateAnalyteAliasResponseObject, error)
+	// DeleteAnalyteAlias Remove an owner alias (seeded aliases cannot be removed)
+	// (DELETE /api/v1/analytes/aliases/{id})
+	DeleteAnalyteAlias(ctx context.Context, request DeleteAnalyteAliasRequestObject) (DeleteAnalyteAliasResponseObject, error)
 	// ListAPIKeys List API keys
 	// (GET /api/v1/api-keys)
 	ListAPIKeys(ctx context.Context, request ListAPIKeysRequestObject) (ListAPIKeysResponseObject, error)
@@ -10680,7 +10940,7 @@ type StrictServerInterface interface {
 	// ListDocuments List documents
 	// (GET /api/v1/documents)
 	ListDocuments(ctx context.Context, request ListDocumentsRequestObject) (ListDocumentsResponseObject, error)
-	// UploadDocument Upload a blood-test PDF (at most 20 MiB)
+	// UploadDocument Upload a blood-test PDF (at most 20 MiB and 50 pages)
 	// (POST /api/v1/documents)
 	UploadDocument(ctx context.Context, request UploadDocumentRequestObject) (UploadDocumentResponseObject, error)
 	// DeleteDocument Delete a document, keeping or deleting derived lab results
@@ -10910,6 +11170,32 @@ func (sh *strictHandler) CreateAnalyteAlias(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateAnalyteAliasResponseObject); ok {
 		if err := validResponse.VisitCreateAnalyteAliasResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteAnalyteAlias operation middleware
+func (sh *strictHandler) DeleteAnalyteAlias(w http.ResponseWriter, r *http.Request, id ID) {
+	var request DeleteAnalyteAliasRequestObject
+
+	request.ID = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteAnalyteAlias(ctx, request.(DeleteAnalyteAliasRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteAnalyteAlias")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteAnalyteAliasResponseObject); ok {
+		if err := validResponse.VisitDeleteAnalyteAliasResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -11686,11 +11972,16 @@ func (sh *strictHandler) ListDocuments(w http.ResponseWriter, r *http.Request, p
 func (sh *strictHandler) UploadDocument(w http.ResponseWriter, r *http.Request) {
 	var request UploadDocumentRequestObject
 
-	if reader, err := r.MultipartReader(); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode multipart body: %w", err))
-		return
-	} else {
-		request.Body = reader
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "application/pdf") {
+		request.Body = r.Body
+	}
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+		if reader, err := r.MultipartReader(); err != nil {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode multipart body: %w", err))
+			return
+		} else {
+			request.MultipartBody = reader
+		}
 	}
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {

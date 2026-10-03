@@ -14,6 +14,7 @@ import (
 	"github.com/KaanEmec/vitamux/internal/crypto"
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/db/dbq"
+	"github.com/KaanEmec/vitamux/internal/documents"
 )
 
 const keysUsage = `usage: vitamux keys <command>
@@ -64,7 +65,7 @@ func keys(args []string, stdout, stderr io.Writer) int {
 }
 
 // rotated counts the values re-sealed per table.
-type rotated struct{ Credentials, TOTP int }
+type rotated struct{ Credentials, TOTP, Documents int }
 
 // rotateKeys re-seals every value whose key_id differs from kr's current key, batchSize rows
 // per transaction. A batch commits only whole, so an interrupted run leaves every row sealed
@@ -111,6 +112,9 @@ func rotateKeys(ctx context.Context, d *db.DB, kr *crypto.Keyring, batchSize, ma
 			}
 			return len(rows), nil
 		}},
+		{&n.Documents, func(q *dbq.Queries) (int, error) {
+			return documents.RotateKeyBatch(ctx, q, kr, int32(batchSize)) //nolint:gosec // small constant
+		}},
 	}
 
 	var err error
@@ -136,7 +140,7 @@ steps:
 		return audit.Record(ctx, q, audit.Event{
 			Actor:  audit.System,
 			Action: "keys.rotate",
-			Detail: map[string]any{"credentials": n.Credentials, "users_totp": n.TOTP},
+			Detail: map[string]any{"credentials": n.Credentials, "users_totp": n.TOTP, "document_keys": n.Documents},
 		})
 	})
 	return n, errors.Join(err, auditErr)

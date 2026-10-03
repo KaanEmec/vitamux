@@ -22,7 +22,7 @@ FROM next WHERE jobs.id = next.id RETURNING jobs.*;
 - Heartbeats extend the lease every 30 s. The reaper requeues expired leases (counting an attempt) and moves jobs to `dead` after `max_attempts`.
 - Retry delay = `min(cap, base·2^attempt)·U(0.5,1)`. `Retry-After` takes precedence. Rate-limit reschedules do not count as attempts; auth failures are not retried.
 - `LISTEN/NOTIFY` wakes workers on enqueue, with a 5 s polling fallback.
-- Job kinds: `sync`, `backfill_unit`, `normalize_batch`, `reprocess`, `rebuild_aggregates`, `extract_document`, `export`, `backup`, `import_unit`, `prune_retention`, `sweep_blobs`, `recompute_local_dates`.
+- Job kinds: `sync`, `backfill_unit`, `normalize_batch`, `reprocess`, `rebuild_aggregates`, `extract_document`, `export`, `backup`, `import_unit`, `prune_retention`, `sweep_blobs`, `recompute_local_dates`, `document_retention`.
 
 ## Scheduler
 

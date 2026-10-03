@@ -97,6 +97,9 @@ func newRouter(log *slog.Logger, ui fs.FS, opts Options) (*router, error) {
 	rt.oauthRoutes()
 	rt.sourceRoutes()
 	rt.webhookRoutes()
+	rt.exportRoutes()
+	rt.documentRoutes()
+	rt.analyteRoutes()
 	return rt, nil
 }
 
