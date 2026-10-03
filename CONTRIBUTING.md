@@ -26,6 +26,8 @@ Signed-off-by: Your Name <you@example.com>
 
 Use `git commit -s`. CI rejects PRs with unsigned commits. There is no CLA. Contributions are licensed under the project's [MIT license](LICENSE).
 
+When you change Go or npm dependencies, run `make notices` and commit `THIRD_PARTY_NOTICES.md`; CI rejects drift and licenses outside the allowlist.
+
 ## Unofficial provider adapters
 
 Adapters for reverse-engineered APIs must be optional, isolated, exactly pinned, and clearly labelled unofficial. Their dependency bumps always need manual review.

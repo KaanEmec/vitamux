@@ -114,8 +114,13 @@ jobs:
           go-version-file: go.mod
       - name: Fixture privacy guard (synthetic marker, emails, phones, tokens)
         run: go run ./tools/fixtureguard
-      - name: Go license report
-        run: go run github.com/google/go-licenses/v2@v2.0.1 report ./cmd/vitamux
-      - name: Web license summary
-        working-directory: web
-        run: npm ci && npx --yes license-checker-rseidelsohn@4 --summary
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install web dependencies (license files)
+        run: npm --prefix web ci --ignore-scripts
+      - name: Third-party notices are current and every license is allowed
+        run: go run ./tools/notices -check # fix: make notices
+

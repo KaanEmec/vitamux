@@ -1,0 +1,16 @@
+# SPDX identifiers accepted without review (one per line; '#' starts a comment).
+# Anything else, including UNKNOWN, fails `make notices-check`. Adding a line is a licensing decision:
+# say why in the PR (and in docs/architecture/project.md#license-and-notices if it is not plain permissive).
+MIT
+BSD-2-Clause
+BSD-3-Clause
+Apache-2.0
+ISC
+MPL-2.0
+Unlicense
+0BSD
+CC0-1.0
+# argparse (web dev tooling, Python-derived); also the allowance for Python-licensed Go stdlib derivatives.
+Python-2.0
+# Reviewed 2026-10-03: permissive (minimatch, web dev tooling).
+BlueOak-1.0.0
