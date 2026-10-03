@@ -445,7 +445,10 @@ paths:
         - name: metrics
           in: query
           required: false
-          description: Comma-separated metric codes; all resolvable metrics when omitted.
+          description: >
+            Comma-separated metric codes or rule families (repeating the parameter also works); every
+            metric with a rule in effect when omitted. Night metrics (sleep, local_night rules)
+            resolve the night of each date, the others its local_day. At most 366 dates.
           style: form
           explode: false
           schema: {type: array, items: {type: string}}
@@ -464,11 +467,15 @@ paths:
       tags: [resolved]
       operationId: getResolvedSeries
       summary: Resolved series of one metric over a range
+      description: >
+        One point per window whose start lies in [start, end) (latest windows: whose as-of instant
+        does), in start order, paged. The range spans at most 366 local dates.
       security: [{session: []}, {apiKey: ['read:health']}]
       parameters:
         - name: metric
           in: query
           required: true
+          description: Catalogue code or rule family (sleep, blood_pressure).
           schema: {type: string}
         - name: start
           in: query
@@ -481,8 +488,13 @@ paths:
         - name: window
           in: query
           required: false
-          description: Window kind or bucket size, e.g. hour, local_day, 5m.
+          description: >
+            Window kind (bucket, hour, local_day, local_night, sleep_episode, latest, reading) or a
+            bucket size (1m, 5m, 15m, 30m); the rule's window when omitted. A window the metric does
+            not allow is 422 unsupported_window.
           schema: {type: string}
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
       responses:
         '200':
           description: Points with a source per point.
@@ -498,6 +510,7 @@ paths:
       tags: [resolved]
       operationId: getResolvedSleep
       summary: Resolved sleep episodes per night
+      description: The sleep rule's main episode of every night in the range (at most 366), with every source that recorded it.
       security: [{session: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/StartDateRequired'
@@ -507,7 +520,7 @@ paths:
           description: Selected episodes.
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/ResolvedEvents'}
+              schema: {$ref: '#/components/schemas/ResolvedSleep'}
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
@@ -517,6 +530,10 @@ paths:
       tags: [resolved]
       operationId: getResolvedWorkouts
       summary: Resolved workouts
+      description: >
+        Overlapping workouts clustered as in docs/architecture/resolution.md#sleep-episode-alignment,
+        one entry per cluster starting on a local date of the range (at most 366), with the member
+        the rule picks marked as selected.
       security: [{session: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/StartDateRequired'
@@ -526,7 +543,7 @@ paths:
           description: Selected workouts.
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/ResolvedEvents'}
+              schema: {$ref: '#/components/schemas/ResolvedWorkouts'}
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
@@ -543,7 +560,15 @@ paths:
         - name: window_key
           in: path
           required: true
-          description: Window key, e.g. a local date (2026-09-14) or an hour start.
+          description: Window key, e.g. a local date (2026-09-14) or an hour start in UTC (2026-09-14T08:00:00Z).
+          schema: {type: string}
+        - name: window
+          in: query
+          required: false
+          description: >
+            Window kind (local_day, local_night, hour, bucket, sleep_episode). For a date key the
+            default is the kind /resolved/daily uses for the metric; for an instant key the rule's
+            bucket or sleep_episode window, else hour.
           schema: {type: string}
       responses:
         '200':
@@ -561,6 +586,11 @@ paths:
       tags: [resolved]
       operationId: previewResolution
       summary: Resolve a draft rule over a range without writing anything
+      description: >
+        Validates the draft like POST /rules/{metric}/versions (422, or 409
+        rule_warning_unacknowledged) and resolves it live beside the rule in effect, one window per
+        local date (at most 366): the draft's local_day or local_night window, else local_day.
+        Nothing is stored: no rule version, no cache rows, no jobs.
       security: [{session: [], csrf: []}, {apiKey: ['read:health']}]
       requestBody:
         required: true
@@ -575,6 +605,7 @@ paths:
               schema: {$ref: '#/components/schemas/ResolutionPreview'}
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
 
   # ---------------------------------------------------------------- rules and overrides
@@ -2571,10 +2602,77 @@ components:
         commit: {type: string}
     SystemStatus:
       type: object
-      description: Open object; properties are added with the endpoint.
+      description: Instance diagnostics (docs/architecture/reliability.md#health-logs-metrics). Lists are bounded.
+      additionalProperties: false
+      required: [versions, database_size_bytes, blob_size_bytes, last_backup_at, degraded_connections, failing_jobs]
+      properties:
+        versions: {$ref: '#/components/schemas/StatusVersions'}
+        database_size_bytes: {type: integer, format: int64}
+        blob_size_bytes: {type: integer, format: int64, description: Stored (compressed and sealed) size of the live blobs.}
+        last_backup_at: {type: [string, 'null'], format: date-time, description: Creation time of the newest complete backup in VITAMUX_BACKUP_DIR; null without one.}
+        degraded_connections:
+          type: array
+          description: Connections whose health is neither ok, paused nor disabled.
+          items: {$ref: '#/components/schemas/StatusConnection'}
+        failing_jobs:
+          type: array
+          description: Jobs that ran out of attempts in the last 7 days, newest first (at most 50).
+          items: {$ref: '#/components/schemas/StatusJob'}
+    StatusVersions:
+      type: object
+      additionalProperties: false
+      required: [app, commit, schema, postgres]
+      properties:
+        app: {type: string}
+        commit: {type: string}
+        schema: {type: string, description: Newest applied migration number.}
+        postgres: {type: string}
+    StatusConnection:
+      type: object
+      additionalProperties: false
+      required: [id, provider, health, health_reason, stream, last_success_at]
+      properties:
+        id: {$ref: '#/components/schemas/ConnectionID'}
+        provider: {type: string}
+        health: {$ref: '#/components/schemas/Health'}
+        health_reason: {type: [string, 'null']}
+        stream: {type: [string, 'null'], description: The stream behind the health when the connection itself is ok.}
+        last_success_at: {type: [string, 'null'], format: date-time}
+    StatusJob:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connection_id, attempts, finished_at, error_class]
+      properties:
+        id: {type: string, format: uuid}
+        kind: {type: string}
+        connection_id: {oneOf: [{$ref: '#/components/schemas/ConnectionID'}, {type: 'null'}]}
+        attempts: {type: integer, minimum: 0}
+        finished_at: {type: [string, 'null'], format: date-time}
+        error_class: {type: [string, 'null'], description: Error class of the last run; never a message.}
     Coverage:
       type: object
-      description: Open object; properties are added with the endpoint.
+      description: >-
+        Share of local hours with data per source and local day, from the hourly aggregates. A source
+        is a provider; its row of a metric has one entry per day from start_date.
+      additionalProperties: false
+      required: [start_date, end_date, rows]
+      properties:
+        start_date: {type: string, format: date}
+        end_date: {type: string, format: date}
+        rows:
+          type: array
+          items: {$ref: '#/components/schemas/CoverageRow'}
+    CoverageRow:
+      type: object
+      additionalProperties: false
+      required: [metric, source, days]
+      properties:
+        metric: {type: string}
+        source: {type: string, description: Provider code.}
+        days:
+          type: array
+          description: Coverage 0..1 of start_date + index; 0 without data.
+          items: {type: number, format: double, minimum: 0, maximum: 1}
     Job:
       type: object
       description: A background job (docs/architecture/reliability.md#job-queue).

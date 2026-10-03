@@ -55,6 +55,8 @@ type Options struct {
 	Withings *withings.Notifications
 	// Extract starts and lists document extractions; nil answers 503.
 	Extract *extract.Service
+	// BackupDir is VITAMUX_BACKUP_DIR; the status page reports its newest backup. Empty: none.
+	BackupDir string
 }
 
 // NewHandler builds the root HTTP handler: the route table behind the middleware chain.
@@ -111,6 +113,7 @@ func newRouter(log *slog.Logger, ui fs.FS, opts Options) (*router, error) {
 	rt.connectionRoutes()
 	rt.configRoutes()
 	rt.manualRoutes()
+	rt.statusRoutes()
 	return rt, nil
 }
 

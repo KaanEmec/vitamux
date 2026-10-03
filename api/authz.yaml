@@ -40,8 +40,8 @@ routes:
   GET /api/v1/overrides: {allow: read:config}
   POST /api/v1/overrides: {allow: write:config, csrf: true}
   POST /api/v1/overrides/{id}/revoke: {allow: write:config, csrf: true}
-  GET /api/v1/coverage: {allow: read:health, planned: true}
-  GET /api/v1/system/status: {allow: read:config, planned: true}
+  GET /api/v1/coverage: {allow: read:health}
+  GET /api/v1/system/status: {allow: read:config}
   GET /api/v1/system/version: {allow: read:config}
   GET /api/v1/jobs: {allow: read:config}
   GET /api/v1/connections: {allow: read:config}

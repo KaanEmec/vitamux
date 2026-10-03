@@ -1656,10 +1656,69 @@ export interface components {
             version: string;
             commit: string;
         };
-        /** @description Open object; properties are added with the endpoint. */
-        SystemStatus: Record<string, never>;
-        /** @description Open object; properties are added with the endpoint. */
-        Coverage: Record<string, never>;
+        /** @description Instance diagnostics (docs/architecture/reliability.md#health-logs-metrics). Lists are bounded. */
+        SystemStatus: {
+            versions: components["schemas"]["StatusVersions"];
+            /** Format: int64 */
+            database_size_bytes: number;
+            /**
+             * Format: int64
+             * @description Stored (compressed and sealed) size of the live blobs.
+             */
+            blob_size_bytes: number;
+            /**
+             * Format: date-time
+             * @description Creation time of the newest complete backup in VITAMUX_BACKUP_DIR; null without one.
+             */
+            last_backup_at: string | null;
+            /** @description Connections whose health is neither ok, paused nor disabled. */
+            degraded_connections: components["schemas"]["StatusConnection"][];
+            /** @description Jobs that ran out of attempts in the last 7 days, newest first (at most 50). */
+            failing_jobs: components["schemas"]["StatusJob"][];
+        };
+        StatusVersions: {
+            app: string;
+            commit: string;
+            /** @description Newest applied migration number. */
+            schema: string;
+            postgres: string;
+        };
+        StatusConnection: {
+            id: components["schemas"]["ConnectionID"];
+            provider: string;
+            health: components["schemas"]["Health"];
+            health_reason: string | null;
+            /** @description The stream behind the health when the connection itself is ok. */
+            stream: string | null;
+            /** Format: date-time */
+            last_success_at: string | null;
+        };
+        StatusJob: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            connection_id: components["schemas"]["ConnectionID"] | null;
+            attempts: number;
+            /** Format: date-time */
+            finished_at: string | null;
+            /** @description Error class of the last run; never a message. */
+            error_class: string | null;
+        };
+        /** @description Share of local hours with data per source and local day, from the hourly aggregates. A source is a provider; its row of a metric has one entry per day from start_date. */
+        Coverage: {
+            /** Format: date */
+            start_date: string;
+            /** Format: date */
+            end_date: string;
+            rows: components["schemas"]["CoverageRow"][];
+        };
+        CoverageRow: {
+            metric: string;
+            /** @description Provider code. */
+            source: string;
+            /** @description Coverage 0..1 of start_date + index; 0 without data. */
+            days: number[];
+        };
         /** @description A background job (docs/architecture/reliability.md#job-queue). */
         Job: {
             /** Format: uuid */

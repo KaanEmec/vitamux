@@ -1217,8 +1217,22 @@ type ConnectionPatch struct {
 // ConnectionPatchStatus Pause or resume; only between active/degraded and paused.
 type ConnectionPatchStatus string
 
-// Coverage Open object; properties are added with the endpoint.
-type Coverage = map[string]interface{}
+// Coverage Share of local hours with data per source and local day, from the hourly aggregates. A source is a provider; its row of a metric has one entry per day from start_date.
+type Coverage struct {
+	EndDate   openapi_types.Date `json:"end_date"`
+	Rows      []CoverageRow      `json:"rows"`
+	StartDate openapi_types.Date `json:"start_date"`
+}
+
+// CoverageRow defines model for CoverageRow.
+type CoverageRow struct {
+	// Days Coverage 0..1 of start_date + index; 0 without data.
+	Days   []float64 `json:"days"`
+	Metric string    `json:"metric"`
+
+	// Source Provider code.
+	Source string `json:"source"`
+}
 
 // CreatedAPIKey defines model for CreatedAPIKey.
 type CreatedAPIKey struct {
@@ -2210,6 +2224,41 @@ type SourcesDrilldown struct {
 // SourcesDrilldownSourcesRuleStatus defines model for SourcesDrilldown.Sources.RuleStatus.
 type SourcesDrilldownSourcesRuleStatus string
 
+// StatusConnection defines model for StatusConnection.
+type StatusConnection struct {
+	// Health Derived health (internal/connectors/health.go).
+	Health        Health       `json:"health"`
+	HealthReason  *string      `json:"health_reason"`
+	ID            ConnectionID `json:"id"`
+	LastSuccessAt *time.Time   `json:"last_success_at"`
+	Provider      string       `json:"provider"`
+
+	// Stream The stream behind the health when the connection itself is ok.
+	Stream *string `json:"stream"`
+}
+
+// StatusJob defines model for StatusJob.
+type StatusJob struct {
+	Attempts     int           `json:"attempts"`
+	ConnectionID *ConnectionID `json:"connection_id"`
+
+	// ErrorClass Error class of the last run; never a message.
+	ErrorClass *string            `json:"error_class"`
+	FinishedAt *time.Time         `json:"finished_at"`
+	ID         openapi_types.UUID `json:"id"`
+	Kind       string             `json:"kind"`
+}
+
+// StatusVersions defines model for StatusVersions.
+type StatusVersions struct {
+	App      string `json:"app"`
+	Commit   string `json:"commit"`
+	Postgres string `json:"postgres"`
+
+	// Schema Newest applied migration number.
+	Schema string `json:"schema"`
+}
+
 // Stream A connection's stream with its sync state. The cursor itself is not shown.
 type Stream struct {
 	HasCursor bool `json:"has_cursor"`
@@ -2236,8 +2285,22 @@ type SyncQueued struct {
 	Jobs []Job `json:"jobs"`
 }
 
-// SystemStatus Open object; properties are added with the endpoint.
-type SystemStatus = map[string]interface{}
+// SystemStatus Instance diagnostics (docs/architecture/reliability.md#health-logs-metrics). Lists are bounded.
+type SystemStatus struct {
+	// BlobSizeBytes Stored (compressed and sealed) size of the live blobs.
+	BlobSizeBytes     int64 `json:"blob_size_bytes"`
+	DatabaseSizeBytes int64 `json:"database_size_bytes"`
+
+	// DegradedConnections Connections whose health is neither ok, paused nor disabled.
+	DegradedConnections []StatusConnection `json:"degraded_connections"`
+
+	// FailingJobs Jobs that ran out of attempts in the last 7 days, newest first (at most 50).
+	FailingJobs []StatusJob `json:"failing_jobs"`
+
+	// LastBackupAt Creation time of the newest complete backup in VITAMUX_BACKUP_DIR; null without one.
+	LastBackupAt *time.Time     `json:"last_backup_at"`
+	Versions     StatusVersions `json:"versions"`
+}
 
 // SystemVersion defines model for SystemVersion.
 type SystemVersion struct {

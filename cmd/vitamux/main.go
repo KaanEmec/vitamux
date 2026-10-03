@@ -197,6 +197,7 @@ func serve(stderr io.Writer) int {
 		Connectors:     syncRuntime,
 		Withings:       withingsNotify,
 		Extract:        extractSvc,
+		BackupDir:      cfg.BackupDir,
 		ReadyChecks: []api.ReadyCheck{
 			{Name: "database", Check: pool.Ping},
 			{Name: "schema", Check: func(ctx context.Context) error { return db.CheckSchema(ctx, pool) }},
