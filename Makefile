@@ -51,8 +51,9 @@ lint: web-install ## Go and web linters
 	npm --prefix web run check
 	npm --prefix web run lint
 
-fixtures: ## Generate synthetic fixtures (E04)
-	@echo "fixturegen arrives in J04.1"; exit 1
+SEED ?= 42
+fixtures: ## Generate the synthetic year into fixtures/generated (SEED=42; ~0.8 GB, git-ignored)
+	go run ./tools/fixturegen -seed $(SEED) -out fixtures/generated
 
 fixture-guard: ## Check fixtures/ and testdata/ for the synthetic marker and PII-like strings
 	go run ./tools/fixtureguard
