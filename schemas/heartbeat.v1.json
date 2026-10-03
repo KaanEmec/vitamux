@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Vitamux client heartbeat v1",
+  "description": "Body of POST /api/ingest/v1/heartbeat: client checkpoint and health. Frozen (Gate G3): only additive, optional changes within v1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "connection_id", "client", "sent_at"],
+  "properties": {
+    "schema": {"const": "vitamux.ingest.heartbeat/1"},
+    "connection_id": {"$ref": "ingest-batch.v1.json#/$defs/connection_id"},
+    "client": {"$ref": "ingest-batch.v1.json#/$defs/client"},
+    "sent_at": {"type": "string", "format": "date-time"},
+    "pending_failed_units": {"type": "integer", "minimum": 0},
+    "last_error_class": {"$ref": "#/$defs/error_class"},
+    "last_error_at": {"type": ["string", "null"], "format": "date-time"},
+    "streams": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stream"],
+        "properties": {
+          "stream": {"$ref": "ingest-batch.v1.json#/$defs/item/properties/stream"},
+          "checkpoint": {
+            "description": "Opaque client checkpoint, e.g. per-type anchor hashes; at most 16 KiB serialized. Never raw anchors or health values.",
+            "type": "object"
+          },
+          "last_success_at": {"type": ["string", "null"], "format": "date-time"},
+          "pending_failed_units": {"type": "integer", "minimum": 0},
+          "last_error_class": {"$ref": "#/$defs/error_class"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "error_class": {
+      "description": "Error class, e.g. reauth_required, rate_limited, transient, schema_drift, permanent, network, storage.",
+      "type": ["string", "null"],
+      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+    }
+  }
+}

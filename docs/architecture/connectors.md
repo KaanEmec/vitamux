@@ -90,6 +90,15 @@ The core does these so connectors stay small:
 - Binary files (FIT, GPX, export zips) go to `POST /api/ingest/v1/batches/{id}/blobs` and are referenced by `blob_sha256`.
 - `POST /api/ingest/v1/heartbeat` reports client checkpoint, pending failed units, version, and last error class.
 
+### Schemas and versioning
+
+- Contract: [`schemas/ingest-batch.v1.json`](../../schemas/ingest-batch.v1.json), [`schemas/heartbeat.v1.json`](../../schemas/heartbeat.v1.json) (JSON Schema 2020-12), with [examples](../../schemas/examples/) and the ingest paths in [`api/openapi.yaml`](../../api/openapi.yaml). Go types and validation: `internal/ingest` (a test keeps them in agreement with the schema files).
+- v1 is **frozen** (Gate G3, 2026-10-03). Within v1, changes are additive and optional only: new optional fields, new `client.kind` or error class values. Removing, renaming, retyping or tightening anything needs `…/2` in `schema`, a new schema file, and a period in which the server accepts both.
+- Envelope objects reject unknown fields; `body`, `request.params` and `checkpoint` are free-form.
+- `connection_id` is `conn_` + the UUID as 32 lowercase hex characters.
+- `sha256` is over the exact bytes of `body` as sent; the server stores those bytes verbatim.
+- The `body` of each stream is versioned by the stream name (`healthkit.samples.v1`); its normalizer owns that format.
+
 ## Normalizer contract
 
 ```go

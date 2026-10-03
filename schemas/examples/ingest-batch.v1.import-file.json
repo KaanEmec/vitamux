@@ -1,0 +1,16 @@
+{
+  "schema": "vitamux.ingest.batch/1",
+  "connection_id": "conn_0190a1b2c3d47e8f9a0b1c2d3e4f5a6c",
+  "client": {"kind": "importer", "name": "fit-import", "version": "1.0.0"},
+  "items": [
+    {
+      "stream": "files.fit.v1",
+      "external_key": "activity-2026-09-14-0700.fit",
+      "fetched_at": "2026-09-14T10:00:00Z",
+      "content_type": "application/vnd.ant.fit",
+      "sha256": "5f1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9",
+      "blob_sha256": "5f1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9"
+    }
+  ],
+  "provenance": {"migration_source": null}
+}

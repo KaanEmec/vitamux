@@ -1,0 +1,205 @@
+openapi: 3.1.0
+info:
+  title: Vitamux API
+  version: 0.1.0
+  license:
+    name: MIT
+    identifier: MIT
+  description: >
+    Contract-first API (ADR-0015, docs/architecture/api.md). This file currently holds the
+    ingest section (/api/ingest/v1); the owner API (/api/v1) is added by E10.
+servers:
+  - url: /
+tags:
+  - name: ingest
+    description: Raw uploads from clients, devices and importers (docs/architecture/connectors.md#push-ingest-contract).
+
+paths:
+  /api/ingest/v1/batches:
+    post:
+      tags: [ingest]
+      operationId: createIngestBatch
+      summary: Upload a batch of raw items
+      description: >
+        Raw data is durable before 202; normalization runs as a job afterwards. Replaying the same
+        Idempotency-Key and body returns the same response. Body may be gzip-encoded
+        (at most 10 MiB compressed, 50 MiB decompressed).
+      security:
+        - clientToken: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: Content-Encoding
+          in: header
+          required: false
+          schema: {type: string, enum: [gzip]}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '../schemas/ingest-batch.v1.json'}
+      responses:
+        '202':
+          description: Items stored; normalization queued.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BatchAccepted'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '413': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/ingest/v1/batches/{batch_id}:
+    get:
+      tags: [ingest]
+      operationId: getIngestBatch
+      summary: Batch status, including normalization outcomes
+      security:
+        - clientToken: []
+      parameters:
+        - $ref: '#/components/parameters/BatchID'
+      responses:
+        '200':
+          description: Batch status.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BatchStatus'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+
+  /api/ingest/v1/batches/{batch_id}/blobs:
+    post:
+      tags: [ingest]
+      operationId: uploadIngestBlob
+      summary: Upload one binary file (FIT, GPX, export zip)
+      description: Items reference the file by blob_sha256 (lowercase hex SHA-256 of the uploaded bytes).
+      security:
+        - clientToken: []
+      parameters:
+        - $ref: '#/components/parameters/BatchID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: {type: string, contentMediaType: application/octet-stream}
+      responses:
+        '201':
+          description: File stored.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BlobStored'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '413': {$ref: '#/components/responses/Problem'}
+
+  /api/ingest/v1/heartbeat:
+    post:
+      tags: [ingest]
+      operationId: postIngestHeartbeat
+      summary: Report client checkpoint and health
+      security:
+        - clientToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '../schemas/heartbeat.v1.json'}
+      responses:
+        '204':
+          description: Recorded.
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+components:
+  securitySchemes:
+    clientToken:
+      type: http
+      scheme: bearer
+      description: 'Client token `vmx_cli_<id>_<secret>` with scope `ingest:<connection_id>`.'
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: {type: string, minLength: 1, maxLength: 255}
+    BatchID:
+      name: batch_id
+      in: path
+      required: true
+      schema: {$ref: '#/components/schemas/BatchID'}
+
+  responses:
+    Problem:
+      description: Error (RFC 9457 problem+json; codes in internal/api/problem.go).
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+
+  schemas:
+    BatchID:
+      type: string
+      pattern: '^bat_[0-9a-f]{32}$'
+    ItemOutcome:
+      type: object
+      additionalProperties: false
+      required: [external_key, status, raw_payload_id]
+      properties:
+        external_key: {type: string}
+        status: {type: string, enum: [stored, duplicate, new_version]}
+        raw_payload_id: {type: string, pattern: '^[0-9]+$'}
+    BatchAccepted:
+      type: object
+      additionalProperties: false
+      required: [batch_id, items, normalization]
+      properties:
+        batch_id: {$ref: '#/components/schemas/BatchID'}
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/ItemOutcome'}
+        normalization: {type: string, enum: [queued]}
+    BatchStatus:
+      type: object
+      required: [batch_id, received_at, normalization, items]
+      properties:
+        batch_id: {$ref: '#/components/schemas/BatchID'}
+        received_at: {type: string, format: date-time}
+        normalization: {type: string, enum: [queued, running, done, failed]}
+        items:
+          type: array
+          items:
+            type: object
+            required: [external_key, raw_payload_id, status]
+            properties:
+              external_key: {type: string}
+              raw_payload_id: {type: string, pattern: '^[0-9]+$'}
+              status: {type: string, enum: [stored, normalized, normalize_failed, quarantined]}
+    BlobStored:
+      type: object
+      additionalProperties: false
+      required: [blob_sha256, size_bytes]
+      properties:
+        blob_sha256: {type: string, pattern: '^[0-9a-f]{64}$'}
+        size_bytes: {type: integer, minimum: 0}
+    Problem:
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type: {type: string}
+        title: {type: string}
+        status: {type: integer}
+        detail: {type: string}
+        code: {type: string}
+        request_id: {type: string}
+        errors:
+          type: array
+          items:
+            type: object
+            required: [pointer, detail]
+            properties:
+              pointer: {type: string}
+              detail: {type: string}

@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Vitamux ingest batch v1",
+  "description": "Body of POST /api/ingest/v1/batches. Frozen (Gate G3): only additive, optional changes within v1. Policy: docs/architecture/connectors.md#schemas-and-versioning.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "connection_id", "client", "items"],
+  "properties": {
+    "schema": {"const": "vitamux.ingest.batch/1"},
+    "connection_id": {"$ref": "#/$defs/connection_id"},
+    "client": {"$ref": "#/$defs/client"},
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1000,
+      "items": {"$ref": "#/$defs/item"}
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "migration_source": {
+          "description": "Set only by migration importers (E16), e.g. open_wearables.",
+          "type": ["string", "null"],
+          "pattern": "^[a-z0-9][a-z0-9._:-]{0,63}$"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "connection_id": {
+      "description": "Connection the client token is scoped to: conn_ + the UUID as 32 lowercase hex characters.",
+      "type": "string",
+      "pattern": "^conn_[0-9a-f]{32}$"
+    },
+    "client": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "name", "version"],
+      "properties": {
+        "kind": {"enum": ["device", "importer", "collector"]},
+        "name": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"},
+        "version": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9.+_-]{0,31}$"}
+      }
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "item": {
+      "description": "One raw source record. Exactly one of body (inline JSON) or blob_sha256 (file uploaded to POST /batches/{id}/blobs).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stream", "external_key", "fetched_at", "content_type"],
+      "oneOf": [{"required": ["body"]}, {"required": ["blob_sha256"]}],
+      "dependentSchemas": {
+        "body": {"properties": {"content_type": {"pattern": "^application/([a-z0-9.-]+\\+)?json(;.*)?$"}}}
+      },
+      "properties": {
+        "stream": {
+          "description": "Source stream and its payload version, e.g. healthkit.samples.v1.",
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$"
+        },
+        "external_key": {
+          "description": "Stable key of the record within the stream. Same key + same content = duplicate; same key + new content = new raw version.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^[^\\x00-\\x1f\\x7f]+$"
+        },
+        "fetched_at": {
+          "description": "When the client read the record from its source; RFC 3339 with offset.",
+          "type": "string",
+          "format": "date-time"
+        },
+        "content_type": {
+          "description": "Media type of the verbatim source payload.",
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*(;.*)?$"
+        },
+        "sha256": {
+          "description": "Optional lowercase hex SHA-256 of the exact bytes of body as sent (or equal to blob_sha256); the server rejects a mismatch.",
+          "$ref": "#/$defs/sha256"
+        },
+        "request": {
+          "description": "How the client fetched the record. Credentials are stripped by the server before storage; clients should not send them.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "endpoint": {"type": "string", "maxLength": 2048},
+            "params": {"type": "object"}
+          }
+        },
+        "body": {
+          "description": "Verbatim source payload, stored byte for byte as sent.",
+          "type": ["object", "array"]
+        },
+        "blob_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

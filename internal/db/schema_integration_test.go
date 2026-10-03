@@ -74,14 +74,12 @@ const (
 func TestConstraints(t *testing.T) {
 	ctx := context.Background()
 	u, app := dbtest.Migrated(t)
-	// Catalogues are read-only for the app role, so the fixture is written as owner.
+	// Catalogues are read-only for the app role, so the fixture is written as owner. The metric_catalog seed (00010) provides metric id 1.
 	owner := dbtest.Pool(t, u, db.OwnerRole)
 	for _, s := range []string{
 		"INSERT INTO users (id, username, password_hash) VALUES ('" + userID + "', 'owner', 'synthetic')",
 		"INSERT INTO connections (id, user_id, provider_id, account_key, mode, status) VALUES ('" + connID + "', '" + userID +
 			"', (SELECT id FROM providers WHERE code = 'withings'), sha256('acct-1'), 'in_process', 'active')",
-		"INSERT INTO units (code) VALUES ('bpm')",
-		"INSERT INTO metric_catalog (code, unit_id) VALUES ('heart_rate', 1)",
 		"INSERT INTO normalizer_versions (name, version, git_sha) VALUES ('test', 1, 'dev')",
 		"INSERT INTO blobs (sha256, size_bytes, stored_bytes, compression) VALUES (sha256('a'), 1, 1, 'none'), (sha256('b'), 1, 1, 'none')",
 		"INSERT INTO ingest_batches (id, user_id, connection_id, source_kind) VALUES ('" + batchID + "', '" + userID + "', '" + connID + "', 'sync')",
@@ -102,9 +100,15 @@ func TestConstraints(t *testing.T) {
 		return fmt.Sprintf(`INSERT INTO jobs (id, kind, status, connection_id, exclusive, dedupe_key, lease_owner, lease_expires_at)
 			VALUES ('%s', 'sync', '%s', '%s', %t, %s, 'w1', now())`, id, status, connID, exclusive, dedupe)
 	}
-	raw := func(blob string) string {
-		return fmt.Sprintf(`INSERT INTO raw_payloads (user_id, connection_id, batch_id, stream, external_key, content_sha256, content_type, fetched_at)
-			VALUES ('%s', '%s', '%s', 'withings.measures', 'grp-1', sha256('%s'), 'application/json', now())`, userID, connID, batchID, blob)
+	raw := func(version int, blob string) string {
+		supersedes := "(SELECT max(id) FROM raw_payloads)"
+		if version == 1 {
+			supersedes = "NULL"
+		}
+		return fmt.Sprintf(`INSERT INTO raw_payloads (user_id, connection_id, batch_id, stream, external_key, version, supersedes_id,
+			content_sha256, content_type, fetched_at)
+			VALUES ('%s', '%s', '%s', 'withings.measures', 'grp-1', %d, %s, sha256('%s'), 'application/json', now())`,
+			userID, connID, batchID, version, supersedes, blob)
 	}
 	measurement := func(supersededAt string) string {
 		return fmt.Sprintf(`INSERT INTO measurements (user_id, metric_id, kind, start_at, local_date, value, provider_id, connection_id,
@@ -132,8 +136,9 @@ func TestConstraints(t *testing.T) {
 		{"dedupe queued twice", []string{job(id1, "queued", false, "'s:1'"), job(id2, "queued", false, "'s:1'")}, codeUnique},
 		{"dedupe queued and running", []string{job(id1, "running", false, "'s:1'"), job(id2, "queued", false, "'s:1'")}, codeUnique},
 		{"dedupe after success", []string{job(id1, "succeeded", false, "'s:1'"), job(id2, "queued", false, "'s:1'")}, ""},
-		{"raw same content", []string{raw("a"), raw("a")}, codeUnique},
-		{"raw new version", []string{raw("a"), raw("b")}, ""},
+		{"raw same version", []string{raw(1, "a"), raw(1, "b")}, codeUnique},
+		{"raw new version", []string{raw(1, "a"), raw(2, "b")}, ""},
+		{"raw reverted content", []string{raw(1, "a"), raw(2, "b"), raw(3, "a")}, ""},
 		{"measurement active twice", []string{measurement("NULL"), measurement("NULL")}, codeUnique},
 		{"measurement superseded", []string{measurement("now()"), measurement("NULL")}, ""},
 	} {

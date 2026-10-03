@@ -1,0 +1,18 @@
+{
+  "schema": "vitamux.ingest.heartbeat/1",
+  "connection_id": "conn_0190a1b2c3d47e8f9a0b1c2d3e4f5a6b",
+  "client": {"kind": "device", "name": "healthbridge-ios", "version": "0.2.0"},
+  "sent_at": "2026-09-14T09:05:00+02:00",
+  "pending_failed_units": 1,
+  "last_error_class": "network",
+  "last_error_at": "2026-09-14T08:59:41+02:00",
+  "streams": [
+    {
+      "stream": "healthkit.samples.v1",
+      "checkpoint": {"anchors": {"HKQuantityTypeIdentifierHeartRate": "7a90f1e2", "HKCategoryTypeIdentifierSleepAnalysis": "c4d5e6f7"}},
+      "last_success_at": "2026-09-14T09:02:12+02:00",
+      "pending_failed_units": 1,
+      "last_error_class": null
+    }
+  ]
+}
