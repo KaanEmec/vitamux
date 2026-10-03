@@ -53,6 +53,10 @@ func (rt *router) postBatch(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if err := checkJSONDepth(body); err != nil {
+		writeBodyError(w, r, err)
+		return
+	}
 	b, err := ingest.DecodeBatch(body)
 	if err != nil {
 		writeValidation(w, r, err)
@@ -118,6 +122,10 @@ func (rt *router) postHeartbeat(w http.ResponseWriter, r *http.Request) {
 	body, err := readBody(r)
 	if err != nil {
 		writeReadError(w, r, err)
+		return
+	}
+	if err := checkJSONDepth(body); err != nil {
+		writeBodyError(w, r, err)
 		return
 	}
 	h, err := ingest.DecodeHeartbeat(body)

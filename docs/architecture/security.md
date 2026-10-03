@@ -12,7 +12,7 @@ This covers a personal, internet-reachable service with one owner.
 | Provider tokens | Refresh race loses a rotating token | Single-flight refresh under row lock; persist before use |
 | Passwords and MFA codes for providers | Persistence or logging | Pass through auth calls only; never stored, logged, or put in job payloads |
 | OAuth and webhooks | CSRF, spoofed notifications | Signed, single-use, session-bound `state`. Per-connection hook token. A webhook payload is only a hint to fetch. |
-| Uploads (PDF, export zip, ingest JSON) | Parser exploits, zip bombs, huge bodies | Size, page, and ratio limits; streaming parsers; fuzzing; no server-side PDF rendering |
+| Uploads (PDF, export zip, ingest JSON) | Parser exploits, zip bombs, huge bodies | Size, page, ratio, and nesting limits; streaming parsers; fuzzing (`make fuzz`, nightly in CI); no server-side PDF rendering |
 | UI | XSS via extracted text | Strict CSP (`default-src 'self'`), framework escaping, no raw HTML |
 | AI provider | Unintended disclosure, SSRF via base URL | Opt-in per provider and per request; base URL set only by admin; HTTPS required (private IPs only if explicitly allowed) |
 | Dependencies | Malicious update | Exact pins, lockfiles, manual review of risky bumps, SBOMs, vulnerability scans |

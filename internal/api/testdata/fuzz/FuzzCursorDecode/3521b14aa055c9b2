@@ -1,0 +1,6 @@
+go test fuzz v1
+string("listMeasurements|metric=steps")
+string("AXsiayI6IjIwMjYtMDktMTRUMDY6MDA6MDAuMTIzNDU2WiI\nsImkiOiI5MTgyNzM2In1gELw6dScUFpl2OVSxYmHW")
+string("0")
+string("0")
+uint16(89)

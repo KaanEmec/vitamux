@@ -40,6 +40,12 @@ Without `-tags webui` the binary serves a placeholder page, so backend work neve
 - Point the code under test at `fake.URL`. See `internal/testutil/fakeprovider/example_integration_test.go`.
 - Use synthetic values only (`synthetic-access-1`). Fixtures follow the [synthetic fixtures policy](architecture/project.md#synthetic-fixtures-policy); `make fixture-guard` checks them.
 
+## Fuzzing
+
+- Parsers of untrusted input have `Fuzz*` targets next to them, seeded from fixtures and asserting no panic plus round-trip invariants. `make fuzz` (`FUZZTIME=10s` per target) runs the list in the Makefile; add a new target there. CI runs it briefly and `.github/workflows/fuzz.yml` nightly.
+- A crash is written to `testdata/fuzz/<Target>/<hash>`: fix the code and commit that file as the regression case (the fixture guard accepts the engine's header in place of a marker). Do not hand-edit corpus entries.
+- Keep seeds small (a few KiB): the engine minimizes every interesting input and crawls on large ones.
+
 ## Package boundaries
 
 These rules are enforced by `depguard` in `.golangci.yml`:

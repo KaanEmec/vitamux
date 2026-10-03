@@ -52,6 +52,7 @@ func TestCleanTreePasses(t *testing.T) {
 	write(t, root, "fixtures/e.pdf", "%PDF-1.4\x00\x01binary")
 	write(t, root, "fixtures/e.pdf.synthetic", "synthetic: true\n")
 	write(t, root, "fixtures/.gitkeep", "")
+	write(t, root, "internal/x/testdata/fuzz/FuzzX/0123abcd", "go test fuzz v1\n[]byte(\"{}\")\n")
 	write(t, root, "outside/real@gmail.com.txt", "not scanned: not under fixtures or testdata")
 	if got := rules(t, root); len(got) != 0 {
 		t.Fatalf("clean tree reported %v", got)
@@ -76,6 +77,9 @@ func TestSeededViolations(t *testing.T) {
 		{"token prefix", "fixtures/a.json", `{"synthetic": true, "k": "` + ghToken + `"}`, RuleToken},
 		{"token keyed", "fixtures/a.json", `{"synthetic": true, ` + keyedTok + `}`, RuleToken},
 		{"jwt", "testdata/a.txt", "# synthetic: true\neyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.sig\n", RuleToken},
+		{"fuzz header outside a corpus dir", "testdata/a.txt", "go test fuzz v1\n[]byte(\"{}\")\n", RuleMarker},
+		{"fuzz corpus with an email", "testdata/fuzz/FuzzX/a", "go test fuzz v1\nstring(\"" + realEmail + "\")\n", RuleEmail},
+		{"fuzz corpus without the engine header", "testdata/fuzz/FuzzX/a", "{}\n", RuleMarker},
 		{"private key", "testdata/a.txt", "# synthetic: true\n-----BEGIN RSA PRIVATE KEY-----\n", RuleToken},
 	}
 	for _, tc := range cases {

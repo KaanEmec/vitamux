@@ -1,10 +1,12 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/netip"
@@ -57,6 +59,7 @@ func Scheme(ctx context.Context) string {
 type bodyClass struct {
 	prefix, suffix string
 	max            int64
+	json           bool // the body is JSON that handlers decode from r.Body: nesting is capped
 }
 
 const (
@@ -67,19 +70,21 @@ const (
 var bodyClasses = []bodyClass{
 	{prefix: "/api/ingest/v1/", suffix: "/blobs", max: 25 * miB}, // raw file parts
 	{prefix: "/api/v1/documents", max: 25 * miB},                 // PDF upload: 20 MiB file plus multipart framing
-	{prefix: "/api/ingest/v1/", max: 10 * miB},                   // gzip batches
-	{prefix: "/api/", max: 1 * miB},                              // owner JSON
-	{max: 64 * kiB},                                              // webhooks, OAuth callbacks, everything else
+	{prefix: "/api/ingest/v1/", max: 10 * miB},                   // gzip batches: depth is checked after decompression (checkJSONDepth)
+	{prefix: "/api/", max: 1 * miB, json: true},                  // owner JSON
+	{max: 64 * kiB}, // webhooks, OAuth callbacks, everything else
 }
 
-func bodyLimit(path string) int64 {
+func bodyClassOf(path string) bodyClass {
 	for _, c := range bodyClasses {
 		if strings.HasPrefix(path, c.prefix) && strings.HasSuffix(path, c.suffix) {
-			return c.max
+			return c
 		}
 	}
-	return bodyClasses[len(bodyClasses)-1].max
+	return bodyClasses[len(bodyClasses)-1]
 }
+
+func bodyLimit(path string) int64 { return bodyClassOf(path).max }
 
 // middleware wraps h, outermost first: request state and id, access log, security headers,
 // panic recovery, body limits, authentication.
@@ -257,17 +262,69 @@ func recoverer(log *slog.Logger, next http.Handler) http.Handler {
 }
 
 // bodyLimits rejects bodies over the route class limit: up front when Content-Length is
-// declared, otherwise when the handler reads past it (see writeBodyError).
+// declared, otherwise when the handler reads past it (see writeBodyError). JSON classes also
+// cap nesting as the handler reads.
 func bodyLimits(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		limit := bodyLimit(r.URL.Path)
-		if r.ContentLength > limit {
+		c := bodyClassOf(r.URL.Path)
+		if r.ContentLength > c.max {
 			writeProblem(w, r, CodePayloadTooLarge, "request body exceeds the limit for this endpoint")
 			return
 		}
 		if r.Body != nil {
-			r.Body = http.MaxBytesReader(w, r.Body, limit)
+			r.Body = http.MaxBytesReader(w, r.Body, c.max)
+			if c.json {
+				r.Body = &depthReader{r: r.Body}
+			}
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// maxJSONDepth caps array and object nesting in request bodies. Real payloads (rule specs,
+// provider records, HealthKit samples) stay far below it; encoding/json alone allows 10,000
+// levels, which is cheap to send and costly for every later recursive consumer.
+const maxJSONDepth = 64
+
+// errJSONTooDeep is a body nested deeper than maxJSONDepth; writeBodyError answers 422.
+var errJSONTooDeep = errors.New("JSON is nested too deeply")
+
+// depthReader fails a read with errJSONTooDeep once the bytes passing through open more than
+// maxJSONDepth levels. It tracks strings and escapes, and stops caring about malformed JSON:
+// the decoder reports that.
+type depthReader struct {
+	r     io.ReadCloser
+	depth int
+	inStr bool
+	esc   bool
+}
+
+func (d *depthReader) Read(p []byte) (int, error) {
+	n, err := d.r.Read(p)
+	for _, c := range p[:n] {
+		switch {
+		case d.esc:
+			d.esc = false
+		case d.inStr:
+			d.esc, d.inStr = c == '\\', c != '"'
+		case c == '"':
+			d.inStr = true
+		case c == '{' || c == '[':
+			if d.depth++; d.depth > maxJSONDepth {
+				return 0, errJSONTooDeep // not n: a decoder finishes a value it already holds before it looks at the error
+			}
+		case (c == '}' || c == ']') && d.depth > 0:
+			d.depth--
+		}
+	}
+	return n, err
+}
+
+func (d *depthReader) Close() error { return d.r.Close() }
+
+// checkJSONDepth applies the same cap to a body that is already in memory (gzip ingest bodies
+// are only readable after decompression).
+func checkJSONDepth(b []byte) error {
+	_, err := io.Copy(io.Discard, &depthReader{r: io.NopCloser(bytes.NewReader(b))})
+	return err
 }

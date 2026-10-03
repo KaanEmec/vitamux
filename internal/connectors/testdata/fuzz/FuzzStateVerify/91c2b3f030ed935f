@@ -1,0 +1,4 @@
+go test fuzz v1
+string("AZLwoAAAcACAAAAAAAAAAJMH\n8bDigKCHydgvt0NnmioCkol--SuiazuGZUfIkofj")
+string("browser-a")
+uint16(4)

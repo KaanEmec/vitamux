@@ -1,0 +1,6 @@
+go test fuzz v1
+string("1")
+string("")
+string("\xcd")
+string("\n1\xc6")
+uint16(54)

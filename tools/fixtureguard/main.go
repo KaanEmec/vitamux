@@ -150,6 +150,7 @@ func scanFile(path string) ([]Violation, error) {
 	marked := sidecar(filepath.Join(filepath.Dir(path), ".synthetic"))
 
 	head, _ := r.Peek(sniffBytes)
+	marked = marked || fuzzCorpus(path, head)
 	if bytes.IndexByte(head, 0) >= 0 {
 		// Binary (PDF, FIT, zip, ...): content is not scanned; a `<file>.synthetic` sidecar carries the marker.
 		if !marked && !sidecar(path+".synthetic") {
@@ -171,6 +172,13 @@ func scanFile(path string) ([]Violation, error) {
 		return append(vs, scanLines(path, bytes.NewReader(body), true)...), nil
 	}
 	return append(vs, scanLines(path, r, marked)...), nil
+}
+
+// fuzzCorpus reports whether path is a Go fuzz corpus entry (testdata/fuzz/<Target>/<file>).
+// The engine parses every file in those directories, so they cannot carry a marker; the
+// engine's own header stands in for it. Content rules still apply.
+func fuzzCorpus(path string, head []byte) bool {
+	return bytes.HasPrefix(head, []byte("go test fuzz v1\n")) && strings.Contains(filepath.ToSlash(path), "testdata/fuzz/")
 }
 
 // sidecar reports whether path exists and carries the marker.

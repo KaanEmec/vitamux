@@ -227,7 +227,7 @@ func readJSON(w http.ResponseWriter, r *http.Request, v any) bool {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(v); err != nil {
-		if tooLarge := (*http.MaxBytesError)(nil); errors.As(err, &tooLarge) {
+		if tooLarge := (*http.MaxBytesError)(nil); errors.As(err, &tooLarge) || errors.Is(err, errJSONTooDeep) {
 			writeBodyError(w, r, err)
 		} else {
 			writeProblem(w, r, CodeValidationFailed, "request body must be a JSON object with the documented fields")

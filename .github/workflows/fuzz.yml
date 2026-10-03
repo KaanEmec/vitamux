@@ -1,0 +1,39 @@
+name: fuzz
+# Nightly fuzzing of every parser (docs/plan/E13-hardening/J13.2-fuzzing-limits.md). The target
+# list lives in the Makefile (FUZZ_TARGETS); ci.yml runs the same targets for 10 s each.
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+    inputs:
+      fuzztime:
+        description: Time per target (Go duration)
+        default: 5m
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      # The engine keeps the inputs it found interesting in the build cache's fuzz directory;
+      # restoring it lets each night start where the last one stopped.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/go-build/fuzz
+          key: fuzz-corpus-${{ github.run_id }}
+          restore-keys: fuzz-corpus-
+      - name: Fuzz every target
+        run: make fuzz FUZZTIME=${{ inputs.fuzztime || '5m' }}
+      - name: Failing inputs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashers
+          path: "**/testdata/fuzz/**"
+          retention-days: 30

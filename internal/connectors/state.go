@@ -39,7 +39,8 @@ func (s *StateSigner) Sign(id uuid.UUID, binding string) string {
 // Verify returns the id of a state made by Sign with the same binding, or ErrAuthState.
 func (s *StateSigner) Verify(state, binding string) (uuid.UUID, error) {
 	raw, err := base64.RawURLEncoding.DecodeString(state)
-	if err != nil || len(raw) != 16+sha256.Size || binding == "" {
+	// The decoder skips CR and LF; accept the canonical spelling only.
+	if err != nil || len(raw) != 16+sha256.Size || binding == "" || base64.RawURLEncoding.EncodeToString(raw) != state {
 		return uuid.Nil, ErrAuthState
 	}
 	id := uuid.UUID(raw[:16])

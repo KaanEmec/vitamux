@@ -24,6 +24,10 @@ var meastypes = map[int]struct{ metric, unit string }{
 	169: {"intracellular_water", "kg"}, 170: {"visceral_fat_index", "index"}, 226: {"basal_metabolic_rate", "kcal/day"},
 }
 
+// maxMeasureDate is 9999-12-31T23:59:59Z: later instants do not marshal as RFC 3339 and
+// eventually overflow timestamptz, so a record dated past it is refused, not written.
+const maxMeasureDate = 253402300799
+
 // groupKinds orders the canonical groups one measure group can produce.
 var groupKinds = []string{"bp_reading", "body_composition"}
 
@@ -61,8 +65,8 @@ func (Normalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ norma
 		return normalize.Output{}, errors.New("withings: undecodable measure group record")
 	}
 	g := rec.MeasureGrp
-	if g == nil || g.GrpID == 0 || g.Date == 0 {
-		return normalize.Output{}, errors.New("withings: record without measure group, id or date")
+	if g == nil || g.GrpID == 0 || g.Date <= 0 || g.Date > maxMeasureDate {
+		return normalize.Output{}, errors.New("withings: record without measure group, id or a date in 1970..9999")
 	}
 	var out normalize.Output
 	if g.Category != 1 {

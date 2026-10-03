@@ -2,10 +2,12 @@ package ingest
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -90,4 +92,45 @@ func TestNormalization(t *testing.T) {
 			t.Errorf("%s: got %s, want %s", c.name, got, c.want)
 		}
 	}
+}
+
+// FuzzDecodeHeartbeat feeds arbitrary bodies to the heartbeat parser. Invariants: no panic;
+// errors are *ValidationError; an accepted heartbeat has timestamps RecordHeartbeat can parse
+// and re-validates after a marshal round trip.
+func FuzzDecodeHeartbeat(f *testing.F) {
+	b, err := os.ReadFile(filepath.Join(schemaDir, "examples", "heartbeat.v1.json"))
+	if err != nil {
+		f.Fatal(err)
+	}
+	f.Add(b)
+	f.Add([]byte(`{"schema":"vitamux.ingest.heartbeat/1","streams":[{}]} {}`))
+	f.Fuzz(func(t *testing.T, data []byte) {
+		h, err := DecodeHeartbeat(data)
+		if err != nil {
+			if ve := (*ValidationError)(nil); !errors.As(err, &ve) || len(ve.Errors) == 0 {
+				t.Fatalf("error is not a non-empty *ValidationError: %v", err)
+			}
+			return
+		}
+		if _, err := ParseConnectionID(h.ConnectionID); err != nil {
+			t.Fatalf("accepted connection id does not parse: %v", err)
+		}
+		if _, err := time.Parse(time.RFC3339Nano, h.SentAt); err != nil {
+			t.Fatalf("accepted sent_at does not parse: %v", err)
+		}
+		for _, s := range h.Streams {
+			if s.LastSuccessAt != nil {
+				if _, err := time.Parse(time.RFC3339Nano, *s.LastSuccessAt); err != nil {
+					t.Fatalf("accepted last_success_at does not parse: %v", err)
+				}
+			}
+		}
+		again, err := json.Marshal(h)
+		if err != nil {
+			t.Fatalf("accepted heartbeat does not marshal: %v", err)
+		}
+		if _, err := DecodeHeartbeat(again); err != nil {
+			t.Fatalf("marshalled heartbeat is rejected: %v", err)
+		}
+	})
 }

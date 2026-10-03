@@ -69,7 +69,9 @@ func (c cursorCodec) decode(query, s string) (cursor, error) {
 		return cursor{}, errInvalidCursor
 	}
 	raw, err := base64.RawURLEncoding.DecodeString(s)
-	if err != nil || len(raw) < 1+cursorMACSize {
+	// The decoder skips CR and LF and ignores spare trailing bits; accept the canonical
+	// spelling only, so every cursor has exactly one string.
+	if err != nil || len(raw) < 1+cursorMACSize || base64.RawURLEncoding.EncodeToString(raw) != s {
 		return cursor{}, errInvalidCursor
 	}
 	payload, sum := raw[:len(raw)-cursorMACSize], raw[len(raw)-cursorMACSize:]

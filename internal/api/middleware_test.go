@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"testing/iotest"
 	"time"
 
 	"github.com/KaanEmec/vitamux/internal/obs"
@@ -321,5 +322,30 @@ func TestProblemRegistry(t *testing.T) {
 	writeProblem(rec, request(t, http.MethodGet, "/", nil), CodeValidationFailed, "bad input", FieldError{Pointer: "/start", Detail: "required"})
 	if rec.Code != 422 || !strings.Contains(rec.Body.String(), `"errors":[{"pointer":"/start","detail":"required"}]`) {
 		t.Fatalf("got %d %s", rec.Code, rec.Body)
+	}
+}
+
+func TestJSONDepthCap(t *testing.T) {
+	deep := func(n int) string { return strings.Repeat("[", n) + strings.Repeat("]", n) }
+	for _, c := range []struct {
+		name, body string
+		ok         bool
+	}{
+		{"at the cap", deep(maxJSONDepth), true},
+		{"one past the cap", deep(maxJSONDepth + 1), false},
+		{"objects count too", strings.Repeat(`{"a":`, maxJSONDepth+1) + "1" + strings.Repeat("}", maxJSONDepth+1), false},
+		{"brackets in strings do not count", `{"a":"` + strings.Repeat("[", 500) + `"}`, true},
+		{"escaped quote stays in the string", `{"a":"\"` + strings.Repeat("[", 500) + `"}`, true},
+		{"siblings reset the depth", strings.Repeat(deep(maxJSONDepth), 10), true},
+		{"unbalanced closers", strings.Repeat("]", 1000) + deep(maxJSONDepth), true},
+	} {
+		if err := checkJSONDepth([]byte(c.body)); (err == nil) != c.ok {
+			t.Errorf("%s: %v", c.name, err)
+		}
+		// Split anywhere: one byte per read must give the same answer.
+		_, err := io.Copy(io.Discard, &depthReader{r: io.NopCloser(iotest.OneByteReader(strings.NewReader(c.body)))})
+		if (err == nil) != c.ok {
+			t.Errorf("%s, byte by byte: %v", c.name, err)
+		}
 	}
 }

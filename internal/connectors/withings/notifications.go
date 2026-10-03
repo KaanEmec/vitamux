@@ -225,6 +225,27 @@ func hookHash(callback string) []byte {
 	return sum[:]
 }
 
+// notification is what a callback form carries. The window is usable only when both dates
+// parse, are not before the epoch and span at most maxNotifyRange (compared in seconds: a
+// Duration product would overflow for absurd dates).
+type notification struct {
+	appli      int
+	start, end int64
+	user       [sha256.Size]byte // SHA-256 of userid, the form of connections.account_key
+	windowOK   bool
+}
+
+func parseNotification(form url.Values) notification {
+	var n notification
+	n.appli, _ = strconv.Atoi(form.Get("appli"))
+	start, serr := strconv.ParseInt(form.Get("startdate"), 10, 64)
+	end, eerr := strconv.ParseInt(form.Get("enddate"), 10, 64)
+	n.start, n.end = start, end
+	n.user = sha256.Sum256([]byte(form.Get("userid")))
+	n.windowOK = serr == nil && eerr == nil && start >= 0 && end >= start && end-start <= int64(maxNotifyRange/time.Second)
+	return n
+}
+
 // Notify handles one notification POST to /webhooks/withings/{token} (form userid, appli,
 // startdate, enddate). An unknown token is ErrUnknownHook. Otherwise the payload is only a hint:
 // a measures notification of the connection's Withings user enqueues one correction sync of
@@ -241,17 +262,15 @@ func (n *Notifications) Notify(ctx context.Context, token string, form url.Value
 	} else if err != nil {
 		return err
 	}
-	appli, _ := strconv.Atoi(form.Get("appli"))
-	start, serr := strconv.ParseInt(form.Get("startdate"), 10, 64)
-	end, eerr := strconv.ParseInt(form.Get("enddate"), 10, 64)
-	user := sha256.Sum256([]byte(form.Get("userid")))
+	h := parseNotification(form)
+	appli, start, end := h.appli, h.start, h.end
 	ignore := ""
 	switch {
 	case !slices.Contains(applis, appli):
 		ignore = "appli"
-	case c.AccountKey != nil && !bytes.Equal(c.AccountKey, user[:]):
+	case c.AccountKey != nil && !bytes.Equal(c.AccountKey, h.user[:]):
 		ignore = "userid"
-	case serr != nil || eerr != nil || end < start || time.Duration(end-start)*time.Second > maxNotifyRange:
+	case !h.windowOK:
 		ignore = "window"
 	case c.Status != "active" && c.Status != "degraded":
 		ignore = "connection_inactive"

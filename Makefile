@@ -8,7 +8,7 @@ COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 LDFLAGS := -s -w -X github.com/KaanEmec/vitamux/internal/version.Version=$(VERSION) -X github.com/KaanEmec/vitamux/internal/version.Commit=$(COMMIT)
 COMPOSE := docker compose -f deploy/compose/compose.dev.yaml
 
-.PHONY: help dev services migrate services-down web-install web-build build test test-integration sqlc openapi lint fixtures fixture-guard golden notices notices-check image clean
+.PHONY: help dev services migrate services-down web-install web-build build test test-integration sqlc openapi lint fixtures fixture-guard golden fuzz notices notices-check image clean
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -65,6 +65,21 @@ fixture-guard: ## Check fixtures/ and testdata/ for the synthetic marker and PII
 
 golden: ## Run golden tests (E07)
 	go test ./... -run Golden
+
+# Every Fuzz* target, as package:Target. CI runs them briefly (ci.yml, go job) and nightly for longer
+# (.github/workflows/fuzz.yml); a new target is added here and nowhere else. HealthKit payloads: E15.
+FUZZTIME ?= 10s
+FUZZ_TARGETS := \
+	internal/ingest:FuzzDecodeBatch internal/ingest:FuzzDecodeHeartbeat \
+	internal/resolve:FuzzParseRule \
+	internal/documents:FuzzValidatePDF internal/documents:FuzzDecodeExtraction \
+	internal/connectors/withings:FuzzNormalizeMeasures internal/connectors/withings:FuzzParseNotification \
+	internal/connectors:FuzzStateVerify \
+	internal/api:FuzzCursorDecode
+
+fuzz: ## Fuzz every target for FUZZTIME each (default 10s); runs all, fails if any did. Crashers land in testdata/fuzz/
+	@rc=0; for t in $(FUZZ_TARGETS); do pkg=./$${t%%:*}; name=$${t##*:}; echo "== $$name ($$pkg, $(FUZZTIME))"; \
+		go test -run '^$$' -fuzz "^$$name$$" -fuzztime $(FUZZTIME) $$pkg || rc=1; done; exit $$rc
 
 notices: web-install ## Regenerate THIRD_PARTY_NOTICES.md (Go + npm); fails on licenses outside the allowlist
 	go run ./tools/notices

@@ -89,5 +89,9 @@ func writeBodyError(w http.ResponseWriter, r *http.Request, err error) {
 		writeProblem(w, r, CodePayloadTooLarge, "request body exceeds the limit for this endpoint")
 		return
 	}
+	if errors.Is(err, errJSONTooDeep) {
+		writeProblem(w, r, CodeValidationFailed, "JSON is nested too deeply (at most 64 levels)")
+		return
+	}
 	writeProblem(w, r, CodeValidationFailed, "request body could not be read")
 }
