@@ -146,3 +146,38 @@ func TestWithingsClient(t *testing.T) {
 		t.Fatal("id without secret accepted")
 	}
 }
+
+func TestExtractors(t *testing.T) {
+	files := filesOf(map[string]string{"/k": "SENTINEL-AI-KEY\n"})
+	c, err := load(envOf(map[string]string{
+		"VITAMUX_GEMINI_API_KEY_FILE": "/k", "VITAMUX_GEMINI_MODEL": "m1",
+		"VITAMUX_OPENAI_COMPATIBLE_BASE_URL": "http://127.0.0.1:8000/v1", "VITAMUX_OPENAI_COMPATIBLE_MODEL": "m2",
+		"VITAMUX_OPENAI_COMPATIBLE_ALLOW_PRIVATE": "true",
+	}), files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.GeminiAPIKey.Value() != "SENTINEL-AI-KEY" || c.GeminiModel != "m1" || c.OpenAICompatibleBaseURL.String() != "http://127.0.0.1:8000/v1" {
+		t.Fatalf("unexpected: %+v", c)
+	}
+	if strings.Contains(fmt.Sprintf("%v %+v %#v", c, c, c), "SENTINEL") {
+		t.Fatal("config rendering leaks the AI key")
+	}
+	for name, env := range map[string]map[string]string{
+		"key without model":   {"VITAMUX_OPENAI_API_KEY_FILE": "/k"},
+		"model without key":   {"VITAMUX_GEMINI_MODEL": "m"},
+		"url without model":   {"VITAMUX_OPENAI_COMPATIBLE_BASE_URL": "https://ai.example.com/v1"},
+		"http public":         {"VITAMUX_OPENAI_COMPATIBLE_BASE_URL": "http://ai.example.com/v1", "VITAMUX_OPENAI_COMPATIBLE_MODEL": "m"},
+		"private not allowed": {"VITAMUX_OPENAI_COMPATIBLE_BASE_URL": "https://10.0.0.5/v1", "VITAMUX_OPENAI_COMPATIBLE_MODEL": "m"},
+		"localhost":           {"VITAMUX_OPENAI_COMPATIBLE_BASE_URL": "https://localhost/v1", "VITAMUX_OPENAI_COMPATIBLE_MODEL": "m"},
+		"credentials in url":  {"VITAMUX_OPENAI_COMPATIBLE_BASE_URL": "https://u:p@ai.example.com/v1", "VITAMUX_OPENAI_COMPATIBLE_MODEL": "m"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := load(envOf(env), files); err == nil {
+				t.Fatal("expected error")
+			} else if strings.Contains(err.Error(), "SENTINEL") {
+				t.Fatalf("error leaks the key: %v", err)
+			}
+		})
+	}
+}

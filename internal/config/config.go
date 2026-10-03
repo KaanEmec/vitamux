@@ -47,6 +47,17 @@ type Config struct {
 	// (docs/providers/withings.md#app-registration-and-callback); both or neither.
 	WithingsClientID     string
 	WithingsClientSecret Secret
+	// Extraction providers (docs/architecture/lab-documents.md#privacy-controls). A provider is
+	// configured when its key (base URL for openai_compatible) and model are set; the owner
+	// still has to enable it and consent per request.
+	GeminiAPIKey                 Secret
+	GeminiModel                  string
+	OpenAIAPIKey                 Secret
+	OpenAIModel                  string
+	OpenAICompatibleBaseURL      *url.URL
+	OpenAICompatibleAPIKey       Secret // optional
+	OpenAICompatibleModel        string
+	OpenAICompatibleAllowPrivate bool // allow http and private or loopback hosts in the base URL
 }
 
 // Secret holds a sensitive value that never prints itself.
@@ -162,7 +173,61 @@ func load(env Lookup, readFile ReadFile) (Config, error) {
 		errs = append(errs, fmt.Errorf("set both %sWITHINGS_CLIENT_ID and %sWITHINGS_CLIENT_SECRET_FILE, or neither", prefix, prefix))
 	}
 
+	errs = append(errs, c.loadExtractors(env, readFile, get)...)
 	return c, errors.Join(errs...)
+}
+
+// loadExtractors reads the extraction provider settings. The openai_compatible base URL must
+// be https on a public host unless VITAMUX_OPENAI_COMPATIBLE_ALLOW_PRIVATE=true (SSRF guard).
+func (c *Config) loadExtractors(env Lookup, readFile ReadFile, get func(name, def string) string) []error {
+	var errs []error
+	var err error
+	for _, p := range []struct {
+		name  string
+		key   *Secret
+		model *string
+	}{{"GEMINI", &c.GeminiAPIKey, &c.GeminiModel}, {"OPENAI", &c.OpenAIAPIKey, &c.OpenAIModel}} {
+		*p.model = get(p.name+"_MODEL", "")
+		if *p.key, err = secret(env, readFile, p.name+"_API_KEY", c.Env); err != nil {
+			errs = append(errs, err)
+		} else if p.key.IsSet() != (*p.model != "") {
+			errs = append(errs, fmt.Errorf("set both %s%s_API_KEY_FILE and %s%s_MODEL, or neither", prefix, p.name, prefix, p.name))
+		}
+	}
+	c.OpenAICompatibleModel = get("OPENAI_COMPATIBLE_MODEL", "")
+	c.OpenAICompatibleAllowPrivate = get("OPENAI_COMPATIBLE_ALLOW_PRIVATE", "") == "true"
+	if c.OpenAICompatibleAPIKey, err = secret(env, readFile, "OPENAI_COMPATIBLE_API_KEY", c.Env); err != nil {
+		errs = append(errs, err)
+	}
+	raw := get("OPENAI_COMPATIBLE_BASE_URL", "")
+	if (raw == "") != (c.OpenAICompatibleModel == "") {
+		errs = append(errs, fmt.Errorf("set both %sOPENAI_COMPATIBLE_BASE_URL and %sOPENAI_COMPATIBLE_MODEL, or neither", prefix, prefix))
+	}
+	if raw == "" {
+		return errs
+	}
+	u, err := url.Parse(raw)
+	switch {
+	case err != nil, u.Host == "", u.User != nil, u.RawQuery != "", u.Fragment != "", u.Scheme != "https" && u.Scheme != "http":
+		errs = append(errs, fmt.Errorf("%sOPENAI_COMPATIBLE_BASE_URL must be an absolute http(s) URL without credentials, query or fragment", prefix))
+	case !c.OpenAICompatibleAllowPrivate && (u.Scheme != "https" || isPrivateHost(u.Hostname())):
+		errs = append(errs, fmt.Errorf("%sOPENAI_COMPATIBLE_BASE_URL must use https on a public host; set %sOPENAI_COMPATIBLE_ALLOW_PRIVATE=true for local inference", prefix, prefix))
+	default:
+		c.OpenAICompatibleBaseURL = u
+	}
+	return errs
+}
+
+// isPrivateHost reports a loopback, private, link-local or unspecified address, or a name
+// that is local by convention. Names are not resolved: the admin sets the URL.
+func isPrivateHost(host string) bool {
+	if a, err := netip.ParseAddr(host); err == nil {
+		a = a.Unmap()
+		return a.IsLoopback() || a.IsPrivate() || a.IsLinkLocalUnicast() || a.IsUnspecified()
+	}
+	host = strings.ToLower(strings.TrimSuffix(host, "."))
+	return host == "localhost" || strings.HasSuffix(host, ".localhost") || strings.HasSuffix(host, ".local") ||
+		strings.HasSuffix(host, ".internal") || !strings.Contains(host, ".")
 }
 
 // secret resolves VITAMUX_<name>_FILE (preferred) or VITAMUX_<name> (development only).

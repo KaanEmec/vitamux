@@ -12,21 +12,29 @@ Extraction is structured data entry with mandatory human confirmation. The produ
 
 ## Extraction provider interface
 
+Package `internal/documents/extract` ([ADR-0013](../adr/0013-extraction-consent.md)):
+
 ```go
 type Extractor interface {
     ID() string        // "fake" | "gemini" | "openai" | "openai_compatible"
-    External() bool    // true ⇒ document leaves the host
-    Extract(ctx context.Context, req ExtractRequest) (ExtractResponse, error)
+    External() bool    // true ⇒ document leaves the host (also openai_compatible)
+    Model() string     // configured model, which consent must name
+    Extract(ctx context.Context, req Request) (Response, error)
 }
-// ExtractRequest: PDF, Pages, Schema (schemas/lab-extraction.v1.json), Prompt (prompts/lab-extraction/v1.md), Model, Hints
-// ExtractResponse: Raw (stored encrypted), Rows, DocMeta (lab, dates), ModelID, Usage, Warnings
+// Request: PDF, Pages, Prompt (prompts/lab-extraction/v1.md), Schema (schemas/lab-extraction.v1.json), both embedded
+// Response: Raw (stored sealed, also when invalid), Extraction (rows, document fields, warnings), ModelID, RequestID, Usage
 ```
 
 | Provider | Notes |
 | --- | --- |
-| `fake` | Deterministic, keyed by PDF sha256 or generator ground truth. Used in CI and demos. |
-| `gemini`, `openai` | Native PDF input plus schema-constrained output. Model names are configuration. |
-| `openai_compatible` | Base URL + model for local or self-hosted inference (privacy option) |
+| `fake` | Deterministic: the committed ground truth for the synthetic fixture PDFs, by sha256. Used in CI and demos; any other PDF fails with `unknown_document`. |
+| `gemini` | `generateContent` with the PDF inline (≤ 14 MiB; no Files API) and `responseJsonSchema`; key in the `x-goog-api-key` header. |
+| `openai` | Responses API, PDF as `input_file`, strict `json_schema` output, `store: false`. |
+| `openai_compatible` | The same call against `VITAMUX_OPENAI_COMPATIBLE_BASE_URL` (key optional), for self-hosted servers that implement the Responses API with file input. |
+
+The schema sent to providers drops the fixture-only `synthetic` key and keywords structured-output APIs reject; `documents.DecodeExtraction` still enforces the full contract on every answer.
+
+`POST /api/v1/documents/{id}/extractions` queues an `extract_document` job (one active per document; a second request answers 409 `conflict`); `GET` on the same path lists runs without raw responses. The job retries `transient` and `rate_limited` failures (Retry-After up to 15 min reschedules) up to 3 attempts. Other failures end the run with `error_class` (`auth`, `rejected`, `too_large`, `refused`, `invalid_output`, `unknown_document`, `provider_unavailable`, `provider_disabled`, `consent_mismatch`, `abandoned`), keep the document, and return it to `uploaded` (or `needs_review` if an earlier run succeeded). Success stores the rows in `lab_extracted_rows` and moves the document to `needs_review`.
 
 ## Extracted row schema (v1)
 
@@ -55,7 +63,7 @@ Deterministic checks after extraction:
 
 ## Privacy controls
 
-- External providers are off by default. Enabling one requires an API-key secret file and `documents.external_ai.<provider>.enabled=true`. Each extraction also requires `consent {provider, model, acknowledged_at}` matching the configuration. Missing consent → `409 consent_required`; a disabled provider → `403`.
-- Stored: prompt and schema versions, model id, provider request id, timestamps. Never logged: keys, document bytes, responses.
+- External providers are off by default. The admin configures one with `VITAMUX_GEMINI_API_KEY_FILE` + `VITAMUX_GEMINI_MODEL`, `VITAMUX_OPENAI_API_KEY_FILE` + `VITAMUX_OPENAI_MODEL`, or `VITAMUX_OPENAI_COMPATIBLE_BASE_URL` + `VITAMUX_OPENAI_COMPATIBLE_MODEL` (optional `..._API_KEY_FILE`; https on a public host unless `VITAMUX_OPENAI_COMPATIBLE_ALLOW_PRIVATE=true`). The owner enables it with the setting `documents.external_ai.<provider>.enabled=true` (`extract.SetEnabled`, audited). Each extraction also requires `consent {provider, model, acknowledged_at}` naming the configured provider and model. Not configured or disabled → `403 forbidden`; missing or mismatched consent → `409 consent_required`. Both are checked again when the job starts.
+- Stored on `extraction_runs`: consent, actor, prompt and schema versions, model id, provider request id, token usage, timestamps; the `document.extract` audit event names provider, model and consent time. Never logged: keys, document bytes, responses, provider error messages (only HTTP status and error code).
 - PDF text is untrusted input (prompt injection). The model has no tools, output must match the schema, and a human reviews everything.
 - Retention: owner settings `documents.retention_days` (default keep) and `documents.delete_original_after_confirmation`, set through `documents.SetPolicy`, which applies the period to every live document's `retention_until`. The daily `document_retention` job deletes due originals with `derived=keep`. Deletion modes: `derived=keep|delete`.

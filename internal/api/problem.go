@@ -40,7 +40,7 @@ var problemKinds = map[Code]struct {
 	CodeConflict:                  {http.StatusConflict, "Conflict"},
 	CodeRateLimited:               {http.StatusTooManyRequests, "Rate limited"},
 	CodeReauthRequired:            {http.StatusConflict, "Re-authorization required"},
-	CodeConsentRequired:           {http.StatusForbidden, "Consent required"},
+	CodeConsentRequired:           {http.StatusConflict, "Consent required"},
 	CodeUnsupportedWindow:         {http.StatusUnprocessableEntity, "Unsupported window"},
 	CodeRuleWarningUnacknowledged: {http.StatusConflict, "Rule warning not acknowledged"},
 	CodePayloadTooLarge:           {http.StatusRequestEntityTooLarge, "Payload too large"},

@@ -26,6 +26,7 @@ import (
 	"github.com/KaanEmec/vitamux/internal/crypto"
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/documents"
+	"github.com/KaanEmec/vitamux/internal/documents/extract"
 	"github.com/KaanEmec/vitamux/internal/export"
 	"github.com/KaanEmec/vitamux/internal/jobs"
 	"github.com/KaanEmec/vitamux/internal/metrics"
@@ -142,6 +143,12 @@ func serve(stderr io.Writer) int {
 	}
 	runner.Register(normalize.KindRecomputeLocalDates, normalize.RecomputeJob(db.New(pool), log))
 	documents.Register(runner, scheduler, db.New(pool), blobs, keys, log) // no-op without blobs and key
+	// Extraction providers; nil without blobs and key.
+	extractSvc, err := extract.Setup(runner, db.New(pool), blobs, keys, log, cfg)
+	if err != nil {
+		log.Error("extractors", "err", err)
+		return 1
+	}
 	withingsConn := withings.New(withings.Config{ClientID: cfg.WithingsClientID, ClientSecret: cfg.WithingsClientSecret.Value()})
 	syncRegistry, err := connectors.NewRegistry(withingsConn) // provider connectors are added as arguments
 	if err != nil {
@@ -171,6 +178,7 @@ func serve(stderr io.Writer) int {
 		Keys:           keys,
 		Connectors:     syncRuntime,
 		Withings:       withingsNotify,
+		Extract:        extractSvc,
 		ReadyChecks: []api.ReadyCheck{
 			{Name: "database", Check: pool.Ping},
 			{Name: "schema", Check: func(ctx context.Context) error { return db.CheckSchema(ctx, pool) }},

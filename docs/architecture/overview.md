@@ -50,7 +50,7 @@ ADRs are written during implementation (J01.1 and the owning jobs).
 | ADR-010 | Frontend | SvelteKit static SPA embedded via `go:embed` | No extra container; Node only at build time |
 | ADR-011 | Secrets | Master key file, HKDF purposes, AES-256-GCM, single-flight token refresh | [security.md](security.md#keys-and-secrets) |
 | ADR-012 | License | MIT + DCO (decided 2026-10-03) | Simplest permissive license; compatible with every planned dependency |
-| ADR-013 | Extraction | Provider interface, consent model, no interpretation | [lab-documents.md](lab-documents.md) |
+| ADR-013 | Extraction | Provider interface, consent model, no interpretation | [ADR-0013](../adr/0013-extraction-consent.md), [lab-documents.md](lab-documents.md) |
 | ADR-014 | Apple Health | Swift package + minimal SwiftUI app; anchor committed after ack | [apple-health.md](apple-health.md) |
 | ADR-015 | API | REST + OpenAPI 3.1 contract-first, problem+json, cursor pagination | [api.md](api.md) |
 | ADR-016 | Dedupe | Account-scoped dedupe keys; corrections supersede | [ADR-0016](../adr/0016-canonical-writer.md) |
