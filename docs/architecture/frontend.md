@@ -31,12 +31,12 @@ Alternatives rejected: htmx (the rule builder, charts, and PDF review need real 
 
 ## Rule builder
 
-The builder follows [resolution.md](resolution.md) in five steps:
+The builder (`src/routes/(app)/rules/new`) follows [resolution.md](resolution.md) in five steps and starts from the rule in effect, a saved version, or an empty rule:
 
-1. **Window**: only the windows allowed for the metric.
-2. **Sources**: groups built from chips of providers, devices, and origins actually seen; drag to order; exclusions; a relay-exclusion suggestion.
-3. **Operation**: plain-language cards ("Use the first source with data", "Average the sources", "Take the highest", …). Duplicate-risk operations require a checkbox acknowledgement.
-4. **Quality**: coverage, plausible range, manual entries, staleness, sleep alignment.
-5. **Preview**: the last 14 days for the draft versus the active rule, with a per-day diff and explanations (`POST /resolution/preview`).
+1. **Metric**: from the catalogue (`GET /rules`, plus `GET /metrics` codes without a rule).
+2. **Sources**: ordered groups of selectors (ORed lists of ANDed conditions) with values seen in the active rules as suggestions; up/down buttons to reorder; exclusions; a relay-exclusion suggestion.
+3. **Strategy**: plain-language cards ("Use the first source with data", "Average the sources", "Take the highest", …) and within-group options. A sum (across or within groups) cannot be saved until the duplicate-risk checkbox adds `cross_source_sum_duplicate_risk`.
+4. **Window and quality**: window (the server checks it against the metric), coverage, plausible range, flags, staleness, wear, sleep alignment, `follow` and `compose`. Extensions the form does not edit (`contexts`) are kept.
+5. **Review**: the rule JSON, its diff against the rule in effect, and the last 14 days for the draft versus the active rule with a per-day diff and explanations (`POST /resolution/preview`; "preview unavailable" on 404/503).
 
-Saving creates a new version.
+Saving (`POST /rules/{metric}/versions`) creates a new version; server field errors return to their step and input. The metric page (`rules/[metric]`) lists versions with a field diff between any two and activates any of them. The catalogue and metric pages show the 90-day `GET /coverage` heatmap when the endpoint answers.

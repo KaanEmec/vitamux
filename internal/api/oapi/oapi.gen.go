@@ -1854,6 +1854,15 @@ type Session struct {
 
 // Settings Owner settings. PATCH changes only the keys it sends.
 type Settings struct {
+	// RetentionIdempotencyKeyDays Days to keep stored ingest responses for Idempotency-Key replays (default 30).
+	RetentionIdempotencyKeyDays *int `json:"retention.idempotency_key_days,omitempty"`
+
+	// RetentionRawDays Days to keep raw payloads, per provider code; a missing provider or 0 keeps them (default). PATCH merges per provider. Pruned raw cannot be reprocessed; the prune_raw job keeps raw that reprocessing still needs.
+	RetentionRawDays *map[string]int `json:"retention.raw_days,omitempty"`
+
+	// RetentionSupersededAfterDays Days to keep superseded canonical rows; 0 keeps them (default).
+	RetentionSupersededAfterDays *int `json:"retention.superseded_after_days,omitempty"`
+
 	// WithingsNotifications Withings notification subscriptions (polling runs either way); needs VITAMUX_PUBLIC_URL.
 	WithingsNotifications *bool `json:"withings.notifications,omitempty"`
 }

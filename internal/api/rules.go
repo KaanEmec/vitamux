@@ -52,6 +52,9 @@ func ruleVersionBody(v resolve.Version) oapi.RuleVersion {
 	if !v.CreatedAt.IsZero() {
 		out.CreatedAt = &v.CreatedAt
 	}
+	if b, ok := resolve.LookupBuiltin(v.Metric); ok && v.Builtin && b.Version == v.Version {
+		out.Reason = &b.Why
+	}
 	return out
 }
 

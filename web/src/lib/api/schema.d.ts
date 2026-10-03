@@ -2333,6 +2333,14 @@ export interface components {
         Settings: {
             /** @description Withings notification subscriptions (polling runs either way); needs VITAMUX_PUBLIC_URL. */
             "withings.notifications"?: boolean;
+            /** @description Days to keep raw payloads, per provider code; a missing provider or 0 keeps them (default). PATCH merges per provider. Pruned raw cannot be reprocessed; the prune_raw job keeps raw that reprocessing still needs. */
+            "retention.raw_days"?: {
+                [key: string]: number;
+            };
+            /** @description Days to keep superseded canonical rows; 0 keeps them (default). */
+            "retention.superseded_after_days"?: number;
+            /** @description Days to keep stored ingest responses for Idempotency-Key replays (default 30). */
+            "retention.idempotency_key_days"?: number;
         };
         TimezonePeriod: {
             /** Format: uuid */

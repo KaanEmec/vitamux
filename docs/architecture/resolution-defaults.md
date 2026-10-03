@@ -8,7 +8,7 @@ Suggested built-in rules for the most common metrics and the ten most common tra
 - the first edit copies the built-in into a user rule version ([resolution.md](resolution.md#selectors-and-validation)), and per-window manual overrides still apply on top;
 - the owner's own comparison beats this table. Fit and placement change optical accuracy a lot: a strap worn snugly on the upper arm can beat a loose wrist watch of a "higher" tier.
 
-The generated [`docs/resolution-defaults.md`](../resolution-defaults.md) lists the defaults that actually ship; [differences](#differences-in-the-shipped-built-ins) from this table are recorded below. This file keeps the reasoning and evidence behind them. The figures here are for contributors. The UI shows a neutral reason ("ranked by published independent validation; you can reorder") and a link, never a judgement about the owner's device.
+The generated [`docs/resolution-defaults.md`](../resolution-defaults.md) lists the defaults that actually ship; [differences](#differences-in-the-shipped-built-ins) from this table are recorded below. This file keeps the reasoning and evidence behind them. The figures here are for contributors. The UI shows each built-in's one-line `Why` (the `reason` field of the rules API) and that the owner can reorder or replace it, never a judgement about the owner's device.
 
 ## Principles
 

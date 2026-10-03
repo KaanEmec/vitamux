@@ -3210,6 +3210,12 @@ components:
       additionalProperties: false
       properties:
         withings.notifications: {type: boolean, description: Withings notification subscriptions (polling runs either way); needs VITAMUX_PUBLIC_URL.}
+        retention.raw_days:
+          type: object
+          additionalProperties: {type: integer, minimum: 0, maximum: 36500}
+          description: Days to keep raw payloads, per provider code; a missing provider or 0 keeps them (default). PATCH merges per provider. Pruned raw cannot be reprocessed; the prune_raw job keeps raw that reprocessing still needs.
+        retention.superseded_after_days: {type: integer, minimum: 0, maximum: 36500, description: Days to keep superseded canonical rows; 0 keeps them (default).}
+        retention.idempotency_key_days: {type: integer, minimum: 7, maximum: 36500, description: Days to keep stored ingest responses for Idempotency-Key replays (default 30).}
     TimezonePeriod:
       type: object
       additionalProperties: false
