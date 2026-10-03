@@ -11,7 +11,7 @@ The engine (J09.4–J09.10), the rules UI (J11.4) and the built-in defaults ([re
 - **Membership:** exclusions win over every group; otherwise an input joins the first group (in rule order) with a matching selector. Membership never changes per window: contexts (E1) only reorder priority. `@workout_source` in `contexts.workout` stands for the group of the source that recorded the workout.
 - **Rule families:** `metric: sleep` (every sleep-derived code) and `metric: blood_pressure` (bp_reading components) select one event or reading for all their codes; per-code rules for members are rejected. Blood pressure takes selecting strategies only, so one reading never mixes sources.
 - **Window:** the rule's `window` is its default window. A request for another kind the catalogue allows reuses groups, strategy and gates; `compose` applies only to `local_day` and a `statistic` only to the kinds it is valid for.
-- **Follow (E5):** the follower uses its own group with the id the leader selected, else falls back through its own ladder with `follow_unavailable`. Leader and follower rules use the same window; cycles are rejected (`ValidateSet`).
+- **Follow (E5):** the follower uses its own group with the id the leader selected, else falls back through its own ladder with `follow_unavailable`. Leader and follower rules use the same window; cycles are rejected (`ValidateSet`), and a rule cannot combine `follow` with `compose`.
 - **Pooling:** `mean`, `minimum`, `maximum` are rejected when `catalog.Metric.Poolable` is false (provider-scoped scores, selection-only metrics). `sum_across_sources` and `intra_group: sum` need `cross_source_sum_duplicate_risk` acknowledged; the warning still appears in every result.
 
 ## Alternatives considered

@@ -9,8 +9,8 @@ import (
 	"github.com/KaanEmec/vitamux/internal/catalog"
 )
 
-// ErrNotImplemented marks rule parts whose engine lands in a later job: sleep episodes (J09.6)
-// and the extensions E1, E2, E3, E5 and E9 (J09.10). The wrapped error names the part.
+// ErrNotImplemented marks rule parts whose engine lives elsewhere: the sleep family and sleep
+// codes resolve through aligned episodes (J09.6). The wrapped error names the part.
 var ErrNotImplemented = errors.New("resolve: not implemented")
 
 // ErrUnacknowledgedSum rejects sum_across_sources or intra_group: sum at resolve time when the
@@ -18,7 +18,8 @@ var ErrNotImplemented = errors.New("resolve: not implemented")
 var ErrUnacknowledgedSum = errors.New("resolve: sum without acknowledged " + string(WarnCrossSourceSum))
 
 // Series holds candidate inputs by catalogue code: the rule's metric for a plain rule, one
-// entry per component for a family (blood_pressure). Input has no code of its own.
+// entry per component for a family (blood_pressure), the source metric for a derived code
+// (E2), plus the wear metric under quality.require_wear (E3). Input has no code of its own.
 type Series map[string][]Input
 
 // Basis says what a group value was computed from.
@@ -51,6 +52,14 @@ type GroupValue struct {
 	Refs       []int64   // contributing Input.ID values, for record_refs
 	Sources    []Source  // distinct contributing sources, in input order
 	Warnings   []Warning // per-group warnings, e.g. intra_group sum
+	// E2: the bucket span [SpanStart, SpanEnd) a min or min_rolling_mean statistic picked.
+	SpanStart, SpanEnd time.Time
+	// E3 (quality.require_wear): no device of the group reports the wear metric, so it is not
+	// gated; otherwise the elapsed base buckets in which one was worn, and the rows that had a
+	// part dropped in buckets where their device was not worn.
+	WearExempt  bool
+	WornBuckets int
+	Gated       int
 }
 
 // spec is what a rule resolves: the aggregation and the codes (one, or a family's members).
@@ -59,9 +68,17 @@ type spec struct {
 	codes  []string
 	byCode map[string]catalog.Metric
 	family bool
+	named  catalog.Metric // a derived code (E2); its codes are the source metric's
 }
 
 func (s spec) primary() catalog.Metric { return s.byCode[s.codes[0]] }
+
+func (s spec) allowsWindow(k catalog.Window) bool {
+	if s.named.Code != "" {
+		return s.named.AllowsWindow(k)
+	}
+	return s.primary().AllowsWindow(k)
+}
 
 func (r *Rule) spec() (spec, error) {
 	switch r.Metric {
@@ -86,6 +103,8 @@ func (r *Rule) spec() (spec, error) {
 		return spec{}, fmt.Errorf("resolve: unknown metric %q", r.Metric)
 	case m.Agg == catalog.SleepDerived:
 		return spec{}, fmt.Errorf("%w: sleep codes resolve through the sleep family (J09.6)", ErrNotImplemented)
+	case m.DerivedFrom != "":
+		return r.derivedSpec(m)
 	}
 	return spec{agg: m.Agg, codes: []string{m.Code}, byCode: map[string]catalog.Metric{m.Code: m}}, nil
 }
@@ -101,17 +120,18 @@ func (r *Rule) withinSource() WithinSource {
 
 // Aggregate computes one group's value in w (docs/architecture/resolution.md#within-source-aggregation).
 // s holds that group's inputs that belong to w and passed the row gates; ResolveWindow does
-// both. now caps the elapsed buckets of an open window (zero: no cap). Without inputs the
-// status is no_data; otherwise valid.
+// both. With quality.require_wear, s also holds the whole wear series (see WearLookback). now
+// caps the elapsed buckets of an open window (zero: no cap). Without inputs the status is
+// no_data; otherwise valid, unless an extension gate lowers it (not_worn, no_full_span).
 func (r *Rule) Aggregate(w Window, group int, s Series, now time.Time) (GroupValue, error) {
 	sp, err := r.spec()
 	if err != nil {
 		return GroupValue{}, err
 	}
-	return r.aggregate(sp, w, group, s, now)
+	return r.aggregate(sp, w, group, s, now, r.newWear(s))
 }
 
-func (r *Rule) aggregate(sp spec, w Window, group int, s Series, now time.Time) (GroupValue, error) {
+func (r *Rule) aggregate(sp spec, w Window, group int, s Series, now time.Time, wear *wearIndex) (GroupValue, error) {
 	gv := GroupValue{Group: group, Status: StatusNoData}
 	if group >= 0 && group < len(r.Groups) {
 		gv.ID = r.Groups[group].ID
@@ -120,10 +140,10 @@ func (r *Rule) aggregate(sp spec, w Window, group int, s Series, now time.Time) 
 	switch {
 	case ws.IntraGroup == IntraSum && !r.acknowledged(WarnCrossSourceSum):
 		return gv, fmt.Errorf("%w (within_source.intra_group)", ErrUnacknowledgedSum)
-	case ws.Statistic == StatMinRollingMean || ws.Statistic == StatMin:
-		return gv, fmt.Errorf("%w: within_source.statistic %s (E2, J09.10)", ErrNotImplemented, ws.Statistic)
 	}
 	in := s[sp.codes[0]]
+	base := baseBucket(sp.primary(), w)
+	noSpan := false
 	switch {
 	case sp.agg == catalog.Latest:
 		gv.aggReadings(sp, s, w, ws.Statistic)
@@ -136,9 +156,10 @@ func (r *Rule) aggregate(sp spec, w Window, group int, s Series, now time.Time) 
 			}
 		}
 	case sp.agg == catalog.Intensive:
-		gv.aggIntensive(in, w, baseBucket(sp.primary(), w), ws.IntraGroup, now)
+		keys, means := gv.aggIntensive(in, w, base, ws.IntraGroup, now, wear)
+		noSpan = len(keys) > 0 && statisticApplies(ws.Statistic, w.Kind) && !gv.windowStatistic(ws, keys, means, base)
 	case sp.agg == catalog.Additive:
-		gv.aggAdditive(in, w, baseBucket(sp.primary(), w), ws, now)
+		gv.aggAdditive(in, w, base, ws, now, wear)
 		if gv.Count > 0 && ws.IntraGroup == IntraSum {
 			gv.Warnings = append(gv.Warnings, WarnCrossSourceSum)
 		}
@@ -149,6 +170,12 @@ func (r *Rule) aggregate(sp spec, w Window, group int, s Series, now time.Time) 
 	}
 	if gv.Count > 0 {
 		gv.Status, gv.Reason = StatusValid, ""
+	}
+	if wear != nil && base > 0 {
+		gv.applyWear(wear, sp, w, in, base, now)
+	}
+	if noSpan && gv.Status == StatusValid {
+		gv.Status, gv.Reason = StatusBelowQuality, ReasonNoFullSpan
 	}
 	return gv, nil
 }
@@ -245,7 +272,9 @@ func combineIntra(p IntraGroup, intensive bool, vals []float64) float64 {
 
 // aggIntensive: per sub-source bucket means, combined per bucket by intra_group, then the mean
 // of the covered buckets, each weighted equally. Repeating samples in a bucket changes nothing.
-func (gv *GroupValue) aggIntensive(in []Input, w Window, base time.Duration, intra IntraGroup, now time.Time) {
+// Samples in buckets where their device was not worn (E3) are dropped. It returns the covered
+// bucket starts in order with their combined means, for the E2 statistics.
+func (gv *GroupValue) aggIntensive(in []Input, w Window, base time.Duration, intra IntraGroup, now time.Time, wear *wearIndex) ([]int64, []float64) {
 	type acc struct {
 		sum float64
 		n   int
@@ -254,6 +283,10 @@ func (gv *GroupValue) aggIntensive(in []Input, w Window, base time.Duration, int
 	buckets := map[int64][]acc{} // bucket start -> per sub-source accumulator
 	for _, x := range in {
 		if x.Kind == catalog.DailyValue || x.Kind == catalog.Cumulative {
+			continue
+		}
+		if !wear.counts(x.Source, x.Start.Truncate(base), base) {
+			gv.Gated++
 			continue
 		}
 		b := x.Start.Truncate(base).UnixNano()
@@ -268,29 +301,33 @@ func (gv *GroupValue) aggIntensive(in []Input, w Window, base time.Duration, int
 		gv.use(x)
 	}
 	if gv.Count == 0 {
-		return
+		return nil, nil
 	}
 	keys := sortedKeys(buckets)
+	combined := make([]float64, len(keys))
 	total := 0.0
-	for _, b := range keys {
+	for k, b := range keys {
 		var means []float64
 		for _, a := range buckets[b] {
 			if a.n > 0 {
 				means = append(means, a.sum/float64(a.n))
 			}
 		}
-		total += combineIntra(intra, true, means)
+		combined[k] = combineIntra(intra, true, means)
+		total += combined[k]
 	}
 	gv.Value = total / float64(len(keys))
 	gv.Basis, gv.Buckets = BasisBucketMeans, len(keys)
 	gv.Coverage = bucketCoverage(keys, w, base, now)
+	return keys, combined
 }
 
 // aggAdditive: on local_day with prefer_reported, a provider daily value wins over intervals;
 // otherwise intervals are summed per base bucket (pro-rated at the bounds of instant windows),
 // sub-sources combine per bucket by intra_group (auto = max), and the buckets are summed. A
-// daily value and intervals are never added.
-func (gv *GroupValue) aggAdditive(in []Input, w Window, base time.Duration, ws WithinSource, now time.Time) {
+// daily value and intervals are never added. Interval parts in buckets where their device was
+// not worn (E3) are dropped; a daily value cannot be split and is gated in applyWear.
+func (gv *GroupValue) aggAdditive(in []Input, w Window, base time.Duration, ws WithinSource, now time.Time, wear *wearIndex) {
 	day := w.Kind == catalog.WindowLocalDay
 	var daily, intervals []Input
 	for _, x := range in {
@@ -325,22 +362,36 @@ func (gv *GroupValue) aggAdditive(in []Input, w Window, base time.Duration, ws W
 	}
 	for _, x := range intervals {
 		i := idx.index(x.Source)
-		gv.use(x)
-		if !x.End.After(x.Start) {
-			add(x.Start.Truncate(base), i, x.Value)
-			continue
+		kept, dropped := false, false
+		put := func(b time.Time, v float64) {
+			if !wear.counts(x.Source, b, base) {
+				dropped = true
+				return
+			}
+			kept = true
+			add(b, i, v)
 		}
-		lo, hi := x.Start, x.End
-		if !day { // local_day takes whole rows by local_date, so a travel day is never split
-			lo, hi = timeMax(lo, w.Start), timeMin(hi, w.End)
-			if hi.Sub(lo) < x.End.Sub(x.Start) {
-				gv.Prorated = true
+		if !x.End.After(x.Start) {
+			put(x.Start.Truncate(base), x.Value)
+		} else {
+			lo, hi := x.Start, x.End
+			if !day { // local_day takes whole rows by local_date, so a travel day is never split
+				lo, hi = timeMax(lo, w.Start), timeMin(hi, w.End)
+				if hi.Sub(lo) < x.End.Sub(x.Start) {
+					gv.Prorated = true
+				}
+			}
+			dur := float64(x.End.Sub(x.Start))
+			for b := lo.Truncate(base); b.Before(hi); b = b.Add(base) {
+				part := timeMin(hi, b.Add(base)).Sub(timeMax(lo, b))
+				put(b, x.Value*float64(part)/dur)
 			}
 		}
-		dur := float64(x.End.Sub(x.Start))
-		for b := lo.Truncate(base); b.Before(hi); b = b.Add(base) {
-			part := timeMin(hi, b.Add(base)).Sub(timeMax(lo, b))
-			add(b, i, x.Value*float64(part)/dur)
+		if kept {
+			gv.use(x)
+		}
+		if dropped {
+			gv.Gated++
 		}
 	}
 	keys := sortedKeys(buckets)

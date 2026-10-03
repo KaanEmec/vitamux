@@ -2,7 +2,7 @@
 
 Rules for metric codes, and the codes not yet implemented. Implemented codes (the `v1` seed from [J07.1](../plan/E07-normalization/J07.1-catalogue-units.md)) with their units, kinds, aggregation, plausible ranges and windows live in the generated [metrics.md](../metrics.md); the source is [`internal/catalog`](../../internal/catalog). Lab analytes live in [analyte-catalog.md](analyte-catalog.md), and the table shapes in [data-model.md](data-model.md).
 
-Adding a code means adding it to `internal/catalog` in the job that needs it, together with a migration that seeds it, and then moving its row out of this file.
+Adding a code means appending it to `internal/catalog` in the job that needs it with a new seed marker (`Since`, plus its file in `seedFiles`), so `go run ./internal/catalog/gen` writes its own seed migration and released ones never change, and then moving its row out of this file.
 
 ## Rules
 
@@ -10,10 +10,10 @@ Adding a code means adding it to `internal/catalog` in the job that needs it, to
 - **Device, origin and context are selectors, not codes.** Fingerstick vs CGM glucose, or Watch vs iPhone steps, stay one code each. The difference lives in `device`, `origin` and `context`.
 - **Selection-only metrics.** When providers define a metric differently, the catalogue drops `mean`, `min` and `max` for it, the same way it does for provider-scoped scores. The provider's definition goes in `context`. This applies to `resting_heart_rate` (sleep-based, awake-inactive, lowest 30 min in 24 h, or still periods), `hrv_rmssd_nightly` (vendors use different overnight windows) and `sleep_temperature_deviation` (provider baselines). The two implemented codes carry `SelectionOnly` in `internal/catalog` ([J09.2](../plan/E09-resolution/J09.2-rules-storage-defaults.md)). Suggested ladders: [resolution-defaults.md](resolution-defaults.md).
 - **Proprietary scores are provider-namespaced** (`<provider>_<name>`) and never pooled across providers. They land in the catalogue together with their connector.
-- **Derived codes** have no rows of their own. Resolution computes them from a source metric (rule [extension](resolution.md#extensions) E2), so they get a catalogue entry for rules and APIs without breaking the rule below.
+- **Derived codes** have no rows of their own. Resolution computes them from a source metric (rule [extension](resolution.md#extensions) E2), so they get a catalogue entry for rules and APIs without breaking the rule below. The implemented ones (`resting_heart_rate_nocturnal`, `spo2_night_min`) carry `DerivedFrom` and are listed in [metrics.md](../metrics.md#derived).
 - **Calculated values are never stored as measurements.** BMI, MAP, pulse pressure, time-in-range, GMI and sleep debt come from resolution or views. A value the *provider* reports (e.g., BMI from a scale) is stored as-is with its origin.
 - **Canonical units** use SI-style units, kept readable: s for durations, m for distances, kg, kcal, °C, mmol/L, % (0–100). The source value and unit are kept whenever conversion changed the value ([data-model.md](data-model.md#measurements)).
-- **Phase:** codes marked below are not implemented yet; the J07.1 seed (`v1`, MVP) is implemented and listed in [metrics.md](../metrics.md). `J09.10` = derived code built with the rule extensions (MVP) · `J08.6` = Withings activity and sleep (post-MVP) · `E15` = needed by the Apple bridge · `later` = backlog, added with the first connector that needs it. A connector that needs a code not yet in the catalogue adds it in its own job.
+- **Phase:** codes marked below are not implemented yet; the J07.1 seed (`v1`, MVP) is implemented and listed in [metrics.md](../metrics.md). `J08.6` = Withings activity and sleep (post-MVP) · `E15` = needed by the Apple bridge · `later` = backlog, added with the first connector that needs it. A connector that needs a code not yet in the catalogue adds it in its own job.
 - **Withings `meastype` codes** were verified against the official `getmeas` reference in [J08.1](../providers/withings.md#assumptions-checked). Measures outside `bp_reading` and `body_composition` (SpO2, temperature, VO2max) are stored as plain samples.
 
 Kinds: `S` sample · `I` interval · `C` cumulative · `D` daily_value. Aggregation values are defined in [resolution.md](resolution.md#within-source-aggregation). HK ids omit the `HKQuantityTypeIdentifier` / `HKCategoryTypeIdentifier` prefix. W = Withings `meastype`.
@@ -55,7 +55,6 @@ Kinds: `S` sample · `I` interval · `C` cumulative · `D` daily_value. Aggregat
 | --- | --- | --- | --- | --- | --- | --- |
 | `walking_heart_rate` | bpm | D | daily_summary | WalkingHeartRateAverage | | E15 |
 | `sleeping_heart_rate` | bpm | D | daily_summary | | | later |
-| `resting_heart_rate_nocturnal` | bpm | derived from `heart_rate` | lowest 30-min mean in the main sleep episode | | | J09.10 |
 | `heart_rate_recovery_1min` | bpm | S | latest | HeartRateRecoveryOneMinute | | later |
 | `rr_interval` | s | S | raw series, not resolved | HKHeartbeatSeriesSample | | later |
 | `afib_burden` | % | D | daily_summary | AtrialFibrillationBurden | | later |
@@ -76,7 +75,6 @@ Cuffless estimates from calibrated optical watches get their own codes, so they 
 
 | Code | Unit | Kinds | Aggregation | Apple HK | W | Phase |
 | --- | --- | --- | --- | --- | --- | --- |
-| `spo2_night_min` | % | derived from `spo2` | lowest value in the main sleep episode | | | J09.10 |
 | `breathing_disturbances` | events/h | D | daily_summary | AppleSleepingBreathingDisturbances | | E15 |
 | `apnea_hypopnea_index` | events/h | D | daily_summary | | | J08.6 |
 | `fev1`, `fvc` | L | S | latest | ForcedExpiratoryVolume1, ForcedVitalCapacity | | later |

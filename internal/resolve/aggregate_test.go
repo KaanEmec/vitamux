@@ -298,12 +298,7 @@ func TestDailySummary(t *testing.T) {
 
 func TestAggregatePendingParts(t *testing.T) {
 	day, _ := LocalDay(date("2026-06-15"), berlin)
-	r := agRule("heart_rate", catalog.WindowLocalDay, OpFirstAvailable, agGroup("g", Selector{Provider: "garmin"}))
-	r.WithinSource = &WithinSource{Statistic: StatMinRollingMean, Span: "30m"}
-	if _, err := r.Aggregate(day, 0, Series{}, time.Time{}); !errors.Is(err, ErrNotImplemented) {
-		t.Errorf("min_rolling_mean: %v", err)
-	}
-	r = agRule(FamilySleep, catalog.WindowLocalNight, OpEventPriority, agGroup("g", Selector{Provider: "garmin"}))
+	r := agRule(FamilySleep, catalog.WindowLocalNight, OpEventPriority, agGroup("g", Selector{Provider: "garmin"}))
 	if _, err := r.Aggregate(day, 0, Series{}, time.Time{}); !errors.Is(err, ErrNotImplemented) {
 		t.Errorf("sleep family: %v", err)
 	}

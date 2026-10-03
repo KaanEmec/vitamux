@@ -137,6 +137,16 @@ func builtins() []Builtin {
 	rmssd := func() []Group {
 		return biLadder(biBrand(provOura), biBrand(provWhoop), biBrand(provGarmin), biBrand(provPolar), biBrand(provFitbit), biBrand(provSamsung))
 	}
+	hrGroups := func() []Group {
+		return biLadder(biDevice("chest_strap"), biDevice("arm_band"), biAppleWatch(), biBrand(provGarmin), biBrand(provFitbit),
+			biBrand(provSamsung), biBrand(provWhoop), biBrand(provPolar), biBrand(provXiaomi), biBrand(provAmazfit), biBrand(provOura))
+	}
+	hrQuality := func() *Quality {
+		return &Quality{PlausibleRange: []float64{25, 230}, ExcludeFlags: []string{"manual_entry"}}
+	}
+	spo2Groups := func() []Group {
+		return biLadder(biApple(), biBrand(provSamsung), biBrand(provWithings), biBrand(provGarmin), biBrand(provFitbit), biBrand(provOura), biBrand(provWhoop))
+	}
 	weightGroups := func() []Group {
 		return biLadder(biDevice("scale"), biGroup("scale_apps", Selector{Provider: provApple, Entry: EntryDevice}), biManual())
 	}
@@ -163,9 +173,7 @@ func builtins() []Builtin {
 				Groups:  biLadder(biDevice("watch"), biDevice("band"), biDevice("ring"), biDevice("phone"))}),
 		biV1("Chest straps are ECG-class, then wrist devices by independent validation; inside workouts the recording device follows the straps.",
 			Rule{Metric: "heart_rate", Window: RuleWindow{Kind: catalog.WindowBucket, Size: "5m"}, Strategy: firstAvailable,
-				Quality: &Quality{PlausibleRange: []float64{25, 230}, ExcludeFlags: []string{"manual_entry"}},
-				Groups: biLadder(biDevice("chest_strap"), biDevice("arm_band"), biAppleWatch(), biBrand(provGarmin), biBrand(provFitbit),
-					biBrand(provSamsung), biBrand(provWhoop), biBrand(provPolar), biBrand(provXiaomi), biBrand(provAmazfit), biBrand(provOura)),
+				Quality: hrQuality(), Groups: hrGroups(),
 				Contexts: map[Context][]string{ContextWorkout: {"chest_strap", "arm_band", ContextWorkoutSource}}}),
 		biV1("Selection only (definitions differ); ranked by nightly error against a chest strap.",
 			Rule{Metric: "resting_heart_rate", Window: day, Strategy: firstAvailable, Quality: &Quality{MaxStaleness: "36h"},
@@ -185,8 +193,7 @@ func builtins() []Builtin {
 			Rule{Metric: FamilyBloodPressure, Window: day, Strategy: firstAvailable, WithinSource: &WithinSource{Statistic: StatMean},
 				Groups: biLadder(biDevice("bp_monitor"), biGroup("watch_cuff", Selector{DeviceType: "watch", Entry: EntryDevice}), biManual())}),
 		biV1("Nightly mean, ranked by published error against reference oximetry; ring values are a trend only.",
-			Rule{Metric: "spo2", Window: night, Strategy: firstAvailable,
-				Groups: biLadder(biApple(), biBrand(provSamsung), biBrand(provWithings), biBrand(provGarmin), biBrand(provFitbit), biBrand(provOura), biBrand(provWhoop))}),
+			Rule{Metric: "spo2", Window: night, Strategy: firstAvailable, Groups: spo2Groups()}),
 		biV1("All published evidence is vendor-funded; low confidence across the board.",
 			Rule{Metric: "respiratory_rate", Window: night, Strategy: firstAvailable,
 				Groups: biLadder(biBrand(provSamsung), biBrand(provOura), biBrand(provWhoop), biApple(), biBrand(provFitbit), biBrand(provGarmin))}),
@@ -194,6 +201,13 @@ func builtins() []Builtin {
 		biV1("Scales agree closely; the latest reading of the day, from a scale before scale apps and manual entries.",
 			Rule{Metric: "weight", Window: day, Strategy: firstAvailable, WithinSource: &WithinSource{Statistic: StatLatest}, Groups: weightGroups()}),
 		spot("height", "The newest value from any source."),
+		biV1("One definition across brands: the lowest 30-minute mean of heart rate in the main sleep episode, from the heart-rate ladder; sparse night data fails the coverage gate.",
+			Rule{Metric: "resting_heart_rate_nocturnal", Window: night, Strategy: firstAvailable,
+				WithinSource: &WithinSource{Statistic: StatMinRollingMean, Span: "30m"},
+				Quality:      &Quality{MinCoverage: biRatio(0.7), PlausibleRange: []float64{25, 230}, ExcludeFlags: []string{"manual_entry"}},
+				Groups:       hrGroups()}),
+		biV1("The lowest 5-minute SpO2 mean in the main sleep episode, from the SpO2 ladder; a failed reading is never 0 %.",
+			Rule{Metric: "spo2_night_min", Window: night, Strategy: firstAvailable, WithinSource: &WithinSource{Statistic: StatMin}, Groups: spo2Groups()}),
 	}
 	for _, m := range catalog.Metrics() {
 		if m.Group == "body_composition" && m.Code != "weight" {

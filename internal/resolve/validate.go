@@ -258,6 +258,10 @@ func (c *checker) strategy(r *Rule, m catalog.Metric, family bool, acked map[War
 
 func (c *checker) withinSource(r *Rule, m catalog.Metric, acked map[Warning]bool) {
 	ws := r.WithinSource
+	if m.DerivedFrom != "" {
+		c.check(ws != nil && (ws.Statistic == StatMinRollingMean || ws.Statistic == StatMin), "/within_source/statistic",
+			"a derived code is computed from "+m.DerivedFrom+" with statistic min_rolling_mean or min")
+	}
 	if ws == nil {
 		return
 	}
@@ -331,7 +335,7 @@ func (c *checker) quality(r *Rule, m catalog.Metric, family bool) {
 	c.check(q.MaxStaleness == "" || q.MaxStaleness.Std() > 0, "/quality/max_staleness", "must be a duration such as 36h or 30d")
 	if q.RequireWear != "" && c.check(bucketed, "/quality/require_wear", "needs a metric with buckets (intensive or additive)") {
 		wm, ok := c.lookup(q.RequireWear)
-		c.check(ok && wm.Agg == catalog.Intensive, "/quality/require_wear", "must name an intensive sample metric such as heart_rate")
+		c.check(ok && wm.Agg == catalog.Intensive && wm.DerivedFrom == "", "/quality/require_wear", "must name an intensive sample metric such as heart_rate")
 	}
 	if s := q.Sleep; s != nil {
 		if s.MatchOverlap != nil {
@@ -373,6 +377,7 @@ func (c *checker) compose(r *Rule, m catalog.Metric) {
 	c.check(cp.Op == ComposeFirstAvailable || cp.Op == ComposeMax, "/compose/op", "must be first_available or max")
 	c.check(m.Agg == catalog.Additive, "/compose", "compose needs an additive metric")
 	c.check(r.Window.Kind == catalog.WindowLocalDay, "/compose", "compose needs a local_day window")
+	c.check(r.Follow == "", "/compose", "compose cannot be combined with follow")
 }
 
 func validateSet(rules []*Rule, lookup lookupFunc) error {

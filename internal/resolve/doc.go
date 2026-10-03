@@ -45,7 +45,17 @@
 //   - Rule.ResolveWindow runs partition, row gates (exclude_flags, plausible range), Aggregate,
 //     group gates (coverage, staleness) and Rule.Select, the strategy step, into a WindowResult
 //     with every group's GroupStatus and the warnings. Rule.ResolveWindows does a series, so
-//     fallback stays per window. J09.10 parts return ErrNotImplemented.
+//     fallback stays per window.
+//
+// Extensions (extensions.go, J09.10; results carry their inputs as plain fields):
+//   - E1: Options.Events (ContextEvents: aligned episodes, workout clusters) or Options.Context
+//     give each window a context (Rule.ContextAt); Select then uses Rule.Ladder for it.
+//   - E2: within_source.statistic min / min_rolling_mean (GroupValue.SpanStart/SpanEnd); derived
+//     catalogue codes (catalog.Metric.DerivedFrom) read the source metric's series.
+//   - E3: quality.require_wear gates rows per base bucket by the wear series in the same Series
+//     (load WearLookback of it); GroupValue.WearExempt, WornBuckets, Gated; reason not_worn.
+//   - E5: Options.Leader (LeaderSelections of the leader's results) by window key.
+//   - E9: a compose rule's local_day sums its hours; WindowResult.Hours keeps them.
 //
 // Overrides (J09.7):
 //   - Overrides stores manual overrides (Create, Revoke, Active, History); each change is audited

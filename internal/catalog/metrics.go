@@ -9,6 +9,7 @@ const (
 	secTemperature = "Temperature"
 	secBody        = "Body composition"
 	secSleep       = "Sleep"
+	secDerived     = "Derived"
 )
 
 var (
@@ -23,8 +24,9 @@ const (
 	groupBody = "body_composition"
 )
 
-// metrics is every v1 code of docs/architecture/metric-catalog.md. The slice order is the
-// seed order, so changing it changes ids in a fresh database: append, never reorder.
+// metrics is every implemented code of docs/architecture/metric-catalog.md. The slice order is
+// the seed order, so changing it changes ids in a fresh database: append, never reorder, and
+// give appended codes the marker of their own seed migration (Since).
 var metrics = []Metric{
 	{Code: "steps", Section: secActivity, Unit: "count", Kinds: intervalDaily, Agg: Additive, Min: 0, Max: 200000, HK: "StepCount"},
 	{Code: "distance_walk_run", Section: secActivity, Unit: "m", Kinds: intervalDaily, Agg: Additive, Min: 0, Max: 300000, HK: "DistanceWalkingRunning"},
@@ -73,4 +75,8 @@ var metrics = []Metric{
 	{Code: "sleep_latency", Section: secSleep, Unit: "s", Agg: SleepDerived, Min: 0, Max: 86400},
 	{Code: "sleep_waso", Section: secSleep, Unit: "s", Agg: SleepDerived, Min: 0, Max: 86400},
 	{Code: "sleep_efficiency", Section: secSleep, Unit: "%", Agg: SleepDerived, Min: 0, Max: 100},
+
+	// Derived codes (E2, J09.10): computed from the source metric's series, never stored as measurements.
+	{Code: "resting_heart_rate_nocturnal", Section: secDerived, Unit: "bpm", Agg: Intensive, Min: 20, Max: 150, DerivedFrom: "heart_rate", Since: SeedDerived},
+	{Code: "spo2_night_min", Section: secDerived, Unit: "%", Agg: Intensive, Min: 50, Max: 100, DerivedFrom: "spo2", Since: SeedDerived},
 }

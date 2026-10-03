@@ -41,8 +41,14 @@ func TestMetricsWellFormed(t *testing.T) {
 			}
 		case Intensive, Latest:
 		}
-		if m.Agg != SleepDerived && len(m.Kinds) == 0 {
+		if m.Agg != SleepDerived && m.DerivedFrom == "" && len(m.Kinds) == 0 {
 			t.Errorf("%s: no kinds", m.Code)
+		}
+		if m.DerivedFrom != "" {
+			src, ok := Lookup(m.DerivedFrom)
+			if !ok || src.DerivedFrom != "" || src.Unit != m.Unit || src.Agg != m.Agg || len(m.Kinds) != 0 {
+				t.Errorf("%s: a derived code needs a stored source metric with its unit and aggregation, and no kinds", m.Code)
+			}
 		}
 		if m.Group != "" && m.Group != groupBP && m.Group != groupBody {
 			t.Errorf("%s: group %q is not a measurement_groups.kind", m.Code, m.Group)
@@ -209,7 +215,9 @@ func TestToCanonical(t *testing.T) {
 // TestGeneratedFilesUpToDate is the drift check: regenerate in memory and compare with the committed files.
 func TestGeneratedFilesUpToDate(t *testing.T) {
 	root := filepath.Join("..", "..")
-	for path, want := range map[string]string{SeedPath: SeedSQL(), DocPath: MetricsDoc()} {
+	files := SeedFiles()
+	files[DocPath] = MetricsDoc()
+	for path, want := range files {
 		got, err := os.ReadFile(filepath.Join(root, path))
 		if err != nil {
 			t.Fatalf("%s: %v (run: go run ./internal/catalog/gen)", path, err)

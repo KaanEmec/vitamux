@@ -307,22 +307,3 @@ func TestPartialAndDefinitionChanged(t *testing.T) {
 		t.Errorf("definition_changed: %v (poolable %v)", res.Warnings, m.Poolable())
 	}
 }
-
-func TestResolvePendingParts(t *testing.T) {
-	w := agHourWindow("2026-06-15T10:00:00Z")
-	for name, edit := range map[string]func(r *Rule){
-		"follow":       func(r *Rule) { r.Follow = "active_energy" },
-		"compose":      func(r *Rule) { r.Compose = &Compose{From: catalog.WindowHour, Op: ComposeMax} },
-		"require_wear": func(r *Rule) { r.Quality = &Quality{RequireWear: "heart_rate"} },
-	} {
-		r := agRule("steps", catalog.WindowHour, OpFirstAvailable, agGroup("garmin", Selector{Provider: "garmin"}))
-		edit(r)
-		if _, err := r.ResolveWindow(w, Series{}, Options{}); !errors.Is(err, ErrNotImplemented) {
-			t.Errorf("%s: %v", name, err)
-		}
-	}
-	r := stHR(OpFirstAvailable)
-	if _, err := r.ResolveWindow(w, Series{}, Options{Context: ContextWorkout}); !errors.Is(err, ErrNotImplemented) {
-		t.Errorf("context: %v", err)
-	}
-}

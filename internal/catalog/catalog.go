@@ -72,8 +72,13 @@ type Metric struct {
 	// SelectionOnly marks a metric that providers define differently (metric-catalog.md#rules):
 	// rules select one source and never pool it.
 	SelectionOnly bool
-	HK            string // HealthKit identifier without prefix
-	Withings      string // meastype
+	// DerivedFrom names the source metric of a derived code (rule extension E2). A derived code
+	// has no rows of its own: resolution computes it from the source metric's series with a
+	// window statistic, so it has no Kinds and only the night windows.
+	DerivedFrom string
+	HK          string // HealthKit identifier without prefix
+	Withings    string // meastype
+	Since       int    // seed migration marker (SeedV1 when 0); a code added later takes a new one
 }
 
 // BaseBucket is the bucket size for within-source aggregation: 5 minutes for sample and
@@ -87,6 +92,9 @@ func (m Metric) BaseBucket() time.Duration {
 
 // Windows lists the window kinds a rule may use for this metric.
 func (m Metric) Windows() []Window {
+	if m.DerivedFrom != "" {
+		return []Window{WindowLocalNight, WindowSleepEpisode}
+	}
 	var w []Window
 	switch m.Agg {
 	case Intensive:

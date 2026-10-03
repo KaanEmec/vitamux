@@ -25,6 +25,8 @@ A built-in applies while the owner has no rule for the metric. The first edit co
 | `builtin:body_temperature:1` | latest | latest | `device` › `manual` | Spot readings: the newest measured value wins, else the newest manual entry. |
 | `builtin:weight:1` | local_day | first_available · statistic latest | `scale` › `scale_apps` › `manual` | Scales agree closely; the latest reading of the day, from a scale before scale apps and manual entries. |
 | `builtin:height:1` | latest | latest | `device` › `manual` | The newest value from any source. |
+| `builtin:resting_heart_rate_nocturnal:1` | local_night | first_available · min_coverage 0.7 · plausible_range 25–230 · exclude_flags manual_entry · statistic min_rolling_mean 30m | `chest_strap` › `arm_band` › `apple_watch` › `garmin` › `garmin_apple` › `fitbit` › `samsung` › `whoop` › `polar` › `xiaomi` › `amazfit` › `oura` › `oura_apple` | One definition across brands: the lowest 30-minute mean of heart rate in the main sleep episode, from the heart-rate ladder; sparse night data fails the coverage gate. |
+| `builtin:spo2_night_min:1` | local_night | first_available · statistic min | `apple` › `samsung` › `withings` › `withings_apple` › `garmin` › `garmin_apple` › `fitbit` › `oura` › `oura_apple` › `whoop` | The lowest 5-minute SpO2 mean in the main sleep episode, from the SpO2 ladder; a failed reading is never 0 %. |
 | `builtin:body_fat_ratio:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
 | `builtin:fat_mass:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
 | `builtin:fat_free_mass:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
@@ -75,4 +77,4 @@ A group id means the same selectors in every built-in. Fields of one selector ar
 
 - `metric: sleep` covers every `sleep_derived` code; `metric: blood_pressure` covers the `bp_reading` components.
 - No built-in for `skin_temperature`: the value depends on where the device is worn, so there is no neutral order; the owner picks one source.
-- Derived codes (E2) and codes not in [metrics.md](metrics.md) get their built-in together with the code.
+- Codes not in [metrics.md](metrics.md) get their built-in together with the code.

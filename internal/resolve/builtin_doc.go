@@ -59,7 +59,7 @@ func DefaultsDoc() string {
 	for _, code := range exempt {
 		fmt.Fprintf(&b, "- No built-in for `%s`: %s.\n", code, NoBuiltin[code])
 	}
-	b.WriteString("- Derived codes (E2) and codes not in [metrics.md](metrics.md) get their built-in together with the code.\n")
+	b.WriteString("- Codes not in [metrics.md](metrics.md) get their built-in together with the code.\n")
 	return b.String()
 }
 
@@ -92,7 +92,7 @@ func gates(r *Rule) string {
 		}
 	}
 	if ws := r.WithinSource; ws != nil && ws.Statistic != "" {
-		parts = append(parts, "statistic "+string(ws.Statistic))
+		parts = append(parts, strings.TrimSpace("statistic "+string(ws.Statistic)+" "+string(ws.Span)))
 	}
 	if c := r.Compose; c != nil {
 		parts = append(parts, fmt.Sprintf("compose %s by %s (E9)", c.Op, c.From))

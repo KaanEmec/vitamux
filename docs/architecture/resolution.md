@@ -123,6 +123,14 @@ Each extension stays typed (no expression language) and adds its inputs to the e
 | E9 | Hour composition | `compose: {from: hour, op: first_available\|max}` on `local_day` for additive metrics: resolve each hour, then sum the hours. A day made of hourly picks from different sources carries warning `composite_exceeds_any_source` when it exceeds every single source | Watch/phone/ring step fallback within a day | v1 |
 | — | Median across sources | `strategy: {op: median_across_sources}` | Opt-in, three or more similar sources | proposed |
 
+How the v1 extensions behave at the edges (`internal/resolve/extensions.go`):
+
+- **E1:** `local_night` and `sleep_episode` windows are sleep windows; any other window is inside a workout or sleep episode when that event covers at least half of it (workouts first). `@workout_source` is the group of the workout the rule itself picks from the cluster.
+- **E2:** `min` is the lowest base-bucket mean; `min_rolling_mean` the lowest mean of consecutive covered buckets spanning `span`, so a gap breaks a span (`below_quality: no_full_span`). The result names the span. Other window kinds keep the plain value.
+- **E3:** a row part counts only in base buckets where its device (device row, else source) has a wear sample. A device without wear rows in the loaded series (callers load 30 days before the window) is exempt. A gated group worn in the window without rows is a measured 0, so "worn, no steps" never falls through to the next source; rows only in unworn buckets give `not_worn`.
+- **E5:** a follower whose leader group is unusable falls back through its own ladder with status `fallback`. `follow` and `compose` cannot be combined.
+- **E9:** hours resolve with their own context, wear and coverage gates and ignore daily values. The day lists every hour and each group's own day total (the sum of its hours), which is what `composite_exceeds_any_source` compares against.
+
 ## Manual overrides
 
 `manual_overrides` are scoped to (metric, window kind, window key) and support three actions:

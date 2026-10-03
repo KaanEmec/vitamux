@@ -10,29 +10,34 @@ type Unit struct {
 	Base   string
 	Factor float64
 	Offset float64
+	Since  int // seed migration marker (SeedV1 when 0); a unit added later takes a new one
 }
 
 // units lists every unit the catalogue knows: the canonical ones and the source units that
 // normalizers convert from. Order is the seed order. Only units with a conversion carry Base data.
 var units = []Unit{
 	base("count"),
-	base("s"), {"ms", "s", 0.001, 0}, {"min", "s", 60, 0}, {"h", "s", 3600, 0},
-	base("m"), {"km", "m", 1000, 0}, {"cm", "m", 0.01, 0}, {"mi", "m", 1609.344, 0}, {"ft", "m", 0.3048, 0}, {"in", "m", 0.0254, 0},
-	base("kcal"), {"kJ", "kcal", 1 / 4.184, 0},
-	base("kg"), {"g", "kg", 0.001, 0}, {"lb", "kg", 0.45359237, 0}, {"oz", "kg", 0.028349523125, 0}, {"st", "kg", 6.35029318, 0},
+	base("s"), conv("ms", "s", 0.001, 0), conv("min", "s", 60, 0), conv("h", "s", 3600, 0),
+	base("m"), conv("km", "m", 1000, 0), conv("cm", "m", 0.01, 0), conv("mi", "m", 1609.344, 0), conv("ft", "m", 0.3048, 0), conv("in", "m", 0.0254, 0),
+	base("kcal"), conv("kJ", "kcal", 1/4.184, 0),
+	base("kg"), conv("g", "kg", 0.001, 0), conv("lb", "kg", 0.45359237, 0), conv("oz", "kg", 0.028349523125, 0), conv("st", "kg", 6.35029318, 0),
 	base("bpm"),
 	base("mL/kg/min"),
-	base("m/s"), {"km/h", "m/s", 1 / 3.6, 0}, {"mph", "m/s", 0.44704, 0},
+	base("m/s"), conv("km/h", "m/s", 1/3.6, 0), conv("mph", "m/s", 0.44704, 0),
 	base("years"),
-	base("mmHg"), {"kPa", "mmHg", 1000 / 133.322387415, 0},
-	base("%"), {"fraction", "%", 100, 0},
+	base("mmHg"), conv("kPa", "mmHg", 1000/133.322387415, 0),
+	base("%"), conv("fraction", "%", 100, 0),
 	base("breaths/min"),
-	base("°C"), {"°F", "°C", 5.0 / 9, -160.0 / 9},
+	base("°C"), conv("°F", "°C", 5.0/9, -160.0/9),
 	base("index"),
 	base("kcal/day"),
 }
 
-func base(code string) Unit { return Unit{code, code, 1, 0} }
+func base(code string) Unit { return Unit{Code: code, Base: code, Factor: 1} }
+
+func conv(code, base string, factor, offset float64) Unit {
+	return Unit{Code: code, Base: base, Factor: factor, Offset: offset}
+}
 
 var unitByCode = func() map[string]Unit {
 	m := make(map[string]Unit, len(units))

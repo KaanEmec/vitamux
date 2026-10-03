@@ -96,7 +96,8 @@ J09.2 encodes the table above in `internal/resolve/builtin.go`, with these delib
 - **Blood pressure** uses `window: local_day` with `statistic: mean`; reading requests reuse the same ladder.
 - **Under-mattress** also matches `device_type: sleep_monitor`, which the Withings normalizer emits.
 - **Codes the table does not list:** `pulse_wave_velocity` and `vascular_age` take Withings first; `body_temperature` and `height` take the newest reading (`latest`), measured before manual. Every `body_composition` code follows `weight` (E5), including visceral fat, fat-free mass, cellular water and BMR. `skin_temperature` has no built-in: the value depends on where the device is worn, so the owner picks a source.
-- **Not yet encoded:** derived codes (E2), codes not in the catalogue, workouts (no catalogue metric yet) and naps (a `sleep_episode` request on the sleep rule) get no separate built-in.
+- **Derived codes (E2)** read the `heart_rate` and `spo2` ladders unchanged; the HR built-in has no sleep context, so nothing is reordered at night.
+- **Not yet encoded:** codes not in the catalogue, workouts (no catalogue metric yet) and naps (a `sleep_episode` request on the sleep rule) get no separate built-in.
 
 ## Review policy
 

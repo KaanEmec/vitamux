@@ -68,6 +68,15 @@ type WindowResult struct {
 	Warnings   []WindowWarning
 	Inputs     InputCounts
 	Partial    bool // the window ends after Options.Now
+	// Context (E1) is the context whose ladder ordered Groups, when the rule lists it;
+	// WorkoutGroup is the group @workout_source stood for ("" when none).
+	Context      Context
+	WorkoutGroup string
+	// FollowGroup (E5) is the group the leader selected for this window ("" when it had none);
+	// warning follow_unavailable says it was not used.
+	FollowGroup string
+	// Hours (E9) are the hourly results a composed local_day sums, in time order.
+	Hours []WindowResult
 }
 
 // Options are per-call inputs that are not part of the rule.
@@ -76,15 +85,24 @@ type Options struct {
 	// Previous is the group id the previous window selected, for definition_changed; "" if unknown.
 	// ResolveWindows sets it from window to window.
 	Previous string
-	Context  Context // E1 context of the window; only "" until J09.10
+	// Context (E1) forces the window's context; "" derives it from Events (Rule.ContextAt).
+	Context Context
+	Events  ContextEvents // E1: aligned sleep episodes and workout clusters
+	// Leader (E5) is the group the follow leader selected, by Window.Key (LeaderSelections).
+	Leader map[string]string
 }
 
 // ResolveWindows resolves consecutive windows; each window falls back on its own, and the
 // selection carries over for definition_changed.
 func (r *Rule) ResolveWindows(ws []Window, s Series, opt Options) ([]WindowResult, error) {
+	sp, err := r.spec()
+	if err != nil {
+		return nil, err
+	}
+	wear := r.newWear(s)
 	out := make([]WindowResult, 0, len(ws))
 	for _, w := range ws {
-		res, err := r.ResolveWindow(w, s, opt)
+		res, err := r.resolve(sp, w, s, opt, wear)
 		if err != nil {
 			return nil, err
 		}
@@ -98,22 +116,31 @@ func (r *Rule) ResolveWindows(ws []Window, s Series, opt Options) ([]WindowResul
 
 // ResolveWindow resolves one window: assign inputs to groups, drop rows by flag and plausible
 // range, aggregate each group, gate coverage and staleness, then apply the strategy. s may hold
-// inputs outside w; Window.Includes filters them.
+// inputs outside w; Window.Includes filters them. A local_day of a rule with compose (E9) is
+// summed from its hours.
 func (r *Rule) ResolveWindow(w Window, s Series, opt Options) (WindowResult, error) {
 	sp, err := r.spec()
 	if err != nil {
 		return WindowResult{}, err
 	}
-	if err := r.pendingParts(); err != nil {
-		return WindowResult{}, err
-	}
-	if !sp.primary().AllowsWindow(w.Kind) {
+	return r.resolve(sp, w, s, opt, r.newWear(s))
+}
+
+func (r *Rule) resolve(sp spec, w Window, s Series, opt Options, wear *wearIndex) (WindowResult, error) {
+	if !sp.allowsWindow(w.Kind) {
 		return WindowResult{}, fmt.Errorf("resolve: window %s is not allowed for %s", w.Kind, r.Metric)
 	}
+	if r.Compose != nil && w.Kind == catalog.WindowLocalDay {
+		return r.composeDay(sp, w, s, opt, wear)
+	}
+	return r.resolveWindow(sp, w, s, opt, wear)
+}
+
+func (r *Rule) resolveWindow(sp spec, w Window, s Series, opt Options, wear *wearIndex) (WindowResult, error) {
 	rows, excluded, unmatched, counts := r.windowRows(sp, w, s)
 	gvs := make([]GroupValue, len(r.Groups))
 	for i := range r.Groups {
-		gv, err := r.aggregate(sp, w, i, rows[i].kept, opt.Now)
+		gv, err := r.aggregate(sp, w, i, rows[i].kept, opt.Now, wear)
 		if err != nil {
 			return WindowResult{}, err
 		}
@@ -129,19 +156,6 @@ func (r *Rule) ResolveWindow(w Window, s Series, opt Options) (WindowResult, err
 	res.Inputs = counts
 	res.Partial = !opt.Now.IsZero() && w.Partial(opt.Now)
 	return res, nil
-}
-
-// pendingParts rejects rule parts that J09.10 implements.
-func (r *Rule) pendingParts() error {
-	switch {
-	case r.Follow != "":
-		return fmt.Errorf("%w: follow (E5, J09.10)", ErrNotImplemented)
-	case r.Compose != nil:
-		return fmt.Errorf("%w: compose (E9, J09.10)", ErrNotImplemented)
-	case r.Quality != nil && r.Quality.RequireWear != "":
-		return fmt.Errorf("%w: quality.require_wear (E3, J09.10)", ErrNotImplemented)
-	}
-	return nil
 }
 
 // groupRows is one group's rows in a window after the row gates.
@@ -247,7 +261,7 @@ func (g *groupRows) drop(reason string, c *InputCounts) {
 
 // gateGroup applies the group gates: an empty group is no_data, or below_quality when the row
 // gates dropped everything; then the plausible range of an additive sum, min_coverage
-// (intensive bucket means only: additive coverage needs the E3 wear gate), and max_staleness
+// (intensive bucket values, and additive values under the E3 wear gate), and max_staleness
 // against the window end, or now for an open window.
 func (r *Rule) gateGroup(sp spec, w Window, gv *GroupValue, rows groupRows, now time.Time) {
 	if gv.Status != StatusValid {
@@ -276,7 +290,7 @@ func (r *Rule) gateGroup(sp spec, w Window, gv *GroupValue, rows groupRows, now 
 			return
 		}
 	}
-	if q.MinCoverage != nil && gv.Basis == BasisBucketMeans && gv.Coverage < *q.MinCoverage {
+	if q.MinCoverage != nil && r.coverageGated(sp, gv) && gv.Coverage < *q.MinCoverage {
 		gv.Status, gv.Reason = StatusBelowQuality, ReasonCoverage
 		return
 	}
@@ -294,16 +308,22 @@ func (r *Rule) gateGroup(sp spec, w Window, gv *GroupValue, rows groupRows, now 
 // Select applies the rule's strategy to gated group values of one window, indexed like
 // Rule.Groups. Only valid groups take part; the others keep their status and reason. A
 // selecting op warns preferred_source_unavailable for every group ahead of the selected one.
-// J09.6 feeds episode-based group values through the same step (event_priority).
+// The ladder is the one of the window's E1 context, and a follower (E5) takes the leader's
+// group when it is valid here. J09.6 feeds episode-based group values through the same step
+// (event_priority).
 func (r *Rule) Select(w Window, gvs []GroupValue, opt Options) (WindowResult, error) {
 	if len(gvs) != len(r.Groups) {
 		return WindowResult{}, fmt.Errorf("resolve: %d group values for %d groups", len(gvs), len(r.Groups))
 	}
-	if opt.Context != "" {
-		return WindowResult{}, fmt.Errorf("%w: contexts (E1, J09.10)", ErrNotImplemented)
-	}
 	res := WindowResult{Window: w, Op: r.Strategy.Op, Status: ResultNoData}
-	order := r.Ladder("", -1)
+	ctx, wg := r.windowContext(w, opt)
+	if len(r.Contexts[ctx]) > 0 {
+		res.Context = ctx
+		if wg >= 0 {
+			res.WorkoutGroup = r.Groups[wg].ID
+		}
+	}
+	order := r.Ladder(ctx, wg)
 	groups := make([]GroupValue, len(order))
 	var valid []int // positions in groups
 	for pos, i := range order {
@@ -322,7 +342,18 @@ func (r *Rule) Select(w Window, gvs []GroupValue, opt Options) (WindowResult, er
 		res.Components = maps.Clone(g.Components)
 	}
 
-	switch op := r.Strategy.Op; op {
+	op, followed := r.Strategy.Op, -1
+	if r.Follow != "" {
+		res.FollowGroup = opt.Leader[w.Key]
+		if followed = followPos(res.FollowGroup, groups); followed >= 0 {
+			op = opFollow
+		} else {
+			warn(WarnFollowUnavailable, res.FollowGroup)
+		}
+	}
+	switch op {
+	case opFollow:
+		selectOne(followed, ResultDirect)
 	case OpSingleSource, OpFirstAvailable, OpEventPriority:
 		if len(valid) == 0 {
 			break
@@ -401,6 +432,9 @@ func (r *Rule) Select(w Window, gvs []GroupValue, opt Options) (WindowResult, er
 			}
 		default: // not valid: keeps its status and reason
 		}
+	}
+	if r.Follow != "" && followed < 0 && res.Status == ResultDirect {
+		res.Status = ResultFallback // the leader's group was the preferred one
 	}
 	if res.Selected != "" && opt.Previous != "" && res.Selected != opt.Previous && r.selectionOnly() {
 		warn(WarnDefinitionChanged, res.Selected)
