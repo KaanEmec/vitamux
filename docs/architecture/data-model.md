@@ -92,22 +92,9 @@ Upsert, in one transaction per raw payload:
 
 Every change writes a `resolution_dirty(user, metric, local_date)` mark.
 
-## Metric catalogue (excerpt)
+## Metric catalogue
 
-The catalogue is owned by code (`internal/catalog`) and seeded into the DB. Metrics are combinable across sources **only if they share a code**.
-
-| Code | Unit | Aggregation | Base bucket |
-| --- | --- | --- | --- |
-| `heart_rate` | bpm | intensive | 5 min |
-| `resting_heart_rate` | bpm | daily_summary | day |
-| `hrv_rmssd` / `hrv_sdnn` | ms | daily_summary / intensive | never pooled with each other |
-| `steps`, `active_energy`, `basal_energy`, `distance_walk_run` | count / kcal / m | additive | interval |
-| `spo2`, `respiratory_rate` | % / breaths·min⁻¹ | intensive | 5 min |
-| provider scores (e.g., `garmin_stress`, `whoop_recovery`) | score | daily_summary or intensive | provider-specific codes, never pooled |
-| `weight`, `body_fat_ratio`, `fat_free_mass`, `muscle_mass`, `bone_mass`, `hydration` | kg / % | latest | reading (group `body_composition`) |
-| `bp_systolic`, `bp_diastolic`, `bp_pulse` | mmHg / bpm | latest | reading (group `bp_reading`) |
-| `sleep_total`, `sleep_deep`, `sleep_light`, `sleep_rem`, `sleep_awake`, `sleep_latency` | s | sleep_derived | episode |
-| `vo2max` | mL/kg/min | latest | reading |
+The catalogue is owned by code (`internal/catalog`) and seeded into the DB. Metrics are combinable across sources **only if they share a code**. Codes, units, kinds, aggregation and provider mappings: [metric-catalog.md](metric-catalog.md). Lab analytes use their own catalogue: [analyte-catalog.md](analyte-catalog.md).
 
 ## Volume and partitioning
 
