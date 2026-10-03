@@ -8,10 +8,12 @@ Adding a code means adding it to `internal/catalog` in the job that needs it, to
 
 - **One code per quantity and method.** Sources combine only when they share a code. Measurements made with different methods get different codes and never share a rule, e.g. `hrv_sdnn` vs `hrv_rmssd`, or `hrv_rmssd` (samples) vs `hrv_rmssd_nightly` (provider overnight average).
 - **Device, origin and context are selectors, not codes.** Fingerstick vs CGM glucose, or Watch vs iPhone steps, stay one code each. The difference lives in `device`, `origin` and `context`.
+- **Selection-only metrics.** When providers define a metric differently, the catalogue drops `mean`, `min` and `max` for it, the same way it does for provider-scoped scores. The provider's definition goes in `context`. This applies to `resting_heart_rate` (sleep-based, awake-inactive, lowest 30 min in 24 h, or still periods), `hrv_rmssd_nightly` (vendors use different overnight windows) and `sleep_temperature_deviation` (provider baselines). For the two implemented codes, the flag is added in [J09.2](../plan/E09-resolution/J09.2-rules-storage-defaults.md). Suggested ladders: [resolution-defaults.md](resolution-defaults.md).
 - **Proprietary scores are provider-namespaced** (`<provider>_<name>`) and never pooled across providers. They land in the catalogue together with their connector.
+- **Derived codes** have no rows of their own. Resolution computes them from a source metric (rule [extension](resolution.md#extensions) E2), so they get a catalogue entry for rules and APIs without breaking the rule below.
 - **Calculated values are never stored as measurements.** BMI, MAP, pulse pressure, time-in-range, GMI and sleep debt come from resolution or views. A value the *provider* reports (e.g., BMI from a scale) is stored as-is with its origin.
 - **Canonical units** use SI-style units, kept readable: s for durations, m for distances, kg, kcal, °C, mmol/L, % (0–100). The source value and unit are kept whenever conversion changed the value ([data-model.md](data-model.md#measurements)).
-- **Phase:** codes marked below are not implemented yet; the J07.1 seed (`v1`, MVP) is implemented and listed in [metrics.md](../metrics.md). `J08.6` = Withings activity and sleep (post-MVP) · `E15` = needed by the Apple bridge · `later` = backlog, added with the first connector that needs it. A connector that needs a code not yet in the catalogue adds it in its own job.
+- **Phase:** codes marked below are not implemented yet; the J07.1 seed (`v1`, MVP) is implemented and listed in [metrics.md](../metrics.md). `J09.10` = derived code built with the rule extensions (MVP) · `J08.6` = Withings activity and sleep (post-MVP) · `E15` = needed by the Apple bridge · `later` = backlog, added with the first connector that needs it. A connector that needs a code not yet in the catalogue adds it in its own job.
 - **Withings `meastype` codes** are verified against the official `getmeas` reference ([J08.1](../plan/E08-withings/J08.1-verify-api.md) re-checks them). Measures outside `bp_reading` and `body_composition` (SpO2, temperature, VO2max) are stored as plain samples.
 
 Kinds: `S` sample · `I` interval · `C` cumulative · `D` daily_value. Aggregation values are defined in [resolution.md](resolution.md#within-source-aggregation). HK ids omit the `HKQuantityTypeIdentifier` / `HKCategoryTypeIdentifier` prefix. W = Withings `meastype`.
@@ -53,6 +55,7 @@ Kinds: `S` sample · `I` interval · `C` cumulative · `D` daily_value. Aggregat
 | --- | --- | --- | --- | --- | --- | --- |
 | `walking_heart_rate` | bpm | D | daily_summary | WalkingHeartRateAverage | | E15 |
 | `sleeping_heart_rate` | bpm | D | daily_summary | | | later |
+| `resting_heart_rate_nocturnal` | bpm | derived from `heart_rate` | lowest 30-min mean in the main sleep episode | | | J09.10 |
 | `heart_rate_recovery_1min` | bpm | S | latest | HeartRateRecoveryOneMinute | | later |
 | `rr_interval` | s | S | raw series, not resolved | HKHeartbeatSeriesSample | | later |
 | `afib_burden` | % | D | daily_summary | AtrialFibrillationBurden | | later |
@@ -61,12 +64,19 @@ Kinds: `S` sample · `I` interval · `C` cumulative · `D` daily_value. Aggregat
 
 ## Blood pressure (group `bp_reading`)
 
-The three codes are implemented (see [metrics.md](../metrics.md)). Group context: position, arm, cuff, irregular-heartbeat flag, part of an averaged session. MAP and pulse pressure are calculated, never stored.
+The three cuff codes are implemented (see [metrics.md](../metrics.md)). Group context: position, arm, cuff, irregular-heartbeat flag, part of an averaged session. MAP and pulse pressure are calculated, never stored.
+
+Cuffless estimates from calibrated optical watches get their own codes, so they can never enter a cuff average. Micro-cuff oscillometric watches use the cuff codes, with their `device_type` recorded.
+
+| Code | Unit | Kinds | Aggregation | Apple HK | W | Phase |
+| --- | --- | --- | --- | --- | --- | --- |
+| `bp_systolic_estimated`, `bp_diastolic_estimated` | mmHg | S (group `bp_estimate`) | latest | | | later |
 
 ## Respiration and oxygen
 
 | Code | Unit | Kinds | Aggregation | Apple HK | W | Phase |
 | --- | --- | --- | --- | --- | --- | --- |
+| `spo2_night_min` | % | derived from `spo2` | lowest value in the main sleep episode | | | J09.10 |
 | `breathing_disturbances` | events/h | D | daily_summary | AppleSleepingBreathingDisturbances | | E15 |
 | `apnea_hypopnea_index` | events/h | D | daily_summary | | | J08.6 |
 | `fev1`, `fvc` | L | S | latest | ForcedExpiratoryVolume1, ForcedVitalCapacity | | later |
@@ -77,7 +87,7 @@ The three codes are implemented (see [metrics.md](../metrics.md)). Group context
 
 | Code | Unit | Kinds | Aggregation | Apple HK | W | Phase |
 | --- | --- | --- | --- | --- | --- | --- |
-| `sleep_temperature_deviation` | °C (delta from baseline) | D | daily_summary | | | later |
+| `sleep_temperature_deviation` | °C (delta from baseline) | D | daily_summary, selection only | | | later |
 | `wrist_temperature_sleeping` | °C | D | daily_summary | AppleSleepingWristTemperature | | E15 |
 | `basal_body_temperature` | °C | S | latest | BasalBodyTemperature | | E15 |
 

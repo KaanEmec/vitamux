@@ -38,6 +38,7 @@ Conventions:
 | [E14](E14-release-v0.1/README.md) | OSS docs, licensing, **v0.1.0** | MVP | E01–E13 |
 | | **— MVP boundary (v0.1.0) —** | | |
 | [E15](E15-apple-health/README.md) | Apple Health Bridge (required) | v0.2.0 | E05, E07, E09, E11, G3; completes after G4 |
+| [E17](E17-sidecar-connectors/README.md) | Remote sidecar connectors and third-party collectors | v0.2.0 | E06, E07, E11, G4 |
 | [E16](E16-migration/README.md) | Reference installation and migration (**final, deferred**) | deploy | G5 |
 
 ```mermaid
@@ -51,6 +52,7 @@ flowchart LR
   E10 --> E12
   E08 & E11 & E12 --> E13 --> E14
   E14 -->|G4| E15 -->|G5| E16
+  E14 -->|G4| E17 --> E15
 ```
 
 ## Gates
@@ -62,7 +64,7 @@ flowchart LR
 | G2 | Rule schema v1 and sleep-date convention accepted | J09.1 | J09.2+, E11 rule UI |
 | G3 | Ingest batch schema v1 frozen | J05.1 | E15 contract work |
 | G4 | v0.1.0 released | J14.5 | E15 completion |
-| G5 | v0.2.0 released | J15.9 | E16 |
+| G5 | v0.2.0 released (E15 and E17) | J15.9 | E16 |
 
 ## Parallel streams
 
@@ -72,3 +74,4 @@ flowchart LR
 4. E12 runs alongside E08–E11 once E03, E05 and E06 exist. Its UI job waits for J11.1.
 5. E15 jobs J15.1, J15.3 and J15.4 can start after G3.
 6. J13.1 (threat model) can start early. The rest of E13 runs once features exist.
+7. J17.1 can start once E06 and E07 are done. E17 runs alongside E15.

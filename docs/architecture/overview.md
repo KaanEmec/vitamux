@@ -45,7 +45,7 @@ ADRs are written during implementation (J01.1 and the owning jobs).
 | ADR-004 | Raw storage | Filesystem content-addressed zstd blobs, metadata in PostgreSQL | Keeps the DB small; immutable blobs make backups simple |
 | ADR-005 | Measurements | One `measurements` table with kinds; groups for BP and body composition; no partitioning yet | Personal scale (~10 M rows/yr worst case) |
 | ADR-006 | Normalization | In Go, from raw payloads; adapters only fetch | Reprocessable, testable |
-| ADR-007 | Execution modes | in-process, push, remote sidecar (deferred) → one ingest pipeline | [connectors.md](connectors.md#execution-modes) |
+| ADR-007 | Execution modes | in-process, push, remote sidecar (v0.2.0) → one ingest pipeline | [connectors.md](connectors.md#execution-modes) |
 | ADR-008/009 | Rules and sleep date | Typed rule schema v1; `sleep_date` = local wake date | [resolution.md](resolution.md) |
 | ADR-010 | Frontend | SvelteKit static SPA embedded via `go:embed` | No extra container; Node only at build time |
 | ADR-011 | Secrets | Master key file, HKDF purposes, AES-256-GCM, single-flight token refresh | [security.md](security.md#keys-and-secrets) |
@@ -81,7 +81,7 @@ flowchart LR
 
 ## Deployment
 
-The minimal reliable topology is **`vitamux` + `postgres`**, with volumes `pgdata` and `vitamux-blobs` and one secret file `master.key`. Optional sidecars, such as future unofficial collectors, are Compose profiles on the internal network. The deployer's reverse proxy (Caddy, Traefik, or Nginx) terminates TLS. The product ships an example but does not depend on it. No container publishes a host port, except optionally `127.0.0.1:8080` for proxy-less local use.
+The minimal reliable topology is **`vitamux` + `postgres`**, with volumes `pgdata` and `vitamux-blobs` and one secret file `master.key`. Optional sidecars, such as third-party collectors, are Compose profiles on the internal network. **Install targets:** plain Docker Compose (reference) and Coolify (a Compose variant that uses Coolify's proxy, domains and secrets), both documented and validated for each release. The deployer's reverse proxy (Caddy, Traefik, or Nginx) terminates TLS. The product ships an example but does not depend on it. No container publishes a host port, except optionally `127.0.0.1:8080` for proxy-less local use.
 
 ## Process modes
 

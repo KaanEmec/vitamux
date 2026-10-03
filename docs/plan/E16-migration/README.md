@@ -5,7 +5,7 @@ Read first: [migration.md](../../architecture/migration.md) and [migration-refer
 
 Status: **not planned in detail.** Job files are written when this epic starts. No product epic may follow E16.
 
-**Objective:** Install the released product on the reference VPS through generic artifacts, bring in the unofficial sources, and migrate existing data without duplicates. Retire Open Wearables only after explicit owner approval.
+**Objective:** Install the released product on the reference VPS through generic artifacts, bring in the unofficial sources as [E17](../E17-sidecar-connectors/README.md) sidecars or push collectors, and migrate existing data without duplicates. Retire Open Wearables only after explicit owner approval.
 
 ## Planned jobs (to be detailed)
 
@@ -13,8 +13,7 @@ Status: **not planned in detail.** Job files are written when this epic starts. 
 | --- | --- |
 | J16.1 | Read-only inventory (Open Wearables API types and ranges, Garmin archive manifest, WHOOP archive check) |
 | J16.2 | Pre-migration backups and restore test |
-| J16.3 | Generic release installation through Coolify |
-| J16.4 | Remote sidecar protocol v1 and conformance kit |
+| J16.3 | Reference VPS installation with the generic Coolify guide (J14.2, J17.4) |
 | J16.5 | Garmin collector adaptation (push raw archive) and Go Garmin normalizers |
 | J16.6 | WHOOP `@dofek/whoop` sidecar (proof, auth, streams, drift handling) and Go WHOOP normalizers |
 | J16.7 | Garmin archive importer |

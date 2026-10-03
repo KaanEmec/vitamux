@@ -28,4 +28,4 @@ Read first: [apple-health#structure](../../architecture/apple-health.md#structur
 | [J15.6](J15.6-configurator-devices.md) | Configurator device and origin integration | J15.2, J11.4, J11.5 | None |
 | [J15.7](J15.7-device-campaign.md) | Physical-device test campaign | J15.5, J15.2 | None |
 | [J15.8](J15.8-export-importer.md) | Apple Health export importer | J15.2, J13.2 | None |
-| [J15.9](J15.9-release.md) | Release docs and v0.2.0 | J15.6, J15.7, J15.8, J14.5 | G5 |
+| [J15.9](J15.9-release.md) | Release docs and v0.2.0 | J15.6, J15.7, J15.8, J14.5, J17.4 | G5 |

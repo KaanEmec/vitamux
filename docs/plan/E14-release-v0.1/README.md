@@ -8,7 +8,7 @@ Read first: [project#license-and-notices](../../architecture/project.md#license-
 **Outputs:** Licenses and notices, documentation set, resource measurements, release pipeline, clean-machine validation, v0.1.0.
 
 ## Acceptance
-- Following only the docs, v0.1.0 installs on a clean Linux VM and macOS, connects the fake/demo provider, shows resolved data and restores a backup.
+- Following only the docs, v0.1.0 installs with Docker Compose on a clean Linux VM and macOS, and on a clean Coolify instance, connects the fake/demo provider, shows resolved data and restores a backup.
 - Images, SBOMs, checksums and the Compose bundle are published.
 - Measured resources are within budget or the docs explain the deviation.
 

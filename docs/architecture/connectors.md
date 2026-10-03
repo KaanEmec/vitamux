@@ -10,7 +10,7 @@ Every mode ends in the same pipeline: raw store → normalize → canonical writ
 | --- | --- | --- | --- |
 | `in_process` | vitamux | Go connector in the worker | MVP: Withings, future official OAuth APIs |
 | `push` | The client | The client uploads raw batches | MVP: iOS app, file importers |
-| `remote` | vitamux | Sidecar over private HTTP | Designed; built with the first sidecar connector ([migration.md](migration.md)) |
+| `remote` | vitamux | Sidecar over private HTTP | v0.2.0 ([E17](../plan/E17-sidecar-connectors/README.md)): community and third-party collectors |
 
 ## Connector interface
 
@@ -140,14 +140,30 @@ Code: `internal/normalize` (interface, `Registry`, `Output.Validate`, `RegisterV
 - Notifications are optional: subscribe with `/webhooks/withings/{hook_token}`. A POST only enqueues a deduplicated window sync. Polling stays on.
 - Withings facts are assumptions until J08.1 verifies them against current docs ([project.md](project.md#assumptions-to-verify)).
 
-## Remote sidecar mode (deferred)
+## Remote sidecar mode
 
-This mode exists for providers whose only usable client is in another language. Sketch of protocol `vitamux-connector/1`:
+This mode exists for providers whose only usable client is in another language, typically an existing open-source collector. Built in [E17](../plan/E17-sidecar-connectors/README.md). Sketch of protocol `vitamux-connector/1`:
 
 - Private HTTP with a shared bearer secret; the sidecar is stateless and has no DB access.
 - Endpoints: `GET /v1/describe`, `POST /v1/auth/begin|continue|refresh`, `POST /v1/fetch` (NDJSON raw lines, then a `result` line with `next_cursor`, `done`, `retry_after_s`, and any rotated credentials).
 - Errors are problem+json with `code ∈ {reauth_required, rate_limited, transient, schema_drift, permanent}`.
 - A conformance kit (`vitamux connector-test --url`) ships with the implementation.
+
+## Third-party collectors
+
+Vitamux reuses existing open-source collectors instead of rewriting them. They run in their own containers, never inside the core.
+
+| Upstream shape | Path | Who schedules |
+| --- | --- | --- |
+| A library or client that can fetch on demand | Sidecar wrapping it, speaking `vitamux-connector/1` | vitamux |
+| A tool with its own scheduler and storage | Push collector: small uploader that sends its raw responses through [push ingest](#push-ingest-contract) | The tool |
+
+Rules for both paths:
+
+- Raw responses go to Vitamux verbatim. Normalizers are in Go in the core, so data stays reprocessable.
+- Pin the upstream by version and image digest, and record its repo, license and official status in `sidecars/<name>/UPSTREAM.md`.
+- A separate container keeps the core MIT. A copyleft upstream needs a review and its own notices.
+- Unofficial upstreams use `Official=false`, start disabled, and must surface shape changes as `schema_drift`.
 
 ## Adding a connector
 
@@ -155,3 +171,4 @@ This mode exists for providers whose only usable client is in another language. 
 2. Register it with one line in the registry. No other package changes.
 3. Required behaviour: raw-first, typed errors, drift reporting, no secret logging, synthetic fixtures only.
 4. Unofficial APIs: `Official=false`, disabled by default, documented warnings.
+5. In another language or from an existing project: see [third-party collectors](#third-party-collectors). Only the normalizer goes into the core.

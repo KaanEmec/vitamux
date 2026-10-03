@@ -59,8 +59,8 @@ This happens per source group, before any cross-source step, so dense sources do
 | Aggregation | Within-source value |
 | --- | --- |
 | intensive | Samples go into base buckets (`min(window, catalogue base_bucket)`). Bucket mean per group; several sub-sources in a group use the `intra_group` mean of their bucket means. Window value = mean of covered bucket means, **each bucket weighted equally**. Coverage = covered buckets / elapsed buckets. |
-| additive | Intervals pro-rated linearly by overlap (flag `prorated`). For `local_day` with `prefer_reported`, use the provider `daily_value` if present, else the interval sum — **never both**. Sub-sources in a group use the per-bucket **max**, so iPhone + Watch steps are not added. |
-| latest | Latest valid reading. Group metrics select whole groups. |
+| additive | Intervals pro-rated linearly by overlap (flag `prorated`). For `local_day` with `prefer_reported`, use the provider `daily_value` if present, else the interval sum — **never both**. Sub-sources in a group use the per-bucket **max**, so iPhone + Watch steps are not added. With `require_wear` (E3), coverage = worn buckets / elapsed buckets. Wear-exempt groups (phones) and rules without the gate skip the coverage gate. |
+| latest | Latest valid reading. Group metrics select whole groups. On `local_day`, `within_source.statistic` is `latest` (default) or `mean` of the selected readings, per component. |
 | daily_summary | The source's `daily_value` for D, else the latest sample in D |
 | sleep_derived | Sum over that group's sessions in the aligned main episode. Missing stages → `no_stage_data`, **not 0**. |
 
@@ -83,6 +83,7 @@ For each window, independently:
 | `latest` / `earliest` | Across groups; ties go by group order | — |
 | `event_priority` | Whole event (session with stages, workout) from the first group with an aligned event | Stages are never spliced across sources |
 
+   For selection-only metrics ([metric-catalog.md](metric-catalog.md#rules)), a selected group that differs from the previous window's adds warning `definition_changed`.
 4. Apply overrides.
 5. Emit the result.
 
@@ -99,7 +100,26 @@ Workouts cluster the same way: overlap ≥ 0.6 of the shorter and a compatible s
 
 ## Group-coherent selection
 
-BP and body-composition components always come from the same reading. `blood_pressure` returns systolic, diastolic, and pulse together. A daily mean averages each component across selected readings and never mixes sources within one reading.
+BP and body-composition components always come from the same reading. `blood_pressure` returns systolic, diastolic, and pulse together. A daily mean (`within_source.statistic: mean`) averages each component across selected readings and never mixes sources within one reading.
+
+Sleep codes are one family. A single rule (`metric: sleep`) selects one episode per window, and every `sleep_*` code reads from that episode. A selected source without stages gives `no_stage_data` for the stage codes, instead of falling through to another source.
+
+## Extensions
+
+Each extension stays typed (no expression language) and adds its inputs to the explanation. E1, E2, E3, E5 and E9 are part of rule schema v1 and built in [J09.10](../plan/E09-resolution/J09.10-rule-extensions.md) for the MVP. The others are proposed: until one exists, the plain rule applies. The [suggested defaults](resolution-defaults.md) mark where each helps.
+
+| Id | Extension | Shape (sketch) | Main use | Status |
+| --- | --- | --- | --- | --- |
+| E1 | Context-specific ladders | `contexts: {workout: [group ids], sleep: [group ids]}`: inside aligned workouts or the sleep episode, the listed groups go first, then the rest in default order | HR, distance and energy during workouts; HR at night | v1 |
+| E2 | Window statistics and derived codes | `within_source: {statistic: min_rolling_mean, span: 30m}` or `{statistic: min}`. Derived catalogue codes have no rows and resolve from a source metric with such a statistic | `resting_heart_rate_nocturnal` from `heart_rate`; `spo2_night_min` from `spo2` | v1 |
+| E3 | Wear gate | `quality: {require_wear: heart_rate}`: a group counts in a bucket only if that device has HR samples there. Devices that never report the wear metric (phones) are exempt. Others get `below_quality: not_worn` | Telling "no steps" from "not worn" for the watch/phone/ring fallback | v1 |
+| E4 | Coverage selection | `strategy: {op: max_coverage}`: the group with the highest coverage, ties by order | One energy source per day, chosen by wear | proposed |
+| E5 | Cross-metric coherence | `follow: <metric>`: use the group the leader metric selected for the same window, else fall back with warning `follow_unavailable`. No cycles. Leader dirty marks also mark followers | Basal and total energy from the same source as active energy | v1 |
+| E6 | Sticky selection | `stickiness: 14d`: switch to a new group only after that much continuous valid data | Baseline-dependent metrics (temperature deviation, HRV) | proposed |
+| E7 | Multi-day windows | `window: {kind: days, size: 7}` plus a session filter (morning/evening, skip first day) | Home BP protocol average | proposed |
+| E8 | Within-source earliest | `within_source: {pick: earliest}` for `latest`-type metrics | First morning weight | proposed |
+| E9 | Hour composition | `compose: {from: hour, op: first_available\|max}` on `local_day` for additive metrics: resolve each hour, then sum the hours. A day made of hourly picks from different sources carries warning `composite_exceeds_any_source` when it exceeds every single source | Watch/phone/ring step fallback within a day | v1 |
+| — | Median across sources | `strategy: {op: median_across_sources}` | Opt-in, three or more similar sources | proposed |
 
 ## Manual overrides
 
@@ -135,7 +155,7 @@ Each case becomes a scenario test in J09.8.
 1. A daily total and intraday intervals from one source are never summed together; hour windows ignore `daily_value`.
 2. A provider relayed through Apple Health while also connected directly: the origin is flagged `relayed`, and defaults exclude it.
 3. Cross-source sum requires acknowledgement and always carries its warning.
-4. An additive day built from hourly maxima (`derive_from: hour`) carries warning `composite_exceeds_any_source`.
+4. An additive day built from hourly picks (`compose: {from: hour}`, E9) carries warning `composite_exceeds_any_source` when it exceeds every single source.
 5. Intervals crossing a window boundary are pro-rated.
 6. Missing sleep stages give `no_stage_data`, not 0.
 7. A night split by a long wake: fragments ≤ 60 min apart merge; otherwise separate episodes.

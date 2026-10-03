@@ -59,6 +59,11 @@ erDiagram
 | Documents | `documents`, `document_keys`, `extraction_runs`, `lab_extracted_rows`, `extraction_row_edits`, `lab_reports`, `lab_results`, `lab_result_revisions`, `analytes`, `analyte_aliases` ([lab-documents.md](lab-documents.md)) |
 | Imports | `import_runs`, `import_items` (unique `(source, item_key, checksum)`) — used by Apple export and migration importers |
 
+Device fields used by rule selectors:
+
+- `devices.device_type` vocabulary: `watch`, `band`, `ring`, `phone`, `chest_strap`, `arm_band`, `scale`, `bp_monitor`, `under_mattress`, `cgm`, `glucose_meter`, `other`.
+- `devices` versions hold hardware and firmware versions, plus the provider's algorithm version when exposed. A sleep session stores the provider's algorithm version in its context when the payload carries one. Device accuracy changes between algorithm updates, so this lets [resolution-defaults](resolution-defaults.md#review-policy) reviews and owner rules tell versions apart.
+
 All canonical event tables share the source and provenance columns: `connection_id`, `provider_id`, `device_id`, `origin_id`, `external_id`, `dedupe_key`, `raw_payload_id`, `normalizer_version_id`, `superseded_*`, `deleted_*`.
 
 ## Measurements

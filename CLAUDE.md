@@ -6,7 +6,7 @@ Vitamux is a standalone, open-source (MIT), self-hosted personal health data agg
 
 - Never put credentials, API keys, access or refresh tokens, passwords, MFA codes, private health payloads, or extracted medical values in source control, logs, prompts, fixtures, or docs. Fixtures are synthetic only.
 - Never diagnose, interpret, or advise. Blood-test extraction is structured data entry with provenance and mandatory human confirmation.
-- Vitamux is its own product. It is not an Open Wearables plugin, fork, or companion, and it is not specific to any VPS. Reference-environment facts (VPS, Coolify, Open Wearables, existing Garmin collector, WHOOP plans) are only for the final migration epic E16: [`docs/architecture/migration-reference.md`](docs/architecture/migration-reference.md). Do not read or design for them elsewhere.
+- Vitamux is its own product. It is not an Open Wearables plugin, fork, or companion, and it is not specific to any VPS. Reference-environment facts (VPS, its Coolify instance, Open Wearables, existing Garmin collector, WHOOP plans) are only for the final migration epic E16: [`docs/architecture/migration-reference.md`](docs/architecture/migration-reference.md). Do not read or design for them elsewhere.
 - Keep documentation lean: update the smallest relevant file and link instead of repeating. Do not create monolithic docs.
 - Precedence: this file > ADRs (`docs/adr/`) > `docs/architecture/` > `docs/plan/`.
 
@@ -30,6 +30,7 @@ Scope:
 
 - MVP connectors: Withings (official OAuth; blood pressure first), push ingestion, and file imports.
 - Apple Health bridge: required (epic E15).
+- Any source, including existing open-source collectors in other languages, plugs in through the connector contract: remote sidecars or push collectors (E17, v0.2.0).
 - Garmin collector, WHOOP (`@dofek/whoop`) and Open Wearables migration: deferred to E16.
 - Future sources (Ultrahuman, scales, BP devices, other official or unofficial adapters) must fit the same connector contract.
 - Single owner first. `user_id` exists on durable rows, but there are no orgs, billing, or role systems.
@@ -42,8 +43,8 @@ These decisions are recorded in [`docs/architecture/overview.md`](docs/architect
 - **Go** modular monolith: one binary `vitamux` with modes `serve`, `migrate`, `import`, `backup`, …
 - **PostgreSQL** is the only database. Jobs, locks, and schedules live in PostgreSQL. No Redis, Kafka, Celery, Kubernetes, workflow engine, or microservices without evidence.
 - **SvelteKit** static SPA embedded in the binary.
-- **Docker Compose** is the reference deployment. Coolify is just one later install target.
-- Other languages only in optional, replaceable sidecars behind the connector contract.
+- **Docker Compose** is the reference deployment; **Coolify** is the second supported install target (a Compose variant; generic, no reference-VPS values).
+- Other languages only in optional, replaceable sidecars behind the connector contract. Existing open-source collectors are reused as sidecars or push collectors ([E17](docs/plan/E17-sidecar-connectors/README.md)).
 
 ## Data requirements (non-negotiable)
 

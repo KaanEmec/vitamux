@@ -46,7 +46,7 @@ Memory stays bounded through batching: normalize 5,000 rows per transaction, COP
 
 ## Deferred features
 
-- Remote sidecar mode and unofficial collectors (Garmin, WHOOP): see [migration.md](migration.md).
+- Remote sidecar mode: v0.2.0 ([E17](../plan/E17-sidecar-connectors/README.md)). Specific unofficial collectors (Garmin, WHOOP): see [migration.md](migration.md) or the community.
 - Withings activity and sleep streams; workout GPS routes (raw files kept).
 - Weighted means, expression language, partitioning or dense series storage, S3 blob backend, HA.
 - Passkeys (TOTP in MVP), multi-user UI, outbound webhooks, FHIR export.
