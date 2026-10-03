@@ -16,7 +16,9 @@ func TestRunCommands(t *testing.T) {
 		{[]string{"help"}, 0, "Commands:"},
 		{nil, 2, "Usage:"},
 		{[]string{"nope"}, 2, "unknown command"},
-		{[]string{"migrate"}, 1, "not implemented"},
+		{[]string{"migrate"}, 2, "usage: vitamux migrate"},
+		{[]string{"migrate", "down-to", "x"}, 2, "usage: vitamux migrate"},
+		{[]string{"admin"}, 1, "not implemented"},
 	}
 	for _, c := range cases {
 		var out, errOut bytes.Buffer

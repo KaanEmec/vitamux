@@ -32,6 +32,8 @@ type Config struct {
 	DataDir       string
 	MasterKeyFile string
 	DatabaseURL   Secret
+	// MigrateDatabaseURL connects `vitamux migrate`; it falls back to DatabaseURL.
+	MigrateDatabaseURL Secret
 }
 
 // Secret holds a sensitive value that never prints itself.
@@ -107,6 +109,14 @@ func load(env Lookup, readFile ReadFile) (Config, error) {
 		errs = append(errs, err)
 	}
 	c.DatabaseURL = db
+	mig, err := secret(env, readFile, "MIGRATE_DATABASE_URL", c.Env)
+	if err != nil {
+		errs = append(errs, err)
+	}
+	if !mig.IsSet() {
+		mig = db
+	}
+	c.MigrateDatabaseURL = mig
 
 	return c, errors.Join(errs...)
 }

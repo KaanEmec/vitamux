@@ -18,6 +18,15 @@
 
 Without `-tags webui` the binary serves a placeholder page, so backend work never needs Node.
 
+## Database and migrations
+
+- `deploy/sql/roles.sql` (idempotent, run by `make services`) creates the `vitamux` schema and the roles `vitamux_owner` (DDL, used by `vitamux migrate`) and `vitamux_app` (DML only, used by `serve`). Every session runs `SET ROLE` to its role, so a development superuser login still exercises least privilege.
+- Migrations are goose SQL files in `internal/db/migrations/NNNNN_name.sql`, embedded in the binary. The newest file number is the schema version `serve` requires; it refuses an older or newer database.
+- `vitamux migrate up|status`; `down-to N` only with `VITAMUX_ENV=development`. `VITAMUX_MIGRATE_DATABASE_URL[_FILE]` overrides the URL for migrations.
+- Tables get app DML by default privileges. Narrow per table in the same migration (e.g. `REVOKE UPDATE, DELETE ON audit_events FROM vitamux_app`).
+- Expand/contract: a release only adds (nullable or defaulted columns, new tables, `CREATE INDEX CONCURRENTLY` in its own `-- +goose NO TRANSACTION` file). Code stops using a column one release before a later migration drops it. Never edit a released migration.
+- Integration tests use `internal/db/dbtest`: `dbtest.Migrated(t)` creates a fresh migrated database per test and returns an app-role pool.
+
 ## Package boundaries
 
 These rules are enforced by `depguard` in `.golangci.yml`:

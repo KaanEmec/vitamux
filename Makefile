@@ -8,17 +8,21 @@ COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 LDFLAGS := -s -w -X github.com/KaanEmec/vitamux/internal/version.Version=$(VERSION) -X github.com/KaanEmec/vitamux/internal/version.Commit=$(COMMIT)
 COMPOSE := docker compose -f deploy/compose/compose.dev.yaml
 
-.PHONY: help dev services services-down web-install web-build build test test-integration lint fixtures golden image clean
+.PHONY: help dev services migrate services-down web-install web-build build test test-integration lint fixtures golden image clean
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
 
-dev: services web-install ## Run PostgreSQL, the Go server (live reload) and Vite
+dev: migrate web-install ## Run PostgreSQL, the Go server (live reload) and Vite
 	@test -f .env || { echo "missing .env — run: cp .env.example .env"; exit 1; }
 	@trap 'kill 0' EXIT; go tool air & npm --prefix web run dev & wait
 
-services: ## Start dev services and wait until healthy
+services: ## Start dev services, wait until healthy, apply roles.sql (idempotent)
 	$(COMPOSE) up -d --wait
+	$(COMPOSE) exec -T postgres psql -q -U vitamux -d vitamux -v ON_ERROR_STOP=1 < deploy/sql/roles.sql
+
+migrate: services ## Apply database migrations to the dev database
+	go run ./cmd/vitamux migrate up
 
 services-down: ## Stop dev services (keeps data volume)
 	$(COMPOSE) down

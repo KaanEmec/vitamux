@@ -6,7 +6,3 @@ var (
 	Version = "dev"
 	Commit  = "unknown"
 )
-
-// SchemaVersion is the database schema version this binary expects.
-// It is bumped together with migrations (J02.1); 0 means "no schema yet".
-const SchemaVersion = 0

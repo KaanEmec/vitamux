@@ -10,11 +10,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/KaanEmec/vitamux/internal/api"
 	"github.com/KaanEmec/vitamux/internal/config"
+	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/obs"
 	"github.com/KaanEmec/vitamux/internal/version"
 	"github.com/KaanEmec/vitamux/web"
@@ -26,7 +29,7 @@ Usage: vitamux <command>
 
 Commands:
   serve     run HTTP server, scheduler and workers
-  migrate   apply database migrations (J02.1)
+  migrate   up | status | down-to VERSION (development only)
   admin     administrative tasks (E03)
   version   print version information
 `
@@ -43,11 +46,13 @@ func run(args []string, stdout, stderr io.Writer) int {
 	switch args[0] {
 	case "version":
 		fmt.Fprintf(stdout, "vitamux %s (commit %s, schema %d, ui embedded: %v)\n",
-			version.Version, version.Commit, version.SchemaVersion, web.Embedded)
+			version.Version, version.Commit, db.ExpectedVersion(), web.Embedded)
 		return 0
 	case "serve":
 		return serve(stderr)
-	case "migrate", "admin":
+	case "migrate":
+		return migrate(args[1:], stdout, stderr)
+	case "admin":
 		fmt.Fprintf(stderr, "vitamux %s: not implemented yet\n", args[0])
 		return 1
 	case "help", "-h", "--help":
@@ -71,6 +76,19 @@ func serve(stderr io.Writer) int {
 		log.Warn("secret supplied as a plain environment variable; use *_FILE outside development")
 	}
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	pool, err := db.Open(ctx, cfg.DatabaseURL.Value(), db.AppRole)
+	if err != nil {
+		log.Error("database", "err", err)
+		return 1
+	}
+	defer pool.Close()
+	if err := db.CheckSchema(ctx, pool); err != nil {
+		log.Error("schema check", "err", err)
+		return 1
+	}
+
 	handler, err := api.NewHandler(log, web.Assets())
 	if err != nil {
 		log.Error("build handler", "err", err)
@@ -86,8 +104,6 @@ func serve(stderr io.Writer) int {
 		ErrorLog:          slog.NewLogLogger(log.Handler(), slog.LevelWarn),
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 	errc := make(chan error, 1)
 	go func() { errc <- srv.ListenAndServe() }()
 	log.Info("listening", "addr", cfg.HTTPAddr)
@@ -105,6 +121,75 @@ func serve(stderr io.Writer) int {
 		if err := srv.Shutdown(shutdownCtx); err != nil {
 			log.Error("shutdown", "err", err)
 			return 1
+		}
+	}
+	return 0
+}
+
+func migrate(args []string, stdout, stderr io.Writer) int {
+	const use = "usage: vitamux migrate up | status | down-to VERSION\n"
+	var target int64
+	switch {
+	case len(args) == 1 && (args[0] == "up" || args[0] == "status"):
+	case len(args) == 2 && args[0] == "down-to":
+		v, err := strconv.ParseInt(args[1], 10, 64)
+		if err != nil || v < 0 {
+			fmt.Fprint(stderr, use)
+			return 2
+		}
+		target = v
+	default:
+		fmt.Fprint(stderr, use)
+		return 2
+	}
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintf(stderr, "configuration error:\n%v\n", err)
+		return 1
+	}
+	if args[0] == "down-to" && cfg.Env != config.Development {
+		fmt.Fprintln(stderr, "migrate down-to is only allowed with VITAMUX_ENV=development")
+		return 1
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	pool, err := db.Open(ctx, cfg.MigrateDatabaseURL.Value(), db.OwnerRole)
+	if err != nil {
+		fmt.Fprintf(stderr, "database: %v\n", err)
+		return 1
+	}
+	defer pool.Close()
+	m, err := db.NewMigrator(pool)
+	if err != nil {
+		fmt.Fprintf(stderr, "migrator: %v\n", err)
+		return 1
+	}
+
+	switch args[0] {
+	case "status":
+		st, err := m.Status(ctx)
+		if err != nil {
+			fmt.Fprintf(stderr, "status: %v\n", err)
+			return 1
+		}
+		for _, s := range st {
+			fmt.Fprintf(stdout, "%05d  %-8s  %s\n", s.Source.Version, s.State, filepath.Base(s.Source.Path))
+		}
+	case "up", "down-to":
+		res, err := m.Up(ctx)
+		if args[0] == "down-to" {
+			res, err = m.DownTo(ctx, target)
+		}
+		for _, r := range res {
+			fmt.Fprintf(stdout, "%-4s %05d  %s (%s)\n", r.Direction, r.Source.Version, filepath.Base(r.Source.Path), r.Duration.Round(time.Millisecond))
+		}
+		if err != nil {
+			fmt.Fprintf(stderr, "migrate %s: %v\n", args[0], err)
+			return 1
+		}
+		if len(res) == 0 {
+			fmt.Fprintf(stdout, "schema already at version %d\n", db.ExpectedVersion())
 		}
 	}
 	return 0
