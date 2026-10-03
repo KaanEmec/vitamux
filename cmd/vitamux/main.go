@@ -19,6 +19,7 @@ import (
 
 	"github.com/KaanEmec/vitamux/internal/api"
 	"github.com/KaanEmec/vitamux/internal/auth"
+	"github.com/KaanEmec/vitamux/internal/backup"
 	"github.com/KaanEmec/vitamux/internal/blob"
 	"github.com/KaanEmec/vitamux/internal/config"
 	"github.com/KaanEmec/vitamux/internal/connectors"
@@ -29,6 +30,7 @@ import (
 	"github.com/KaanEmec/vitamux/internal/documents/extract"
 	"github.com/KaanEmec/vitamux/internal/export"
 	"github.com/KaanEmec/vitamux/internal/jobs"
+	"github.com/KaanEmec/vitamux/internal/lifecycle"
 	"github.com/KaanEmec/vitamux/internal/metrics"
 	"github.com/KaanEmec/vitamux/internal/normalize"
 	"github.com/KaanEmec/vitamux/internal/obs"
@@ -48,6 +50,8 @@ Commands:
   keys      rotate (re-seal values under the current master key)
   reprocess re-normalize stored raw payloads after a normalizer change
   import    ndjson [--merge] EXPORT (load a Vitamux export zip)
+  backup    [--out DIR|-] (database dump, blobs and manifest; default VITAMUX_BACKUP_DIR)
+  restore   --from DIR (into an empty database and data dir, then migrate up)
   version   print version information
 `
 
@@ -79,6 +83,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return reprocess(args[1:], stdout, stderr)
 	case "import":
 		return importCmd(args[1:], stdout, stderr)
+	case "backup":
+		return backupCmd(args[1:], stdout, stderr)
+	case "restore":
+		return restoreCmd(args[1:], stdout, stderr)
 	case "help", "-h", "--help":
 		fmt.Fprint(stdout, usage)
 		return 0
@@ -141,7 +149,12 @@ func serve(stderr io.Writer) int {
 		scheduler.Daily(blob.KindSweep)
 		runner.Register(export.Kind, export.Handler(db.New(pool), blobs))
 	}
+	if blobs != nil && cfg.BackupDir != "" { // daily backup (docs/operations/backup.md)
+		runner.Register(backup.Kind, backup.Job(backup.Options{DatabaseURL: cfg.DatabaseURL.Value(), DB: db.New(pool), DataDir: cfg.DataDir, Keys: keys, Out: cfg.BackupDir}, cfg.BackupKeep, log))
+		scheduler.Daily(backup.Kind)
+	}
 	runner.Register(normalize.KindRecomputeLocalDates, normalize.RecomputeJob(db.New(pool), log))
+	lifecycle.Register(runner, scheduler, db.New(pool), log) // daily retention jobs
 	documents.Register(runner, scheduler, db.New(pool), blobs, keys, log) // no-op without blobs and key
 	// Extraction providers; nil without blobs and key.
 	extractSvc, err := extract.Setup(runner, db.New(pool), blobs, keys, log, cfg)

@@ -181,3 +181,15 @@ func TestExtractors(t *testing.T) {
 		})
 	}
 }
+
+func TestBackup(t *testing.T) {
+	c, err := load(envOf(map[string]string{"VITAMUX_BACKUP_DIR": "/backups"}), filesOf(nil))
+	if err != nil || c.BackupDir != "/backups" || c.BackupKeep != 3 {
+		t.Fatalf("dir %q keep %d, %v", c.BackupDir, c.BackupKeep, err)
+	}
+	for _, keep := range []string{"0", "-1", "three"} {
+		if _, err := load(envOf(map[string]string{"VITAMUX_BACKUP_KEEP": keep}), filesOf(nil)); err == nil {
+			t.Errorf("VITAMUX_BACKUP_KEEP=%s accepted", keep)
+		}
+	}
+}

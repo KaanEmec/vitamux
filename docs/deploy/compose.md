@@ -15,16 +15,16 @@ docker compose run --rm vitamux admin create-owner     # first owner (reads the 
 
 Point your reverse proxy at `127.0.0.1:8080` (change with `VITAMUX_PORT`). It must terminate TLS for `VITAMUX_PUBLIC_URL`, which is also where OAuth callbacks (`/oauth/<provider>/callback`) and webhooks (`/webhooks/...`) arrive. Set `VITAMUX_TRUSTED_PROXIES` to the proxy's address as the container sees it (for a host proxy on Linux, the `frontend` network gateway: `docker network inspect vitamux_frontend`), otherwise `X-Forwarded-*` is ignored.
 
-Back up `secrets/` and the master key separately from database backups. Losing the master key loses provider tokens and encrypted documents ([security#keys](../architecture/security.md)). `init-secrets` refuses to overwrite an existing key.
+Daily backups go to the `vitamux-backups` volume ([operations/backup.md](../operations/backup.md)). Back up `secrets/` and the master key separately from them. Losing the master key loses provider tokens and encrypted documents ([security#keys](../architecture/security.md)). `init-secrets` refuses to overwrite an existing key.
 
 ## What is locked down
 
 Enforced by the policy test `deploy/compose/compose_test.go` (runs in the `go` CI job):
 
 - PostgreSQL has no published port and sits on an `internal` network (no route out); `migrate` too. Only `vitamux` is also on a normal network, for provider API calls, and publishes only `127.0.0.1:<port>`.
-- Every container: `read_only` rootfs (tmpfs for `/tmp`, writable only `/data` and the pgdata volume), `cap_drop: [ALL]`, `no-new-privileges`, non-root user, `mem_limit` from [project#resource-budget](../architecture/project.md#resource-budget) (vitamux 512 MiB, postgres 1 GiB), a healthcheck, rotated JSON logs.
+- Every container: `read_only` rootfs (tmpfs for `/tmp`, writable only `/data`, `/backups` and the pgdata volume), `cap_drop: [ALL]`, `no-new-privileges`, non-root user, `mem_limit` from [project#resource-budget](../architecture/project.md#resource-budget) (vitamux 512 MiB, postgres 1 GiB), a healthcheck, rotated JSON logs.
 - Secrets are Compose secrets read through `*_FILE` settings; no credential is in the Compose file or the environment. `vitamux` gets only the DML-only `vitamux_app` URL; the DDL `vitamux_owner` URL is mounted into `migrate` alone. Roles are created on first start from [`deploy/sql/roles.sql`](../../deploy/sql/roles.sql); rotating a role password later is an `ALTER ROLE` plus editing the secret file.
-- The healthcheck is `vitamux healthcheck` (GET `/readyz`; the distroless image has no curl). `stop_grace_period: 60s` lets `serve` drain jobs on `SIGTERM` ([reliability#upgrades](../architecture/reliability.md#upgrades)).
+- The healthcheck is `vitamux healthcheck` (GET `/readyz`; the distroless image has no curl or shell, only `pg_dump`/`pg_restore` for backups). `stop_grace_period: 60s` lets `serve` drain jobs on `SIGTERM` ([reliability#upgrades](../architecture/reliability.md#upgrades)).
 - The CI `image` job scans the built image with Trivy and fails only on CRITICAL findings that have a fix.
 
 ## Upgrade

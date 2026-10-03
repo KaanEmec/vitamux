@@ -5,3 +5,8 @@ Vitamux is licensed under the MIT License; see the LICENSE file.
 
 Third-party software included in or used to build Vitamux, with its license
 notices, is listed in THIRD_PARTY_NOTICES.md.
+
+The container image also contains pg_dump and pg_restore from Alpine Linux's
+postgresql18-client package and the libraries they link: PostgreSQL client
+(PostgreSQL License), libpq (PostgreSQL License), OpenSSL (Apache-2.0), zlib
+(Zlib), zstd (BSD-3-Clause), lz4 (BSD-2-Clause) and musl libc (MIT).

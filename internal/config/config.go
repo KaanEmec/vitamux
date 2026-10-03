@@ -12,6 +12,7 @@ import (
 	"net/netip"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -35,6 +36,10 @@ type Config struct {
 	LogLevel      slog.Level
 	DataDir       string
 	MasterKeyFile string
+	// BackupDir enables the daily backup job (VITAMUX_BACKUP_DIR); BackupKeep is how many
+	// backups it keeps (VITAMUX_BACKUP_KEEP, default 3). docs/operations/backup.md.
+	BackupDir  string
+	BackupKeep int
 	// PreviousMasterKeyFiles lists retired master keys that can still open old sealed values
 	// during rotation (comma-separated VITAMUX_PREVIOUS_MASTER_KEY_FILES).
 	PreviousMasterKeyFiles []string
@@ -109,6 +114,12 @@ func load(env Lookup, readFile ReadFile) (Config, error) {
 		MetricsAddr:   get("METRICS_ADDR", ""),
 		DataDir:       get("DATA_DIR", "./data"),
 		MasterKeyFile: get("MASTER_KEY_FILE", ""),
+	}
+	c.BackupDir = get("BACKUP_DIR", "")
+	if n, err := strconv.Atoi(get("BACKUP_KEEP", "3")); err != nil || n < 1 {
+		errs = append(errs, fmt.Errorf("%sBACKUP_KEEP must be a positive integer", prefix))
+	} else {
+		c.BackupKeep = n
 	}
 	for _, p := range strings.Split(get("PREVIOUS_MASTER_KEY_FILES", ""), ",") {
 		if p = strings.TrimSpace(p); p != "" {

@@ -78,6 +78,8 @@ services:
       VITAMUX_LOG_LEVEL: ${VITAMUX_LOG_LEVEL:-info}
       VITAMUX_DATABASE_URL_FILE: /run/secrets/database_url
       VITAMUX_MASTER_KEY_FILE: /secrets/master.key
+      VITAMUX_BACKUP_DIR: /backups # daily backup; copy it off-host (docs/operations/backup.md)
+      VITAMUX_BACKUP_KEEP: ${VITAMUX_BACKUP_KEEP:-3}
       VITAMUX_WITHINGS_CLIENT_ID: ${VITAMUX_WITHINGS_CLIENT_ID:-}
       VITAMUX_WITHINGS_CLIENT_SECRET_FILE: /run/secrets/withings_client_secret
       GOMEMLIMIT: 400MiB # keep the Go heap under mem_limit
@@ -85,6 +87,7 @@ services:
     volumes:
       - vitamux-data:/data
       - vitamux-secrets:/secrets:ro
+      - vitamux-backups:/backups
     ports:
       - "127.0.0.1:${VITAMUX_PORT:-8080}:8080"
     networks: [backend, frontend] # frontend: outbound access to provider APIs
@@ -99,6 +102,29 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
       migrate: {condition: service_completed_successfully}
+
+  # Disaster recovery into a fresh stack, before the first `up` (docs/operations/backup.md):
+  #   docker compose --profile restore run --rm restore --from /backups/vitamux-<time>
+  restore:
+    <<: *vitamux
+    profiles: [restore]
+    entrypoint: ["/vitamux", "restore"]
+    command: []
+    restart: "no"
+    environment:
+      VITAMUX_ENV: production
+      VITAMUX_MIGRATE_DATABASE_URL_FILE: /run/secrets/migrate_database_url
+      VITAMUX_MASTER_KEY_FILE: /secrets/master.key
+    secrets: [migrate_database_url]
+    volumes:
+      - vitamux-data:/data
+      - vitamux-secrets:/secrets:ro
+      - vitamux-backups:/backups:ro
+    networks: [backend]
+    mem_limit: 512m
+    healthcheck: {disable: true}
+    depends_on:
+      postgres: {condition: service_healthy}
 
   # Run once before the first start: docker compose --profile setup run --rm init-secrets
   init-secrets:
@@ -123,6 +149,7 @@ volumes:
   pgdata:
   vitamux-data:
   vitamux-secrets:
+  vitamux-backups:
 
 secrets:
   pg_superuser_password: {file: ./secrets/pg_superuser_password}

@@ -62,13 +62,13 @@ Re-running a job or re-importing a file changes nothing.
 
 ## Backup and restore
 
-- `vitamux backup --to DIR` writes:
+- `vitamux backup --out DIR` writes (operator guide: [operations/backup.md](../operations/backup.md)):
   1. `pg_dump -Fc` (the image ships a matching client);
-  2. a copy of new blobs and `names.key` (content-addressed and immutable, so copying after the dump guarantees every referenced blob exists; [ADR-0004](../adr/0004-blob-store.md));
-  3. `manifest.json` (versions, sha256 checksums, blob count, required master `key_id`).
+  2. a tar of the blobs and `names.key` (content-addressed and immutable, so copying after the dump guarantees every referenced blob exists; [ADR-0004](../adr/0004-blob-store.md));
+  3. `manifest.json` (versions, sha256 checksums, blob count, required master `key_id`, a MAC under the master key).
 
   It can also run as a scheduled `backup` job with a retention count. Off-host encryption (restic, age, rclone) is documented but not built in.
-- `vitamux restore --from DIR` restores into an empty DB and copies blobs. It verifies the manifest, blob references, and `vitamux resolve verify`, and refuses on any checksum mismatch.
+- `vitamux restore --from DIR` restores into an empty DB and copies blobs. It verifies the manifest and blob references, refuses on any checksum mismatch, and migrates an older schema. Run `vitamux resolve verify` afterwards.
 - The master key is never in the bundle and must be backed up separately.
 - A restore drill runs in CI on synthetic data.
 - Backup vs export: a backup is the whole instance (secrets, jobs, sealed documents) for disaster recovery and needs the master key. An [export](api.md#exports) is the owner's data as portable NDJSON without secrets, readable by other tools and importable into a fresh or existing instance of the same schema version; it is not a backup.

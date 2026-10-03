@@ -30,6 +30,7 @@ Precedence when documents disagree: `CLAUDE.md` (product brief) > ADRs in `docs/
 | [frontend.md](architecture/frontend.md) | UI stack, navigation, rule builder | E11 |
 | [project.md](architecture/project.md) | License, testing, releases, resource budget, deferred features, risks, assumptions, open questions | Release, CI, planning |
 | [deploy/compose.md](deploy/compose.md) | Release Compose install, hardening, upgrade, Coolify note | Deploying, container or Compose changes |
+| [operations/backup.md](operations/backup.md) | Backup contents, scheduled backups, off-host encryption, restore steps, drill | Backups, restore, disaster recovery |
 | [providers/withings.md](providers/withings.md) | Verified Withings API facts: OAuth, getmeas, meastypes, notifications, limits; how Vitamux syncs | Withings connector (E08) |
 | [migration.md](architecture/migration.md), [migration-reference.md](architecture/migration-reference.md) | **Deferred** final epic: design notes and owner-verified reference facts (VPS, Open Wearables, Garmin collector, WHOOP) | Only E16 |
 

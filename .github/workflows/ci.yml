@@ -57,7 +57,8 @@ jobs:
       - name: OpenAPI Go generation is up to date
         run: go tool oapi-codegen -config internal/api/oapi/config.yaml api/openapi.yaml && git diff --exit-code -- internal/api/oapi && test -z "$(git status --porcelain internal/api/oapi)"
       - run: go test -race ./...
-      - run: go test -run '^$' -fuzz=FuzzDecodeBatch -fuzztime=20s ./internal/ingest # batch parser fuzz smoke
+      - name: Fuzz smoke (10 s per target; target list in the Makefile)
+        run: make fuzz FUZZTIME=10s
       - run: go test -tags webui ./internal/api/ # CSP check against the real built page
       - name: Compose policy (no DB port, loopback-only publish, read-only, cap_drop, no plaintext secrets)
         run: go test -count=1 ./deploy/compose/
@@ -87,6 +88,12 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      # pg_dump/pg_restore of the server's major version for the restore drill (internal/backup).
+      - name: PostgreSQL ${{ matrix.postgres }} client tools
+        run: |
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y --no-install-recommends postgresql-client-${{ matrix.postgres }}
+          echo "/usr/lib/postgresql/${{ matrix.postgres }}/bin" >> "$GITHUB_PATH"
       - run: go test -tags integration ./...
 
   image:
