@@ -1,0 +1,8 @@
+# Extends the default rules. Allowlist only proven false positives, never real secrets.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "HealthKit metadata keys (HKMetadataKey...) are field names, not credentials"
+regexTarget = "line"
+regexes = ['''"HKMetadataKey[A-Za-z]+":\s*"[^"]*"''']
