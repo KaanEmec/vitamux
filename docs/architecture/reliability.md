@@ -2,6 +2,8 @@
 
 ## Job queue
 
+Decision and handler contract: [ADR-0003](../adr/0003-postgres-job-queue.md).
+
 ```sql
 WITH next AS (
   SELECT j.id FROM jobs j
@@ -26,6 +28,7 @@ FROM next WHERE jobs.id = next.id RETURNING jobs.*;
 
 - One leader per database via `pg_try_advisory_lock` on a dedicated connection. Failover happens automatically.
 - Every 15 s the leader turns due `schedules` into jobs with `dedupe_key = schedule_id:slot`. Even two leaders cannot duplicate jobs.
+- Slots missed while no leader ran coalesce into one job. A schedule's `mode` is `incremental` (follow the cursor) or `correction` (re-fetch the `lookback` window ending at the slot).
 - Defaults come from connector descriptors (Withings measures: hourly). They are editable per stream.
 
 ## Idempotency
@@ -61,7 +64,7 @@ Re-running a job or re-importing a file changes nothing.
 
 - `vitamux backup --to DIR` writes:
   1. `pg_dump -Fc` (the image ships a matching client);
-  2. a copy of new blobs (content-addressed and immutable, so copying after the dump guarantees every referenced blob exists);
+  2. a copy of new blobs and `names.key` (content-addressed and immutable, so copying after the dump guarantees every referenced blob exists; [ADR-0004](../adr/0004-blob-store.md));
   3. `manifest.json` (versions, sha256 checksums, blob count, required master `key_id`).
 
   It can also run as a scheduled `backup` job with a retention count. Off-host encryption (restic, age, rclone) is documented but not built in.

@@ -41,7 +41,7 @@ ADRs are written during implementation (J01.1 and the owning jobs).
 | --- | --- | --- | --- |
 | ADR-001 | Core language | **Go** | I/O-bound CRUD, HTTP, SQL, and jobs. Rust saves ~20–40 MiB, which is small next to PostgreSQL's 150–300 MiB, and costs slower development, harder cross-compiles, and fewer contributors. Go has pgx+sqlc, goose, stdlib routing, and static binaries. Other languages are allowed only in optional sidecars. |
 | ADR-002 | Shape | Modular monolith, one binary with modes | Package boundaries enforced by lint; no service fleet |
-| ADR-003 | Jobs | Own PostgreSQL queue (`SKIP LOCKED`, leases, dedupe keys, advisory-lock leader) | Small and transparent; River considered |
+| ADR-003 | Jobs | Own PostgreSQL queue (`SKIP LOCKED`, leases, dedupe keys, advisory-lock leader) | Small and transparent; River considered ([ADR-0003](../adr/0003-postgres-job-queue.md)) |
 | ADR-004 | Raw storage | Filesystem content-addressed zstd blobs, metadata in PostgreSQL | Keeps the DB small; immutable blobs make backups simple |
 | ADR-005 | Measurements | One `measurements` table with kinds; groups for BP and body composition; no partitioning yet | Personal scale (~10 M rows/yr worst case) |
 | ADR-006 | Normalization | In Go, from raw payloads; adapters only fetch | Reprocessable, testable |

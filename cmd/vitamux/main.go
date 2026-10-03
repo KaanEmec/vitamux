@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/KaanEmec/vitamux/internal/config"
 	"github.com/KaanEmec/vitamux/internal/crypto"
 	"github.com/KaanEmec/vitamux/internal/db"
+	"github.com/KaanEmec/vitamux/internal/jobs"
 	"github.com/KaanEmec/vitamux/internal/obs"
 	"github.com/KaanEmec/vitamux/internal/version"
 	"github.com/KaanEmec/vitamux/web"
@@ -108,6 +110,8 @@ func serve(stderr io.Writer) int {
 	if keyErr != nil {
 		log.Error("master key", "err", keyErr) // /readyz reports it as not loaded
 	}
+	runner := jobs.NewRunner(db.New(pool), jobs.Config{Log: log}) // job handlers register on it before Run
+	scheduler := jobs.NewScheduler(db.New(pool), log)
 	handler, err := api.NewHandler(log, web.Assets(), api.Options{
 		HSTS:           cfg.PublicURL.Scheme == "https",
 		TrustedProxies: cfg.TrustedProxies,
@@ -118,6 +122,7 @@ func serve(stderr io.Writer) int {
 			{Name: "schema", Check: func(ctx context.Context) error { return db.CheckSchema(ctx, pool) }},
 			{Name: "data_dir", Check: func(context.Context) error { return dirWritable(cfg.DataDir) }},
 			{Name: "master_key", Check: func(context.Context) error { return keyErr }},
+			{Name: "workers", Check: runner.Ready},
 		},
 	})
 	if err != nil {
@@ -133,6 +138,11 @@ func serve(stderr io.Writer) int {
 		IdleTimeout:       120 * time.Second,
 		ErrorLog:          slog.NewLogLogger(log.Handler(), slog.LevelWarn),
 	}
+
+	var background sync.WaitGroup
+	background.Go(func() { runner.Run(ctx) })
+	background.Go(func() { scheduler.Run(ctx) })
+	defer func() { stop(); background.Wait() }() // SIGTERM drain: finish or release jobs before the pool closes
 
 	errc := make(chan error, 1)
 	go func() { errc <- srv.ListenAndServe() }()
