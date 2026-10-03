@@ -101,7 +101,7 @@ The minimal reliable topology is **`vitamux` + `postgres`**, with volumes `pgdat
 | --- | --- | --- |
 | `/`, `/api/v1/*` | Public via proxy | Owner session cookie or API key |
 | `/api/ingest/v1/*` | Public via proxy (iOS app) | Client token scoped to one connection |
-| `/oauth/{provider}/callback` | Public; `HEAD` → 204 | Signed single-use `state` |
+| `/oauth/{provider}/callback` | Public; `HEAD` → 204 | Signed single-use, session-bound `state` + browser-binding cookie ([flow](connectors.md#oauth-connection-flow)) |
 | `/webhooks/{provider}/{hook_token}` | Public; `HEAD` → 204 | Unguessable token; payload is only a hint |
 | `/healthz`, `/readyz` | Public allowed (no data) | None |
 | `:9090/metrics` | Private listener only | Network isolation |

@@ -31,10 +31,10 @@ var metrics = []Metric{
 	{Code: "active_energy", Section: secActivity, Unit: "kcal", Kinds: intervalDaily, Agg: Additive, Min: 0, Max: 20000, HK: "ActiveEnergyBurned"},
 
 	{Code: "heart_rate", Section: secHeart, Unit: "bpm", Kinds: sample, Agg: Intensive, Min: 20, Max: 250, HK: "HeartRate", Withings: "11 (outside BP)"},
-	{Code: "resting_heart_rate", Section: secHeart, Unit: "bpm", Kinds: sampleDaily, Agg: DailySummary, Min: 20, Max: 150, HK: "RestingHeartRate"},
+	{Code: "resting_heart_rate", Section: secHeart, Unit: "bpm", Kinds: sampleDaily, Agg: DailySummary, Min: 20, Max: 150, SelectionOnly: true, HK: "RestingHeartRate"},
 	{Code: "hrv_sdnn", Section: secHeart, Unit: "ms", Kinds: sample, Agg: Intensive, Min: 1, Max: 500, HK: "HeartRateVariabilitySDNN"},
 	{Code: "hrv_rmssd", Section: secHeart, Unit: "ms", Kinds: sample, Agg: Intensive, Min: 1, Max: 500},
-	{Code: "hrv_rmssd_nightly", Section: secHeart, Unit: "ms", Kinds: daily, Agg: DailySummary, Min: 1, Max: 500},
+	{Code: "hrv_rmssd_nightly", Section: secHeart, Unit: "ms", Kinds: daily, Agg: DailySummary, Min: 1, Max: 500, SelectionOnly: true},
 	{Code: "vo2max", Section: secHeart, Unit: "mL/kg/min", Kinds: sample, Agg: Latest, Min: 10, Max: 100, HK: "VO2Max", Withings: "123"},
 	{Code: "pulse_wave_velocity", Section: secHeart, Unit: "m/s", Kinds: sample, Agg: Latest, Min: 2, Max: 30, Withings: "91"},
 	{Code: "vascular_age", Section: secHeart, Unit: "years", Kinds: sample, Agg: Latest, Min: 10, Max: 120, Withings: "155"},

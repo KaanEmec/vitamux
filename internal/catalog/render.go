@@ -79,7 +79,14 @@ func MetricsDoc() string {
 	}
 
 	b.WriteString("\n## Windows and strategies by aggregation\n\n")
-	b.WriteString("Bucket size is 5 minutes for `intensive` and `additive`. Provider-scoped scores lose `mean`, `min` and `max`. Metrics in a group add the `reading` window.\n\n")
+	var selection []string
+	for _, m := range metrics {
+		if m.SelectionOnly {
+			selection = append(selection, "`"+m.Code+"`")
+		}
+	}
+	b.WriteString("Bucket size is 5 minutes for `intensive` and `additive`. Provider-scoped scores and selection-only metrics (" +
+		strings.Join(selection, ", ") + ") lose `mean`, `min` and `max`. Metrics in a group add the `reading` window.\n\n")
 	b.WriteString("| Aggregation | Windows | Strategies |\n| --- | --- | --- |\n")
 	for _, a := range []Aggregation{Intensive, Additive, Latest, DailySummary, SleepDerived} {
 		m := Metric{Agg: a}

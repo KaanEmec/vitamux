@@ -8,7 +8,7 @@ Suggested built-in rules for the most common metrics and the ten most common tra
 - the first edit copies the built-in into a user rule version ([resolution.md](resolution.md#selectors-and-validation)), and per-window manual overrides still apply on top;
 - the owner's own comparison beats this table. Fit and placement change optical accuracy a lot: a strap worn snugly on the upper arm can beat a loose wrist watch of a "higher" tier.
 
-Once J09.2 lands, the generated `docs/resolution-defaults.md` lists the defaults that actually ship. This file keeps the reasoning and evidence behind them. The figures here are for contributors. The UI shows a neutral reason ("ranked by published independent validation; you can reorder") and a link, never a judgement about the owner's device.
+The generated [`docs/resolution-defaults.md`](../resolution-defaults.md) lists the defaults that actually ship; [differences](#differences-in-the-shipped-built-ins) from this table are recorded below. This file keeps the reasoning and evidence behind them. The figures here are for contributors. The UI shows a neutral reason ("ranked by published independent validation; you can reorder") and a link, never a judgement about the owner's device.
 
 ## Principles
 
@@ -85,6 +85,18 @@ Strategy is `first_available` over the listed ladder unless stated otherwise. Re
 | ECG and AFib results | events | none: all results listed | — | Inconclusive is its own category. BASEL sensitivity: Apple ≈ Samsung 85% › Fitbit 66% › Withings 58%, with 17–26% inconclusive. Garmin was not tested | later |
 | `blood_glucose` | 5-min bucket | first_available | `cgm` › `glucose_meter` | CGM for the series; fingersticks stay selectable | E15 |
 | Provider scores | local_day | stay with their own provider | — | Never pooled ([metric-catalog.md](metric-catalog.md#provider-namespaced-scores)) | with connector |
+
+## Differences in the shipped built-ins
+
+J09.2 encodes the table above in `internal/resolve/builtin.go`, with these deliberate differences:
+
+- **Relays.** A brand whose app relays into Apple Health is two adjacent groups, `<brand>` then `<brand>_apple`, instead of one group with two selectors. The direct path wins whenever it has a valid value, so the relayed copy is used only when the direct connector is absent or silent; this is the static form of "relayed origins are excluded when the relaying provider is connected". Until J15.1, the only relay ids are the `known_relay_origins` seed (Garmin Connect, Oura, Withings).
+- **Brands without a connector** (`fitbit`, `samsung`, `whoop`, `polar`, `xiaomi`, `amazfit`) use placeholder provider codes; their groups stay empty until the connector lands. Ties such as Xiaomi/Amazfit or Oura/WHOOP are adjacent groups in the listed order. "Others" for `hrv_rmssd_nightly` means Fitbit, then Samsung.
+- **Apple** is matched by the native origin prefix `com.apple.health` (`apple`), with `device_type: watch` for `apple_watch`, so relayed or third-party HealthKit data never lands there. "Scale apps via Apple Health" is any measured (non-manual) Apple Health weight.
+- **Blood pressure** uses `window: local_day` with `statistic: mean`; reading requests reuse the same ladder.
+- **Under-mattress** also matches `device_type: sleep_monitor`, which the Withings normalizer emits.
+- **Codes the table does not list:** `pulse_wave_velocity` and `vascular_age` take Withings first; `body_temperature` and `height` take the newest reading (`latest`), measured before manual. Every `body_composition` code follows `weight` (E5), including visceral fat, fat-free mass, cellular water and BMR. `skin_temperature` has no built-in: the value depends on where the device is worn, so the owner picks a source.
+- **Not yet encoded:** derived codes (E2), codes not in the catalogue, workouts (no catalogue metric yet) and naps (a `sleep_episode` request on the sleep rule) get no separate built-in.
 
 ## Review policy
 

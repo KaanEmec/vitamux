@@ -225,7 +225,7 @@ func (c *checker) strategy(r *Rule, m catalog.Metric, family bool, acked map[War
 		detail := fmt.Sprintf("%s is not allowed for %s (%s)", s.Op, m.Code, m.Agg)
 		switch {
 		case s.Op.pooling() && s.Op != OpSum && !m.Poolable():
-			// Selection-only metrics (J09.2) reach this branch once the catalogue marks them unpoolable.
+			// Provider-scoped scores and selection-only metrics (catalog.Metric.SelectionOnly).
 			detail = m.Code + " is never pooled across sources (provider-scoped or selection-only); use first_available or single_source"
 		case s.Op == OpSum:
 			detail = "sum_across_sources needs an additive metric"

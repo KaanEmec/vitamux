@@ -11,6 +11,15 @@ import (
 	"github.com/google/uuid"
 )
 
+// The rule version in effect per metric. No row: the built-in default applies, if there is one.
+type ActiveRule struct {
+	UserID      uuid.UUID
+	Metric      string
+	Version     int32
+	ActivatedBy string
+	ActivatedAt time.Time
+}
+
 // Personal access tokens `vmx_pat_<id>_<secret>`: the id is the lookup prefix, only the secret's SHA-256 is stored.
 type ApiKey struct {
 	ID         uuid.UUID
@@ -309,6 +318,18 @@ type NormalizerVersion struct {
 	RegisteredAt time.Time
 }
 
+// One row per started authorization; the callback deletes it (single use). Logging out deletes it with the session.
+type OauthState struct {
+	ID         uuid.UUID
+	UserID     uuid.UUID
+	SessionID  uuid.UUID
+	ProviderID int16
+	// Connection being reauthorized; null for a new connection or a reconnect recognised by account.
+	ConnectionID *uuid.UUID
+	ExpiresAt    time.Time
+	CreatedAt    time.Time
+}
+
 // Data vendors and transports. Seeded by migrations; read-only for the app role.
 type Provider struct {
 	ID   int16
@@ -366,6 +387,23 @@ type ResolutionDirty struct {
 	MetricID  int16
 	LocalDate time.Time
 	MarkedAt  time.Time
+}
+
+// Immutable rule versions; an edit inserts version + 1. Insert-only for the app role.
+type ResolutionRule struct {
+	ID     uuid.UUID
+	UserID uuid.UUID
+	// Catalogue code or rule family (sleep, blood_pressure), so no foreign key to metric_catalog.
+	Metric  string
+	Version int32
+	// Rule JSON, schemas/resolution-rule.v1.json; validated by internal/resolve before insert.
+	Spec json.RawMessage
+	// Built-in reference this version copied (builtin:<metric>:<n>); set on the copy only.
+	BasedOn *string
+	Note    *string
+	// Audit actor: owner, api_key:<id> or system.
+	CreatedBy string
+	CreatedAt time.Time
 }
 
 type Schedule struct {

@@ -19,6 +19,7 @@ Precedence when documents disagree: `CLAUDE.md` (product brief) > ADRs in `docs/
 | [metrics.md](metrics.md) | Generated: implemented metric codes, units, conversions, windows, strategies | Catalogue, normalizers, rules |
 | [analyte-catalog.md](architecture/analyte-catalog.md) | Lab analyte codes, canonical units, conversion factors | Lab review, analyte seed |
 | [resolution-defaults.md](architecture/resolution-defaults.md) | Suggested built-in rules per metric, brand evidence tiers, sources | Built-in defaults (J09.2), rule UI |
+| [resolution-defaults.md](resolution-defaults.md) | Generated: the built-in rules that ship, their groups and coverage | Rules, rule UI |
 | [resolution.md](architecture/resolution.md) | Rule schema, windows, aggregation, strategies, sleep alignment, overrides, results, cache | Resolution engine, rule UI |
 | [api.md](architecture/api.md) | API conventions, endpoint surface, example payloads | Handlers, OpenAPI, frontend data use |
 | [reliability.md](architecture/reliability.md) | Job queue, scheduler, idempotency, upgrades, health, logs, metrics, backups | Jobs, ops, backup |
@@ -27,6 +28,7 @@ Precedence when documents disagree: `CLAUDE.md` (product brief) > ADRs in `docs/
 | [lab-documents.md](architecture/lab-documents.md) | PDF storage, extraction providers, review, privacy | E12 |
 | [frontend.md](architecture/frontend.md) | UI stack, navigation, rule builder | E11 |
 | [project.md](architecture/project.md) | License, testing, releases, resource budget, deferred features, risks, assumptions, open questions | Release, CI, planning |
+| [providers/withings.md](providers/withings.md) | Verified Withings API facts: OAuth, getmeas, meastypes, notifications, limits; how Vitamux syncs | Withings connector (E08) |
 | [migration.md](architecture/migration.md), [migration-reference.md](architecture/migration-reference.md) | **Deferred** final epic: design notes and owner-verified reference facts (VPS, Open Wearables, Garmin collector, WHOOP) | Only E16 |
 
 ## Plan (`plan/`)

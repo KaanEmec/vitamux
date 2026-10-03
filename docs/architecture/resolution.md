@@ -37,7 +37,7 @@ The provider names are illustrative; rules work for any provider.
   - `single_source` with more than one group; empty groups;
   - `sum_across_sources` or `intra_group: sum` without `acknowledged_warnings: [cross_source_sum_duplicate_risk]`;
   - per-code rules for family members, and the extension checks listed in [ADR-0008](../adr/0008-rule-schema.md).
-- Every edit creates an immutable version, and `active_rules` points to one. Built-in defaults live in code as `builtin:<metric>:<n>` and are copied on first edit.
+- Every edit creates an immutable version (`rule:<metric>:<n>`), and `active_rules` points to one; any version, older ones included, can be activated again. Activation runs `ValidateSet` on the whole active set and rejects only problems the change introduces. Built-in defaults live in code as `builtin:<metric>:<n>` ([list](../resolution-defaults.md)), apply while a metric has no active version, and are copied as version 1 on first edit. Creating and activating versions is audited with the actor and a field diff.
 
 ## Windows
 

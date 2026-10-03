@@ -8,6 +8,13 @@
 //     catalog.Metric.Poolable, so a catalogue flag needs no change here.
 //   - Warning and the Warn* constants are the warning catalogue.
 //
+// Built-ins and storage (J09.2):
+//   - Builtins and LookupBuiltin are the builtin:<metric>:<n> defaults (builtin.go, generating
+//     docs/resolution-defaults.md); NoBuiltin lists the codes deliberately without one.
+//   - Store keeps immutable owner versions (rule:<metric>:<n>): Create (the first edit copies
+//     the built-in as version 1), Activate (any version; ValidateSet on the active set),
+//     Active, ActiveSet, History and Diff. Every mutation is audited with actor and diff.
+//
 // Grouping (pure, no database):
 //   - Source is the selector identity of a row; Selector.Matches tests one selector.
 //   - Rule.Assign places a source (exclusions win, then the first matching group);

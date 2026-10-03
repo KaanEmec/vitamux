@@ -69,8 +69,11 @@ type Metric struct {
 	Group string
 	// ProviderScoped marks a provider-namespaced score (<provider>_<name>): never pooled across providers.
 	ProviderScoped bool
-	HK             string // HealthKit identifier without prefix
-	Withings       string // meastype
+	// SelectionOnly marks a metric that providers define differently (metric-catalog.md#rules):
+	// rules select one source and never pool it.
+	SelectionOnly bool
+	HK            string // HealthKit identifier without prefix
+	Withings      string // meastype
 }
 
 // BaseBucket is the bucket size for within-source aggregation: 5 minutes for sample and
@@ -105,7 +108,7 @@ func (m Metric) Windows() []Window {
 
 // Strategies lists the cross-source strategies a rule may use for this metric. Sum needs
 // additive data (and the rule must still acknowledge the duplicate risk); mean, min and max
-// are rejected for provider-scoped scores; event_priority applies to sleep episodes only.
+// are rejected for provider-scoped scores and selection-only metrics; event_priority applies to sleep episodes only.
 func (m Metric) Strategies() []Strategy {
 	s := []Strategy{SingleSource, FirstAvailable}
 	if m.Poolable() {
@@ -122,7 +125,7 @@ func (m Metric) Strategies() []Strategy {
 }
 
 // Poolable reports whether values from different providers may be combined (mean, min, max).
-func (m Metric) Poolable() bool { return !m.ProviderScoped }
+func (m Metric) Poolable() bool { return !m.ProviderScoped && !m.SelectionOnly }
 
 // AllowsWindow and AllowsStrategy are the checks J09 rule validation calls.
 func (m Metric) AllowsWindow(w Window) bool     { return slices.Contains(m.Windows(), w) }

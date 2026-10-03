@@ -85,6 +85,11 @@ func TestStrategiesAndWindows(t *testing.T) {
 	if score.Poolable() || score.AllowsStrategy(Mean) || score.AllowsStrategy(Min) || score.AllowsStrategy(Max) || !score.AllowsStrategy(FirstAvailable) {
 		t.Errorf("provider-scoped strategies: %v", score.Strategies())
 	}
+	for _, code := range []string{"resting_heart_rate", "hrv_rmssd_nightly"} {
+		if m, _ := Lookup(code); m.Poolable() || m.AllowsStrategy(Mean) || !m.AllowsStrategy(FirstAvailable) {
+			t.Errorf("%s is selection-only: %v", code, m.Strategies())
+		}
+	}
 	if !bp.AllowsWindow(WindowReading) || hr.AllowsWindow(WindowReading) {
 		t.Error("only group metrics have the reading window")
 	}

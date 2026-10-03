@@ -81,7 +81,7 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 
 ## Windows and strategies by aggregation
 
-Bucket size is 5 minutes for `intensive` and `additive`. Provider-scoped scores lose `mean`, `min` and `max`. Metrics in a group add the `reading` window.
+Bucket size is 5 minutes for `intensive` and `additive`. Provider-scoped scores and selection-only metrics (`resting_heart_rate`, `hrv_rmssd_nightly`) lose `mean`, `min` and `max`. Metrics in a group add the `reading` window.
 
 | Aggregation | Windows | Strategies |
 | --- | --- | --- |
