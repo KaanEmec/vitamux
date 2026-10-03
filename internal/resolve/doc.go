@@ -46,4 +46,11 @@
 //     group gates (coverage, staleness) and Rule.Select, the strategy step, into a WindowResult
 //     with every group's GroupStatus and the warnings. Rule.ResolveWindows does a series, so
 //     fallback stays per window. J09.10 parts return ErrNotImplemented.
+//
+// Overrides (J09.7):
+//   - Overrides stores manual overrides (Create, Revoke, Active, History); each change is audited
+//     and marks resolution_dirty in its transaction. Rows are never deleted.
+//   - Rule.ResolveWindowOverridden and ResolveWindowsOverridden take the loaded overrides and
+//     return Resolved: the effective result, the applied and ignored overrides, and the
+//     computed result without them.
 package resolve

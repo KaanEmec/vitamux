@@ -131,7 +131,9 @@ Each extension stays typed (no expression language) and adds its inputs to the e
 - `force_source(group)`;
 - `set_value(value, unit, note)`: the result status becomes `overridden`, and the computed result is kept.
 
-Overrides never touch source rows. They are revocable and audited. Fixing a bad measurement means `exclude_input` or a `manual` provider entry.
+In the engine, `exclude_input` drops one input row (a whole reading for blood pressure) and resolves again; `force_source` selects the named group if it has a value; `set_value` wins over `force_source`. Each window result lists the applied and ignored overrides and keeps the computed result. A window left without a value stays `no_data`. At most one active `force_source` and one active `set_value` exist per window (revoke first); `set_value` is for single metrics, in the canonical unit.
+
+Overrides never touch source rows. They are revocable (soft: the row stays as history) and audited without the value or note; each change marks that local date in `resolution_dirty`. Fixing a bad measurement means `exclude_input` or a `manual` provider entry.
 
 ## Result shape
 

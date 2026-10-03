@@ -107,6 +107,8 @@ type Connection struct {
 	ConsecutiveFailures int32
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
+	// SHA-256 of the random token in the notification callback URL /webhooks/<provider>/<token>; null while not subscribed. The token itself is only sent to the provider.
+	HookTokenHash []byte
 }
 
 // Provider tokens, sealed by internal/crypto (purpose credentials, AAD bound to the connection).
@@ -145,6 +147,24 @@ type Device struct {
 	HardwareVersion *string
 	SoftwareVersion *string
 	CreatedAt       time.Time
+}
+
+// Export zips (blob_sha256 holds a blob reference); deleted with their blob after expires_at.
+type Export struct {
+	ID         uuid.UUID
+	UserID     uuid.UUID
+	JobID      *uuid.UUID
+	Format     string
+	IncludeRaw bool
+	CreatedAt  time.Time
+	FinishedAt *time.Time
+	ExpiresAt  *time.Time
+	SizeBytes  *int64
+	BlobSha256 []byte
+	// SHA-256 of the current one-time download token; a new token replaces it.
+	TokenHash      []byte
+	TokenExpiresAt *time.Time
+	TokenUsedAt    *time.Time
 }
 
 // First successful response per (client, Idempotency-Key), replayed for the same request; another request with the key is a conflict.
@@ -241,6 +261,34 @@ type KnownRelayOrigin struct {
 	// LIKE pattern matched against data_origins.origin_key.
 	OriginPattern     string
 	RelayedProviderID int16
+}
+
+// Owner corrections scoped to (metric, window kind, window key). Never delete: a revoke sets revoked_at and the row stays as history.
+type ManualOverride struct {
+	ID     uuid.UUID
+	UserID uuid.UUID
+	// Rule metric: catalogue code or rule family (sleep, blood_pressure), so no foreign key to metric_catalog.
+	Metric     string
+	WindowKind string
+	// resolve.Window.Key: date for local_day and local_night, UTC start for bucket, hour and sleep_episode, as_of for latest, g:<id> or m:<id> for reading.
+	WindowKey string
+	// Local date the window belongs to; the resolution_dirty mark written with the override.
+	LocalDate time.Time
+	Action    string
+	// exclude_input: measurements.id. No foreign key; a correction replaces the row, and the override is then reported as ignored.
+	InputID *int64
+	// force_source: the rule group id to use for the window.
+	SourceGroup *string
+	// set_value: the window value in the metric's canonical unit (unit).
+	Value *float64
+	Unit  *string
+	// set_value: why; required.
+	Note *string
+	// Audit actor: owner, api_key:<id> or system.
+	CreatedBy string
+	CreatedAt time.Time
+	RevokedAt *time.Time
+	RevokedBy *string
 }
 
 type Measurement struct {
