@@ -7,13 +7,15 @@
 - Instants are RFC 3339 **with offset**, half-open `[start, end)`. Dates are `YYYY-MM-DD` (`start_date`/`end_date`, inclusive), in the user's timezone periods.
 - Cursor pagination: `limit` (default 500, max 10,000 for measurements) and an opaque HMAC-protected `cursor`. Responses carry `next_cursor` and `has_more`. No offsets.
 - Repeatable filters: `metric`, `provider`, `connection`, `device`, `origin`, `kind`. Expansions via `include=provenance|stages|segments|superseded`.
-- Errors are `application/problem+json` with `type`, `title`, `status`, `detail`, `code`, `request_id`, and `errors[]`. Codes: `validation_failed`, `not_found`, `conflict`, `rate_limited`, `reauth_required`, `consent_required`, `unsupported_window`, `rule_warning_unacknowledged`. Also `payload_too_large` (413) and `internal_error` (500). The registry is `internal/api/problem.go`.
+- Errors are `application/problem+json` with `type`, `title`, `status`, `detail`, `code`, `request_id`, and `errors[]`. Codes: `validation_failed`, `not_found`, `conflict`, `rate_limited`, `reauth_required`, `consent_required`, `unsupported_window`, `rule_warning_unacknowledged`. Also `unauthenticated` and `totp_required` (401), `forbidden` (403), `payload_too_large` (413), `internal_error` (500) and `unavailable` (503). The registry is `internal/api/problem.go`.
 - Request bodies are capped per route class (`bodyClasses` in `internal/api/middleware.go`): 1 MiB owner JSON, 10 MiB ingest batches, 25 MiB uploads. `X-Forwarded-For`/`-Proto` are trusted only from `VITAMUX_TRUSTED_PROXIES` (comma-separated CIDRs; empty trusts none).
 - `Idempotency-Key` is required on ingest POSTs and accepted on job-creating owner POSTs.
 - Auth:
-  - UI: session cookie (`HttpOnly; Secure; SameSite=Strict`) + CSRF header.
-  - API: `Bearer vmx_pat_<id>_<secret>` with scopes `read:health`, `read:config`, `write:config`, `write:documents`, `admin`.
-  - Ingest: `Bearer vmx_cli_<id>_<secret>` with scope `ingest:<connection_id>`.
+  - UI: session cookie (`HttpOnly; Secure; SameSite=Strict`) + `X-CSRF-Token` header on mutating requests (value from `POST /auth/login` or `GET /auth/session`).
+  - API: `Bearer vmx_pat_<id>_<secret>` with scopes `read:health`, `read:config`, `write:config`, `write:documents`, `admin` (implies the others).
+  - Ingest: `Bearer vmx_cli_<id>_<secret>` with scope `ingest:<connection_id>`; rejected on `/api/v1`.
+  - `<id>` is the row UUID as 32 lowercase hex characters; `<secret>` is 32 random bytes, unpadded base64url. Only SHA-256(secret) is stored; the token is shown once.
+  - Each route declares its access (public, session, scope, ingest) when registered in `internal/api`; anything else gets 401/403.
 
 ## Ingest endpoints (`/api/ingest/v1`)
 
@@ -37,7 +39,7 @@
 | Devices | `POST /devices/pairing-codes`, `GET /devices`, `POST /devices/{id}/request-anchor-reset`, `POST /devices/{id}/revoke` |
 | Documents and labs | `POST/GET /documents`, `GET /documents/{id}[/file]`, `DELETE /documents/{id}?derived=keep\|delete`, `POST /documents/{id}/extractions`, `GET /extractions/{id}`, `PATCH /extractions/{id}/rows/{row}`, `POST /extractions/{id}/confirm`, `GET /lab-results`, `GET /lab-results/{id}/history`, `GET/POST /analytes/aliases` |
 | Exports | `POST /exports`, `GET /exports/{id}`, `GET /exports/{id}/download` |
-| Auth and settings | `POST /auth/login\|logout`, `/auth/totp/*`, `GET/POST/DELETE /api-keys`, `GET/PATCH /settings`, `GET/POST /timezone-periods` |
+| Auth and settings | `POST /auth/login\|logout`, `GET /auth/session`, `POST /auth/totp/enroll\|confirm\|disable`, `GET/POST /api-keys`, `DELETE /api-keys/{id}`, `GET/PATCH /settings`, `GET/POST /timezone-periods` |
 
 ## Example: resolved day
 

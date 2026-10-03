@@ -300,7 +300,8 @@ func TestReadyz(t *testing.T) {
 
 func TestProblemRegistry(t *testing.T) {
 	documented := []Code{CodeValidationFailed, CodeNotFound, CodeConflict, CodeRateLimited, CodeReauthRequired,
-		CodeConsentRequired, CodeUnsupportedWindow, CodeRuleWarningUnacknowledged, CodePayloadTooLarge, CodeInternal}
+		CodeConsentRequired, CodeUnsupportedWindow, CodeRuleWarningUnacknowledged, CodePayloadTooLarge, CodeInternal,
+		CodeUnauthenticated, CodeTOTPRequired, CodeForbidden, CodeUnavailable}
 	for _, c := range documented {
 		if _, ok := problemKinds[c]; !ok {
 			t.Errorf("code %q not registered", c)

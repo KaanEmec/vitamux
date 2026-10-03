@@ -10,7 +10,7 @@ import (
 )
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, password_hash, totp_ciphertext, totp_key_id, created_at, updated_at FROM users WHERE username = $1
+SELECT id, username, password_hash, totp_ciphertext, totp_key_id, created_at, updated_at, totp_enabled_at, totp_last_step FROM users WHERE username = $1
 `
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
@@ -24,6 +24,8 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.TotpKeyID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TotpEnabledAt,
+		&i.TotpLastStep,
 	)
 	return i, err
 }

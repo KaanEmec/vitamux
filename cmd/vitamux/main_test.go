@@ -20,6 +20,9 @@ func TestRunCommands(t *testing.T) {
 		{[]string{"migrate"}, 2, "usage: vitamux migrate"},
 		{[]string{"migrate", "down-to", "x"}, 2, "usage: vitamux migrate"},
 		{[]string{"admin"}, 2, "usage: vitamux admin"},
+		{[]string{"keys"}, 2, "usage: vitamux keys"},
+		{[]string{"keys", "nope"}, 2, "usage: vitamux keys"},
+		{[]string{"keys", "rotate", "extra"}, 2, "usage: vitamux keys"},
 	}
 	for _, c := range cases {
 		var out, errOut bytes.Buffer

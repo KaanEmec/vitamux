@@ -28,7 +28,7 @@ linters:
             - pkg: "github.com/jackc/pgx"
               desc: "database access goes through internal/db"
         domain-not-http:
-          files: ["**/internal/connectors/**", "**/internal/normalize/**", "**/internal/resolve/**", "**/internal/ingest/**", "**/internal/jobs/**", "**/internal/documents/**", "**/internal/imports/**"]
+          files: ["**/internal/auth/**", "**/internal/connectors/**", "**/internal/normalize/**", "**/internal/resolve/**", "**/internal/ingest/**", "**/internal/jobs/**", "**/internal/documents/**", "**/internal/imports/**"]
           deny:
             - pkg: "github.com/KaanEmec/vitamux/internal/api"
               desc: "domain packages must not depend on the HTTP layer"

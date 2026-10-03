@@ -328,6 +328,14 @@ type RawPayload struct {
 	Status           string
 }
 
+// Single-use TOTP recovery codes; only the SHA-256 of each 80-bit code is stored.
+type RecoveryCode struct {
+	UserID    uuid.UUID
+	CodeHash  []byte
+	CreatedAt time.Time
+	UsedAt    *time.Time
+}
+
 // Days whose resolved values must be recomputed; written in the canonical writer's transaction.
 type ResolutionDirty struct {
 	UserID    uuid.UUID
@@ -443,6 +451,10 @@ type User struct {
 	TotpKeyID *string
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	// Set when enrolment is confirmed; a sealed secret without it is a pending enrolment.
+	TotpEnabledAt *time.Time
+	// Last accepted TOTP time step; a code is accepted only for a later step (no replay).
+	TotpLastStep *int64
 }
 
 type Workout struct {

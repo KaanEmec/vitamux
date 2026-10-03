@@ -27,6 +27,14 @@ Out of scope: a fully compromised host, beyond least privilege and keeping secre
 - Losing the key loses provider tokens (reauthorize) and encrypted documents. Normalized and raw data are not app-encrypted; they rely on volume or disk encryption.
 - All other secrets (DB passwords, OAuth client secrets, AI keys) are read from `*_FILE` paths. Plain env values are accepted in development only, with a warning.
 
+## Owner sign-in
+
+- Passwords: argon2id, m=64 MiB, t=3, p=2, 16-byte salt, 32-byte key, stored as a PHC string; at least 12 characters. Set only by `vitamux admin create-owner|reset-password`, which read a TTY (no echo) or piped stdin; reset ends all sessions.
+- Sessions: 32 random bytes in cookie `vitamux_session` (`Path=/; HttpOnly; Secure; SameSite=Strict`; `Secure` is dropped only with `VITAMUX_ENV=development` on plain http). Only the SHA-256 is stored. Idle timeout 12 h, absolute 7 days, a new token on every login. CSRF token = HMAC-SHA256(`session-signing` key, session token).
+- Throttling (in memory, single process): per username and per client address (IPv6 by /64). From the 5th consecutive failure, a lockout of 1 s doubling up to 15 min; attempts during it get 429 with `Retry-After`. Unknown usernames cost the same argon2 run.
+- TOTP: RFC 6238 (SHA-1, 6 digits, 30 s, ±1 step), each step accepted once. Secret sealed with purpose `credentials`, AAD `users.totp:<user id>`; enrolment is pending until a code confirms it. Ten single-use 80-bit recovery codes, stored as SHA-256.
+- Without a loadable master key, sign-in answers 503 and every protected route 401.
+
 ## Database roles
 
 - `vitamux_owner`: owns the schema, used only by `vitamux migrate`.

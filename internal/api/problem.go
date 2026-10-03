@@ -11,6 +11,9 @@ type Code string
 
 const (
 	CodeValidationFailed          Code = "validation_failed"
+	CodeUnauthenticated           Code = "unauthenticated"
+	CodeTOTPRequired              Code = "totp_required"
+	CodeForbidden                 Code = "forbidden"
 	CodeNotFound                  Code = "not_found"
 	CodeConflict                  Code = "conflict"
 	CodeRateLimited               Code = "rate_limited"
@@ -20,6 +23,7 @@ const (
 	CodeRuleWarningUnacknowledged Code = "rule_warning_unacknowledged"
 	CodePayloadTooLarge           Code = "payload_too_large"
 	CodeInternal                  Code = "internal_error"
+	CodeUnavailable               Code = "unavailable"
 )
 
 // problemKinds is the registry: every code an API response may carry, with its HTTP status
@@ -29,6 +33,9 @@ var problemKinds = map[Code]struct {
 	title  string
 }{
 	CodeValidationFailed:          {http.StatusUnprocessableEntity, "Validation failed"},
+	CodeUnauthenticated:           {http.StatusUnauthorized, "Authentication required"},
+	CodeTOTPRequired:              {http.StatusUnauthorized, "TOTP code required"},
+	CodeForbidden:                 {http.StatusForbidden, "Forbidden"},
 	CodeNotFound:                  {http.StatusNotFound, "Not found"},
 	CodeConflict:                  {http.StatusConflict, "Conflict"},
 	CodeRateLimited:               {http.StatusTooManyRequests, "Rate limited"},
@@ -38,6 +45,7 @@ var problemKinds = map[Code]struct {
 	CodeRuleWarningUnacknowledged: {http.StatusConflict, "Rule warning not acknowledged"},
 	CodePayloadTooLarge:           {http.StatusRequestEntityTooLarge, "Payload too large"},
 	CodeInternal:                  {http.StatusInternalServerError, "Internal error"},
+	CodeUnavailable:               {http.StatusServiceUnavailable, "Service unavailable"},
 }
 
 // FieldError points at one invalid input in a validation_failed problem.

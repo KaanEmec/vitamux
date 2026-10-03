@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/KaanEmec/vitamux/internal/api"
+	"github.com/KaanEmec/vitamux/internal/auth"
 	"github.com/KaanEmec/vitamux/internal/config"
 	"github.com/KaanEmec/vitamux/internal/crypto"
 	"github.com/KaanEmec/vitamux/internal/db"
@@ -32,6 +33,7 @@ Commands:
   serve     run HTTP server, scheduler and workers
   migrate   up | status | down-to VERSION (development only)
   admin     administrative tasks (E03)
+  keys      rotate (re-seal values under the current master key)
   version   print version information
 `
 
@@ -55,6 +57,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return migrate(args[1:], stdout, stderr)
 	case "admin":
 		return admin(args[1:], stdout, stderr)
+	case "keys":
+		return keys(args[1:], stdout, stderr)
 	case "help", "-h", "--help":
 		fmt.Fprint(stdout, usage)
 		return 0
@@ -92,9 +96,14 @@ func serve(stderr io.Writer) int {
 	if err := os.MkdirAll(cfg.DataDir, 0o750); err != nil {
 		log.Warn("create data dir", "err", err) // /readyz reports it as not writable
 	}
+	var keys *crypto.Keyring
 	keyErr := errors.New("VITAMUX_MASTER_KEY_FILE is not set (create one with `vitamux admin init-secrets`)")
 	if cfg.MasterKeyFile != "" {
-		_, keyErr = crypto.Load(cfg.MasterKeyFile, cfg.PreviousMasterKeyFiles...)
+		keys, keyErr = crypto.Load(cfg.MasterKeyFile, cfg.PreviousMasterKeyFiles...)
+	}
+	var authSvc *auth.Service // nil without a key: sign-in fails closed
+	if keyErr == nil {
+		authSvc, keyErr = auth.New(db.New(pool), keys)
 	}
 	if keyErr != nil {
 		log.Error("master key", "err", keyErr) // /readyz reports it as not loaded
@@ -102,6 +111,8 @@ func serve(stderr io.Writer) int {
 	handler, err := api.NewHandler(log, web.Assets(), api.Options{
 		HSTS:           cfg.PublicURL.Scheme == "https",
 		TrustedProxies: cfg.TrustedProxies,
+		Auth:           authSvc,
+		Development:    cfg.Env == config.Development,
 		ReadyChecks: []api.ReadyCheck{
 			{Name: "database", Check: pool.Ping},
 			{Name: "schema", Check: func(ctx context.Context) error { return db.CheckSchema(ctx, pool) }},

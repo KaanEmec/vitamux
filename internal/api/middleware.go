@@ -82,9 +82,9 @@ func bodyLimit(path string) int64 {
 }
 
 // middleware wraps h, outermost first: request state and id, access log, security headers,
-// panic recovery, body limits.
+// panic recovery, body limits, authentication.
 func middleware(log *slog.Logger, o Options, mux *http.ServeMux) http.Handler {
-	inner := bodyLimits(mux)
+	inner := bodyLimits(authenticate(log, o.Auth, mux))
 	inner = recoverer(log, inner)
 	inner = securityHeaders(o.HSTS, inner)
 	inner = accessLog(log, mux, inner)

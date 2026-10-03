@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/KaanEmec/vitamux/internal/auth"
 	"github.com/KaanEmec/vitamux/internal/version"
 )
 
@@ -31,26 +32,51 @@ type Options struct {
 	// TrustedProxies are the peers whose X-Forwarded-For/-Proto are believed. Empty trusts none.
 	TrustedProxies []netip.Prefix
 	ReadyChecks    []ReadyCheck
+	// Auth authenticates sessions and tokens. Nil (no master key) fails closed: login
+	// answers 503 and every protected route 401.
+	Auth *auth.Service
+	// Development lets the session cookie drop Secure on plain-http requests.
+	Development bool
 }
 
 // NewHandler builds the root HTTP handler: the route table behind the middleware chain.
-// The API surface is added in E10.
+// The rest of the API surface is added in E10.
 func NewHandler(log *slog.Logger, ui fs.FS, opts Options) (http.Handler, error) {
+	rt, err := newRouter(log, ui, opts)
+	if err != nil {
+		return nil, err
+	}
+	return rt.handler(), nil
+}
+
+// router is the route table. API routes are added with handle, which records who may
+// call them.
+type router struct {
+	log    *slog.Logger
+	opts   Options
+	mux    *http.ServeMux
+	routes []route
+}
+
+func newRouter(log *slog.Logger, ui fs.FS, opts Options) (*router, error) {
 	uh, err := newUIHandler(ui)
 	if err != nil {
 		return nil, err
 	}
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
+	rt := &router{log: log, opts: opts, mux: http.NewServeMux()}
+	rt.mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(log, w, http.StatusOK, map[string]string{"status": "ok", "version": version.Version})
 	})
-	mux.HandleFunc("GET /readyz", readyz(log, opts.ReadyChecks))
-	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) { // never fall through to the SPA
+	rt.mux.HandleFunc("GET /readyz", readyz(log, opts.ReadyChecks))
+	rt.mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) { // never fall through to the SPA
 		writeProblem(w, r, CodeNotFound, "no such API endpoint")
 	})
-	mux.Handle("/", uh)
-	return middleware(log, opts, mux), nil
+	rt.mux.Handle("/", uh)
+	rt.authRoutes()
+	return rt, nil
 }
+
+func (rt *router) handler() http.Handler { return middleware(rt.log, rt.opts, rt.mux) }
 
 func writeJSON(log *slog.Logger, w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")

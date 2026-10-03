@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -54,5 +55,29 @@ func TestInitSecretsDefaultPath(t *testing.T) {
 	}
 	if _, err := crypto.Load(filepath.Join(dir, "master.key")); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func pipeStdin(t *testing.T, input string) *os.File {
+	t.Helper()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = r.Close() })
+	go func() {
+		_, _ = w.WriteString(input)
+		_ = w.Close()
+	}()
+	return r
+}
+
+func TestReadCredentialsFromPipe(t *testing.T) {
+	user, pw, err := readCredentials(pipeStdin(t, " owner \r\npass word with spaces\r\n"), io.Discard)
+	if err != nil || user != "owner" || pw != "pass word with spaces" {
+		t.Fatalf("got %q %q %v", user, pw, err)
+	}
+	if _, _, err := readCredentials(pipeStdin(t, "owner\n"), io.Discard); err == nil {
+		t.Fatal("a missing password line must fail")
 	}
 }

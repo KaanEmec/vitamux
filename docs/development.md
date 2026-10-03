@@ -15,6 +15,7 @@
 | `make lint` | golangci-lint, svelte-check, ESLint |
 | `make build` | `bin/vitamux` with the UI embedded (`-tags webui`) |
 | `vitamux admin init-secrets` | Creates the master key file (`VITAMUX_MASTER_KEY_FILE`, default `./data/master.key`); never overwrites |
+| `vitamux admin create-owner` | Creates the single owner account; username and password from the terminal or two lines on stdin (`reset-password` likewise) |
 | `make image` | Release container image (distroless, non-root) |
 
 Without `-tags webui` the binary serves a placeholder page, so backend work never needs Node.
@@ -38,7 +39,7 @@ These rules are enforced by `depguard` in `.golangci.yml`:
 | --- | --- |
 | everything | std `log` (use `log/slog`) |
 | everything except `internal/db` | `github.com/jackc/pgx` |
-| `connectors`, `normalize`, `resolve`, `ingest`, `jobs`, `documents`, `imports` | `internal/api` |
+| `auth`, `connectors`, `normalize`, `resolve`, `ingest`, `jobs`, `documents`, `imports` | `internal/api` |
 | `connectors` | `internal/resolve` |
 | `resolve` | `internal/connectors`, `internal/ingest` |
 | `normalize` | `internal/connectors` (connectors import normalize, never the reverse) |
