@@ -23,6 +23,9 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
+      - name: TS API client is up to date
+        run: npm run openapi && git diff --exit-code -- src/lib/api && test -z "$(git status --porcelain src/lib/api)"
+      - run: npm run lint:api # Spectral (pinned in package.json)
       - run: npm run check
       - run: npm run lint
       - run: npm run build
@@ -49,6 +52,8 @@ jobs:
           version: v2.14.0
       - name: sqlc generation is up to date
         run: go tool sqlc generate && git diff --exit-code -- internal/db/dbq && test -z "$(git status --porcelain internal/db/dbq)"
+      - name: OpenAPI Go generation is up to date
+        run: go tool oapi-codegen -config internal/api/oapi/config.yaml api/openapi.yaml && git diff --exit-code -- internal/api/oapi && test -z "$(git status --porcelain internal/api/oapi)"
       - run: go test -race ./...
       - run: go test -run '^$' -fuzz=FuzzDecodeBatch -fuzztime=20s ./internal/ingest # batch parser fuzz smoke
       - run: go test -tags webui ./internal/api/ # CSP check against the real built page

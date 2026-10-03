@@ -29,6 +29,7 @@ Without `-tags webui` the binary serves a placeholder page, so backend work neve
 - Expand/contract: a release only adds (nullable or defaulted columns, new tables, `CREATE INDEX CONCURRENTLY` in its own `-- +goose NO TRANSACTION` file). Code stops using a column one release before a later migration drops it. Never edit a released migration.
 - Integration tests use `internal/db/dbtest`: `dbtest.Migrated(t)` creates a fresh migrated database per test and returns an app-role pool.
 - Queries live in `internal/db/queries/*.sql`; `make sqlc` regenerates `internal/db/dbq` (commit the output; CI fails on drift). Domain code uses `db.DB` (`Q()`, `Tx`, `CopyFrom`) and `db.ErrNotFound`/`db.ErrConflict`, never pgx.
+- After editing `api/openapi.yaml`, `make openapi` regenerates `internal/api/oapi` and `web/src/lib/api/schema.d.ts` (commit both; CI fails on drift and runs Spectral). See [api.md](architecture/api.md#implementing-owner-endpoints).
 - [`docs/schema/`](schema/README.md) is generated from the migrated schema; the integration tests fail when it drifts. After changing a migration, run `VITAMUX_UPDATE_SCHEMA_DOC=1 go test -tags integration -run TestSchemaDoc ./internal/db`.
 
 ## Writing integration tests

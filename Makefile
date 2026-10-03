@@ -8,7 +8,7 @@ COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 LDFLAGS := -s -w -X github.com/KaanEmec/vitamux/internal/version.Version=$(VERSION) -X github.com/KaanEmec/vitamux/internal/version.Commit=$(COMMIT)
 COMPOSE := docker compose -f deploy/compose/compose.dev.yaml
 
-.PHONY: help dev services migrate services-down web-install web-build build test test-integration sqlc lint fixtures fixture-guard golden image clean
+.PHONY: help dev services migrate services-down web-install web-build build test test-integration sqlc openapi lint fixtures fixture-guard golden image clean
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -46,10 +46,15 @@ test-integration: services ## Integration tests against dev PostgreSQL
 sqlc: ## Regenerate internal/db/dbq from migrations and queries
 	go tool sqlc generate
 
+openapi: web-install ## Regenerate Go server types and the TS client from api/openapi.yaml
+	go tool oapi-codegen -config internal/api/oapi/config.yaml api/openapi.yaml
+	npm --prefix web run openapi
+
 lint: web-install ## Go and web linters
 	golangci-lint run ./...
 	npm --prefix web run check
 	npm --prefix web run lint
+	npm --prefix web run lint:api
 
 SEED ?= 42
 fixtures: ## Generate the synthetic year into fixtures/generated (SEED=42; ~0.8 GB, git-ignored)

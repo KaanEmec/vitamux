@@ -10,8 +10,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/KaanEmec/vitamux/internal/api/oapi"
 	"github.com/KaanEmec/vitamux/internal/auth"
 	"github.com/KaanEmec/vitamux/internal/blob"
+	"github.com/KaanEmec/vitamux/internal/crypto"
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/version"
 )
@@ -42,6 +44,8 @@ type Options struct {
 	// DB and Blobs back the ingest endpoints, which answer 503 while either is nil.
 	DB    *db.DB
 	Blobs *blob.Store
+	// Keys signs pagination cursors. Nil uses a per-process key.
+	Keys *crypto.Keyring
 }
 
 // NewHandler builds the root HTTP handler: the route table behind the middleware chain.
@@ -61,6 +65,7 @@ type router struct {
 	opts   Options
 	mux    *http.ServeMux
 	routes []route
+	ops    *oapi.ServerInterfaceWrapper // generated owner operations (owner.go)
 }
 
 func newRouter(log *slog.Logger, ui fs.FS, opts Options) (*router, error) {
@@ -69,6 +74,9 @@ func newRouter(log *slog.Logger, ui fs.FS, opts Options) (*router, error) {
 		return nil, err
 	}
 	rt := &router{log: log, opts: opts, mux: http.NewServeMux()}
+	if rt.ops, err = newOwnerOps(rt); err != nil {
+		return nil, err
+	}
 	rt.mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(log, w, http.StatusOK, map[string]string{"status": "ok", "version": version.Version})
 	})
@@ -78,6 +86,7 @@ func newRouter(log *slog.Logger, ui fs.FS, opts Options) (*router, error) {
 	})
 	rt.mux.Handle("/", uh)
 	rt.authRoutes()
+	rt.systemRoutes()
 	rt.ingestRoutes()
 	return rt, nil
 }

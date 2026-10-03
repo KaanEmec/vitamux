@@ -6,15 +6,40 @@ info:
     name: MIT
     identifier: MIT
   description: >
-    Contract-first API (ADR-0015, docs/architecture/api.md). This file currently holds the
-    ingest section (/api/ingest/v1); the owner API (/api/v1) is added by E10.
+    Contract-first API (ADR-0015, docs/architecture/api.md). /api/v1 is for the owner (session
+    cookie + X-CSRF-Token, or an API key); /api/ingest/v1 is for clients and devices. Schemas
+    marked as open objects get their properties when the endpoint is implemented; changes
+    within v1 are additive only.
 servers:
   - url: /
 tags:
   - name: ingest
     description: Raw uploads from clients, devices and importers (docs/architecture/connectors.md#push-ingest-contract).
+  - name: catalogue
+    description: Metric catalogue (docs/architecture/metric-catalog.md).
+  - name: source-data
+    description: Normalized source records with provenance (docs/architecture/data-model.md).
+  - name: resolved
+    description: Values selected by resolution rules (docs/architecture/resolution.md).
+  - name: rules
+    description: Resolution rules and manual overrides.
+  - name: system
+    description: Coverage, health, jobs and build information.
+  - name: connections
+    description: Provider connections, syncs, backfills and streams (docs/architecture/connectors.md).
+  - name: devices
+    description: Paired devices such as the Apple Health bridge (docs/architecture/apple-health.md).
+  - name: documents
+    description: Blood-test documents, extractions and lab results (docs/architecture/lab-documents.md).
+  - name: exports
+    description: Portable data exports (docs/architecture/api.md#exports).
+  - name: auth
+    description: Sign-in, sessions, TOTP and API keys (docs/architecture/security.md).
+  - name: settings
+    description: Owner settings and timezone periods.
 
 paths:
+  # ---------------------------------------------------------------- ingest (/api/ingest/v1)
   /api/ingest/v1/batches:
     post:
       tags: [ingest]
@@ -28,10 +53,7 @@ paths:
         - clientToken: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
-        - name: Content-Encoding
-          in: header
-          required: false
-          schema: {type: string, enum: [gzip]}
+        - $ref: '#/components/parameters/ContentEncoding'
       requestBody:
         required: true
         content:
@@ -81,10 +103,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/BatchID'
         - $ref: '#/components/parameters/IdempotencyKey'
-        - name: Content-Encoding
-          in: header
-          required: false
-          schema: {type: string, enum: [gzip]}
+        - $ref: '#/components/parameters/ContentEncoding'
       requestBody:
         required: true
         content:
@@ -122,8 +141,1561 @@ paths:
         '403': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
 
+  # ---------------------------------------------------------------- catalogue
+  /api/v1/metrics:
+    get:
+      tags: [catalogue]
+      operationId: listMetrics
+      summary: List catalogue metrics
+      security: [{session: []}, {apiKey: ['read:health']}]
+      responses:
+        '200':
+          description: All metrics.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [metrics]
+                properties:
+                  metrics: {type: array, items: {$ref: '#/components/schemas/Metric'}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/metrics/{code}:
+    get:
+      tags: [catalogue]
+      operationId: getMetric
+      summary: Get one catalogue metric
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/MetricCodePath'
+      responses:
+        '200':
+          description: The metric.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Metric'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+
+  # ---------------------------------------------------------------- source data
+  /api/v1/measurements:
+    get:
+      tags: [source-data]
+      operationId: listMeasurements
+      summary: List normalized measurements
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/Start'
+        - $ref: '#/components/parameters/End'
+        - $ref: '#/components/parameters/MetricFilter'
+        - $ref: '#/components/parameters/ProviderFilter'
+        - $ref: '#/components/parameters/ConnectionFilter'
+        - $ref: '#/components/parameters/DeviceFilter'
+        - $ref: '#/components/parameters/OriginFilter'
+        - $ref: '#/components/parameters/KindFilter'
+        - $ref: '#/components/parameters/Include'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: One page of measurements.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MeasurementPage'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/measurements/manual:
+    post:
+      tags: [source-data]
+      operationId: createManualMeasurement
+      summary: Record a manual measurement (provider manual, audited)
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ManualMeasurementInput'}
+      responses:
+        '201':
+          description: Stored.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Measurement'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/groups:
+    get:
+      tags: [source-data]
+      operationId: listGroups
+      summary: List measurement groups (blood-pressure readings, weigh-ins)
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - name: kind
+          in: query
+          required: false
+          schema: {type: string, enum: [bp_reading, body_composition]}
+        - $ref: '#/components/parameters/Start'
+        - $ref: '#/components/parameters/End'
+        - $ref: '#/components/parameters/ProviderFilter'
+        - $ref: '#/components/parameters/ConnectionFilter'
+        - $ref: '#/components/parameters/DeviceFilter'
+        - $ref: '#/components/parameters/OriginFilter'
+        - $ref: '#/components/parameters/Include'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: One page of groups.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/GroupPage'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/blood-pressure:
+    get:
+      tags: [source-data]
+      operationId: listBloodPressure
+      summary: List blood-pressure readings
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/Start'
+        - $ref: '#/components/parameters/End'
+        - $ref: '#/components/parameters/ProviderFilter'
+        - $ref: '#/components/parameters/ConnectionFilter'
+        - $ref: '#/components/parameters/DeviceFilter'
+        - $ref: '#/components/parameters/OriginFilter'
+        - $ref: '#/components/parameters/Include'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: One page of readings.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BloodPressurePage'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/sleep:
+    get:
+      tags: [source-data]
+      operationId: listSleep
+      summary: List sleep sessions
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+        - $ref: '#/components/parameters/ProviderFilter'
+        - $ref: '#/components/parameters/ConnectionFilter'
+        - $ref: '#/components/parameters/DeviceFilter'
+        - $ref: '#/components/parameters/OriginFilter'
+        - $ref: '#/components/parameters/Include'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: One page of sleep sessions.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SleepPage'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/sleep/{id}:
+    get:
+      tags: [source-data]
+      operationId: getSleep
+      summary: Get one sleep session
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+        - $ref: '#/components/parameters/Include'
+      responses:
+        '200':
+          description: The sleep session.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SleepSession'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/workouts:
+    get:
+      tags: [source-data]
+      operationId: listWorkouts
+      summary: List workouts
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/Start'
+        - $ref: '#/components/parameters/End'
+        - $ref: '#/components/parameters/ProviderFilter'
+        - $ref: '#/components/parameters/ConnectionFilter'
+        - $ref: '#/components/parameters/DeviceFilter'
+        - $ref: '#/components/parameters/OriginFilter'
+        - $ref: '#/components/parameters/Include'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: One page of workouts.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WorkoutPage'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/workouts/{id}:
+    get:
+      tags: [source-data]
+      operationId: getWorkout
+      summary: Get one workout
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+        - $ref: '#/components/parameters/Include'
+      responses:
+        '200':
+          description: The workout.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Workout'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/provenance/{entity}/{id}:
+    get:
+      tags: [source-data]
+      operationId: getProvenance
+      summary: Trace a record back to its raw payload, batch and normalizer
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - name: entity
+          in: path
+          required: true
+          description: Record type, e.g. measurement, group, sleep, workout, lab_result.
+          schema: {type: string}
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: The provenance trace.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Provenance'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+
+  # ---------------------------------------------------------------- resolved
+  /api/v1/resolved/daily:
+    get:
+      tags: [resolved]
+      operationId: getResolvedDaily
+      summary: Resolved values per local day
+      description: Example in docs/architecture/api.md#example-resolved-day.
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/StartDateRequired'
+        - $ref: '#/components/parameters/EndDateRequired'
+        - name: metrics
+          in: query
+          required: false
+          description: Comma-separated metric codes; all resolvable metrics when omitted.
+          style: form
+          explode: false
+          schema: {type: array, items: {type: string}}
+      responses:
+        '200':
+          description: One entry per local day.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResolvedDaily'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/resolved/series:
+    get:
+      tags: [resolved]
+      operationId: getResolvedSeries
+      summary: Resolved series of one metric over a range
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - name: metric
+          in: query
+          required: true
+          schema: {type: string}
+        - name: start
+          in: query
+          required: true
+          schema: {type: string, format: date-time}
+        - name: end
+          in: query
+          required: true
+          schema: {type: string, format: date-time}
+        - name: window
+          in: query
+          required: false
+          description: Window kind or bucket size, e.g. hour, local_day, 5m.
+          schema: {type: string}
+      responses:
+        '200':
+          description: Points with a source per point.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResolvedSeries'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/resolved/sleep:
+    get:
+      tags: [resolved]
+      operationId: getResolvedSleep
+      summary: Resolved sleep episodes per night
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/StartDateRequired'
+        - $ref: '#/components/parameters/EndDateRequired'
+      responses:
+        '200':
+          description: Selected episodes.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResolvedEvents'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/resolved/workouts:
+    get:
+      tags: [resolved]
+      operationId: getResolvedWorkouts
+      summary: Resolved workouts
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/StartDateRequired'
+        - $ref: '#/components/parameters/EndDateRequired'
+      responses:
+        '200':
+          description: Selected workouts.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResolvedEvents'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/resolved/{metric}/{window_key}/sources:
+    get:
+      tags: [resolved]
+      operationId: getResolvedSources
+      summary: All-sources drilldown for one metric and window
+      description: Example in docs/architecture/api.md#example-all-sources-drilldown.
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/MetricPath'
+        - name: window_key
+          in: path
+          required: true
+          description: Window key, e.g. a local date (2026-09-14) or an hour start.
+          schema: {type: string}
+      responses:
+        '200':
+          description: Every source, including excluded ones.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SourcesDrilldown'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/resolution/preview:
+    post:
+      tags: [resolved]
+      operationId: previewResolution
+      summary: Resolve a draft rule over a range without writing anything
+      security: [{session: [], csrf: []}, {apiKey: ['read:health']}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ResolutionPreviewRequest'}
+      responses:
+        '200':
+          description: Preview results.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResolutionPreview'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  # ---------------------------------------------------------------- rules and overrides
+  /api/v1/rules:
+    get:
+      tags: [rules]
+      operationId: listRules
+      summary: List active rules per metric
+      security: [{session: []}, {apiKey: ['read:config']}]
+      responses:
+        '200':
+          description: Active rules.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [rules]
+                properties:
+                  rules: {type: array, items: {$ref: '#/components/schemas/Rule'}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/rules/{metric}/versions:
+    get:
+      tags: [rules]
+      operationId: listRuleVersions
+      summary: List the versions of a metric's rule
+      security: [{session: []}, {apiKey: ['read:config']}]
+      parameters:
+        - $ref: '#/components/parameters/MetricPath'
+      responses:
+        '200':
+          description: Versions, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [versions]
+                properties:
+                  versions: {type: array, items: {$ref: '#/components/schemas/RuleVersion'}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+    post:
+      tags: [rules]
+      operationId: createRuleVersion
+      summary: Save a new rule version (not yet active)
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      parameters:
+        - $ref: '#/components/parameters/MetricPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RuleVersionInput'}
+      responses:
+        '201':
+          description: Saved.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RuleVersion'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/rules/{metric}/activate:
+    post:
+      tags: [rules]
+      operationId: activateRule
+      summary: Activate a rule version
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      parameters:
+        - $ref: '#/components/parameters/MetricPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RuleActivation'}
+      responses:
+        '200':
+          description: The now active version.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RuleVersion'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/overrides:
+    get:
+      tags: [rules]
+      operationId: listOverrides
+      summary: List manual overrides
+      security: [{session: []}, {apiKey: ['read:config']}]
+      parameters:
+        - $ref: '#/components/parameters/MetricFilter'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: One page of overrides.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OverridePage'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+    post:
+      tags: [rules]
+      operationId: createOverride
+      summary: Create a manual override (audited, reversible)
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/OverrideInput'}
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Override'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/overrides/{id}/revoke:
+    post:
+      tags: [rules]
+      operationId: revokeOverride
+      summary: Revoke a manual override
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: The revoked override.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Override'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+
+  # ---------------------------------------------------------------- coverage and health
+  /api/v1/coverage:
+    get:
+      tags: [system]
+      operationId: getCoverage
+      summary: Source × day coverage matrix
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/StartDateRequired'
+        - $ref: '#/components/parameters/EndDateRequired'
+        - $ref: '#/components/parameters/MetricFilter'
+      responses:
+        '200':
+          description: Coverage per source and day.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Coverage'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/system/status:
+    get:
+      tags: [system]
+      operationId: getSystemStatus
+      summary: Instance diagnostics
+      description: Versions, database and blob sizes, last backup, degraded connections, failing jobs.
+      security: [{session: []}, {apiKey: ['read:config']}]
+      responses:
+        '200':
+          description: Status.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SystemStatus'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/system/version:
+    get:
+      tags: [system]
+      operationId: getSystemVersion
+      summary: Build version of the running server
+      security: [{session: []}, {apiKey: ['read:config']}]
+      responses:
+        '200':
+          description: Version.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SystemVersion'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/jobs:
+    get:
+      tags: [system]
+      operationId: listJobs
+      summary: List background jobs
+      security: [{session: []}, {apiKey: ['read:config']}]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: {type: string}
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: One page of jobs.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/JobPage'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  # ---------------------------------------------------------------- connections
+  /api/v1/connections:
+    get:
+      tags: [connections]
+      operationId: listConnections
+      summary: List connections with health
+      security: [{session: []}, {apiKey: ['read:config']}]
+      responses:
+        '200':
+          description: All connections.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [connections]
+                properties:
+                  connections: {type: array, items: {$ref: '#/components/schemas/Connection'}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+    post:
+      tags: [connections]
+      operationId: createConnection
+      summary: Create a connection
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ConnectionInput'}
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Connection'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/connections/{id}:
+    get:
+      tags: [connections]
+      operationId: getConnection
+      summary: Get one connection
+      security: [{session: []}, {apiKey: ['read:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ConnectionIDPath'
+      responses:
+        '200':
+          description: The connection.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Connection'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+    patch:
+      tags: [connections]
+      operationId: updateConnection
+      summary: Update a connection
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ConnectionIDPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ConnectionPatch'}
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Connection'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+    delete:
+      tags: [connections]
+      operationId: deleteConnection
+      summary: Delete a connection, keeping or deleting its data
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ConnectionIDPath'
+        - name: data
+          in: query
+          required: true
+          schema: {type: string, enum: [keep, delete]}
+      responses:
+        '204':
+          description: Deleted.
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/connections/{id}/auth/begin:
+    post:
+      tags: [connections]
+      operationId: beginConnectionAuth
+      summary: Start interactive authorization (OAuth redirect or credential prompt)
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ConnectionIDPath'
+      responses:
+        '200':
+          description: Next step.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AuthStep'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/connections/{id}/auth/continue:
+    post:
+      tags: [connections]
+      operationId: continueConnectionAuth
+      summary: Continue interactive authorization (e.g. an MFA code)
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ConnectionIDPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AuthContinueInput'}
+      responses:
+        '200':
+          description: Next step, or done.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AuthStep'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/connections/{id}/sync:
+    post:
+      tags: [connections]
+      operationId: syncConnection
+      summary: Queue a manual sync (coalesced with a pending one)
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ConnectionIDPath'
+        - $ref: '#/components/parameters/IdempotencyKeyOptional'
+      responses:
+        '202':
+          description: Queued.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Job'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/connections/{id}/backfills:
+    post:
+      tags: [connections]
+      operationId: createBackfill
+      summary: Start a bounded, resumable backfill
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ConnectionIDPath'
+        - $ref: '#/components/parameters/IdempotencyKeyOptional'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/BackfillInput'}
+      responses:
+        '202':
+          description: Queued.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Job'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/connections/{id}/runs:
+    get:
+      tags: [connections]
+      operationId: listConnectionRuns
+      summary: List sync and backfill runs of a connection
+      security: [{session: []}, {apiKey: ['read:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ConnectionIDPath'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: One page of runs.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RunPage'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/connections/{id}/streams:
+    get:
+      tags: [connections]
+      operationId: listConnectionStreams
+      summary: List the streams of a connection with cursor and status
+      security: [{session: []}, {apiKey: ['read:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ConnectionIDPath'
+      responses:
+        '200':
+          description: Streams.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [streams]
+                properties:
+                  streams: {type: array, items: {$ref: '#/components/schemas/Stream'}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/connections/{id}/streams/{stream}/reset-cursor:
+    post:
+      tags: [connections]
+      operationId: resetStreamCursor
+      summary: Reset a stream's sync cursor
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ConnectionIDPath'
+        - name: stream
+          in: path
+          required: true
+          schema: {type: string}
+      responses:
+        '200':
+          description: The stream after reset.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Stream'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+
+  # ---------------------------------------------------------------- devices
+  /api/v1/devices:
+    get:
+      tags: [devices]
+      operationId: listDevices
+      summary: List paired devices
+      security: [{session: []}, {apiKey: ['read:config']}]
+      responses:
+        '200':
+          description: Devices.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [devices]
+                properties:
+                  devices: {type: array, items: {$ref: '#/components/schemas/PairedDevice'}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/devices/pairing-codes:
+    post:
+      tags: [devices]
+      operationId: createPairingCode
+      summary: Create a short-lived pairing code
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      responses:
+        '201':
+          description: The code (shown once).
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PairingCode'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/devices/{id}/request-anchor-reset:
+    post:
+      tags: [devices]
+      operationId: requestDeviceAnchorReset
+      summary: Ask the device to resync from scratch on its next contact
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '204':
+          description: Requested.
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/devices/{id}/revoke:
+    post:
+      tags: [devices]
+      operationId: revokeDevice
+      summary: Revoke a device's token
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '204':
+          description: Revoked.
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+
+  # ---------------------------------------------------------------- documents and labs
+  /api/v1/documents:
+    get:
+      tags: [documents]
+      operationId: listDocuments
+      summary: List documents
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: One page of documents.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DocumentPage'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+    post:
+      tags: [documents]
+      operationId: uploadDocument
+      summary: Upload a blood-test PDF (at most 20 MiB)
+      security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: {type: string, contentMediaType: application/pdf}
+      responses:
+        '201':
+          description: Stored.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Document'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '413': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/documents/{id}:
+    get:
+      tags: [documents]
+      operationId: getDocument
+      summary: Get one document
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: The document.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Document'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+    delete:
+      tags: [documents]
+      operationId: deleteDocument
+      summary: Delete a document, keeping or deleting derived lab results
+      security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+        - name: derived
+          in: query
+          required: true
+          schema: {type: string, enum: [keep, delete]}
+      responses:
+        '204':
+          description: Deleted.
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/documents/{id}/file:
+    get:
+      tags: [documents]
+      operationId: getDocumentFile
+      summary: Download the original PDF
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: The PDF.
+          content:
+            application/pdf:
+              schema: {type: string, contentMediaType: application/pdf}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/documents/{id}/extractions:
+    post:
+      tags: [documents]
+      operationId: createExtraction
+      summary: Start an extraction run (may send the PDF to the configured external extractor)
+      security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+        - $ref: '#/components/parameters/IdempotencyKeyOptional'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ExtractionInput'}
+      responses:
+        '202':
+          description: Queued.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Extraction'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/extractions/{id}:
+    get:
+      tags: [documents]
+      operationId: getExtraction
+      summary: Get an extraction run with its rows
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: The extraction.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Extraction'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/extractions/{id}/rows/{row}:
+    patch:
+      tags: [documents]
+      operationId: updateExtractionRow
+      summary: Edit an extracted row during review (audited)
+      security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+        - name: row
+          in: path
+          required: true
+          schema: {type: string}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ExtractionRowPatch'}
+      responses:
+        '200':
+          description: The edited row.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ExtractionRow'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/extractions/{id}/confirm:
+    post:
+      tags: [documents]
+      operationId: confirmExtraction
+      summary: Confirm reviewed rows as lab results
+      security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: The confirmed extraction.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Extraction'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/lab-results:
+    get:
+      tags: [documents]
+      operationId: listLabResults
+      summary: List confirmed lab results
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: One page of lab results.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LabResultPage'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/lab-results/{id}/history:
+    get:
+      tags: [documents]
+      operationId: getLabResultHistory
+      summary: Revisions of one lab result
+      security: [{session: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Revisions, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [revisions]
+                properties:
+                  revisions: {type: array, items: {$ref: '#/components/schemas/LabResult'}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/analytes/aliases:
+    get:
+      tags: [documents]
+      operationId: listAnalyteAliases
+      summary: List analyte aliases
+      security: [{session: []}, {apiKey: ['read:config']}]
+      responses:
+        '200':
+          description: Aliases.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [aliases]
+                properties:
+                  aliases: {type: array, items: {$ref: '#/components/schemas/AnalyteAlias'}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+    post:
+      tags: [documents]
+      operationId: createAnalyteAlias
+      summary: Map a printed label to an analyte
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AnalyteAlias'}
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AnalyteAlias'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  # ---------------------------------------------------------------- exports
+  /api/v1/exports:
+    post:
+      tags: [exports]
+      operationId: createExport
+      summary: Start an export job
+      security: [{session: [], csrf: []}, {apiKey: [admin]}]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyOptional'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ExportRequest'}
+      responses:
+        '202':
+          description: Queued.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Export'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/exports/{id}:
+    get:
+      tags: [exports]
+      operationId: getExport
+      summary: Export status; carries a one-time download URL when done
+      security: [{session: []}, {apiKey: [admin]}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: The export.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Export'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/exports/{id}/download:
+    get:
+      tags: [exports]
+      operationId: downloadExport
+      summary: Download the export zip with its one-time, short-lived token
+      security: [{session: []}, {apiKey: [admin]}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+        - name: token
+          in: query
+          required: true
+          schema: {type: string}
+      responses:
+        '200':
+          description: The zip (one file per table plus manifest.json).
+          content:
+            application/zip:
+              schema: {type: string, contentMediaType: application/zip}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+
+  # ---------------------------------------------------------------- auth (hand-written handlers in internal/api/auth.go)
+  /api/v1/auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: Sign in; sets the session cookie
+      description: Answers 429 with Retry-After while the username or address is locked out.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/LoginRequest'}
+      responses:
+        '200':
+          description: Signed in.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Session'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+        '429': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: Sign out and clear the session cookie
+      security: [{session: [], csrf: []}]
+      responses:
+        '204':
+          description: Signed out.
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/auth/session:
+    get:
+      tags: [auth]
+      operationId: getSession
+      summary: Current user and CSRF token
+      security: [{session: []}]
+      responses:
+        '200':
+          description: The session.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Session'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/auth/totp/enroll:
+    post:
+      tags: [auth]
+      operationId: enrollTOTP
+      summary: Start TOTP enrolment
+      security: [{session: [], csrf: []}]
+      responses:
+        '200':
+          description: Secret and otpauth URI (shown once).
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TOTPEnrollment'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/auth/totp/confirm:
+    post:
+      tags: [auth]
+      operationId: confirmTOTP
+      summary: Confirm TOTP enrolment with a code
+      security: [{session: [], csrf: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: {type: string}
+      responses:
+        '200':
+          description: Recovery codes (shown once).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [recovery_codes]
+                properties:
+                  recovery_codes: {type: array, items: {type: string}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/auth/totp/disable:
+    post:
+      tags: [auth]
+      operationId: disableTOTP
+      summary: Disable TOTP (password plus a code or recovery code)
+      security: [{session: [], csrf: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: {type: string}
+                totp_code: {type: string}
+                recovery_code: {type: string}
+      responses:
+        '204':
+          description: Disabled.
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/api-keys:
+    get:
+      tags: [auth]
+      operationId: listAPIKeys
+      summary: List API keys
+      security: [{session: []}, {apiKey: [admin]}]
+      responses:
+        '200':
+          description: API keys (never the secret).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [api_keys]
+                properties:
+                  api_keys: {type: array, items: {$ref: '#/components/schemas/APIKey'}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+    post:
+      tags: [auth]
+      operationId: createAPIKey
+      summary: Create an API key; the token is returned once
+      security: [{session: [], csrf: []}, {apiKey: [admin]}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, scopes]
+              properties:
+                name: {type: string, minLength: 1, maxLength: 100}
+                scopes: {type: array, minItems: 1, items: {$ref: '#/components/schemas/Scope'}}
+                expires_at: {type: string, format: date-time}
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CreatedAPIKey'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/api-keys/{id}:
+    delete:
+      tags: [auth]
+      operationId: revokeAPIKey
+      summary: Revoke an API key
+      security: [{session: [], csrf: []}, {apiKey: [admin]}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '204':
+          description: Revoked.
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+
+  # ---------------------------------------------------------------- settings
+  /api/v1/settings:
+    get:
+      tags: [settings]
+      operationId: getSettings
+      summary: Owner settings
+      security: [{session: []}, {apiKey: ['read:config']}]
+      responses:
+        '200':
+          description: Settings.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Settings'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+    patch:
+      tags: [settings]
+      operationId: updateSettings
+      summary: Change settings (merge patch)
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Settings'}
+      responses:
+        '200':
+          description: Updated settings.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Settings'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/timezone-periods:
+    get:
+      tags: [settings]
+      operationId: listTimezonePeriods
+      summary: List timezone periods
+      security: [{session: []}, {apiKey: ['read:config']}]
+      responses:
+        '200':
+          description: Periods, oldest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [timezone_periods]
+                properties:
+                  timezone_periods: {type: array, items: {$ref: '#/components/schemas/TimezonePeriod'}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+    post:
+      tags: [settings]
+      operationId: createTimezonePeriod
+      summary: Add a timezone period (local dates are recomputed)
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/TimezonePeriod'}
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TimezonePeriod'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
 components:
   securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: vitamux_session
+      description: Owner session cookie set by POST /api/v1/auth/login (HttpOnly, Secure, SameSite=Strict).
+    csrf:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description: Required with the session cookie on mutating requests; the value comes from login or GET /api/v1/auth/session.
+    apiKey:
+      type: http
+      scheme: bearer
+      description: 'API key `vmx_pat_<id>_<secret>`. The listed role is the scope it needs; `admin` implies every scope.'
     clientToken:
       type: http
       scheme: bearer
@@ -135,11 +1707,134 @@ components:
       in: header
       required: true
       schema: {type: string, minLength: 1, maxLength: 255}
+    IdempotencyKeyOptional:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Replays the stored response for the same request; a different request with the same key is 409.
+      schema: {type: string, minLength: 1, maxLength: 255}
+    ContentEncoding:
+      name: Content-Encoding
+      in: header
+      required: false
+      schema: {type: string, enum: [gzip]}
     BatchID:
       name: batch_id
       in: path
       required: true
       schema: {$ref: '#/components/schemas/BatchID'}
+    ID:
+      name: id
+      in: path
+      required: true
+      schema: {type: string, minLength: 1}
+    ConnectionIDPath:
+      name: id
+      in: path
+      required: true
+      schema: {$ref: '#/components/schemas/ConnectionID'}
+    MetricPath:
+      name: metric
+      in: path
+      required: true
+      schema: {type: string}
+    MetricCodePath:
+      name: code
+      in: path
+      required: true
+      schema: {type: string}
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: Page size. Endpoints may cap it lower than 10,000.
+      schema: {type: integer, minimum: 1, maximum: 10000, default: 500}
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: Opaque next_cursor from the previous page of the same query.
+      schema: {type: string}
+    Start:
+      name: start
+      in: query
+      required: false
+      description: Inclusive start instant (RFC 3339 with offset).
+      schema: {type: string, format: date-time}
+    End:
+      name: end
+      in: query
+      required: false
+      description: Exclusive end instant (RFC 3339 with offset).
+      schema: {type: string, format: date-time}
+    StartDate:
+      name: start_date
+      in: query
+      required: false
+      description: First local date, inclusive.
+      schema: {type: string, format: date}
+    EndDate:
+      name: end_date
+      in: query
+      required: false
+      description: Last local date, inclusive.
+      schema: {type: string, format: date}
+    StartDateRequired:
+      name: start_date
+      in: query
+      required: true
+      description: First local date, inclusive.
+      schema: {type: string, format: date}
+    EndDateRequired:
+      name: end_date
+      in: query
+      required: true
+      description: Last local date, inclusive.
+      schema: {type: string, format: date}
+    MetricFilter:
+      name: metric
+      in: query
+      required: false
+      description: Metric code; repeatable.
+      schema: {type: array, items: {type: string}}
+    ProviderFilter:
+      name: provider
+      in: query
+      required: false
+      description: Provider code; repeatable.
+      schema: {type: array, items: {type: string}}
+    ConnectionFilter:
+      name: connection
+      in: query
+      required: false
+      description: Connection id; repeatable.
+      schema: {type: array, items: {$ref: '#/components/schemas/ConnectionID'}}
+    DeviceFilter:
+      name: device
+      in: query
+      required: false
+      description: Device id; repeatable.
+      schema: {type: array, items: {type: string}}
+    OriginFilter:
+      name: origin
+      in: query
+      required: false
+      description: Origin key (e.g. a HealthKit bundle id); repeatable.
+      schema: {type: array, items: {type: string}}
+    KindFilter:
+      name: kind
+      in: query
+      required: false
+      description: Measurement kind; repeatable.
+      schema: {type: array, items: {type: string, enum: [sample, interval, cumulative, daily_value]}}
+    Include:
+      name: include
+      in: query
+      required: false
+      description: Comma-separated expansions.
+      style: form
+      explode: false
+      schema: {type: array, items: {type: string, enum: [provenance, stages, segments, superseded]}}
 
   responses:
     Problem:
@@ -149,6 +1844,39 @@ components:
           schema: {$ref: '#/components/schemas/Problem'}
 
   schemas:
+    # ------------------------------------------------ shared
+    Problem:
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type: {type: string}
+        title: {type: string}
+        status: {type: integer}
+        detail: {type: string}
+        code: {type: string}
+        request_id: {type: string}
+        errors:
+          type: array
+          items:
+            type: object
+            required: [pointer, detail]
+            properties:
+              pointer: {type: string}
+              detail: {type: string}
+    PageInfo:
+      type: object
+      required: [has_more]
+      properties:
+        has_more: {type: boolean}
+        next_cursor: {type: string, description: Present when has_more is true.}
+    ConnectionID:
+      type: string
+      pattern: '^conn_[0-9a-f]{32}$'
+    Scope:
+      type: string
+      enum: ['read:health', 'read:config', 'write:config', 'write:documents', admin]
+
+    # ------------------------------------------------ ingest
     BatchID:
       type: string
       pattern: '^bat_[0-9a-f]{32}$'
@@ -193,21 +1921,332 @@ components:
       properties:
         blob_sha256: {type: string, pattern: '^[0-9a-f]{64}$'}
         size_bytes: {type: integer, minimum: 0}
-    Problem:
+
+    # ------------------------------------------------ resolved (docs/architecture/resolution.md#result-shape)
+    ResolvedDaily:
       type: object
-      required: [type, title, status, code]
+      required: [timezone, days]
       properties:
-        type: {type: string}
-        title: {type: string}
-        status: {type: integer}
-        detail: {type: string}
-        code: {type: string}
-        request_id: {type: string}
-        errors:
+        timezone: {type: string, description: IANA timezone of the requested period.}
+        days:
           type: array
           items:
             type: object
-            required: [pointer, detail]
+            required: [local_date, metrics]
             properties:
-              pointer: {type: string}
-              detail: {type: string}
+              local_date: {type: string, format: date}
+              metrics:
+                type: object
+                additionalProperties: {$ref: '#/components/schemas/ResolvedValue'}
+    ResolvedValue:
+      type: object
+      required: [status, explanation]
+      properties:
+        status: {type: string, enum: [direct, fallback, calculated, overridden, no_data]}
+        value: {description: 'A number, or an object of components (e.g. blood pressure systolic/diastolic/pulse).'}
+        unit: {type: string}
+        partial: {type: boolean}
+        window: {$ref: '#/components/schemas/Window'}
+        rule: {$ref: '#/components/schemas/RuleRef'}
+        inputs: {type: array, items: {$ref: '#/components/schemas/ResolvedInput'}}
+        warnings:
+          type: array
+          items:
+            type: object
+            required: [code]
+            properties:
+              code: {type: string}
+              group: {type: string}
+        explanation: {type: string}
+        computed_at: {type: string, format: date-time}
+        links:
+          type: object
+          properties:
+            sources: {type: string}
+    Window:
+      type: object
+      required: [kind]
+      properties:
+        kind: {type: string, description: 'e.g. local_day, hour, bucket, night, latest.'}
+        start: {type: string, format: date-time}
+        end: {type: string, format: date-time}
+        local_date: {type: string, format: date}
+    RuleRef:
+      type: object
+      required: [ref, version]
+      properties:
+        ref: {type: string, description: 'builtin:<metric> or user:<metric>.'}
+        version: {type: integer}
+        strategy: {type: string}
+    ResolvedInput:
+      type: object
+      required: [group, status]
+      properties:
+        group: {type: string}
+        status: {type: string, description: 'e.g. used, no_data, below_quality, excluded.'}
+        selected: {type: boolean}
+        value: {description: Same shape as ResolvedValue.value.}
+        basis: {type: string, description: 'e.g. daily_value, intervals, samples, reading.'}
+        coverage: {type: number, format: double, minimum: 0, maximum: 1}
+        readings: {type: integer}
+        reason: {type: string}
+        sources:
+          type: array
+          items:
+            type: object
+            properties:
+              provider: {type: string}
+              connection_id: {type: string}
+              device: {$ref: '#/components/schemas/DeviceRef'}
+        record_refs: {type: array, items: {type: string}}
+    DeviceRef:
+      type: object
+      properties:
+        type: {type: string}
+    SourcesDrilldown:
+      type: object
+      required: [metric, window, rule, sources]
+      properties:
+        metric: {type: string}
+        window: {$ref: '#/components/schemas/Window'}
+        rule: {$ref: '#/components/schemas/RuleRef'}
+        sources:
+          type: array
+          items:
+            type: object
+            required: [group, rule_status, provider]
+            properties:
+              group: {type: [string, 'null'], description: Rule group; null when the source is outside the rule.}
+              rule_status: {type: string, enum: [used, excluded, not_in_rule]}
+              reason: {type: string}
+              provider: {type: string}
+              device: {$ref: '#/components/schemas/DeviceRef'}
+              origin:
+                type: object
+                properties:
+                  key: {type: string}
+                  name: {type: string}
+                  relayed_provider: {type: string}
+              values:
+                type: object
+                description: Per-basis values, e.g. daily_value, interval_sum, intervals.
+                additionalProperties: {type: number, format: double}
+              records:
+                type: object
+                required: [href]
+                properties:
+                  href: {type: string}
+              provenance:
+                type: object
+                properties:
+                  raw_payload_ids: {type: array, items: {type: string}}
+                  normalizer: {type: string}
+                  fetched_at: {type: string, format: date-time}
+    ResolvedSeries:
+      type: object
+      description: Open object; properties are added with the endpoint.
+    ResolvedEvents:
+      type: object
+      description: Open object; properties are added with the endpoint.
+    ResolutionPreviewRequest:
+      type: object
+      description: A draft rule and a date range. Open object; properties are added with the endpoint.
+    ResolutionPreview:
+      type: object
+      description: Open object; properties are added with the endpoint.
+
+    # ------------------------------------------------ system
+    SystemVersion:
+      type: object
+      additionalProperties: false
+      required: [version, commit]
+      properties:
+        version: {type: string}
+        commit: {type: string}
+    SystemStatus:
+      type: object
+      description: Open object; properties are added with the endpoint.
+    Coverage:
+      type: object
+      description: Open object; properties are added with the endpoint.
+    Job:
+      type: object
+      description: Open object; properties are added with the endpoint.
+    JobPage:
+      allOf:
+        - $ref: '#/components/schemas/PageInfo'
+        - type: object
+          required: [jobs]
+          properties:
+            jobs: {type: array, items: {$ref: '#/components/schemas/Job'}}
+
+    # ------------------------------------------------ exports (docs/architecture/api.md#exports)
+    ExportRequest:
+      type: object
+      required: [format]
+      properties:
+        scope: {type: object, description: What to export; everything when omitted. Properties are added with the endpoint.}
+        format: {type: string, enum: [ndjson, csv]}
+        include_raw: {type: boolean, default: false}
+    Export:
+      type: object
+      required: [id, status, created_at]
+      properties:
+        id: {type: string}
+        status: {type: string, enum: [queued, running, done, failed]}
+        format: {type: string, enum: [ndjson, csv]}
+        include_raw: {type: boolean}
+        created_at: {type: string, format: date-time}
+        finished_at: {type: string, format: date-time}
+        size_bytes: {type: integer, minimum: 0}
+        download_url: {type: string, description: One-time, short-lived; present when status is done.}
+
+    # ------------------------------------------------ auth (matches internal/api/auth.go)
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username: {type: string}
+        password: {type: string}
+        totp_code: {type: string}
+        recovery_code: {type: string}
+    User:
+      type: object
+      required: [id, username, totp_enabled]
+      properties:
+        id: {type: string, format: uuid}
+        username: {type: string}
+        totp_enabled: {type: boolean}
+    Session:
+      type: object
+      required: [user, csrf_token]
+      properties:
+        user: {$ref: '#/components/schemas/User'}
+        csrf_token: {type: string}
+    TOTPEnrollment:
+      type: object
+      required: [secret, otpauth_uri]
+      properties:
+        secret: {type: string}
+        otpauth_uri: {type: string}
+    APIKey:
+      type: object
+      required: [id, name, scopes, created_at, last_used_at, expires_at, revoked_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        scopes: {type: array, items: {$ref: '#/components/schemas/Scope'}}
+        created_at: {type: string, format: date-time}
+        last_used_at: {type: [string, 'null'], format: date-time}
+        expires_at: {type: [string, 'null'], format: date-time}
+        revoked_at: {type: [string, 'null'], format: date-time}
+    CreatedAPIKey:
+      allOf:
+        - $ref: '#/components/schemas/APIKey'
+        - type: object
+          required: [token]
+          properties:
+            token: {type: string, description: Shown in this response only.}
+
+    # ------------------------------------------------ open objects: properties are added with each endpoint
+    Metric: {type: object, description: Catalogue metric (docs/architecture/metric-catalog.md). Open object.}
+    Measurement: {type: object, description: Normalized measurement (docs/architecture/data-model.md#measurements). Open object.}
+    MeasurementPage:
+      allOf:
+        - $ref: '#/components/schemas/PageInfo'
+        - type: object
+          required: [measurements]
+          properties:
+            measurements: {type: array, items: {$ref: '#/components/schemas/Measurement'}}
+    ManualMeasurementInput: {type: object, description: Open object.}
+    Group: {type: object, description: Measurement group (bp_reading, body_composition). Open object.}
+    GroupPage:
+      allOf:
+        - $ref: '#/components/schemas/PageInfo'
+        - type: object
+          required: [groups]
+          properties:
+            groups: {type: array, items: {$ref: '#/components/schemas/Group'}}
+    BloodPressureReading: {type: object, description: Open object.}
+    BloodPressurePage:
+      allOf:
+        - $ref: '#/components/schemas/PageInfo'
+        - type: object
+          required: [readings]
+          properties:
+            readings: {type: array, items: {$ref: '#/components/schemas/BloodPressureReading'}}
+    SleepSession: {type: object, description: Open object.}
+    SleepPage:
+      allOf:
+        - $ref: '#/components/schemas/PageInfo'
+        - type: object
+          required: [sleep]
+          properties:
+            sleep: {type: array, items: {$ref: '#/components/schemas/SleepSession'}}
+    Workout: {type: object, description: Open object.}
+    WorkoutPage:
+      allOf:
+        - $ref: '#/components/schemas/PageInfo'
+        - type: object
+          required: [workouts]
+          properties:
+            workouts: {type: array, items: {$ref: '#/components/schemas/Workout'}}
+    Provenance: {type: object, description: Provenance trace (internal/provenance). Open object.}
+    Rule: {type: object, description: Open object.}
+    RuleVersion: {type: object, description: Open object.}
+    RuleVersionInput: {type: object, description: Typed rule (docs/architecture/resolution.md). Open object.}
+    RuleActivation:
+      type: object
+      required: [version]
+      properties:
+        version: {type: integer, minimum: 1}
+        acknowledge_warnings: {type: array, items: {type: string}}
+    Override: {type: object, description: Open object.}
+    OverrideInput: {type: object, description: Open object.}
+    OverridePage:
+      allOf:
+        - $ref: '#/components/schemas/PageInfo'
+        - type: object
+          required: [overrides]
+          properties:
+            overrides: {type: array, items: {$ref: '#/components/schemas/Override'}}
+    Connection: {type: object, description: Connection with health; never credentials. Open object.}
+    ConnectionInput: {type: object, description: Open object.}
+    ConnectionPatch: {type: object, description: Open object.}
+    AuthStep: {type: object, description: Next interactive auth step (redirect URL, prompt, or done). Open object.}
+    AuthContinueInput: {type: object, description: Open object.}
+    BackfillInput: {type: object, description: Open object.}
+    Run: {type: object, description: Open object.}
+    RunPage:
+      allOf:
+        - $ref: '#/components/schemas/PageInfo'
+        - type: object
+          required: [runs]
+          properties:
+            runs: {type: array, items: {$ref: '#/components/schemas/Run'}}
+    Stream: {type: object, description: Open object.}
+    PairedDevice: {type: object, description: Open object.}
+    PairingCode: {type: object, description: Open object.}
+    Document: {type: object, description: Open object.}
+    DocumentPage:
+      allOf:
+        - $ref: '#/components/schemas/PageInfo'
+        - type: object
+          required: [documents]
+          properties:
+            documents: {type: array, items: {$ref: '#/components/schemas/Document'}}
+    ExtractionInput: {type: object, description: Extractor choice and consent to send externally. Open object.}
+    Extraction: {type: object, description: Open object.}
+    ExtractionRow: {type: object, description: Open object.}
+    ExtractionRowPatch: {type: object, description: Open object.}
+    LabResult: {type: object, description: Open object.}
+    LabResultPage:
+      allOf:
+        - $ref: '#/components/schemas/PageInfo'
+        - type: object
+          required: [lab_results]
+          properties:
+            lab_results: {type: array, items: {$ref: '#/components/schemas/LabResult'}}
+    AnalyteAlias: {type: object, description: Open object.}
+    Settings: {type: object, description: Open object.}
+    TimezonePeriod: {type: object, description: Open object.}

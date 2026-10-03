@@ -1,0 +1,62 @@
+# Spectral ruleset for api/openapi.yaml (ADR-0015). Run: npm --prefix web run lint:api
+extends: ["spectral:oas"]
+rules:
+  info-contact: off
+  operation-description: off
+  operation-operationId: error
+  operation-tags: error
+  # Flags role lists on non-OAuth schemes, which OAS 3.1 allows; replaced by the two rules below.
+  oas3-operation-security-defined: off
+
+  vitamux-security-schemes:
+    description: Operations use only the declared security schemes.
+    severity: error
+    given: "$.paths.*[get,put,post,patch,delete].security[*]"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          propertyNames: {enum: [session, csrf, apiKey, clientToken]}
+
+  vitamux-api-key-scopes:
+    description: API key roles are Vitamux scopes (internal/auth/principal.go).
+    severity: error
+    given: "$.paths.*[get,put,post,patch,delete].security[*].apiKey[*]"
+    then:
+      function: enumeration
+      functionOptions:
+        values: ["read:health", "read:config", "write:config", "write:documents", "admin"]
+
+  vitamux-error-responses:
+    description: Every operation declares at least one 4xx response.
+    severity: error
+    given: "$.paths.*[get,put,post,patch,delete]"
+    then:
+      field: responses
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          anyOf:
+            - {required: ["400"]}
+            - {required: ["401"]}
+            - {required: ["403"]}
+            - {required: ["404"]}
+            - {required: ["409"]}
+            - {required: ["413"]}
+            - {required: ["422"]}
+            - {required: ["429"]}
+
+  vitamux-problem-json:
+    description: Error responses are application/problem+json only (internal/api/problem.go).
+    severity: error
+    given: "$.paths.*[get,put,post,patch,delete].responses[?(@property.match(/^[45]/))]"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          required: [content]
+          properties:
+            content: {type: object, required: ["application/problem+json"], maxProperties: 1}

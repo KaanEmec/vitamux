@@ -5,7 +5,7 @@
 - REST + JSON, contract-first in `api/openapi.yaml` (OpenAPI 3.1). Server types (`oapi-codegen`) and the TS client are generated; contract tests validate responses.
 - `/api/v1` is for the owner and `/api/ingest/v1` for clients and devices. Only additive changes within v1.
 - Instants are RFC 3339 **with offset**, half-open `[start, end)`. Dates are `YYYY-MM-DD` (`start_date`/`end_date`, inclusive), in the user's timezone periods.
-- Cursor pagination: `limit` (default 500, max 10,000 for measurements) and an opaque HMAC-protected `cursor`. Responses carry `next_cursor` and `has_more`. No offsets.
+- Cursor pagination: `limit` (default 500, max 10,000 for measurements) and an opaque HMAC-protected `cursor`. Responses carry `next_cursor` and `has_more` beside an array named after the resource (`{"measurements": [...], "has_more": true, "next_cursor": "…"}`). No offsets. A cursor is bound to the operation and filters that produced it, and is invalid (422) after tampering or a master-key rotation.
 - Repeatable filters: `metric`, `provider`, `connection`, `device`, `origin`, `kind`. Expansions via `include=provenance|stages|segments|superseded`.
 - Errors are `application/problem+json` with `type`, `title`, `status`, `detail`, `code`, `request_id`, and `errors[]`. Codes: `validation_failed`, `not_found`, `conflict`, `rate_limited`, `reauth_required`, `consent_required`, `unsupported_window`, `rule_warning_unacknowledged`. Also `unauthenticated` and `totp_required` (401), `forbidden` (403), `payload_too_large` (413), `internal_error` (500) and `unavailable` (503). The registry is `internal/api/problem.go`.
 - Request bodies are capped per route class (`bodyClasses` in `internal/api/middleware.go`): 1 MiB owner JSON, 10 MiB ingest batches, 25 MiB uploads. `X-Forwarded-For`/`-Proto` are trusted only from `VITAMUX_TRUSTED_PROXIES` (comma-separated CIDRs; empty trusts none).
@@ -33,13 +33,17 @@
 | Source data | `GET /measurements`, `/groups?kind=`, `/blood-pressure`, `/sleep[/{id}]`, `/workouts[/{id}]`, `/provenance/{entity}/{id}` |
 | Resolved | `GET /resolved/daily`, `/resolved/series?metric&start&end&window`, `/resolved/sleep`, `/resolved/workouts`, `/resolved/{metric}/{window_key}/sources`; `POST /resolution/preview` (draft rule × range; no writes) |
 | Rules and overrides | `GET /rules`, `GET /rules/{metric}/versions`, `POST /rules/{metric}/versions`, `POST /rules/{metric}/activate`, `GET/POST /overrides`, `POST /overrides/{id}/revoke` |
-| Coverage and health | `GET /coverage?start_date&end_date&metric`, `GET /system/status`, `GET /jobs` |
+| Coverage and health | `GET /coverage?start_date&end_date&metric`, `GET /system/status`, `GET /system/version`, `GET /jobs` |
 | Connections | `GET/POST /connections`, `GET/PATCH/DELETE /connections/{id}` (`?data=keep\|delete`), `POST …/auth/begin\|continue`, `POST …/sync`, `POST …/backfills`, `GET …/runs`, `GET …/streams`, `POST …/streams/{s}/reset-cursor` |
 | Manual data | `POST /measurements/manual` (provider `manual`, audited) |
 | Devices | `POST /devices/pairing-codes`, `GET /devices`, `POST /devices/{id}/request-anchor-reset`, `POST /devices/{id}/revoke` |
 | Documents and labs | `POST/GET /documents`, `GET /documents/{id}[/file]`, `DELETE /documents/{id}?derived=keep\|delete`, `POST /documents/{id}/extractions`, `GET /extractions/{id}`, `PATCH /extractions/{id}/rows/{row}`, `POST /extractions/{id}/confirm`, `GET /lab-results`, `GET /lab-results/{id}/history`, `GET/POST /analytes/aliases` |
 | Exports | `POST /exports`, `GET /exports/{id}`, `GET /exports/{id}/download` |
 | Auth and settings | `POST /auth/login\|logout`, `GET /auth/session`, `POST /auth/totp/enroll\|confirm\|disable`, `GET/POST /api-keys`, `DELETE /api-keys/{id}`, `GET/PATCH /settings`, `GET/POST /timezone-periods` |
+
+## Implementing owner endpoints
+
+`make openapi` generates request/response types, parameter binding and the strict-server interface into `internal/api/oapi`, and the TS client into `web/src/lib/api/schema.d.ts`; CI fails on drift, and Spectral (`.spectral.yaml`) lints the spec. An area implements its operations as methods on `*owner` in its own file and registers each generated handler like any other route, `rt.handle("GET /api/v1/system/version", scope(auth.ReadConfig), rt.ops.GetSystemVersion)`, so access stays declared per route and deny-by-default; unregistered operations answer 404. Handlers return `problemErr(code, detail)`, `db.ErrNotFound` or `errInvalidCursor` as errors to get the matching problem. Contract tests validate responses with `checkResponse` (`internal/api/contract_test.go`). See `internal/api/owner.go`.
 
 ## Example: resolved day
 

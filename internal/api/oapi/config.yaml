@@ -1,0 +1,12 @@
+# oapi-codegen config: `make openapi` regenerates oapi.gen.go from api/openapi.yaml.
+# Ingest operations are hand-written (internal/api/ingest.go) and reference external JSON
+# Schemas, so they are excluded here.
+package: oapi
+output: internal/api/oapi/oapi.gen.go
+generate:
+  models: true
+  std-http-server: true
+  strict-server: true
+output-options:
+  exclude-tags: [ingest]
+  name-normalizer: ToCamelCaseWithInitialisms

@@ -152,6 +152,7 @@ func serve(stderr io.Writer) int {
 		Development:    cfg.Env == config.Development,
 		DB:             db.New(pool),
 		Blobs:          blobs,
+		Keys:           keys,
 		ReadyChecks: []api.ReadyCheck{
 			{Name: "database", Check: pool.Ping},
 			{Name: "schema", Check: func(ctx context.Context) error { return db.CheckSchema(ctx, pool) }},
