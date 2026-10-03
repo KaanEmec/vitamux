@@ -138,6 +138,19 @@ type Device struct {
 	CreatedAt       time.Time
 }
 
+// First successful response per (client, Idempotency-Key), replayed for the same request; another request with the key is a conflict.
+type IdempotencyKey struct {
+	ClientID uuid.UUID
+	Key      string
+	// SHA-256 over the route and the decompressed request body.
+	RequestSha256 []byte
+	// Null only inside the claiming transaction, so never in a committed row.
+	ResponseStatus *int16
+	// Batch or blob receipt: ids, external keys and outcomes; never payload bodies.
+	ResponseBody []byte
+	CreatedAt    time.Time
+}
+
 // Items already imported, so re-running an importer skips them.
 type ImportItem struct {
 	ID           int64
@@ -329,6 +342,14 @@ type RawPayload struct {
 	Status           string
 	// Previous version of the same (connection, stream, external_key); null for version 1.
 	SupersedesID *int64
+	// Normalizer version of the last normalization attempt, failed ones included; null until one ran.
+	NormalizerVersionID *int32
+	// When the last attempt finished.
+	NormalizedAt *time.Time
+	// Short code and reason for normalize_failed (no_normalizer, normalizer_error, normalizer_panic, invalid_output) or a skip (superseded_raw). Never payload content.
+	StatusDetail *string
+	// Non-fatal findings of the last attempt: [{code, detail}]. Never health values.
+	Warnings json.RawMessage
 }
 
 // Single-use TOTP recovery codes; only the SHA-256 of each 80-bit code is stored.

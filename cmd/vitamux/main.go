@@ -20,6 +20,7 @@ import (
 	"github.com/KaanEmec/vitamux/internal/auth"
 	"github.com/KaanEmec/vitamux/internal/blob"
 	"github.com/KaanEmec/vitamux/internal/config"
+	"github.com/KaanEmec/vitamux/internal/connectors"
 	"github.com/KaanEmec/vitamux/internal/crypto"
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/jobs"
@@ -38,6 +39,7 @@ Commands:
   migrate   up | status | down-to VERSION (development only)
   admin     administrative tasks (E03)
   keys      rotate (re-seal values under the current master key)
+  reprocess re-normalize stored raw payloads after a normalizer change
   version   print version information
 `
 
@@ -63,6 +65,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return admin(args[1:], stdout, stderr)
 	case "keys":
 		return keys(args[1:], stdout, stderr)
+	case "reprocess":
+		return reprocess(args[1:], stdout, stderr)
 	case "help", "-h", "--help":
 		fmt.Fprint(stdout, usage)
 		return 0
@@ -125,11 +129,25 @@ func serve(stderr io.Writer) int {
 		scheduler.Daily(blob.KindSweep)
 	}
 	runner.Register(normalize.KindRecomputeLocalDates, normalize.RecomputeJob(db.New(pool), log))
+	syncRegistry, err := connectors.NewRegistry() // provider connectors are added as arguments
+	if err != nil {
+		log.Error("connector registry", "err", err)
+		return 1
+	}
+	if blobs != nil { // syncs need the blob store and the master key
+		runner.Register(jobs.KindSync, connectors.New(connectors.Config{DB: db.New(pool), Blobs: blobs, Keys: keys, Registry: syncRegistry, Log: log}).Handle)
+	}
+	if err := registerNormalizeJobs(runner, db.New(pool), blobs, log); err != nil {
+		log.Error("normalizers", "err", err)
+		return 1
+	}
 	handler, err := api.NewHandler(log, web.Assets(), api.Options{
 		HSTS:           cfg.PublicURL.Scheme == "https",
 		TrustedProxies: cfg.TrustedProxies,
 		Auth:           authSvc,
 		Development:    cfg.Env == config.Development,
+		DB:             db.New(pool),
+		Blobs:          blobs,
 		ReadyChecks: []api.ReadyCheck{
 			{Name: "database", Check: pool.Ping},
 			{Name: "schema", Check: func(ctx context.Context) error { return db.CheckSchema(ctx, pool) }},

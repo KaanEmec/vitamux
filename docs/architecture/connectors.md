@@ -27,25 +27,29 @@ type Descriptor struct {
 type Connector interface {
     Describe() Descriptor
     Plan(ctx context.Context, c Conn, req PlanRequest) ([]WorkUnit, error) // incremental|correction|backfill|manual
-    Fetch(ctx context.Context, c Conn, cred Credentials, u WorkUnit, out RawSink) (FetchResult, error)
+    Fetch(ctx context.Context, c Conn, cred Credentials, u WorkUnit, out *RawSink) (FetchResult, error) // one page
 }
 type Authenticator interface { // only if AuthKind needs it
-    Begin(ctx context.Context, c Conn, in AuthInput) (AuthStep, error)                         // redirect URL or challenge
-    Continue(ctx context.Context, c Conn, st AuthState, in AuthInput) (AuthStep, *Credentials, error)
+    Begin(ctx context.Context, c Conn, in AuthInput) (AuthStep, error)                         // redirect URL or challenge (J08.2)
+    Continue(ctx context.Context, c Conn, st AuthState, in AuthInput) (AuthStep, *Credentials, error) // (J08.2)
     Refresh(ctx context.Context, c Conn, cred Credentials) (Credentials, error)
 }
-type FetchResult struct { NextCursor json.RawMessage; Done bool; RetryAfter time.Duration }
+type FetchResult struct { NextCursor json.RawMessage; HighWatermark time.Time; Done bool; RetryAfter time.Duration }
 ```
+
+Code: [`internal/connectors`](../../internal/connectors). `NewRegistry(connectors...)` validates descriptors; `EnsureSchedules` turns stream defaults into schedules; `Runtime.Handle` is the `sync` job handler. `Conn.HTTP` is the provider's rate-limited client: it waits for the token buckets, refuses calls while the provider is blocked, and turns a 429 into `RateLimitedError`. Only incremental and manual runs advance the stream cursor; correction runs keep their progress in the job checkpoint.
 
 ## Typed errors
 
-| Error | Runtime reaction |
+| Error (class) | Runtime reaction |
 | --- | --- |
-| `ErrReauthRequired` | Connection `needs_reauth`, schedules paused, no retries |
-| `ErrRateLimited{RetryAfter}` | Set `provider_rate_state.blocked_until`; reschedule without consuming an attempt |
-| `ErrTransient` | Exponential backoff with full jitter (cap 30 min) |
-| `ErrSchemaDrift{Endpoint, Fingerprint}` | Store raw as `quarantined`; stream `degraded: schema_drift`; **never substitute other data** |
-| `ErrPermanent` | Job `dead`, shown in UI |
+| `ErrReauthRequired` (`reauth_required`) | Connection `needs_reauth` (its schedules stop), job `dead`, no retries. A refused access token is first refreshed once and the page retried. |
+| `RateLimitedError{RetryAfter}` (`rate_limited`) | Set `provider_rate_state.blocked_until`; reschedule at its end without consuming an attempt; not counted as a failure |
+| `ErrTransient` (`transient`), any untyped error | Exponential backoff with full jitter (cap 30 min); connection status kept, failure counted |
+| `SchemaDriftError{Endpoint, Fingerprint}` (`schema_drift`) | Store the page's raw as `quarantined`, cursor unchanged; stream and connection `degraded: schema_drift`; job `dead`; the next slot tries again; **never substitute other data** |
+| `ErrPermanent` (`permanent`) | Job `dead`, connection `error` (its schedules stop until the owner resumes it) |
+
+Each failure sets `connections.last_error_class` and, except rate limits, increments `consecutive_failures`. A successful run resets both, sets `last_success_at`, marks the stream `ok`, and leaves the connection `degraded` only while another stream still is. Owner-set states (`paused`, `disabled`) are never overwritten.
 
 ## Runtime responsibilities
 
@@ -66,8 +70,9 @@ The core does these so connectors stay small:
 `POST /api/ingest/v1/batches`
 
 - Client token scope `ingest:<connection_id>`.
-- `Idempotency-Key` header required.
-- Body gzip allowed, ≤ 10 MiB compressed and ≤ 50 MiB decompressed.
+- `Idempotency-Key` header required ([semantics](api.md#conventions)).
+- Body gzip allowed, ≤ 10 MiB compressed and ≤ 50 MiB decompressed, and at most 100× the compressed size (+1 MiB); beyond that `413`.
+- `connection_id` must be the token's connection (`403` otherwise).
 
 ```json
 {
@@ -87,8 +92,9 @@ The core does these so connectors stay small:
 `202` → `{"batch_id": "bat_…", "items": [{"external_key": "…", "status": "stored|duplicate|new_version", "raw_payload_id": "88123"}], "normalization": "queued"}`
 
 - Raw data is durable before `202`. Normalization runs as a job afterwards.
-- Binary files (FIT, GPX, export zips) go to `POST /api/ingest/v1/batches/{id}/blobs` and are referenced by `blob_sha256`.
-- `POST /api/ingest/v1/heartbeat` reports client checkpoint, pending failed units, version, and last error class.
+- Binary files (FIT, GPX, export zips, ≤ 25 MiB) go to `POST /api/ingest/v1/batches/{id}/blobs` and are referenced by `blob_sha256`. Upload them first, to any existing batch of the same connection (e.g. one holding the inline items); an item whose blob is not uploaded fails with `422`. A blob no batch references within 24 h is swept.
+- `GET /api/ingest/v1/batches/{id}` lists the batch's new raw rows with their status. `normalization` is the `normalize_batch` job's state while queued or running, `failed` if it died or a row failed or was quarantined, else `done`.
+- `POST /api/ingest/v1/heartbeat` reports client checkpoint, pending failed units, version, and last error class. The summary goes to `clients.metadata.heartbeat`; per stream, the checkpoint, last success and error class go to `sync_cursors` (`cursor`, `high_watermark`, `degraded` + `status_reason`). A heartbeat with an older `sent_at` than the recorded one is ignored.
 
 ### Schemas and versioning
 
@@ -117,6 +123,7 @@ Code: `internal/normalize` (interface, `Registry`, `Output.Validate`, `RegisterV
 - **Golden tests** per normalizer (synthetic raw → canonical JSON) with `normtest.Golden`: cases are `testdata/<id>/<case>.raw.<ext>`, goldens `<case>.golden.json` record the version. Output that changes without a `Version()` bump fails; after a bump, `UPDATE_GOLDEN=1 make golden` rewrites.
 - Normalizers emit source values and units; the writer applies canonical units and keeps the original value and unit when they differ.
 - Every row references `normalizer_versions(name, version, git_sha)`.
+- **Jobs** (`normalize.Processor`): `normalize_batch` (payload `{batch_id}`) normalizes each stored payload in its own transaction. A panic, a `Normalize` error, invalid output or a missing normalizer marks it `normalize_failed` with `status_detail` (`normalizer_panic`, `normalizer_error`, `invalid_output`, `no_normalizer`) and a warning; the raw stays. `vitamux reprocess --normalizer --stream --since --until [--wait]` queues a `reprocess` job over the newest raw version of each record that the current normalizer version has not attempted yet: unchanged output only takes the new version, changed records are superseded, a second run selects nothing. Errors and warnings must not carry payload values.
 - Third-party adapters may submit canonical records alongside raw (tagged `external:<adapter>@<version>`). These are validated against the canonical schema.
 
 ## Withings connector (reference pattern)
