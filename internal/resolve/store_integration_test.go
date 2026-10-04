@@ -24,6 +24,7 @@ type event struct{ actor, action, detail string }
 type env struct {
 	events func() []event
 	exec   func(stmt string) error
+	d      *db.DB
 }
 
 func newStore(t *testing.T) (*resolve.Store, env, resolve.By) {
@@ -34,6 +35,7 @@ func newStore(t *testing.T) (*resolve.Store, env, resolve.By) {
 		t.Fatal(err)
 	}
 	e := env{
+		d:    db.New(pool),
 		exec: func(stmt string) error { _, err := pool.Exec(ctx, stmt); return err },
 		events: func() []event {
 			t.Helper()
@@ -53,7 +55,7 @@ func newStore(t *testing.T) (*resolve.Store, env, resolve.By) {
 			return out
 		},
 	}
-	return resolve.NewStore(db.New(pool)), e, resolve.By{UserID: uuid.MustParse(ownerID), Actor: "api_key:test"}
+	return resolve.NewStore(e.d), e, resolve.By{UserID: uuid.MustParse(ownerID), Actor: "api_key:test"}
 }
 
 // spec returns the built-in for metric as JSON after edit changes it.
@@ -170,26 +172,56 @@ func TestEditCreatesNextVersionAndReactivation(t *testing.T) {
 	}
 }
 
-func TestMetricWithoutBuiltin(t *testing.T) {
+func TestMetricWithoutBuiltinUsesDefault(t *testing.T) {
 	ctx := t.Context()
-	s, _, by := newStore(t)
-	if _, err := s.Active(ctx, by.UserID, "skin_temperature"); !errors.Is(err, db.ErrNotFound) {
-		t.Fatalf("no rule yet: %v", err)
+	s, e, by := newStore(t)
+	if _, err := s.Active(ctx, by.UserID, "no_such_code"); !errors.Is(err, db.ErrNotFound) {
+		t.Fatalf("an unknown code has no rule: %v", err)
 	}
-	r := resolve.Rule{Schema: resolve.SchemaV1, Metric: "skin_temperature", Window: resolve.RuleWindow{Kind: catalog.WindowLocalNight},
-		Groups:   []resolve.Group{{ID: "ring", Match: []resolve.Selector{{DeviceType: "ring"}}}},
-		Strategy: resolve.Strategy{Op: resolve.OpSingleSource}}
-	j, _ := json.Marshal(r)
-	v, err := s.Create(ctx, by, j, "", false)
-	if err != nil || v.Version != 1 || v.BasedOn != "" {
-		t.Fatalf("v1 = %+v %v", v, err)
+	before, err := s.Active(ctx, by.UserID, "skin_temperature")
+	if err != nil || !before.Default || !before.Builtin || !strings.HasPrefix(before.Ref, "default:skin_temperature:") {
+		t.Fatalf("a code without a built-in uses its default rule: %+v %v", before, err)
 	}
-	if _, err := s.Activate(ctx, by, "skin_temperature", 1); err != nil {
+	steps, _ := s.Active(ctx, by.UserID, "steps")
+
+	for _, bad := range [][]string{{"garmin", "garmin"}, {"no_such_provider"}} {
+		if err := resolve.SetSourcePriority(ctx, e.d.Q(), by.UserID, by.Actor, bad); !errors.Is(err, resolve.ErrInvalidPriority) {
+			t.Errorf("%v: %v", bad, err)
+		}
+	}
+	if err := resolve.SetSourcePriority(ctx, e.d.Q(), by.UserID, by.Actor, []string{"whoop", "garmin"}); err != nil {
 		t.Fatal(err)
 	}
+	if order, err := resolve.SourcePriority(ctx, e.d.Q(), by.UserID); err != nil || strings.Join(order, ",") != "whoop,garmin" {
+		t.Fatalf("source order = %v %v", order, err)
+	}
+	after, _ := s.Active(ctx, by.UserID, "skin_temperature")
+	if after.Ref == before.Ref || after.Rule.Groups[0].ID != "whoop" {
+		t.Errorf("a new source order is a new default rule: %s -> %s, %+v", before.Ref, after.Ref, after.Rule.Groups[0])
+	}
+	if v, _ := s.Active(ctx, by.UserID, "steps"); v.Ref != steps.Ref {
+		t.Errorf("built-ins ignore the source order: %s", v.Ref)
+	}
+
+	r := *after.Rule
+	r.Groups = r.Groups[:1]
+	j, _ := json.Marshal(r)
+	v, err := s.Create(ctx, by, j, "", true)
+	if err != nil || v.Version != 2 || !v.Active {
+		t.Fatalf("the first edit is version 2: %+v %v", v, err)
+	}
+	hist, _ := s.History(ctx, by.UserID, "skin_temperature")
+	if len(hist) != 2 || hist[1].BasedOn != after.Ref || hist[1].Default {
+		t.Errorf("version 1 copies the default rule: %+v", hist)
+	}
 	set, err := s.ActiveSet(ctx, by.UserID)
-	if err != nil || set[len(set)-1].Ref != "rule:skin_temperature:1" || len(set) != len(resolve.Builtins())+1 {
-		t.Errorf("active set ends with the owner's extra metric: %d rules, %v", len(set), err)
+	if err != nil || len(set) != len(resolve.Builtins())+len(resolve.NoBuiltin) {
+		t.Errorf("a rule for every built-in and every code without one: %d rules, %v", len(set), err)
+	}
+	for _, x := range set {
+		if x.Metric == "skin_temperature" && x.Ref != "rule:skin_temperature:2" {
+			t.Errorf("the owner's version replaces the default rule: %s", x.Ref)
+		}
 	}
 }
 

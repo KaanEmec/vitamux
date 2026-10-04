@@ -325,7 +325,7 @@
 				<p class="sub">
 					<span class="code">{metric}</span>{meta ? ` · ${meta.aggregation.replaceAll('_', ' ')}` : ''}{unit ? ` · ${unit}` : ''}
 					{#if rule}
-						· <a href="/rules/{encodeURIComponent(metric)}">{rule.ref.startsWith('builtin:') ? 'Built-in rule' : `Rule v${rule.version}`}{rule.strategy ? `, ${rule.strategy.replaceAll('_', ' ')}` : ''}</a>
+						· <a href="/rules/{encodeURIComponent(metric)}">{rule.ref.startsWith('default:') ? 'Default rule' : rule.ref.startsWith('builtin:') ? 'Built-in rule' : `Rule v${rule.version}`}{rule.strategy ? `, ${rule.strategy.replaceAll('_', ' ')}` : ''}</a>
 					{/if}
 				</p>
 			</div>

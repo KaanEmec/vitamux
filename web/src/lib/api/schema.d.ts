@@ -2080,7 +2080,7 @@ export interface components {
             key?: string;
         };
         RuleRef: {
-            /** @description builtin:<metric>:<n>, rule:<metric>:<n>, or draft:<metric> in a preview. */
+            /** @description builtin:<metric>:<n>, default:<metric>:<hash>, rule:<metric>:<n>, or draft:<metric> in a preview. */
             ref: string;
             /** @description 0 for a draft. */
             version: number;
@@ -2319,7 +2319,7 @@ export interface components {
             /** @description The window kind both rules resolve. */
             window: string;
             draft_rule: components["schemas"]["RuleRef"];
-            /** @description The rule in effect; null when the metric has none. */
+            /** @description The rule in effect (a default rule at least); never null since J24.1, kept nullable for clients. */
             active_rule: components["schemas"]["RuleRef"] | null;
             days: components["schemas"]["PreviewDay"][];
         };
@@ -3119,17 +3119,20 @@ export interface components {
         Rule: components["schemas"]["RuleVersion"];
         /** @description A rule version, the owner's or a built-in (docs/architecture/resolution.md#rule-specification). */
         RuleVersion: {
-            /** @description rule:<metric>:<n> for the owner's versions, builtin:<metric>:<n> for built-ins. */
+            /** @description rule:<metric>:<n> for the owner's versions, builtin:<metric>:<n> for built-ins, default:<metric>:<hash> for the default rule. */
             ref: string;
             /** @description Catalogue code or rule family (sleep, blood_pressure). */
             metric: string;
             version: number;
+            /** @description Shipped with Vitamux rather than stored by the owner; true for the default rule too. */
             builtin: boolean;
+            /** @description The default rule of a metric without a built-in: the owner's source order (setting sources.priority), then a generic device ladder (docs/resolution-defaults.md#default-rule). */
+            default: boolean;
             /** @description The rule in effect for the metric. */
             active: boolean;
             /** @description The typed rule (schemas/resolution-rule.v1.json). */
             spec: Record<string, never>;
-            /** @description The built-in this version copied. */
+            /** @description The built-in or default rule this version copied. */
             based_on: string | null;
             note: string | null;
             /** @description Audit actor; null for built-ins. */
@@ -3139,7 +3142,7 @@ export interface components {
              * @description Null for built-ins.
              */
             created_at: string | null;
-            /** @description Built-ins only: why the ladder is ordered this way (docs/resolution-defaults.md). */
+            /** @description Built-ins only: why the ladder is ordered this way, or why the metric uses the default rule (docs/resolution-defaults.md). */
             reason?: string;
         };
         RuleVersionInput: {
@@ -3918,6 +3921,8 @@ export interface components {
             "retention.superseded_after_days"?: number;
             /** @description Days to keep stored ingest responses for Idempotency-Key replays (default 30). */
             "retention.idempotency_key_days"?: number;
+            /** @description The owner's source order: provider codes, first preferred. Metrics without a built-in resolve through the default rule, which tries these providers first (docs/resolution-defaults.md#default-rule). Empty by default. */
+            "sources.priority"?: string[];
         };
         TimezonePeriod: {
             /** Format: uuid */

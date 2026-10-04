@@ -128,7 +128,11 @@ test('the catalogue lists every metric with its rule, reason and coverage', asyn
 	const rhr = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'resting_heart_rate' }) });
 	await expect(rhr.getByText('Your rule · version 2')).toBeVisible();
 	const skin = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'skin_temperature' }) });
-	await expect(skin.getByText('No rule')).toBeVisible();
+	await expect(skin.getByText('Default', { exact: true })).toBeVisible();
+	await expect(skin.getByText('uses the default rule.')).toBeVisible();
+	await expect(skin.getByRole('link', { name: 'source order' })).toHaveAttribute('href', '/settings/sources#source-order');
+	const deep = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'sleep_deep' }) });
+	await expect(deep.getByText('No rule')).toBeVisible();
 
 	rules.coverage = 'ok';
 	await page.reload();

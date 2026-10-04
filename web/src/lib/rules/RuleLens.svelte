@@ -523,7 +523,7 @@
 						<li class={{ active: v.active }}>
 							<span class="mark" aria-hidden="true"></span>
 							<span class="who">
-								<span>{v.builtin ? 'Built-in' : `Version ${v.version}`}{v.note ? ` · ${v.note}` : ''}</span>
+								<span>{v.default ? 'Default rule' : v.builtin ? 'Built-in' : `Version ${v.version}`}{v.note ? ` · ${v.note}` : ''}</span>
 								<span class="muted small">{v.active ? 'Active' : ''}{v.active && when(v) ? ' · ' : ''}{when(v)}</span>
 							</span>
 							{#if !v.active && !v.builtin}
@@ -551,7 +551,7 @@
 	<aside class="lens card" aria-labelledby="{uid}-title">
 		<div class="lens-head">
 			<h2 id="{uid}-title">{title}</h2>
-			{#if activeVersion}<span class="chip">{activeVersion.builtin ? 'Built-in' : `Rule v${activeVersion.version}`} · active</span>{/if}
+			{#if activeVersion}<span class="chip">{activeVersion.default ? 'Default rule' : activeVersion.builtin ? 'Built-in' : `Rule v${activeVersion.version}`} · active</span>{/if}
 		</div>
 		{@render body()}
 	</aside>

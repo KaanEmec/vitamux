@@ -308,7 +308,7 @@
 		{#if metric && activeRule(metric)}
 			{@const r = activeRule(metric)}
 			<p class="muted">
-				In effect: {r?.builtin ? 'built-in default' : `version ${r?.version}`}.
+				In effect: {r?.default ? 'default rule' : r?.builtin ? 'built-in default' : `version ${r?.version}`}.
 				{#if r?.reason}{r.reason}{/if}
 			</p>
 		{/if}

@@ -326,15 +326,13 @@ func (o *owner) GetSourceSeries(ctx context.Context, req oapi.GetSourceSeriesReq
 	}
 	out := oapi.GetSourceSeries200JSONResponse{Metric: m.Code, Unit: m.Unit, Aggregation: oapi.SourceSeriesAggregation(m.Agg),
 		Grain: oapi.SourceSeriesGrain(grain), Timezone: z.name(prm.Start), Behind: behind, Sources: []oapi.SourceSeriesSource{}}
-	v, hasRule, err := o.ruleFor(ctx, m.Code)
+	v, err := o.ruleFor(ctx, m.Code)
 	if err != nil {
 		return nil, err
 	}
-	var rule *resolve.Rule
-	if hasRule {
-		ref := ruleRef(v, v.Rule.Strategy.Op)
-		out.Rule, rule = &ref, v.Rule
-	}
+	ref := ruleRef(v, v.Rule.Strategy.Op)
+	out.Rule = &ref
+	rule := v.Rule
 
 	// source returns the index in out.Sources of the source with these ids, adding it first.
 	idx := map[string]int{}
@@ -349,14 +347,12 @@ func (o *owner) GetSourceSeries(ctx context.Context, req oapi.GetSourceSeriesReq
 		}
 		s := oapi.SourceSeriesSource{Provider: src.Provider, ConnectionID: ingest.FormatConnectionID(conn), Device: deviceRef(src),
 			Origin: originRef(src, ""), RuleStatus: oapi.SourceSeriesSourceRuleStatusNotInRule, Points: []oapi.SourcePoint{}}
-		if rule != nil {
-			switch a := rule.Assign(src); a.Membership() {
-			case resolve.Excluded:
-				s.RuleStatus = oapi.SourceSeriesSourceRuleStatusExcluded
-			case resolve.Grouped:
-				s.RuleStatus, s.Group = oapi.SourceSeriesSourceRuleStatusUsed, &rule.Groups[a.Group].ID
-			case resolve.NotInRule:
-			}
+		switch a := rule.Assign(src); a.Membership() {
+		case resolve.Excluded:
+			s.RuleStatus = oapi.SourceSeriesSourceRuleStatusExcluded
+		case resolve.Grouped:
+			s.RuleStatus, s.Group = oapi.SourceSeriesSourceRuleStatusUsed, &rule.Groups[a.Group].ID
+		case resolve.NotInRule:
 		}
 		idx[key] = len(out.Sources)
 		out.Sources = append(out.Sources, s)

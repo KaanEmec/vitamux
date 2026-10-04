@@ -73,6 +73,25 @@ test('AI providers: enabling one saves only that key', async ({ page, settings }
 	expect(settings.patches).toEqual([{ 'documents.external_ai.openai.enabled': true }]);
 });
 
+test('source order: connected providers join the saved order; reorder by keyboard and save', async ({ page, settings }) => {
+	const connections = [{ provider: 'withings' }, { provider: 'whoop' }, { provider: 'manual' }];
+	await page.route('**/api/v1/connections', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ connections }) }));
+	await page.goto('/settings/sources');
+	const items = page.getByRole('list', { name: 'Source order, first preferred' }).getByRole('listitem');
+	await expect(items).toHaveText([/whoop/i, /withings/i]);
+
+	await page.getByRole('button', { name: /Move withings up/i }).click();
+	await expect(items).toHaveText([/withings/i, /whoop/i]);
+	await expect(page.getByRole('button', { name: /Move withings down/i })).toBeFocused();
+	await page.keyboard.press('Enter');
+	await expect(items).toHaveText([/whoop/i, /withings/i]);
+	await expect(page.getByRole('button', { name: /Move withings up/i })).toBeFocused();
+	await page.keyboard.press('Enter');
+	await page.getByRole('button', { name: 'Save order' }).click();
+	await expect(page.getByRole('status').filter({ hasText: 'Saved.' })).toBeVisible();
+	expect(settings.patches).toEqual([{ 'sources.priority': ['withings', 'whoop'] }]);
+});
+
 test('retention: typed controls, a generic extra key, and a field error', async ({ page, settings }) => {
 	await page.goto('/settings/retention');
 	await expect(page.getByLabel('Days to keep raw payloads for withings')).toHaveValue('90');

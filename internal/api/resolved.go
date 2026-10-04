@@ -173,20 +173,14 @@ func sourcesLink(metric string, r *resolve.Rule, w resolve.Window) string {
 	return link
 }
 
-// ruleFor returns the rule in effect for metric's rule (its family for family codes), with
-// ok false when the metric has none.
-func (o *owner) ruleFor(ctx context.Context, metric string) (resolve.Version, bool, error) {
+// ruleFor returns the rule in effect for metric's rule (its family for family codes). Every
+// resolvable metric has one (a default rule at least); anything else is 404.
+func (o *owner) ruleFor(ctx context.Context, metric string) (resolve.Version, error) {
 	v, err := resolve.NewStore(o.opts.DB).Active(ctx, auth.PrincipalFrom(ctx).UserID, resolve.RuleMetric(metric))
 	if errors.Is(err, db.ErrNotFound) {
-		return v, false, nil
+		return v, problemErr(CodeNotFound, "no rule is in effect for "+metric)
 	}
-	return v, err == nil, err
-}
-
-// noRule is the value of a metric without a rule in effect.
-func noRule(metric string) oapi.ResolvedValue {
-	return oapi.ResolvedValue{Status: oapi.ResolvedValueStatus(resolve.ResultNoData),
-		Explanation: "No rule is in effect for " + metric + "; only the all-sources view shows its data until a source is picked."}
+	return v, err
 }
 
 // dateRange checks an inclusive range of local dates.
@@ -507,15 +501,9 @@ func (o *owner) GetResolvedDaily(ctx context.Context, req oapi.GetResolvedDailyR
 	out.Timezone = z.name(first.Start)
 	now := time.Now()
 	for _, m := range metrics {
-		v, ok, err := o.ruleFor(ctx, m)
+		v, err := o.ruleFor(ctx, m)
 		if err != nil {
 			return nil, err
-		}
-		if !ok {
-			for i := range out.Days {
-				out.Days[i].Metrics[m] = noRule(m)
-			}
-			continue
 		}
 		rs, err := resolve.Run(ctx, o.opts.DB, resolve.Request{UserID: user, Metric: m, Kind: dailyKind(m, v.Rule), From: from, To: to, Now: now})
 		if err != nil {
@@ -565,12 +553,9 @@ func (o *owner) GetResolvedSeries(ctx context.Context, req oapi.GetResolvedSerie
 			return nil, errInvalidCursor
 		}
 	}
-	v, ok, err := o.ruleFor(ctx, prm.Metric)
+	v, err := o.ruleFor(ctx, prm.Metric)
 	if err != nil {
 		return nil, err
-	}
-	if !ok {
-		return nil, problemErr(CodeNotFound, "no rule is in effect for "+prm.Metric)
 	}
 	kind, size, draft, err := seriesWindow(prm.Metric, v, ptrVal(prm.Window))
 	if err != nil {
@@ -763,9 +748,9 @@ func (o *owner) GetResolvedSleep(ctx context.Context, req oapi.GetResolvedSleepR
 	if err != nil {
 		return nil, err
 	}
-	v, ok, err := o.ruleFor(ctx, resolve.FamilySleep)
-	if err != nil || !ok {
-		return nil, cmp.Or(err, problemErr(CodeNotFound, "no sleep rule is in effect"))
+	v, err := o.ruleFor(ctx, resolve.FamilySleep)
+	if err != nil {
+		return nil, err
 	}
 	z, err := o.zones(ctx)
 	if err != nil {
@@ -815,9 +800,9 @@ func (o *owner) GetResolvedWorkouts(ctx context.Context, req oapi.GetResolvedWor
 	if err != nil {
 		return nil, err
 	}
-	v, ok, err := o.ruleFor(ctx, workoutRule)
-	if err != nil || !ok {
-		return nil, cmp.Or(err, problemErr(CodeNotFound, "no "+workoutRule+" rule is in effect"))
+	v, err := o.ruleFor(ctx, workoutRule)
+	if err != nil {
+		return nil, err
 	}
 	z, err := o.zones(ctx)
 	if err != nil {
@@ -909,17 +894,9 @@ func (o *owner) GetResolvedSources(ctx context.Context, req oapi.GetResolvedSour
 	if !resolvable(metric) {
 		return nil, problemErr(CodeNotFound, "no such metric")
 	}
-	v, ok, err := o.ruleFor(ctx, metric)
+	v, err := o.ruleFor(ctx, metric)
 	if err != nil {
 		return nil, err
-	}
-	var draft *resolve.Version
-	if !ok {
-		// No rule yet: an empty rule lists every source as not_in_rule.
-		r := &resolve.Rule{Schema: resolve.SchemaV1, Metric: resolve.RuleMetric(metric), Window: resolve.RuleWindow{Kind: catalog.WindowLocalDay},
-			Strategy: resolve.Strategy{Op: resolve.OpFirstAvailable}}
-		v = resolve.Version{Ref: "none:" + r.Metric, Metric: r.Metric, Rule: r}
-		draft = &v
 	}
 	z, err := o.zones(ctx)
 	if err != nil {
@@ -955,7 +932,7 @@ func (o *owner) GetResolvedSources(ctx context.Context, req oapi.GetResolvedSour
 		to = date.AddDate(0, 0, 1)
 	}
 	rs, err := resolve.Run(ctx, o.opts.DB, resolve.Request{UserID: auth.PrincipalFrom(ctx).UserID, Metric: metric, Kind: kind,
-		From: date, To: to, Rule: draft, Sources: true, Now: time.Now()})
+		From: date, To: to, Sources: true, Now: time.Now()})
 	if err != nil {
 		return nil, resolveErr(err)
 	}
@@ -1126,27 +1103,22 @@ func (o *owner) PreviewResolution(ctx context.Context, req oapi.PreviewResolutio
 	}
 	out := oapi.PreviewResolution200JSONResponse{Metric: metric, Timezone: z.name(first.Start), Window: string(kind),
 		DraftRule: ruleRef(draft, r.Strategy.Op), Days: []oapi.PreviewDay{}}
-	active := map[time.Time]oapi.ResolvedValue{}
-	v, ok, err := o.ruleFor(ctx, metric)
+	v, err := o.ruleFor(ctx, metric)
 	if err != nil {
 		return nil, err
 	}
-	if ok {
-		ref := ruleRef(v, v.Rule.Strategy.Op)
-		out.ActiveRule = &ref
-		rs, err := resolve.Run(ctx, o.opts.DB, resolve.Request{UserID: user, Metric: metric, Kind: kind, From: from, To: to, Live: true, Now: now})
-		if err != nil {
-			return nil, resolveErr(err)
-		}
-		for _, x := range rs {
-			active[x.Window.Date] = resolvedValue(z, x, v.Rule)
-		}
+	ref := ruleRef(v, v.Rule.Strategy.Op)
+	out.ActiveRule = &ref
+	rs, err := resolve.Run(ctx, o.opts.DB, resolve.Request{UserID: user, Metric: metric, Kind: kind, From: from, To: to, Live: true, Now: now})
+	if err != nil {
+		return nil, resolveErr(err)
+	}
+	active := map[time.Time]oapi.ResolvedValue{}
+	for _, x := range rs {
+		active[x.Window.Date] = resolvedValue(z, x, v.Rule)
 	}
 	for _, x := range drafts {
-		a, ok := active[x.Window.Date]
-		if !ok {
-			a = noRule(metric)
-		}
+		a := active[x.Window.Date] // both runs resolve the same dates
 		d := resolvedValue(z, x, r)
 		d.Links = nil // the drilldown shows the rule in effect, not the draft
 		out.Days = append(out.Days, oapi.PreviewDay{LocalDate: apiDate(x.Window.Date), Draft: d, Active: a})

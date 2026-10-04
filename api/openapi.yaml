@@ -3283,7 +3283,7 @@ components:
       type: object
       required: [ref, version]
       properties:
-        ref: {type: string, description: 'builtin:<metric>:<n>, rule:<metric>:<n>, or draft:<metric> in a preview.'}
+        ref: {type: string, description: 'builtin:<metric>:<n>, default:<metric>:<hash>, rule:<metric>:<n>, or draft:<metric> in a preview.'}
         version: {type: integer, description: 0 for a draft.}
         strategy: {type: string}
     ResolvedInput:
@@ -3513,7 +3513,7 @@ components:
         window: {type: string, description: The window kind both rules resolve.}
         draft_rule: {$ref: '#/components/schemas/RuleRef'}
         active_rule:
-          description: The rule in effect; null when the metric has none.
+          description: The rule in effect (a default rule at least); never null since J24.1, kept nullable for clients.
           oneOf: [{$ref: '#/components/schemas/RuleRef'}, {type: 'null'}]
         days: {type: array, items: {$ref: '#/components/schemas/PreviewDay'}}
     PreviewDay:
@@ -4340,19 +4340,24 @@ components:
       type: object
       description: A rule version, the owner's or a built-in (docs/architecture/resolution.md#rule-specification).
       additionalProperties: false
-      required: [ref, metric, version, builtin, active, spec, based_on, note, created_by, created_at]
+      required: [ref, metric, version, builtin, default, active, spec, based_on, note, created_by, created_at]
       properties:
-        ref: {type: string, description: 'rule:<metric>:<n> for the owner''s versions, builtin:<metric>:<n> for built-ins.'}
+        ref: {type: string, description: 'rule:<metric>:<n> for the owner''s versions, builtin:<metric>:<n> for built-ins, default:<metric>:<hash> for the default rule.'}
         metric: {type: string, description: "Catalogue code or rule family (sleep, blood_pressure)."}
         version: {type: integer, minimum: 1}
-        builtin: {type: boolean}
+        builtin: {type: boolean, description: Shipped with Vitamux rather than stored by the owner; true for the default rule too.}
+        default:
+          type: boolean
+          description: >
+            The default rule of a metric without a built-in: the owner's source order (setting
+            sources.priority), then a generic device ladder (docs/resolution-defaults.md#default-rule).
         active: {type: boolean, description: The rule in effect for the metric.}
         spec: {type: object, description: The typed rule (schemas/resolution-rule.v1.json)., x-go-type: json.RawMessage}
-        based_on: {type: [string, 'null'], description: The built-in this version copied.}
+        based_on: {type: [string, 'null'], description: The built-in or default rule this version copied.}
         note: {type: [string, 'null']}
         created_by: {type: [string, 'null'], description: Audit actor; null for built-ins.}
         created_at: {type: [string, 'null'], format: date-time, description: Null for built-ins.}
-        reason: {type: string, description: 'Built-ins only: why the ladder is ordered this way (docs/resolution-defaults.md).'}
+        reason: {type: string, description: 'Built-ins only: why the ladder is ordered this way, or why the metric uses the default rule (docs/resolution-defaults.md).'}
     RuleVersionInput:
       type: object
       additionalProperties: false
@@ -5122,6 +5127,14 @@ components:
           description: Days to keep raw payloads, per provider code; a missing provider or 0 keeps them (default). PATCH merges per provider. Pruned raw cannot be reprocessed; the prune_raw job keeps raw that reprocessing still needs.
         retention.superseded_after_days: {type: integer, minimum: 0, maximum: 36500, description: Days to keep superseded canonical rows; 0 keeps them (default).}
         retention.idempotency_key_days: {type: integer, minimum: 7, maximum: 36500, description: Days to keep stored ingest responses for Idempotency-Key replays (default 30).}
+        sources.priority:
+          type: array
+          items: {type: string}
+          uniqueItems: true
+          description: >
+            The owner's source order: provider codes, first preferred. Metrics without a built-in
+            resolve through the default rule, which tries these providers first
+            (docs/resolution-defaults.md#default-rule). Empty by default.
     TimezonePeriod:
       type: object
       additionalProperties: false

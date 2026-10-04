@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/KaanEmec/vitamux/internal/audit"
+	"github.com/KaanEmec/vitamux/internal/catalog"
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/db/dbq"
 )
@@ -28,17 +30,19 @@ type By struct {
 	Actor  string
 }
 
-// Version is one rule version: the owner's (Builtin false) or a built-in. Rule is the parsed
-// spec; a stored version may fail Validate when the catalogue changed after it was saved.
+// Version is one rule version: the owner's (Builtin false) or a built-in, which includes the
+// default rule (Default true; default.go). Rule is the parsed spec; a stored version may fail
+// Validate when the catalogue changed after it was saved.
 type Version struct {
-	Ref       string // builtin:<metric>:<n> or rule:<metric>:<n>
+	Ref       string // builtin:<metric>:<n>, default:<metric>:<hash> or rule:<metric>:<n>
 	Metric    string
 	Version   int
 	Builtin   bool
+	Default   bool
 	ID        uuid.UUID // uuid.Nil for built-ins
 	Rule      *Rule
 	Spec      json.RawMessage
-	BasedOn   string // the built-in this version copied, if any
+	BasedOn   string // the built-in or default rule this version copied, if any
 	Note      string
 	CreatedBy string
 	CreatedAt time.Time // zero for built-ins
@@ -49,8 +53,8 @@ type Version struct {
 func RuleRef(metric string, version int) string { return fmt.Sprintf("rule:%s:%d", metric, version) }
 
 // Create validates spec and stores it as the metric's next version, and activates it when
-// asked. The first version of a metric that has a built-in copies the built-in as version 1,
-// so the edit becomes version 2 and its diff shows the change from the default. Errors:
+// asked. The first version of a metric copies the built-in or default rule in effect as version
+// 1, so the edit becomes version 2 and its diff shows the change from the default. Errors:
 // *ValidationError for an invalid spec or (when activating) an invalid active set.
 func (s *Store) Create(ctx context.Context, by By, spec []byte, note string, activate bool) (Version, error) {
 	r, err := ParseRule(spec)
@@ -70,12 +74,18 @@ func (s *Store) Create(ctx context.Context, by By, spec []byte, note string, act
 				return err
 			}
 			prev = row.Spec
-		} else if b, ok := LookupBuiltin(r.Metric); ok {
-			copied, err := s.insert(ctx, q, by, r.Metric, 1, builtinSpec(b), b.Ref(), "")
+		} else {
+			set, err := activeSet(ctx, q, by.UserID)
 			if err != nil {
 				return err
 			}
-			latest, prev = 1, copied.Spec
+			if i := slices.IndexFunc(set, func(v Version) bool { return v.Metric == r.Metric }); i >= 0 {
+				copied, err := s.insert(ctx, q, by, r.Metric, 1, set[i].Spec, set[i].Ref, "")
+				if err != nil {
+					return err
+				}
+				latest, prev = 1, copied.Spec
+			}
 		}
 		row, err := s.insert(ctx, q, by, r.Metric, latest+1, spec, "", note)
 		if err != nil {
@@ -213,7 +223,7 @@ func introduced(before, after error) error {
 }
 
 // Active returns the rule in effect for a metric: the owner's active version, else the
-// built-in. db.ErrNotFound when the metric has neither.
+// built-in, else the default rule. db.ErrNotFound for a code outside the catalogue and families.
 func (s *Store) Active(ctx context.Context, userID uuid.UUID, metric string) (Version, error) {
 	set, err := s.ActiveSet(ctx, userID)
 	if err != nil {
@@ -228,7 +238,8 @@ func (s *Store) Active(ctx context.Context, userID uuid.UUID, metric string) (Ve
 }
 
 // ActiveSet returns the rule in effect for every metric that has one: built-in order first,
-// with the owner's active versions in place of their built-ins, then the owner's other metrics.
+// with the owner's active versions in place of their built-ins, then the other catalogue codes
+// in catalogue order (the owner's version, else the default rule), then the owner's other metrics.
 func (s *Store) ActiveSet(ctx context.Context, userID uuid.UUID) ([]Version, error) {
 	set, err := activeSet(ctx, s.db.Q(), userID)
 	return set, db.MapErr(err)
@@ -260,6 +271,27 @@ func activeSet(ctx context.Context, q *dbq.Queries, userID uuid.UUID) ([]Version
 		out = append(out, Version{Ref: b.Ref(), Metric: b.Rule.Metric, Version: b.Version, Builtin: true,
 			Rule: &b.Rule, Spec: builtinSpec(b), Active: true})
 	}
+	priority, err := SourcePriority(ctx, q, userID)
+	if err != nil {
+		return nil, err
+	}
+	for _, m := range catalog.Metrics() {
+		if RuleMetric(m.Code) != m.Code || slices.ContainsFunc(out, func(v Version) bool { return v.Metric == m.Code }) {
+			continue // a family member, or a built-in
+		}
+		if v, ok := owned[m.Code]; ok {
+			out = append(out, v)
+			delete(owned, m.Code)
+			continue
+		}
+		var leader *Rule
+		if f := defaultFollows[m.Code]; f != "" {
+			if i := slices.IndexFunc(out, func(v Version) bool { return v.Metric == f }); i >= 0 {
+				leader = out[i].Rule
+			}
+		}
+		out = append(out, defaultRule(m, priority, leader))
+	}
 	for _, m := range order {
 		if v, ok := owned[m]; ok {
 			out = append(out, v)
@@ -269,7 +301,7 @@ func activeSet(ctx context.Context, q *dbq.Queries, userID uuid.UUID) ([]Version
 }
 
 // History returns the owner's versions of a metric, newest first. A metric the owner never
-// edited has none; its rule is the built-in (LookupBuiltin).
+// edited has none; its rule is the built-in or default rule (Active).
 func (s *Store) History(ctx context.Context, userID uuid.UUID, metric string) ([]Version, error) {
 	rows, err := s.db.Q().ListRuleVersions(ctx, dbq.ListRuleVersionsParams{UserID: userID, Metric: metric})
 	if err != nil {

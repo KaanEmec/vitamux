@@ -19,6 +19,7 @@ import (
 	"github.com/KaanEmec/vitamux/internal/ingest"
 	"github.com/KaanEmec/vitamux/internal/jobs"
 	"github.com/KaanEmec/vitamux/internal/normalize"
+	"github.com/KaanEmec/vitamux/internal/resolve"
 )
 
 // Schedules, jobs, timezone periods and settings (J10.4). Every mutation is audited; the
@@ -260,7 +261,11 @@ func (o *owner) settings(ctx context.Context) (oapi.Settings, error) {
 	} else if !errors.Is(err, db.ErrNotFound) {
 		return oapi.Settings{}, err
 	}
-	out := oapi.Settings{WithingsNotifications: &on}
+	order, err := resolve.SourcePriority(ctx, o.opts.DB.Q(), auth.PrincipalFrom(ctx).UserID)
+	if err != nil {
+		return oapi.Settings{}, err
+	}
+	out := oapi.Settings{WithingsNotifications: &on, SourcesPriority: &order}
 	if err := documentSettings(ctx, o.opts.DB.Q(), auth.PrincipalFrom(ctx).UserID, &out); err != nil {
 		return oapi.Settings{}, err
 	}
@@ -294,6 +299,17 @@ func (o *owner) UpdateSettings(ctx context.Context, req oapi.UpdateSettingsReque
 	}
 	if err := o.updateDocumentSettings(ctx, req.Body); err != nil {
 		return nil, err
+	}
+	if order := req.Body.SourcesPriority; order != nil {
+		p := auth.PrincipalFrom(ctx)
+		err := o.opts.DB.Tx(ctx, func(q *dbq.Queries) error { return resolve.SetSourcePriority(ctx, q, p.UserID, p.Actor(), *order) })
+		if errors.Is(err, resolve.ErrInvalidPriority) {
+			return nil, problemErr(CodeValidationFailed, "invalid source order",
+				FieldError{Pointer: "/sources.priority", Detail: strings.TrimPrefix(err.Error(), resolve.ErrInvalidPriority.Error()+": ")})
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
 	var applyErr error
 	if on := req.Body.WithingsNotifications; on != nil {

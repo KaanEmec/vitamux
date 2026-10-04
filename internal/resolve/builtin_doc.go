@@ -49,6 +49,23 @@ func DefaultsDoc() string {
 		fmt.Fprintf(&b, "| `%s` | %s |\n", id, strings.Join(sels, " or "))
 	}
 
+	b.WriteString("\n## Default rule\n\n")
+	b.WriteString("A catalogue code with neither a built-in nor an owner rule resolves through its default rule, `default:<metric>:<hash>` ")
+	b.WriteString("([`internal/resolve/default.go`](../internal/resolve/default.go)). The hash is of the rule, so a new source order is a new ref. ")
+	b.WriteString("It is `first_available` without gates, on `local_day` (`local_night` for night-only codes), and tries the providers of the owner's source order ")
+	b.WriteString("(setting `" + SettingSourcePriority + "`, Settings › Sources), each followed by its Apple Health relay group, then ")
+	var generic []string
+	for _, g := range defaultGroups(nil) {
+		generic = append(generic, "`"+g.ID+"`")
+	}
+	b.WriteString(strings.Join(generic, " › ") + ". A provider-scoped code takes its provider alone. ")
+	var follows []string
+	for f, leader := range defaultFollows {
+		follows = append(follows, fmt.Sprintf("`%s` follows `%s` (E5) with that rule's window and groups", f, leader))
+	}
+	slices.Sort(follows)
+	b.WriteString(strings.Join(follows, "; ") + ". The first edit copies the default rule into the owner's version 1.\n")
+
 	b.WriteString("\n## Coverage\n\n")
 	b.WriteString("- `metric: sleep` covers every `sleep_derived` code; `metric: blood_pressure` covers the `bp_reading` components.\n")
 	var exempt []string

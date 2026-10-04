@@ -32,10 +32,10 @@ func BuiltinRef(metric string, version int) string {
 }
 
 // NoBuiltin lists the catalogue codes that ship without a built-in, with the reason. The
-// owner picks a source at onboarding; until then only the all-sources view shows them.
+// default rule (default.go) resolves them.
 var NoBuiltin = func() map[string]string {
 	m := map[string]string{
-		"skin_temperature": "the value depends on where the device is worn, so there is no neutral order; the owner picks one source",
+		"skin_temperature": "the value depends on where the device is worn, so there is no neutral order: uses the default rule",
 	}
 	// The Apple Health bridge codes (J15.2) have no researched ladder yet.
 	for _, code := range []string{"distance_cycling", "distance_swimming", "distance_wheelchair", "floors_climbed",
@@ -44,12 +44,12 @@ var NoBuiltin = func() map[string]string {
 		"diet_protein", "diet_carbohydrate", "diet_fat_total", "diet_fat_saturated", "diet_fat_monounsaturated",
 		"diet_fat_polyunsaturated", "diet_fiber", "diet_sugar", "diet_cholesterol", "diet_water", "diet_caffeine",
 		"walking_steadiness", "walking_asymmetry", "walking_double_support", "walking_step_length"} {
-		m[code] = "added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source"
+		m[code] = "added with the Apple Health bridge (J15.2); no researched ladder: uses the default rule"
 	}
 	// Garmin and WHOOP scores (J18.4, J19.4) are provider-scoped: one source each, nothing to order.
 	for _, code := range []string{"garmin_stress", "garmin_body_battery", "garmin_training_readiness", "garmin_sleep_score",
 		"whoop_recovery", "whoop_strain", "whoop_sleep_performance"} {
-		m[code] = "a provider-scoped score with a single source, so there is nothing to order"
+		m[code] = "a provider-scoped score with a single source, so there is nothing to order: uses the default rule, which takes that provider alone"
 	}
 	return m
 }()

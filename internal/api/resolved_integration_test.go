@@ -232,13 +232,13 @@ func TestResolvedDaily(t *testing.T) {
 		t.Errorf("cached steps %s, live %s", a, b)
 	}
 
-	// Every metric with a rule; a metric without one is no_data with its reason.
+	// Every metric has a rule; one without a built-in uses its default rule.
 	e.call(daily, "/api/v1/resolved/daily?start_date=2025-09-14&end_date=2025-09-14", "", http.StatusOK, &d)
-	if _, ok := d.Days[0].Metrics["sleep"]; !ok || len(d.Days[0].Metrics) < 10 {
+	if _, ok := d.Days[0].Metrics["skin_temperature"]; !ok || len(d.Days[0].Metrics) < 10 {
 		t.Errorf("all metrics: %d", len(d.Days[0].Metrics))
 	}
 	e.call(daily, "/api/v1/resolved/daily?start_date=2025-09-14&end_date=2025-09-14&metrics=skin_temperature", "", http.StatusOK, &d)
-	if v := d.Days[0].Metrics["skin_temperature"]; v.Status != "no_data" || !strings.Contains(v.Explanation, "No rule") {
+	if v := d.Days[0].Metrics["skin_temperature"]; v.Status != "no_data" || v.Rule == nil || !strings.HasPrefix(v.Rule.Ref, "default:") {
 		t.Errorf("skin_temperature: %+v", v)
 	}
 	for _, target := range []string{
@@ -248,6 +248,53 @@ func TestResolvedDaily(t *testing.T) {
 		"/api/v1/resolved/daily?end_date=2025-09-14",
 	} {
 		e.call(daily, target, "", http.StatusUnprocessableEntity, nil)
+	}
+}
+
+// TestDefaultRule resolves a code without a built-in through the default rule (J24.1), whose
+// ladder starts with the owner's source order.
+func TestDefaultRule(t *testing.T) {
+	e := newResolvedEnv(t, "2025-09-13", 3)
+	// The synthetic steps rows again as floors_climbed, so the code has the same sources.
+	e.exec(`INSERT INTO measurements (user_id, metric_id, kind, start_at, end_at, tz_offset_min, local_date, value, provider_id,
+		connection_id, device_id, origin_id, dedupe_key, quality_flags, raw_payload_id, normalizer_version_id)
+	SELECT user_id, (SELECT id FROM metric_catalog WHERE code = 'floors_climbed'), kind, start_at, end_at, tz_offset_min, local_date, 1,
+		provider_id, connection_id, device_id, origin_id, substring(sha256(dedupe_key || 'floors') FOR 16), quality_flags, raw_payload_id,
+		normalizer_version_id
+	FROM measurements WHERE metric_id = (SELECT id FROM metric_catalog WHERE code = 'steps') AND superseded_at IS NULL AND deleted_at IS NULL`)
+	floors := func() oapi.ResolvedValue {
+		var d oapi.ResolvedDaily
+		e.call(daily, "/api/v1/resolved/daily?start_date=2025-09-14&end_date=2025-09-14&metrics=floors_climbed", "", http.StatusOK, &d)
+		return d.Days[0].Metrics["floors_climbed"]
+	}
+	before := floors()
+	if before.Value == nil || before.Selected == nil || before.Rule == nil || !strings.HasPrefix(before.Rule.Ref, "default:floors_climbed:") {
+		t.Fatalf("floors_climbed resolves through its default rule: %+v", before)
+	}
+
+	const settings, patch = "GET /api/v1/settings", "PATCH /api/v1/settings"
+	var s oapi.Settings
+	e.call(settings, "/api/v1/settings", "", http.StatusOK, &s)
+	if s.SourcesPriority == nil || len(*s.SourcesPriority) != 0 {
+		t.Errorf("no source order by default: %+v", s.SourcesPriority)
+	}
+	for _, bad := range []string{`{"sources.priority": ["no_such_provider"]}`, `{"sources.priority": ["garmin", "garmin"]}`} {
+		e.call(patch, "/api/v1/settings", bad, http.StatusUnprocessableEntity, nil)
+	}
+	e.call(patch, "/api/v1/settings", `{"sources.priority": ["apple_health"]}`, http.StatusOK, &s)
+	if s.SourcesPriority == nil || strings.Join(*s.SourcesPriority, ",") != "apple_health" {
+		t.Fatalf("source order saved: %+v", s.SourcesPriority)
+	}
+	after := floors()
+	if after.Rule.Ref == before.Rule.Ref || after.Selected == nil || *after.Selected != "apple_health" {
+		t.Errorf("the owner's first provider leads the new default rule: %s -> %s, selected %v", before.Rule.Ref, after.Rule.Ref, after.Selected)
+	}
+	var rules oapi.ListRules200JSONResponse
+	e.call("GET /api/v1/rules", "/api/v1/rules", "", http.StatusOK, &rules)
+	for _, r := range rules.Rules {
+		if r.Metric == "floors_climbed" && (!r.Default || !r.Builtin || r.Ref != after.Rule.Ref || r.Reason == nil) {
+			t.Errorf("the rules list shows the default rule: %+v", r)
+		}
 	}
 }
 
