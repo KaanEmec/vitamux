@@ -1,7 +1,7 @@
 // Real-stack smoke: the embedded SPA and the Go API on a freshly migrated database whose only
 // row is the owner (scripts/e2e-stack.sh creates it and passes the sign-in in the environment).
 // Signs in through the form, opens Dashboard, Explore (with a metric page and its rule lens),
-// Rules and Settings, and expects every /api/v1 answer
+// Rules, Connections and Settings (with Sources), and expects every /api/v1 answer
 // after sign-in to be a 2xx (apart from the endpoints listed below). Run with `--project=stack`; skipped without the stack variables.
 import { expect, test } from '@playwright/test';
 
@@ -12,7 +12,7 @@ const username = process.env.VITAMUX_E2E_USER;
 const password = process.env.VITAMUX_E2E_PASSWORD;
 test.skip(!username || !password, 'run via scripts/e2e-stack.sh');
 
-test('sign in, then Dashboard, Explore, Rules and Settings load from the real API', async ({ page }) => {
+test('sign in, then Dashboard, Explore, Rules, Connections and Settings load from the real API', async ({ page }) => {
 	const failures: string[] = [];
 	const errors: string[] = [];
 	page.on('pageerror', (e) => errors.push(e.message));
@@ -35,7 +35,9 @@ test('sign in, then Dashboard, Explore, Rules and Settings load from the real AP
 		['/explore', 'Explore'],
 		['/explore/steps', 'Steps'],
 		['/rules', 'Rules'],
-		['/settings', 'Settings']
+		['/connections', 'Connections'],
+		['/settings', 'Settings'],
+		['/settings/sources', 'Settings']
 	]) {
 		await page.goto(path);
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);
