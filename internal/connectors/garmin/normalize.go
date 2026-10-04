@@ -61,7 +61,7 @@ var streams = map[string]struct {
 	StreamFitnessAge:        {1, fitnessAge},
 	StreamBodyComposition:   {2, bodyComposition},
 	StreamBloodPressure:     {1, bloodPressure},
-	StreamActivities:        {3, activity},
+	StreamActivities:        {4, activity},
 }
 
 // Normalizer normalizes one garmin.* stream; its ID is the stream name.

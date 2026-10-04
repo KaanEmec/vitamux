@@ -22,6 +22,7 @@ const (
 	SeedGarmin    = 36 // the Garmin provider-scoped codes of J25.5
 	SeedGarminAct = 38 // the Garmin activity summary codes (J25.5)
 	SeedWithings  = 40 // the Withings urine and core body temperature codes of J25.2, J25.3
+	SeedMore      = 41 // the Garmin swim, stress and strength summary codes (J25.5) and Withings swim laps (J25.3)
 )
 
 var seedFiles = map[int]struct{ path, job string }{
@@ -34,6 +35,7 @@ var seedFiles = map[int]struct{ path, job string }{
 	SeedGarmin:    {"internal/db/migrations/00036_catalogue_garmin.sql", "J25.5"},
 	SeedGarminAct: {"internal/db/migrations/00038_catalogue_garmin_activities.sql", "J25.5"},
 	SeedWithings:  {"internal/db/migrations/00040_catalogue_withings.sql", "J25.2, J25.3"},
+	SeedMore:      {"internal/db/migrations/00041_catalogue_garmin_withings.sql", "J25.5, J25.3"},
 }
 
 func since(marker int) int {

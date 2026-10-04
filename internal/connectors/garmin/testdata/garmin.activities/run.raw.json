@@ -56,6 +56,7 @@
   "avgVerticalOscillation": 8.2,
   "avgGroundContactTime": 245.0,
   "avgVerticalRatio": 7.9,
+  "avgGradeAdjustedSpeed": 2.6,
   "avgRespirationRate": 28.5,
   "minRespirationRate": 18.0,
   "maxRespirationRate": 38.0,

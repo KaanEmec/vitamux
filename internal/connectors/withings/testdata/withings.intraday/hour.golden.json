@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "withings.intraday",
-  "version": 2,
+  "version": 3,
   "output": {
     "devices": [
       {
@@ -145,6 +145,20 @@
           "record_type": "intraday",
           "external_id": "1735714920",
           "component": "swim_strokes"
+        }
+      },
+      {
+        "metric": "swim_laps",
+        "kind": "interval",
+        "start": "2025-01-01T07:02:00Z",
+        "end": "2025-01-01T07:04:00Z",
+        "value": 1,
+        "unit": "count",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "intraday",
+          "external_id": "1735714920",
+          "component": "swim_laps"
         }
       },
       {

@@ -234,7 +234,7 @@ var intradayValues = []struct {
 }{
 	{"steps", "steps", "count", true}, {"elevation", "floors_climbed", "count", true},
 	{"calories", "active_energy", "kcal", true}, {"distance", "distance_walk_run", "m", true},
-	{"stroke", "swim_strokes", "count", true}, {"heart_rate", "heart_rate", "bpm", false},
+	{"stroke", "swim_strokes", "count", true}, {"pool_lap", "swim_laps", "count", true}, {"heart_rate", "heart_rate", "bpm", false},
 	{"spo2_auto", "spo2", "%", false}, {"rr", "respiratory_rate", "breaths/min", false},
 	{"rmssd", "hrv_rmssd", "ms", false}, {"sdnn1", "hrv_sdnn", "ms", false},
 	{"core_body_temperature", "core_body_temperature_estimated", "°C", false},

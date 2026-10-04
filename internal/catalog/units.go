@@ -42,6 +42,8 @@ var units = []Unit{
 
 	// J25.5: running cadence.
 	{Code: "steps/min", Base: "steps/min", Factor: 1, Since: SeedGarminAct},
+	// J25.5: swim cadence.
+	{Code: "strokes/min", Base: "strokes/min", Factor: 1, Since: SeedMore},
 	// J25.2: units of the Withings U-Scan.
 	withings(base("pH")), withings(base("ratio")), withings(base("mmol/mmol")), withings(conv("µmol/L", "mmol/L", 0.001, 0)),
 }

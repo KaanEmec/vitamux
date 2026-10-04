@@ -384,7 +384,7 @@ var activityValues = func() []activityValue {
 		{"maxElevation", "garmin_activity_elevation_max", "m", i}, {"maxVerticalSpeed", "garmin_activity_vertical_speed_max", "m/s", i},
 		{"avgStrideLength", "running_stride_length", "cm", i}, {"avgVerticalOscillation", "running_vertical_oscillation", "cm", i},
 		{"avgGroundContactTime", "running_ground_contact_time", "ms", i}, {"avgVerticalRatio", "garmin_activity_vertical_ratio", "%", i},
-		{"avgSwolf", "garmin_activity_swolf", "index", i}, {"strokes", "swim_strokes", "count", i},
+		{"averageSwolf", "garmin_activity_swolf", "index", i}, {"strokes", "swim_strokes", "count", i},
 		{"avgRespirationRate", "respiratory_rate", "breaths/min", i},
 		{"minRespirationRate", "garmin_activity_respiration_min", "breaths/min", i},
 		{"maxRespirationRate", "garmin_activity_respiration_max", "breaths/min", i},
@@ -393,6 +393,14 @@ var activityValues = func() []activityValue {
 		{"moderateIntensityMinutes", "intensity_moderate_time", "min", i},
 		{"vigorousIntensityMinutes", "intensity_vigorous_time", "min", i},
 		{"vO2MaxValue", "vo2max", "mL/kg/min", s},
+		{"averageSwimCadenceInStrokesPerMinute", "garmin_activity_swim_cadence", "strokes/min", i},
+		{"maxSwimCadenceInStrokesPerMinute", "garmin_activity_swim_cadence_max", "strokes/min", i},
+		{"avgStrokeDistance", "garmin_activity_stroke_distance", "m", i},
+		{"avgGradeAdjustedSpeed", "garmin_activity_grade_adjusted_speed", "m/s", i},
+		{"avgStress", "garmin_activity_stress_avg", "index", i}, {"maxStress", "garmin_activity_stress_max", "index", i},
+		{"startStress", "garmin_activity_stress_start", "index", i}, {"endStress", "garmin_activity_stress_end", "index", i},
+		{"activeSets", "garmin_activity_sets_active", "count", i}, {"totalSets", "garmin_activity_sets_total", "count", i},
+		{"totalReps", "garmin_activity_reps_total", "count", i},
 	}
 	for z := 1; z <= 5; z++ {
 		n := strconv.Itoa(z)

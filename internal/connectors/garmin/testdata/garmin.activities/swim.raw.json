@@ -25,7 +25,10 @@
   "averageSpeed": 0.9,
   "maxSpeed": 1.4,
   "strokes": 1250,
-  "avgSwolf": 38.0,
+  "averageSwolf": 38.0,
+  "averageSwimCadenceInStrokesPerMinute": 27.0,
+  "maxSwimCadenceInStrokesPerMinute": 41.0,
+  "avgStrokeDistance": 1.3,
   "avgRespirationRate": 22.0
  }
 }

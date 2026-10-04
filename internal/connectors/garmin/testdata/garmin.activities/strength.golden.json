@@ -1,0 +1,170 @@
+{
+  "synthetic": true,
+  "normalizer": "garmin.activities",
+  "version": 4,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "1000000001",
+        "manufacturer": "Garmin"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "garmin_activity_moving_time",
+        "kind": "interval",
+        "start": "2026-06-17T17:00:00Z",
+        "end": "2026-06-17T17:46:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 2700,
+        "unit": "s",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000004",
+          "component": "garmin_activity_moving_time"
+        }
+      },
+      {
+        "metric": "garmin_activity_stress_avg",
+        "kind": "interval",
+        "start": "2026-06-17T17:00:00Z",
+        "end": "2026-06-17T17:46:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 31,
+        "unit": "index",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000004",
+          "component": "garmin_activity_stress_avg"
+        }
+      },
+      {
+        "metric": "garmin_activity_stress_max",
+        "kind": "interval",
+        "start": "2026-06-17T17:00:00Z",
+        "end": "2026-06-17T17:46:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 58,
+        "unit": "index",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000004",
+          "component": "garmin_activity_stress_max"
+        }
+      },
+      {
+        "metric": "garmin_activity_stress_start",
+        "kind": "interval",
+        "start": "2026-06-17T17:00:00Z",
+        "end": "2026-06-17T17:46:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 24,
+        "unit": "index",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000004",
+          "component": "garmin_activity_stress_start"
+        }
+      },
+      {
+        "metric": "garmin_activity_stress_end",
+        "kind": "interval",
+        "start": "2026-06-17T17:00:00Z",
+        "end": "2026-06-17T17:46:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 40,
+        "unit": "index",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000004",
+          "component": "garmin_activity_stress_end"
+        }
+      },
+      {
+        "metric": "garmin_activity_sets_active",
+        "kind": "interval",
+        "start": "2026-06-17T17:00:00Z",
+        "end": "2026-06-17T17:46:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 18,
+        "unit": "count",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000004",
+          "component": "garmin_activity_sets_active"
+        }
+      },
+      {
+        "metric": "garmin_activity_sets_total",
+        "kind": "interval",
+        "start": "2026-06-17T17:00:00Z",
+        "end": "2026-06-17T17:46:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 18,
+        "unit": "count",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000004",
+          "component": "garmin_activity_sets_total"
+        }
+      },
+      {
+        "metric": "garmin_activity_reps_total",
+        "kind": "interval",
+        "start": "2026-06-17T17:00:00Z",
+        "end": "2026-06-17T17:46:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 164,
+        "unit": "count",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000004",
+          "component": "garmin_activity_reps_total"
+        }
+      }
+    ],
+    "workouts": [
+      {
+        "start": "2026-06-17T17:00:00Z",
+        "end": "2026-06-17T17:46:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "sport": "traditional_strength_training",
+        "provider_sport": "strength_training",
+        "energy_kcal": 320,
+        "avg_hr_bpm": 112,
+        "max_hr_bpm": 148,
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000004"
+        }
+      }
+    ]
+  }
+}

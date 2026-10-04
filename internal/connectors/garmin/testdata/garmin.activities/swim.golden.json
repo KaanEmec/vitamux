@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "garmin.activities",
-  "version": 3,
+  "version": 4,
   "output": {
     "devices": [
       {
@@ -110,6 +110,57 @@
           "record_type": "activity",
           "external_id": "90000000003",
           "component": "respiratory_rate"
+        }
+      },
+      {
+        "metric": "garmin_activity_swim_cadence",
+        "kind": "interval",
+        "start": "2026-06-16T16:00:00Z",
+        "end": "2026-06-16T17:00:50Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 27,
+        "unit": "strokes/min",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000003",
+          "component": "garmin_activity_swim_cadence"
+        }
+      },
+      {
+        "metric": "garmin_activity_swim_cadence_max",
+        "kind": "interval",
+        "start": "2026-06-16T16:00:00Z",
+        "end": "2026-06-16T17:00:50Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 41,
+        "unit": "strokes/min",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000003",
+          "component": "garmin_activity_swim_cadence_max"
+        }
+      },
+      {
+        "metric": "garmin_activity_stroke_distance",
+        "kind": "interval",
+        "start": "2026-06-16T16:00:00Z",
+        "end": "2026-06-16T17:00:50Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 1.3,
+        "unit": "m",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000003",
+          "component": "garmin_activity_stroke_distance"
         }
       }
     ],
