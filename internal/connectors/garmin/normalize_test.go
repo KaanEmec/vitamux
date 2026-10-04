@@ -2,6 +2,7 @@ package garmin
 
 import (
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -87,5 +88,27 @@ func TestVO2maxCalendarDate(t *testing.T) {
 		if err != nil || l.Date.Format(time.DateOnly) != "2026-06-15" {
 			t.Errorf("%s: %v %v", tz, l.Date, err)
 		}
+	}
+}
+
+// TestEmptyDaysStillDriftOnRetype: a no-wellness summary and a null readiness score are empty, but
+// a normal summary without its start time and a non-numeric readiness score stay drift.
+func TestEmptyDaysStillDriftOnRetype(t *testing.T) {
+	const readinessMeta = `{"endpoint": "/metrics-service/metrics/trainingreadiness/2026-06-15"}`
+	for name, c := range map[string]struct {
+		stream, meta, body, field string
+	}{
+		"summary without wellness start": {StreamDailySummary, "",
+			`{"response": {"calendarDate": "2026-06-15", "includesWellnessData": true, "wellnessStartTimeGmt": null}}`, "wellnessStartTimeGmt"},
+		"readiness score retyped": {StreamTraining, readinessMeta,
+			`{"response": [{"timestamp": "2026-06-15T04:45:00.0", "score": "high"}]}`, "score"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			raw := normalize.RawPayload{Stream: c.stream, Body: []byte(c.body), RequestMeta: []byte(c.meta)}
+			_, err := Normalizer{c.stream}.Normalize(t.Context(), raw, normalize.Env{})
+			if err == nil || !strings.Contains(err.Error(), "schema drift") || !strings.Contains(err.Error(), c.field) {
+				t.Fatalf("want drift on %s, got %v", c.field, err)
+			}
+		})
 	}
 }

@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "garmin.daily_summary",
-  "version": 1,
+  "version": 2,
   "output": {
     "measurements": [
       {

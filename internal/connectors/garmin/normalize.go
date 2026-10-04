@@ -43,7 +43,7 @@ var streams = map[string]struct {
 	version int
 	decode  func(b *builder, resp []byte) error
 }{
-	StreamDailySummary:      {1, dailySummary},
+	StreamDailySummary:      {2, dailySummary},
 	StreamHeartRate:         {1, heartRate},
 	StreamSteps:             {1, steps},
 	StreamStressBodyBattery: {1, stressBodyBattery},
@@ -51,7 +51,7 @@ var streams = map[string]struct {
 	StreamHRV:               {1, hrv},
 	StreamRespiration:       {1, respiration},
 	StreamSpO2:              {1, spo2},
-	StreamTraining:          {1, training},
+	StreamTraining:          {2, training},
 	StreamBodyComposition:   {1, bodyComposition},
 	StreamBloodPressure:     {1, bloodPressure},
 	StreamActivities:        {1, activity},
@@ -269,10 +269,12 @@ func (d dayBounds) zone() normalize.Zone {
 }
 
 // dailySummary maps the daily totals that have a catalogue code. Resting HR comes from
-// garmin.heart_rate, stress and Body Battery from their series.
+// garmin.heart_rate, stress and Body Battery from their series. A day without wellness data
+// (includesWellnessData false, wellnessStartTimeGmt and the totals null) is no output.
 func dailySummary(b *builder, resp []byte) error {
 	var r struct {
 		CalendarDate string   `json:"calendarDate"`
+		HasWellness  *bool    `json:"includesWellnessData"`
 		StartGMT     gtime    `json:"wellnessStartTimeGmt"`
 		StartLocal   gtime    `json:"wellnessStartTimeLocal"`
 		EndGMT       gtime    `json:"wellnessEndTimeGmt"`
@@ -287,6 +289,8 @@ func dailySummary(b *builder, resp []byte) error {
 	switch {
 	case r.CalendarDate == "":
 		return drift(b.stream, "calendarDate")
+	case r.HasWellness != nil && !*r.HasWellness:
+		return nil
 	case r.StartGMT.IsZero():
 		return drift(b.stream, "wellnessStartTimeGmt")
 	case !r.EndGMT.After(r.StartGMT.Time):
@@ -578,7 +582,8 @@ func maxMetrics(b *builder, raw []byte) error {
 	return nil
 }
 
-// readiness maps one training-readiness snapshot; Garmin updates it during the day.
+// readiness maps one training-readiness snapshot; Garmin updates it during the day. A snapshot
+// with a null score has no readiness yet and is skipped.
 func readiness(b *builder, raw []byte) error {
 	var r struct {
 		Timestamp gtime    `json:"timestamp"`
@@ -593,7 +598,7 @@ func readiness(b *builder, raw []byte) error {
 	case r.Timestamp.IsZero():
 		return drift(b.stream, "[].timestamp")
 	case r.Score == nil:
-		return drift(b.stream, "[].score")
+		return nil
 	}
 	b.sample("garmin_training_readiness", r.Timestamp.Time, zoneAt(r.Timestamp.Time, r.Local.Time), *r.Score, "index", b.device(r.DeviceID))
 	return nil

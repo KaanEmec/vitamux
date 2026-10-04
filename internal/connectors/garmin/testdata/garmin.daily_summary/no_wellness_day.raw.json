@@ -1,0 +1,24 @@
+{
+ "synthetic": true,
+ "unit": {
+  "date": "2026-06-17"
+ },
+ "response": {
+  "userProfileId": 1,
+  "calendarDate": "2026-06-17",
+  "displayName": "synthetic-user",
+  "source": "GARMIN",
+  "privacyProtected": false,
+  "includesWellnessData": false,
+  "includesActivityData": false,
+  "includesCalorieConsumedData": false,
+  "netRemainingKilocalories": 0,
+  "wellnessStartTimeGmt": null,
+  "wellnessStartTimeLocal": null,
+  "wellnessEndTimeGmt": null,
+  "totalSteps": null,
+  "activeKilocalories": null,
+  "bmrKilocalories": null,
+  "floorsAscended": null
+ }
+}
