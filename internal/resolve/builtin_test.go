@@ -94,7 +94,7 @@ func TestBuiltinShape(t *testing.T) {
 		refs[b.Ref()] = true
 	}
 	hr, _ := LookupBuiltin("heart_rate")
-	if hr.Ref() != "builtin:heart_rate:2" || hr.Rule.Groups[0].ID != "chest_strap" || hr.Rule.Contexts[ContextWorkout] == nil {
+	if hr.Ref() != "builtin:heart_rate:3" || hr.Rule.Groups[0].ID != "chest_strap" || hr.Rule.Groups[3].ID != "whoop" || hr.Rule.Groups[5].ID != "garmin" || hr.Rule.Contexts[ContextWorkout] == nil {
 		t.Errorf("heart_rate: %+v", hr.Rule)
 	}
 	for _, code := range []string{"resting_heart_rate", "hrv_rmssd_nightly"} {
@@ -114,6 +114,15 @@ func TestBuiltinShape(t *testing.T) {
 	steps, _ := LookupBuiltin("steps")
 	if i, p := groupIndex(steps.Rule, "iphone"), groupIndex(steps.Rule, "phone"); i < 0 || i > p {
 		t.Errorf("steps: iphone (%d) comes before phone (%d)", i, p)
+	}
+	for _, code := range []string{"steps", "distance_walk_run", "active_energy", "resting_heart_rate_nocturnal", FamilySleep} {
+		b, _ := LookupBuiltin(code)
+		if q := b.Rule.Quality; q != nil && (q.MinCoverage != nil || q.RequireWear != "" || q.Sleep != nil && q.Sleep.MinEpisodeCoverage != nil) {
+			t.Errorf("%s: gates are opt-in: %+v", code, q)
+		}
+	}
+	if rhr, _ := LookupBuiltin("resting_heart_rate_nocturnal"); groupIndex(rhr.Rule, "whoop") != 3 || groupIndex(rhr.Rule, "whoop") > groupIndex(rhr.Rule, "garmin") {
+		t.Errorf("resting_heart_rate_nocturnal shares the heart-rate order: %+v", rhr.Rule.Groups)
 	}
 	if groupIndex(hr.Rule, "whoop_apple") < 0 {
 		t.Error("heart_rate: WHOOP relayed through Apple Health has its group")
@@ -144,7 +153,7 @@ func TestDefaultsDocUpToDate(t *testing.T) {
 	if string(got) != DefaultsDoc() {
 		t.Errorf("%s is stale; run: go run ./internal/resolve/gen", DefaultsDocPath)
 	}
-	if !strings.Contains(string(got), "`builtin:sleep:2`") {
+	if !strings.Contains(string(got), "`builtin:sleep:3`") {
 		t.Error("doc lists the sleep family built-in")
 	}
 }

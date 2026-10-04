@@ -412,11 +412,20 @@ func TestScenariosMarch(t *testing.T) {
 
 	// 13. DST: 2025-03-30 has 23 hours; the day window spans them by the wall clock.
 	hours := s.run(t, "heart_rate", catalog.WindowHour, "2025-03-30", "2025-03-30", nil, now)
-	day := s.run(t, "steps", catalog.WindowLocalDay, "2025-03-30", "2025-03-30", nil, now)[0]
+	day := s.run(t, "steps", catalog.WindowLocalDay, "2025-03-30", "2025-03-30", gatedSteps(), now)[0]
 	if len(hours) != 23 || day.Window.End.Sub(day.Window.Start) != 23*time.Hour {
 		t.Errorf("13: %d hours, day of %v", len(hours), day.Window.End.Sub(day.Window.Start))
 	}
 	golden(t, "scenario-13-dst", hours[2], day)
+}
+
+// gatedSteps is the built-in steps rule with the opt-in wear and coverage gates the built-in no
+// longer carries (J24.2).
+func gatedSteps() *Rule {
+	b, _ := LookupBuiltin("steps")
+	r := b.Rule
+	r.Quality = &Quality{MinCoverage: new(0.6), RequireWear: "heart_rate"}
+	return &r
 }
 
 // 7 (continued). Garmin wakes only 35 minutes on 2025-04-08: the fragments merge.
@@ -434,7 +443,7 @@ func TestScenarioSplitNightShort(t *testing.T) {
 // 13 (continued). Travel: the first trip day is a New York day by its stored local dates.
 func TestScenarioTravel(t *testing.T) {
 	s := loadSlice(t, "2025-05-11", 3)
-	days := s.run(t, "steps", catalog.WindowLocalDay, "2025-05-11", "2025-05-13", nil, "2025-06-01T00:00:00Z")
+	days := s.run(t, "steps", catalog.WindowLocalDay, "2025-05-11", "2025-05-13", gatedSteps(), "2025-06-01T00:00:00Z")
 	ny, _ := time.LoadLocation("America/New_York")
 	if w := days[1].Window; !w.Start.Equal(time.Date(2025, 5, 12, 0, 0, 0, 0, ny)) || days[1].Status == ResultNoData {
 		t.Errorf("13: travel day %s from %v", resultText(days[1]), w.Start)

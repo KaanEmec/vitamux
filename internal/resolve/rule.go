@@ -165,7 +165,7 @@ type Quality struct {
 // SleepQuality configures episode alignment. Absent values take the documented defaults.
 type SleepQuality struct {
 	MatchOverlap       *float64 `json:"match_overlap,omitempty"`        // default 0.5
-	MinEpisodeCoverage *float64 `json:"min_episode_coverage,omitempty"` // default 0.7
+	MinEpisodeCoverage *float64 `json:"min_episode_coverage,omitempty"` // opt-in; unset = no gate
 	IncludeNaps        bool     `json:"include_naps,omitempty"`
 	NightAnchor        string   `json:"night_anchor,omitempty"` // local "HH:MM", 12:00-23:59; default 18:00 (ADR-0009)
 }

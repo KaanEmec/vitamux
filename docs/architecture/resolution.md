@@ -26,7 +26,7 @@ quality:
 acknowledged_warnings: []
 ```
 
-The provider names are illustrative; rules work for any provider.
+The provider names are illustrative; rules work for any provider. Coverage and wear gates (`min_coverage`, `require_wear`, `sleep.min_episode_coverage`) are opt-in: they apply only when the rule sets them, and no built-in does.
 
 ## Selectors and validation
 
@@ -73,7 +73,7 @@ This happens per source group, before any cross-source step, so dense sources do
 | Aggregation | Within-source value |
 | --- | --- |
 | intensive | Samples go into base buckets (`min(window, catalogue base_bucket)`). Bucket mean per group; several sub-sources in a group use the `intra_group` mean of their bucket means. Window value = mean of covered bucket means, **each bucket weighted equally**. Coverage = covered buckets / elapsed buckets. |
-| additive | Intervals pro-rated linearly by overlap (flag `prorated`). For `local_day` with `prefer_reported`, use the provider `daily_value` if present, else the interval sum — **never both**. Sub-sources in a group use the per-bucket **max**, so iPhone + Watch steps are not added. With `require_wear` (E3), coverage = worn buckets / elapsed buckets. Wear-exempt groups (phones) and rules without the gate skip the coverage gate. |
+| additive | Intervals pro-rated linearly by overlap (flag `prorated`). For `local_day` with `prefer_reported`, use the provider `daily_value` if present, else the interval sum — **never both**. Sub-sources in a group use the per-bucket **max**, so iPhone + Watch steps are not added. With `require_wear` (E3), coverage = worn buckets / elapsed buckets. Wear-exempt groups (phones) and rules without the gate skip the coverage gate; no built-in sets it (opt-in). |
 | latest | Latest valid reading. Group metrics select whole groups. On `local_day`, `within_source.statistic` is `latest` (default) or `mean` of the selected readings, per component. |
 | daily_summary | The source's `daily_value` for D, else the latest sample in D |
 | sleep_derived | Sum over that group's sessions in the aligned main episode. Missing stages → `no_stage_data`, **not 0**. |
@@ -106,10 +106,10 @@ For each window, independently:
 1. Gather candidate sessions for the night from the rule's groups (excluded and unmatched sessions are only listed). Merge same-source fragments that are ≤ 60 min apart.
 2. Link sessions across sources when `overlap / min(duration_a, duration_b) ≥ match_overlap`. Connected components are episodes.
 3. The main episode is the one with the largest union span. Others are secondary: `sleep_episode` windows resolve them; `local_night` adds them only with `include_naps`.
-4. A group whose sessions cover less than `min_episode_coverage` of the episode is `below_quality: partial_episode`. When a group has several sources in the episode, the one covering most of it is used alone.
+4. A group whose sessions cover less than `min_episode_coverage` of the episode is `below_quality: partial_episode`. The gate is opt-in: with no `min_episode_coverage`, no group is dropped for partial coverage. When a group has several sources in the episode, the one covering most of it is used alone.
 5. Codes sum the selected source's sessions: stored totals, with `sleep_latency` from the first session, `sleep_waso` and `sleep_unspecified` from stages, `sleep_in_bed` as session time, and `sleep_efficiency` = total / in bed.
 
-Example: A 23:10–06:55 and B 23:40–07:05 overlap by 0.98, so they are matched and deep sleep is averaged. If A had only 03:00–07:00, its coverage would be 0.51 < 0.7, so A is excluded and B is used with warning `insufficient_sources`.
+Example: A 23:10–06:55 and B 23:40–07:05 overlap by 0.98, so they are matched and deep sleep is averaged. With `min_episode_coverage: 0.7` and A only 03:00–07:00, its coverage would be 0.51 < 0.7, so A is excluded and B is used with warning `insufficient_sources`.
 
 Workouts cluster the same way: overlap ≥ 0.6 of the shorter and a compatible sport (equal, or one is `other`; a cluster never holds two specific sports). Each cluster is listed once, with alternates; the picked workout keeps its own segments.
 
