@@ -1,7 +1,9 @@
 """Example Vitamux sidecar: protocol vitamux-connector/1 for a fictional heart-rate source.
 
-Standard library only; all data is synthetic. Run it with SIDECAR_SECRET_FILE pointing at the
-shared secret (README.md lists the synthetic sign-in values, the scenarios and BREAK variants).
+Standard library only; all data is synthetic. Run it with VITAMUX_SIDECAR_SECRET_FILE pointing at
+the shared secret (README.md lists the synthetic sign-in values, the scenarios and BREAK variants).
+It has no upstream, so it always answers from built-in synthetic data, as a template sidecar
+does with REPLAY=1; the variable is accepted and changes nothing.
 """
 
 import base64
@@ -27,7 +29,7 @@ SCENARIOS = {
     "synthetic-user": "ok",  # normal data
     "synthetic-limited": "limited",  # fetch answers rate_limited with Retry-After
     "synthetic-flaky": "flaky",  # fetch answers transient
-    "synthetic-drift": "drift",  # fetch answers schema_drift
+    "synthetic-drift": "drift",  # fetch answers a quarantined record, then schema_drift
     "synthetic-expired": "expired",  # fetch and refresh answer reauth_required
     "synthetic-rotate": "rotate",  # every fetch hands back rotated credentials
 }
@@ -45,7 +47,7 @@ BREAKS = {
     "bad_cursor": "next_cursor of a page that is not done repeats the request cursor",
     "unstable_replay": "the same cursor returns different raw bodies each time",
     "no_rotation": "refresh returns the credentials it was given",
-    "wrong_error_code": "errors carry the wrong typed code",
+    "wrong_error_code": "fetch errors carry the wrong typed code",
     "no_retry_after": "rate_limited has neither the Retry-After header nor retry_after_s",
     "bad_drift": "schema_drift omits endpoint and fingerprint",
     "leaks_secret": "error details echo the bearer secret",
@@ -57,6 +59,7 @@ SAMPLES = 25
 PAGE_SIZE = 10
 DEVICE = "synthetic-band-01"
 SAMPLES_ENDPOINT = "GET /heart-rate"
+REQUEST = {"endpoint": SAMPLES_ENDPOINT, "params": {"stream": "heart_rate"}}  # what a real sidecar sends upstream, sanitized
 
 
 def iso(t: datetime) -> str:
@@ -153,6 +156,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if self.path == "/healthz":  # unauthenticated, for the container healthcheck
                 return self.send_body(200, b"ok\n", "text/plain")
+            self.read_body()  # before anything can fail, so a kept-alive connection never reads a leftover body as a request
             self.authorize()
             routes = {
                 ("GET", "/v1/describe"): lambda: self.send_json(200, self.describe_response()),
@@ -178,15 +182,19 @@ class Handler(BaseHTTPRequestHandler):
         if not hmac.compare_digest(got, self.server.secret):
             raise Problem(401, "permanent", "bad sidecar secret")
 
-    def read_json(self) -> dict:
+    def read_body(self):
         try:
-            length = int(self.headers.get("Content-Length", ""))
+            length = int(self.headers.get("Content-Length") or 0)
         except ValueError:
             length = -1
         if not 0 <= length <= MAX_BODY:
-            raise Problem(400, "permanent", "body missing or over 1 MiB")
+            self.close_connection = True
+            raise Problem(400, "permanent", "body over 1 MiB or length unreadable")
+        self.body = self.rfile.read(length)
+
+    def read_json(self) -> dict:
         try:
-            body = json.loads(self.rfile.read(length))
+            body = json.loads(self.body)
         except ValueError:
             body = None
         if not isinstance(body, dict):
@@ -209,10 +217,11 @@ class Handler(BaseHTTPRequestHandler):
     def send_json(self, status: int, obj: dict):
         self.send_body(status, json.dumps(obj).encode(), "application/json")
 
-    def send_problem(self, p: Problem):
+    def error_fields(self, p: Problem) -> tuple[dict, dict]:
+        """The typed error as problem fields (shared by problem+json and the error line) and the headers."""
         code, extra, headers = p.code, dict(p.extra), {}
         if self.brk == "wrong_error_code":
-            code = "permanent" if code == "transient" else "transient"
+            code = {"reauth_required": "transient", "rate_limited": "transient", "schema_drift": "transient", "transient": "permanent"}.get(code, code)
         if p.code == "rate_limited":
             if self.brk == "no_retry_after":
                 extra.pop("retry_after_s", None)
@@ -221,7 +230,11 @@ class Handler(BaseHTTPRequestHandler):
         if p.code == "schema_drift" and self.brk == "bad_drift":
             extra.clear()
         detail = p.title + (f" (bearer {self.server.secret.decode()})" if self.brk == "leaks_secret" else "")
-        body = {"type": "about:blank", "title": p.title, "status": p.status, "detail": detail, "code": code, **extra}
+        return {"title": p.title, "detail": detail, "code": code, **extra}, headers
+
+    def send_problem(self, p: Problem):
+        fields, headers = self.error_fields(p)
+        body = {"type": "about:blank", "status": p.status, **fields}
         self.send_body(p.status, json.dumps(body).encode(), "application/problem+json", headers)
 
     # Auth. Prompts carry a signed session so a sidecar restart loses nothing and the core never
@@ -289,11 +302,20 @@ class Handler(BaseHTTPRequestHandler):
 
     # Fetch: raw lines then one result line, as application/x-ndjson.
 
+    def send_drift(self):
+        """A record whose shape changed is kept quarantined, and the page ends in a schema_drift error line."""
+        drifted = {"synthetic": True, "id": "hr-0", "sample": {"t": iso(sample_time(0)), "v": 62}}
+        raw = {"type": "raw", "external_key": "sample:hr-0", "content_type": "application/json", "body": drifted, "request": REQUEST, "quarantine": True}
+        p = Problem(502, "schema_drift", "upstream response changed shape", endpoint=SAMPLES_ENDPOINT, fingerprint=hashlib.sha256(b"synthetic-drift").hexdigest())
+        fields, _ = self.error_fields(p)
+        out = [json.dumps(raw), json.dumps({"type": "error", **fields})]
+        self.send_body(200, ("\n".join(out) + "\n").encode(), "application/x-ndjson")
+
     def fetch(self):
         body = self.read_json()
         if body.get("stream") != STREAM:
             raise Problem(400, "permanent", "unknown stream")
-        if body.get("mode") not in ("incremental", "manual"):
+        if body.get("mode", "incremental") not in ("incremental", "manual"):
             raise Problem(400, "permanent", "mode not supported")
         scenario, generation = parse_token(body.get("credentials"), "access")
         since, offset = parse_cursor(body.get("cursor"))
@@ -301,10 +323,11 @@ class Handler(BaseHTTPRequestHandler):
             "expired": Problem(401, "reauth_required", "access token expired"),
             "limited": Problem(429, "rate_limited", "too many requests", retry_after_s=RETRY_AFTER_S),
             "flaky": Problem(503, "transient", "upstream unavailable"),
-            "drift": Problem(502, "schema_drift", "upstream response changed shape", endpoint=SAMPLES_ENDPOINT, fingerprint=hashlib.sha256(b"synthetic-drift").hexdigest()),
         }
         if scenario in failures:
             raise failures[scenario]
+        if scenario == "drift":
+            return self.send_drift()
 
         matching = [i for i in range(SAMPLES) if since is None or sample_time(i) > since]
         page = matching[offset : offset + PAGE_SIZE]
@@ -314,8 +337,7 @@ class Handler(BaseHTTPRequestHandler):
             s = sample(i)
             if self.brk == "unstable_replay":
                 s["bpm"] = 40 + datetime.now().microsecond % 100
-            lines.append({"type": "raw", "external_key": f"sample:{s['id']}", "content_type": "application/json", "body": s,
-                          "request": {"method": "GET", "url": "https://example.invalid/heart-rate"}})
+            lines.append({"type": "raw", "external_key": f"sample:{s['id']}", "content_type": "application/json", "body": s, "request": REQUEST})
         result: dict = {"type": "result", "done": done}
         if done and matching:
             result["next_cursor"] = {"since": iso(sample_time(matching[-1]))}
@@ -344,15 +366,15 @@ def make_server(addr: tuple[str, int], secret: bytes, brk: str = "") -> Threadin
 
 
 def main() -> int:
-    path = os.environ.get("SIDECAR_SECRET_FILE")
+    path = os.environ.get("VITAMUX_SIDECAR_SECRET_FILE")
     try:
         if not path:
-            raise ValueError("SIDECAR_SECRET_FILE is not set")
+            raise ValueError("VITAMUX_SIDECAR_SECRET_FILE is not set")
         with open(path, "rb") as f:
             secret = f.read().strip()
         if not secret:
             raise ValueError("secret file is empty")
-        host, _, port = os.environ.get("SIDECAR_ADDR", "127.0.0.1:8090").rpartition(":")
+        host, _, port = os.environ.get("SIDECAR_ADDR", "0.0.0.0:8080").rpartition(":")
         server = make_server((host, int(port)), secret, os.environ.get("BREAK", ""))
     except (OSError, ValueError) as e:
         sys.stderr.write(f"sidecar: {e}\n")

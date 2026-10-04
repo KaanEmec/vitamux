@@ -110,14 +110,18 @@ class Conformant(Base):
         self.assertEqual(self.s.json("/v1/fetch", {"stream": sidecar.STREAM, "mode": "incremental", "cursor": {"since": 1}, "credentials": creds})[1]["code"], "permanent")
 
     def test_scenarios(self):
-        for user, status, code in [("synthetic-expired", 401, "reauth_required"), ("synthetic-limited", 429, "rate_limited"), ("synthetic-flaky", 503, "transient"), ("synthetic-drift", 502, "schema_drift")]:
+        for user, status, code in [("synthetic-expired", 401, "reauth_required"), ("synthetic-limited", 429, "rate_limited"), ("synthetic-flaky", 503, "transient")]:
             got, headers, raw, _ = self.s.fetch(self.s.sign_in(user))
             p = json.loads(raw)
             self.assertEqual((got, p["code"]), (status, code), user)
             if code == "rate_limited":
                 self.assertEqual((headers["Retry-After"], p["retry_after_s"]), ("7", 7))
-            if code == "schema_drift":
-                self.assertTrue(p["endpoint"] and p["fingerprint"])
+        # Drift: a quarantined record, then the error line, in a 200 page.
+        got, _, _, lines = self.s.fetch(self.s.sign_in("synthetic-drift"))
+        self.assertEqual(got, 200)
+        self.assertEqual([line["type"] for line in lines], ["raw", "error"])
+        self.assertTrue(lines[0]["quarantine"])
+        self.assertTrue(lines[1]["code"] == "schema_drift" and lines[1]["endpoint"] and lines[1]["fingerprint"])
         creds = self.s.sign_in("synthetic-rotate")
         *_, lines = self.s.fetch(creds)
         self.assertNotEqual(lines[-1]["credentials"]["access_token"], creds["access_token"])
@@ -189,8 +193,8 @@ class BreakVariants(unittest.TestCase):
         self.assertEqual((status, headers["Retry-After"], "retry_after_s" in json.loads(raw)), (429, None, False))
 
     def check_bad_drift(self, s):
-        p = json.loads(s.fetch(s.sign_in("synthetic-drift"))[2])
-        self.assertEqual((p["code"], "endpoint" in p, "fingerprint" in p), ("schema_drift", False, False))
+        err = s.fetch(s.sign_in("synthetic-drift"))[3][-1]
+        self.assertEqual((err["code"], "endpoint" in err, "fingerprint" in err), ("schema_drift", False, False))
 
     def check_leaks_secret(self, s):
         self.assertIn(SECRET, s.call("/v1/nope")[2])

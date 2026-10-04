@@ -82,7 +82,7 @@ services:
       VITAMUX_BACKUP_KEEP: ${VITAMUX_BACKUP_KEEP:-3}
       VITAMUX_WITHINGS_CLIENT_ID: ${VITAMUX_WITHINGS_CLIENT_ID:-}
       VITAMUX_WITHINGS_CLIENT_SECRET_FILE: /run/secrets/withings_client_secret
-      VITAMUX_SIDECARS: ${VITAMUX_SIDECARS:-} # e.g. example_sidecar=http://example-sidecar:8090
+      VITAMUX_SIDECARS: ${VITAMUX_SIDECARS:-} # e.g. example_sidecar=http://example-sidecar:8080
       VITAMUX_SIDECAR_EXAMPLE_SIDECAR_SECRET_FILE: /secrets/sidecar-example_sidecar.secret
       GOMEMLIMIT: 400MiB # keep the Go heap under mem_limit
     secrets: [database_url, withings_client_secret]
@@ -154,7 +154,7 @@ services:
     user: "65532:65532" # the vitamux image's uid, which owns the shared 0600 secret file
     restart: unless-stopped
     environment:
-      SIDECAR_SECRET_FILE: /secrets/sidecar-example_sidecar.secret
+      VITAMUX_SIDECAR_SECRET_FILE: /secrets/sidecar-example_sidecar.secret
     volumes:
       - vitamux-secrets:/secrets:ro
     tmpfs:
@@ -162,7 +162,7 @@ services:
     networks: [backend]
     mem_limit: 256m
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8090/healthz', timeout=2)"]
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8080/healthz', timeout=2)"]
       interval: 15s
       timeout: 3s
       retries: 3
