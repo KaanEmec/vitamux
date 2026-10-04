@@ -166,6 +166,7 @@ A catalogue code with neither a built-in nor an owner rule resolves through its 
 - No built-in for `garmin_activity_fastest_split_10000`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
 - No built-in for `garmin_activity_fastest_split_1609`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
 - No built-in for `garmin_activity_fastest_split_5000`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_grade_adjusted_speed`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
 - No built-in for `garmin_activity_max_power`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
 - No built-in for `garmin_activity_max_speed`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
 - No built-in for `garmin_activity_moving_time`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
@@ -175,10 +176,20 @@ A catalogue code with neither a built-in nor an owner rule resolves through its 
 - No built-in for `garmin_activity_power_zone_3_time`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
 - No built-in for `garmin_activity_power_zone_4_time`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
 - No built-in for `garmin_activity_power_zone_5_time`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_reps_total`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
 - No built-in for `garmin_activity_respiration_max`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
 - No built-in for `garmin_activity_respiration_min`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
 - No built-in for `garmin_activity_running_cadence`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
 - No built-in for `garmin_activity_running_cadence_max`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_sets_active`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_sets_total`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_stress_avg`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_stress_end`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_stress_max`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_stress_start`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_stroke_distance`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_swim_cadence`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_swim_cadence_max`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
 - No built-in for `garmin_activity_swolf`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
 - No built-in for `garmin_activity_temperature_max`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
 - No built-in for `garmin_activity_temperature_min`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
@@ -248,6 +259,7 @@ A catalogue code with neither a built-in nor an owner rule resolves through its 
 - No built-in for `stair_descent_speed`: added with the mapping corrections (J25.1); no researched ladder: uses the default rule.
 - No built-in for `stand_hours`: added with the Apple Health bridge (J15.2); no researched ladder: uses the default rule.
 - No built-in for `stand_time`: added with the Apple Health bridge (J15.2); no researched ladder: uses the default rule.
+- No built-in for `swim_laps`: added with the Withings mappings; no researched ladder: uses the default rule.
 - No built-in for `swim_strokes`: added with the mapping corrections (J25.1); no researched ladder: uses the default rule.
 - No built-in for `underwater_depth`: added with the mapping corrections (J25.1); no researched ladder: uses the default rule.
 - No built-in for `urine_calcium`: added with the Withings mappings; no researched ladder: uses the default rule.

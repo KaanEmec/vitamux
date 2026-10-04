@@ -12,7 +12,7 @@
     "entries[].data.hrv_quality": "raw: quality grade of the HRV window, no catalogue code",
     "entries[].data.model": "raw: device model text",
     "entries[].data.modelid": "raw: device type derived from the model id; 1051-1060 are phone-app relays",
-    "entries[].data.pool_lap": "raw: pool laps, no catalogue code",
+    "entries[].data.pool_lap": "swim_laps",
     "entries[].data.rmssd": "hrv_rmssd",
     "entries[].data.rr": "respiratory_rate",
     "entries[].data.sdnn1": "hrv_sdnn",

@@ -97,6 +97,14 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `garmin_activity_fastest_split_1609` | s | interval | latest | 0 to 86400 | local_day, latest | - |  |  |  |
 | `garmin_activity_fastest_split_5000` | s | interval | latest | 0 to 86400 | local_day, latest | - |  |  |  |
 | `garmin_activity_fastest_split_10000` | s | interval | latest | 0 to 86400 | local_day, latest | - |  |  |  |
+| `garmin_activity_swim_cadence` | strokes/min | interval | intensive | 0 to 200 | bucket, hour, local_day, local_night, sleep_episode, latest | 5m → raw |  |  |  |
+| `garmin_activity_swim_cadence_max` | strokes/min | interval | latest | 0 to 300 | local_day, latest | - |  |  |  |
+| `garmin_activity_stroke_distance` | m | interval | intensive | 0 to 10 | bucket, hour, local_day, local_night, sleep_episode, latest | 5m → raw |  |  |  |
+| `garmin_activity_grade_adjusted_speed` | m/s | interval | intensive | 0 to 100 | bucket, hour, local_day, local_night, sleep_episode, latest | 5m → raw |  |  |  |
+| `garmin_activity_sets_active` | count | interval | additive | 0 to 1000 | bucket, hour, local_day | 30m → 1m |  |  |  |
+| `garmin_activity_sets_total` | count | interval | additive | 0 to 1000 | bucket, hour, local_day | 30m → 1m |  |  |  |
+| `garmin_activity_reps_total` | count | interval | additive | 0 to 100000 | bucket, hour, local_day | 30m → 1m |  |  |  |
+| `swim_laps` | count | interval | additive | 0 to 10000 | bucket, hour, local_day | 30m → 1m |  |  |  |
 
 ## Heart and circulation
 
@@ -130,6 +138,10 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `garmin_hrv_baseline_low` | ms | daily_value | daily_summary | 1 to 500 | local_day, latest | - |  |  |  |
 | `garmin_hrv_baseline_high` | ms | daily_value | daily_summary | 1 to 500 | local_day, latest | - |  |  |  |
 | `garmin_hrv_baseline_floor` | ms | daily_value | daily_summary | 1 to 500 | local_day, latest | - |  |  |  |
+| `garmin_activity_stress_avg` | index | interval | intensive | 0 to 100 | bucket, hour, local_day, local_night, sleep_episode, latest | 5m → raw |  |  |  |
+| `garmin_activity_stress_max` | index | interval | latest | 0 to 100 | local_day, latest | - |  |  |  |
+| `garmin_activity_stress_start` | index | interval | latest | 0 to 100 | local_day, latest | - |  |  |  |
+| `garmin_activity_stress_end` | index | interval | latest | 0 to 100 | local_day, latest | - |  |  |  |
 
 ## Blood pressure
 
@@ -403,6 +415,7 @@ A value converts to the base unit as `value * factor + offset`.
 | IU | IU | 1 | 0 |
 | µS | µS | 1 | 0 |
 | steps/min | steps/min | 1 | 0 |
+| strokes/min | strokes/min | 1 | 0 |
 | pH | pH | 1 | 0 |
 | ratio | ratio | 1 | 0 |
 | mmol/mmol | mmol/mmol | 1 | 0 |

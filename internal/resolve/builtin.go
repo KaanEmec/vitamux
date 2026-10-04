@@ -99,6 +99,14 @@ var NoBuiltin = func() map[string]string {
 		"garmin_activity_respiration_max"} {
 		m[code] = "a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone"
 	}
+	// The Garmin swim, stress and strength summary values: provider-scoped, one source each.
+	for _, code := range []string{"garmin_activity_swim_cadence", "garmin_activity_swim_cadence_max", "garmin_activity_stroke_distance",
+		"garmin_activity_grade_adjusted_speed", "garmin_activity_stress_avg", "garmin_activity_stress_max",
+		"garmin_activity_stress_start", "garmin_activity_stress_end", "garmin_activity_sets_active", "garmin_activity_sets_total",
+		"garmin_activity_reps_total"} {
+		m[code] = "a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone"
+	}
+	m["swim_laps"] = "added with the Withings mappings; no researched ladder: uses the default rule"
 	// The Withings U-Scan and core body temperature codes of J25.2 and J25.3.
 	for _, code := range []string{"urine_ph", "urine_specific_gravity", "urine_nitrites", "urine_ketones", "urine_vitamin_c",
 		"urine_calcium", "urine_creatinine", "urine_calcium_creatinine_ratio", "core_body_temperature_estimated"} {

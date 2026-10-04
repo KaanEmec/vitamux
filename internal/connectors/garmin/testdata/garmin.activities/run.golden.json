@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "garmin.activities",
-  "version": 3,
+  "version": 4,
   "output": {
     "devices": [
       {
@@ -532,6 +532,23 @@
           "record_type": "activity",
           "external_id": "90000000001",
           "component": "vo2max"
+        }
+      },
+      {
+        "metric": "garmin_activity_grade_adjusted_speed",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 2.6,
+        "unit": "m/s",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_activity_grade_adjusted_speed"
         }
       },
       {

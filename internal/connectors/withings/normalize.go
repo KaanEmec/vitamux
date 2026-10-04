@@ -52,7 +52,7 @@ var groupKinds = []string{"bp_reading", "body_composition"}
 func Normalizers() []normalize.Normalizer {
 	return []normalize.Normalizer{Normalizer{},
 		streamNormalizer{StreamActivity, 1, normalizeActivity},
-		streamNormalizer{StreamIntraday, 2, normalizeIntraday},
+		streamNormalizer{StreamIntraday, 3, normalizeIntraday},
 		streamNormalizer{StreamSleep, 1, normalizeSleep}}
 }
 

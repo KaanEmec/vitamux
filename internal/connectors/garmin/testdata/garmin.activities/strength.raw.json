@@ -1,0 +1,36 @@
+{
+ "synthetic": true,
+ "unit": {
+  "activity_id": 90000000004
+ },
+ "response": {
+  "activityId": 90000000004,
+  "activityName": "Synthetic strength",
+  "startTimeLocal": "2026-06-17 19:00:00",
+  "startTimeGMT": "2026-06-17 17:00:00",
+  "activityType": {
+   "typeId": 13,
+   "typeKey": "strength_training",
+   "parentTypeId": 29,
+   "isHidden": false
+  },
+  "duration": 2700.0,
+  "elapsedDuration": 2760.0,
+  "movingDuration": 2700.0,
+  "calories": 320.0,
+  "deviceId": 1000000001,
+  "manufacturer": "GARMIN",
+  "manualActivity": false,
+  "distance": 0.0,
+  "averageHR": 112.0,
+  "maxHR": 148.0,
+  "activeSets": 18,
+  "totalSets": 18,
+  "totalReps": 164,
+  "avgStress": 31.0,
+  "maxStress": 58.0,
+  "startStress": 24.0,
+  "endStress": 40.0,
+  "differenceStress": 16.0
+ }
+}
