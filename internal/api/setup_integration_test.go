@@ -24,7 +24,7 @@ import (
 
 const (
 	setupClientID = "synthetic-client-id"
-	setupSecret   = "synthetic-app-secret-1" //nolint:gosec // a synthetic test value
+	setupSecret   = "synthetic-app-secret-1"
 )
 
 type setupEnv struct {
