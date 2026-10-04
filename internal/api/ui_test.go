@@ -49,7 +49,7 @@ func TestHealthz(t *testing.T) {
 }
 
 func TestSPAFallbackForDeepLinks(t *testing.T) {
-	for _, p := range []string{"/", "/rules/steps", "/connections/conn_1/history"} {
+	for _, p := range []string{"/", "/rules/steps", "/connections/conn_1/history", "/_app/immutable"} {
 		res := get(t, newTestHandler(t), p)
 		body, _ := io.ReadAll(res.Body)
 		if res.StatusCode != 200 || !strings.Contains(string(body), "boot();") {
