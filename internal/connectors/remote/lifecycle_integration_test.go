@@ -51,6 +51,7 @@ type env struct {
 	count         func(t *testing.T, sql string, args ...any) int
 	blobs         *blob.Store
 	rt            *connectors.Runtime
+	restart       func() // a new process: provider blocks and buckets only from the database
 	user, session uuid.UUID
 }
 
@@ -101,7 +102,9 @@ func setup(t *testing.T, sidecars ...*Connector) *env {
 		t.Fatal(err)
 	}
 	pub, _ := url.Parse("https://vitamux.example.test")
-	e.rt = connectors.New(connectors.Config{DB: e.d, Blobs: blobs, Keys: keys, Registry: reg, PublicURL: pub, Log: log})
+	cfg := connectors.Config{DB: e.d, Blobs: blobs, Keys: keys, Registry: reg, PublicURL: pub, Log: log}
+	e.rt = connectors.New(cfg)
+	e.restart = func() { e.rt = connectors.New(cfg) }
 	e.exec(t, "INSERT INTO users (id, username, password_hash) VALUES ($1, 'owner', 'synthetic')", e.user)
 	e.exec(t, `INSERT INTO timezone_periods (id, user_id, tz, valid_from) VALUES (gen_random_uuid(), $1, 'Europe/Berlin', '2000-01-01Z')`, e.user)
 	e.exec(t, `INSERT INTO sessions (id, user_id, token_hash, expires_at) VALUES ($1, $2, $3, now() + interval '1 day')`, e.session, e.user, e.session[:])
@@ -357,6 +360,7 @@ func TestLifecycle(t *testing.T) {
 	f.do(func() { f.limited = 0 })
 	e.exec(t, `UPDATE provider_rate_state SET blocked_until = now()`)
 	e.exec(t, `UPDATE jobs SET run_at = now() WHERE status = 'queued'`)
+	e.restart() // the in-process block of the sidecar's client would still refuse the call
 	f.add(1, t0)
 	e.run(t)
 	allSucceeded("after rate limit")

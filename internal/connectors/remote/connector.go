@@ -189,6 +189,9 @@ func (c *Connector) fetch(ctx context.Context, conn connectors.Conn, cred connec
 	if u.From.IsZero() && u.To.IsZero() {
 		mode = connectors.ModeIncremental
 	}
+	if err := admit(ctx, conn); err != nil {
+		return connectors.FetchResult{}, err
+	}
 	res, err := c.cl.do(ctx, c.cl.fetch, "/v1/fetch", FetchRequestOf(u, mode, cred, conn.Config))
 	if err != nil {
 		return connectors.FetchResult{}, err
@@ -248,8 +251,21 @@ func scanErr(err error) error {
 	return fmt.Errorf("%w: sidecar: reading page: %w", connectors.ErrTransient, err)
 }
 
+// admit waits for the provider's rate limits (the descriptor's rate_limits) and refuses a
+// call while the provider is blocked, as connectors.HTTPClient does for in-process
+// connectors. Describe and Begin have no connection and must not reach the upstream.
+func admit(ctx context.Context, conn connectors.Conn) error {
+	if conn.HTTP == nil {
+		return nil
+	}
+	return conn.HTTP.Wait(ctx)
+}
+
 // Refresh asks the sidecar to refresh the credentials.
 func (c *Connector) Refresh(ctx context.Context, conn connectors.Conn, cred connectors.Credentials) (connectors.Credentials, error) {
+	if err := admit(ctx, conn); err != nil {
+		return connectors.Credentials{}, err
+	}
 	b, err := c.cl.message(ctx, "/v1/auth/refresh", RefreshRequest{Credentials: cred, Config: conn.Config})
 	if err != nil {
 		return connectors.Credentials{}, err
@@ -279,6 +295,9 @@ func (c *Connector) Begin(ctx context.Context, in connectors.AuthInput) (connect
 
 // Continue sends the owner's answers or the provider callback with the previous session.
 func (c *Connector) Continue(ctx context.Context, conn connectors.Conn, in connectors.AuthInput) (connectors.Authorized, error) {
+	if err := admit(ctx, conn); err != nil {
+		return connectors.Authorized{}, err
+	}
 	b, err := c.cl.message(ctx, "/v1/auth/continue", ContinueRequest(in, conn.Config))
 	if err != nil {
 		return connectors.Authorized{}, err

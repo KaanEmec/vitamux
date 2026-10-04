@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -412,5 +413,38 @@ func TestAuth(t *testing.T) {
 	}
 	if _, err := c.Refresh(ctx, connectors.Conn{}, cred); !errors.Is(err, connectors.ErrTransient) {
 		t.Fatalf("malformed refresh: %v", err)
+	}
+}
+
+// Sidecar calls take the provider's token buckets like in-process calls: one request per
+// 100 ms admits the first fetch at once and spaces the next ones.
+func TestRateLimitsThrottleSidecarCalls(t *testing.T) {
+	f, srv := newFake(t)
+	f.add(3, t0)
+	c := newRemote(t, srv, defaultLimits, nil)
+	cred := signedIn(t, f, c)
+	conn := connectors.Conn{Provider: fakeProvider, HTTP: connectors.NewHTTPClient(nil, []connectors.RateLimitSpec{{Requests: 1, Per: 100 * time.Millisecond}})}
+	start := time.Now()
+	for range 3 {
+		if _, err := c.fetch(t.Context(), conn, cred, connectors.WorkUnit{Stream: fakeStream}, func(ingest.RawItem) {}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := c.Refresh(t.Context(), conn, cred); err != nil {
+		t.Fatal(err)
+	}
+	if d := time.Since(start); d < 280*time.Millisecond {
+		t.Fatalf("4 calls in %s: not throttled", d)
+	}
+
+	// A caller that cannot wait for a token gives up without calling the sidecar.
+	calls := f.called("/v1/fetch")
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Millisecond)
+	defer cancel()
+	if _, err := c.fetch(ctx, conn, cred, connectors.WorkUnit{Stream: fakeStream}, func(ingest.RawItem) {}); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("no token: %v", err)
+	}
+	if f.called("/v1/fetch") != calls {
+		t.Fatal("the sidecar was called without a token")
 	}
 }

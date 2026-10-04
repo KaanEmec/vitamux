@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,22 +22,36 @@ const (
 // provider's token buckets before each call, refuses calls while the provider is blocked,
 // and turns a 429 into a RateLimitedError (its body is discarded).
 type HTTPClient struct {
-	c       *httpx.Client
-	buckets []*bucket
+	c *httpx.Client
 
 	mu           sync.Mutex
+	limits       []RateLimitSpec // the buckets' source; a sidecar's change when it is described
+	buckets      []*bucket
 	blockedUntil time.Time
+}
+
+// Wait admits one provider call: a RateLimitedError while the provider is blocked, else it
+// waits for the provider's token buckets. Do calls it; a connector whose calls do not go
+// through Do (a sidecar, which has its own client) calls it before each one.
+func (h *HTTPClient) Wait(ctx context.Context) error {
+	if until, ok := h.blocked(time.Now()); ok {
+		return &RateLimitedError{RetryAfter: time.Until(until)}
+	}
+	h.mu.Lock()
+	buckets := h.buckets
+	h.mu.Unlock()
+	for _, b := range buckets {
+		if err := b.wait(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Do sends req; see HTTPClient. Status codes other than 429 are returned as responses.
 func (h *HTTPClient) Do(req *http.Request) (*http.Response, error) {
-	if until, ok := h.blocked(time.Now()); ok {
-		return nil, &RateLimitedError{RetryAfter: time.Until(until)}
-	}
-	for _, b := range h.buckets {
-		if err := b.wait(req.Context()); err != nil {
-			return nil, err
-		}
+	if err := h.Wait(req.Context()); err != nil {
+		return nil, err
 	}
 	res, err := h.c.Do(req)
 	if err != nil {
@@ -84,7 +99,8 @@ func parseRetryAfter(v string, now time.Time) time.Duration {
 }
 
 // providerClients holds one HTTPClient per provider, so all connections of a provider share
-// its buckets and block.
+// its buckets and block. A provider's buckets are rebuilt when its rate limits change (a
+// sidecar first described after its placeholder was used).
 type providerClients struct {
 	base *httpx.Client
 	mu   sync.Mutex
@@ -94,15 +110,34 @@ type providerClients struct {
 func (p *providerClients) get(d Descriptor) *HTTPClient {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if h, ok := p.m[d.Provider]; ok {
-		return h
+	h, ok := p.m[d.Provider]
+	if !ok {
+		h = NewHTTPClient(p.base, d.RateLimits)
+		p.m[d.Provider] = h
 	}
-	h := &HTTPClient{c: p.base}
-	for _, l := range d.RateLimits {
+	h.setLimits(d.RateLimits)
+	return h
+}
+
+// NewHTTPClient returns a client that sends through base within limits. The runtime keeps one
+// per provider; tests build their own.
+func NewHTTPClient(base *httpx.Client, limits []RateLimitSpec) *HTTPClient {
+	h := &HTTPClient{c: base}
+	h.setLimits(limits)
+	return h
+}
+
+// setLimits rebuilds the buckets when limits differ from the current ones.
+func (h *HTTPClient) setLimits(limits []RateLimitSpec) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.buckets != nil && slices.Equal(h.limits, limits) {
+		return
+	}
+	h.limits, h.buckets = slices.Clone(limits), make([]*bucket, 0, len(limits))
+	for _, l := range limits {
 		h.buckets = append(h.buckets, newBucket(l))
 	}
-	p.m[d.Provider] = h
-	return h
 }
 
 // bucket is a token bucket: Requests tokens refill evenly over Per, starting full.

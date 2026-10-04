@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -51,6 +52,36 @@ func TestBucketLimitsRate(t *testing.T) {
 	_ = slow.wait(ctx)
 	if err := slow.wait(ctx); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("empty bucket wait = %v, want deadline exceeded", err)
+	}
+}
+
+// A sidecar's client is first handed out for its placeholder (no limits); once the sidecar is
+// described, the same client (same block) gets the described buckets. Unchanged limits keep
+// the buckets' state.
+func TestProviderClientFollowsLimits(t *testing.T) {
+	p := providerClients{m: map[string]*HTTPClient{}}
+	h := p.get(Descriptor{Provider: "example_sidecar", Remote: true})
+	if err := h.Wait(t.Context()); err != nil || len(h.buckets) != 0 {
+		t.Fatalf("placeholder: %v, %d buckets", err, len(h.buckets))
+	}
+	h.block(time.Now().Add(time.Hour))
+	limits := []RateLimitSpec{{Requests: 1, Per: time.Hour}}
+	if p.get(Descriptor{Provider: "example_sidecar", RateLimits: limits}) != h || len(h.buckets) != 1 {
+		t.Fatal("described limits not applied to the provider's client")
+	}
+	var rl *RateLimitedError
+	if err := h.Wait(t.Context()); !errors.As(err, &rl) {
+		t.Fatalf("blocked provider admitted: %v", err)
+	}
+	h.blockedUntil = time.Time{}
+	if err := h.Wait(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	p.get(Descriptor{Provider: "example_sidecar", RateLimits: slices.Clone(limits)})
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Millisecond)
+	defer cancel()
+	if err := h.Wait(ctx); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("unchanged limits refilled the bucket: %v", err)
 	}
 }
 
