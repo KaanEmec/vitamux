@@ -14,6 +14,9 @@ updates:
     groups:
       npm-production: {dependency-type: production}
       npm-development: {dependency-type: development}
+    ignore:
+      - dependency-name: typescript # svelte-check 4 supports TypeScript 5 and 6 only
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions # SHA pins; the version comment is updated too
     directory: /
@@ -76,3 +79,6 @@ updates:
     schedule: {interval: weekly, day: monday}
     groups:
       base-images: {patterns: ["*"]}
+    ignore:
+      - dependency-name: node # stay on the LTS line; move majors by hand
+        update-types: ["version-update:semver-major"]
