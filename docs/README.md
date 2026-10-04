@@ -19,6 +19,7 @@ Precedence when documents disagree: `CLAUDE.md` (product brief) > ADRs in `docs/
 | [operations/troubleshooting.md](operations/troubleshooting.md) | `/readyz` failures, schema mismatch, `needs_reauth`, degraded streams, cache verify | Health checks, connection states, error messages |
 | [faq.md](faq.md) | What Vitamux is and is not, data ownership, sources, roadmap | Product questions |
 | [api-reference.md](api-reference.md) | Generated: operations by tag with access (`go run ./tools/apiref`) | API consumers; regenerate after spec or `authz.yaml` changes |
+| [sidecars.md](sidecars.md) | Wrapping a third-party collector: sidecar or push collector, template, license gate, checks, upstream tracking | Third-party collectors, `sidecars/`, sidecar workflows |
 | [adapters.md](adapters.md) | Writing a connector step by step; toy example in `internal/connectors/example` | New connectors and normalizers |
 
 `go test ./tools/doclinks` checks every relative link and anchor in `docs/` and the root `*.md` files.

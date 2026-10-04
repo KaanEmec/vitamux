@@ -1,0 +1,65 @@
+# Compose overlay for the sidecar `<name>` (docs/sidecars.md#enable-a-sidecar-in-compose).
+# Enable it next to deploy/compose/compose.yaml by adding to deploy/compose/.env:
+#   COMPOSE_FILE=compose.yaml:../../sidecars/<name>/compose.yaml
+#   COMPOSE_PROFILES=sidecar-<name>
+#   VITAMUX_SIDECARS=<name>=http://sidecar-<name>:8080      (comma-separated for several)
+# Without the profile nothing here starts. The sidecar has no database access: it joins only
+# `frontend` (outbound access to the provider; vitamux reaches it there), never `backend`.
+# The image follows :stable; pin a digest instead for manual updates (docs/sidecars.md#updates).
+x-sidecar: &sidecar
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  pids_limit: 128
+  logging:
+    driver: json-file
+    options: {max-size: "10m", max-file: "3"}
+
+services:
+  # Writes the shared secret once (never overwrites). Both vitamux and the sidecar read it.
+  sidecar-<name>-secret:
+    <<: *sidecar
+    image: busybox:stable # for its shell and a random source; replace with a digest pin
+    profiles: [sidecar-<name>]
+    user: "0:0" # a fresh named volume is root-owned
+    entrypoint: ["/bin/sh", "-euc"]
+    command:
+      - |
+        [ -s /s/secret ] || { umask 077; od -An -tx1 -N32 /dev/urandom | tr -d ' \n' > /s/secret; }
+        chmod 0444 /s/secret
+    volumes: ["sidecar-<name>-secret:/s"]
+    network_mode: none
+    restart: "no"
+    mem_limit: 16m
+    healthcheck: {disable: true}
+
+  sidecar-<name>:
+    <<: *sidecar
+    image: ${VITAMUX_SIDECAR_<NAME>_IMAGE:-ghcr.io/kaanemec/vitamux-sidecar-<name>:stable}
+    profiles: [sidecar-<name>]
+    restart: unless-stopped
+    environment:
+      VITAMUX_SIDECAR_SECRET_FILE: /sidecar-secret/secret
+    volumes: ["sidecar-<name>-secret:/sidecar-secret:ro"]
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    networks: [frontend]
+    mem_limit: 256m
+    healthcheck: # TCP connect: /v1/* needs the bearer secret, so the probe does not call it
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8080), 2)"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 20s
+    depends_on:
+      sidecar-<name>-secret: {condition: service_completed_successfully}
+
+  vitamux:
+    environment:
+      VITAMUX_SIDECARS: ${VITAMUX_SIDECARS:-<name>=http://sidecar-<name>:8080}
+      VITAMUX_SIDECAR_<NAME>_SECRET_FILE: /sidecar-secret/<name>/secret
+    volumes: ["sidecar-<name>-secret:/sidecar-secret/<name>:ro"]
+    depends_on:
+      sidecar-<name>-secret: {condition: service_completed_successfully}
+
+volumes:
+  sidecar-<name>-secret:

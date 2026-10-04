@@ -136,6 +136,24 @@ The stack writes a daily backup to the `vitamux-backups` volume and keeps three 
 - `deploy/compose/secrets/` (database passwords and the Withings secret);
 - the master key: `docker run --rm -v vitamux_vitamux-secrets:/s:ro busybox cat /s/master.key > master.key && chmod 600 master.key`, then move that file off the host.
 
+## Sidecars
+
+Optional third-party sources (a collector wrapped as a sidecar, [guide](sidecars.md)) run as Compose profiles next to `vitamux`. They get no database access, 256 MiB, a read-only root and only the `frontend` network. Their image follows `:stable`, so a pull brings the newest upstream release that passed its checks. Unofficial sources start paused: enable the connection in the UI after reading its warning.
+
+**Compose.** Each sidecar ships an overlay, `sidecars/<name>/compose.yaml` (in the release bundle next to `deploy/`). In `deploy/compose/.env`:
+
+```sh
+COMPOSE_FILE=compose.yaml:../../sidecars/<name>/compose.yaml
+COMPOSE_PROFILES=sidecar-<name>
+VITAMUX_SIDECARS=<name>=http://sidecar-<name>:8080   # comma-separated for several sidecars
+```
+
+Then `docker compose up -d --wait`. A one-shot service creates the shared secret once in a volume that only `vitamux` and that sidecar mount; nothing goes in `.env`. In the UI, Connections lists the source with its upstream version; the first connect runs the sidecar's own sign-in (password, MFA code or redirect). To pin, set `VITAMUX_SIDECAR_<NAME>_IMAGE=...@sha256:<digest>` in `.env`; to update on a schedule, run `docker compose pull && docker compose up -d` from cron or a systemd timer.
+
+**Coolify.** The Coolify resource is one file, so merge the overlay by hand into `deploy/coolify/compose.yaml`: add the overlay's two services and its volume, delete their `profiles:` lines, and add the overlay's `vitamux:` keys (`environment`, `volumes`, `depends_on`) to the existing `vitamux` service. Keep the Coolify `VITAMUX_SIDECARS` default or set it as an environment variable, then redeploy. Updates: redeploy (Coolify pulls `:stable`) or pin the digest through `VITAMUX_SIDECAR_<NAME>_IMAGE`. Not yet verified on a live Coolify instance.
+
+Failures show per connection (degraded or needs re-auth), never for the whole stack; see [troubleshooting](operations/troubleshooting.md). Resource budget: [resource-budget.md](resource-budget.md).
+
 ## Upgrades and operations
 
 - New releases: [operations/upgrade.md](operations/upgrade.md).

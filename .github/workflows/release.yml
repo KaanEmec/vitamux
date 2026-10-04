@@ -165,7 +165,11 @@ jobs:
           cp deploy/compose/initdb/*.sql "stage/$b/deploy/compose/initdb/"
           cp deploy/sql/roles.sql "stage/$b/deploy/sql/"
           [ ! -d deploy/coolify ] || cp -R deploy/coolify "stage/$b/deploy/" # Coolify variant (docs/install.md#coolify)
-          cp docs/install.md "stage/$b/docs/"
+          cp docs/install.md docs/sidecars.md "stage/$b/docs/"
+          for d in sidecars/*/; do # overlays enabled through COMPOSE_FILE (docs/install.md#sidecars)
+            case $d in */_template/) continue ;; esac
+            mkdir -p "stage/$b/$d" && cp "$d/compose.yaml" "$d/UPSTREAM.md" "stage/$b/$d"
+          done
           cp LICENSE NOTICE "stage/$b/"
           # The bundle pins its own release instead of :latest.
           sed -i "s|^# VITAMUX_IMAGE=${IMAGE}:latest\$|VITAMUX_IMAGE=${IMAGE}:${TAG}|" "stage/$b/deploy/compose/.env.example"

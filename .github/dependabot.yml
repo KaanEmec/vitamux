@@ -29,3 +29,24 @@ updates:
     ignore:
       - dependency-name: node # stay on the LTS line; move majors by hand
         update-types: ["version-update:semver-major"]
+
+# Sidecars (docs/sidecars.md#automatic-upstream-updates). Entries are per directory, so a new
+# sidecars/<name>/ adds its own pair below (uncomment, replace <name>, <package>, <lockstep>);
+# keep the template commented while sidecars/ holds nothing else. Upstream bumps are checked
+# daily, wait one day after a release (a pulled or malicious release is usually caught by then)
+# and group the upstream package with the packages it releases in lockstep, so one PR changes
+# only upstream lines and sidecar-automerge.yml may merge it. Anything else Dependabot proposes
+# for the directory is a separate PR that stays open for review.
+#
+#  - package-ecosystem: uv # or npm
+#    directory: /sidecars/<name>
+#    schedule: {interval: daily}
+#    cooldown: {default-days: 1}
+#    groups:
+#      upstream: {patterns: ["<package>", "<lockstep>"]}
+#
+#  - package-ecosystem: docker # base image digests of this sidecar's Dockerfile (reviewed by hand)
+#    directory: /sidecars/<name>
+#    schedule: {interval: weekly, day: monday}
+#    groups:
+#      base-images: {patterns: ["*"]}

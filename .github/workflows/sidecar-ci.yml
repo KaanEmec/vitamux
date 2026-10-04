@@ -1,0 +1,46 @@
+# Sidecar checks on pull requests (docs/sidecars.md#checks): license gate, cassette unit tests,
+# the image in replay mode against `vitamux connector-test`, Go normalizer goldens. Inert while
+# sidecars/ holds nothing but _template. Dependabot bumps of a sidecar's upstream run through
+# here, and sidecar-automerge.yml merges them when this workflow and ci are green.
+name: sidecar-ci
+on:
+  pull_request:
+    paths:
+      - "sidecars/**"
+      - "scripts/sidecar-check.sh"
+      - "tools/notices/**"
+      - ".github/workflows/sidecar-*.yml"
+permissions:
+  contents: read
+concurrency:
+  group: sidecar-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    outputs:
+      names: ${{ steps.list.outputs.names }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - id: list
+        run: |
+          names=$(find sidecars -mindepth 1 -maxdepth 1 -type d ! -name '_*' -printf '%f\n' 2>/dev/null | sort | jq -Rsc 'split("\n") | map(select(length > 0))')
+          echo "names=${names:-[]}" >> "$GITHUB_OUTPUT"
+
+  check:
+    needs: list
+    if: needs.list.outputs.names != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        name: ${{ fromJSON(needs.list.outputs.names) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+      - run: scripts/sidecar-check.sh "$NAME"
+        env:
+          NAME: ${{ matrix.name }}

@@ -172,12 +172,13 @@ Vitamux reuses existing open-source collectors instead of rewriting them. They r
 | A library or client that can fetch on demand | Sidecar wrapping it, speaking `vitamux-connector/1` | vitamux |
 | A tool with its own scheduler and storage | Push collector: small uploader that sends its raw responses through [push ingest](#push-ingest-contract) | The tool |
 
-Rules for both paths:
+Rules for both paths (how to: [sidecars.md](../sidecars.md)):
 
 - Raw responses go to Vitamux verbatim. Normalizers are in Go in the core, so data stays reprocessable.
-- Pin the upstream by version and image digest, and record its repo, license and official status in `sidecars/<name>/UPSTREAM.md`.
-- A separate container keeps the core MIT. A copyleft upstream needs a review and its own notices.
+- Each upstream lives in `sidecars/<name>/` with `UPSTREAM.md` (repo, package, locked version, license, official status). The lockfile pins the exact version and hashes, the base image is pinned by digest, and the image has a 256 MiB limit and no database access.
+- A separate container keeps the core MIT. The license gate fails a sidecar without `UPSTREAM.md` or with an unreviewed copyleft license ([license gate](../sidecars.md#license-gate)).
 - Unofficial upstreams use `Official=false`, start disabled, and must surface shape changes as `schema_drift`.
+- Wrapped upstreams follow their releases automatically ([E17 J17.5](../plan/E17-sidecar-connectors/J17.5-upstream-tracking.md)): Dependabot bumps the locked version daily after a 1-day cooldown, a bump touching only upstream lines merges when every check is green, a failing one stays open as `upstream-break`, a nightly canary builds against the upstream's default branch, and `ghcr.io/<owner>/vitamux-sidecar-<name>:stable` only ever points at a green build ([details](../sidecars.md#automatic-upstream-updates)). `describe` reports `upstream`, which the core records on the connection and audits.
 
 ## Adding a connector
 
