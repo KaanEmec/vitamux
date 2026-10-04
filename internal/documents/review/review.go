@@ -273,7 +273,7 @@ func (s *Service) EditRow(ctx context.Context, user uuid.UUID, actor string, run
 			cur["analyte"] = optional(code)
 		}
 		if _, chosen := set["analyte"]; !chosen && set["analyte_label"] != nil { // a corrected label gets its own suggestion
-			code, _, err := analytes.Suggest(ctx, q, user, *set["analyte_label"].(*string))
+			code, _, err := analytes.Suggest(ctx, q, user, *str(set["analyte_label"]))
 			if err != nil {
 				return err
 			}
@@ -298,29 +298,16 @@ func (s *Service) EditRow(ctx context.Context, user uuid.UUID, actor string, run
 			return nil // nothing to record
 		}
 		if err := q.ReviewExtractedRow(ctx, dbq.ReviewExtractedRowParams{ID: r.ID, ReviewStatus: status,
-			AnalyteLabel: *cur["analyte_label"].(*string), ValueText: str(cur["value_text"]), ValueNumeric: num(cur["value_numeric"]),
+			AnalyteLabel: *str(cur["analyte_label"]), ValueText: str(cur["value_text"]), ValueNumeric: num(cur["value_numeric"]),
 			Comparator: str(cur["comparator"]), UnitText: str(cur["unit_text"]), ReferenceRangeText: str(cur["reference_range_text"]),
 			RefLow: num(cur["ref_low"]), RefHigh: num(cur["ref_high"]), AbnormalFlagPrinted: str(cur["printed_flag"]),
 			SpecimenType: str(cur["specimen_type"]), CollectedAt: str(cur["collected_at"]), ReportedAt: str(cur["reported_at"]),
 			Laboratory: str(cur["laboratory"]), Analyte: str(cur["analyte"])}); err != nil {
 			return err
 		}
-		var actions []string
-		if len(changes) > 0 {
-			b, err := json.Marshal(changes)
-			if err != nil {
-				return err
-			}
-			if err := q.InsertRowEdit(ctx, dbq.InsertRowEditParams{RowID: r.ID, Action: "edit", Changes: b, Actor: actor}); err != nil {
-				return err
-			}
-			actions = append(actions, "edit")
-		}
-		if review != "" && (review == "reject" || len(changes) == 0) {
-			if err := q.InsertRowEdit(ctx, dbq.InsertRowEditParams{RowID: r.ID, Action: review, Changes: []byte("{}"), Actor: actor}); err != nil {
-				return err
-			}
-			actions = append(actions, review)
+		actions, err := insertRowEdits(ctx, q, actor, r.ID, review, changes)
+		if err != nil {
+			return err
 		}
 		fields := make([]string, 0, len(changes))
 		for f := range changes {
@@ -339,6 +326,30 @@ func (s *Service) EditRow(ctx context.Context, user uuid.UUID, actor string, run
 		return Row{}, err
 	}
 	return x.Rows[index], nil
+}
+
+// insertRowEdits appends a review patch to the edit history of a row: one "edit" entry with the
+// old and new values, and the accept or reject decision when the edit does not imply it. It
+// returns the actions recorded.
+func insertRowEdits(ctx context.Context, q *dbq.Queries, actor string, rowID int64, review string, changes map[string]any) ([]string, error) {
+	var actions []string
+	if len(changes) > 0 {
+		b, err := json.Marshal(changes)
+		if err != nil {
+			return nil, err
+		}
+		if err := q.InsertRowEdit(ctx, dbq.InsertRowEditParams{RowID: rowID, Action: "edit", Changes: b, Actor: actor}); err != nil {
+			return nil, err
+		}
+		actions = append(actions, "edit")
+	}
+	if review != "" && (review == "reject" || len(changes) == 0) {
+		if err := q.InsertRowEdit(ctx, dbq.InsertRowEditParams{RowID: rowID, Action: review, Changes: []byte("{}"), Actor: actor}); err != nil {
+			return nil, err
+		}
+		actions = append(actions, review)
+	}
+	return actions, nil
 }
 
 // decodePatch type-checks every field of a patch. Values become *string or *float64, nil for null.
@@ -376,28 +387,9 @@ func decodePatch(body map[string]json.RawMessage) (map[string]any, error) {
 			bad(f, "must be a string or null")
 			continue
 		}
-		switch spec.kind {
-		case kNumber: // decoded above
-		case kText:
-			if n := utf8.RuneCountInString(v); n < 1 || n > spec.max {
-				bad(f, "must be 1-"+strconv.Itoa(spec.max)+" characters (null when not printed)")
-				continue
-			}
-		case kComparator:
-			if v != "<" && v != ">" && v != "<=" && v != ">=" {
-				bad(f, "must be <, >, <=, >= or null")
-				continue
-			}
-		case kDate:
-			if _, ok := parseLocal(&v); !ok {
-				bad(f, "must be an ISO 8601 local date or date-time without offset")
-				continue
-			}
-		case kAnalyte:
-			if _, ok := analytes.Lookup(v); !ok {
-				bad(f, "must be an analyte code from docs/analytes.md, or null for unknown")
-				continue
-			}
+		if detail := stringProblem(spec.kind, spec.max, v); detail != "" {
+			bad(f, detail)
+			continue
 		}
 		set[f] = &v
 	}
@@ -406,6 +398,30 @@ func decodePatch(body map[string]json.RawMessage) (map[string]any, error) {
 		return nil, &InvalidError{probs}
 	}
 	return set, nil
+}
+
+// stringProblem says why v is not valid for a field of kind k, or "" when it is.
+func stringProblem(k kind, maxLen int, v string) string {
+	switch k {
+	case kNumber: // decoded as a number by the caller
+	case kText:
+		if n := utf8.RuneCountInString(v); n < 1 || n > maxLen {
+			return "must be 1-" + strconv.Itoa(maxLen) + " characters (null when not printed)"
+		}
+	case kComparator:
+		if v != "<" && v != ">" && v != "<=" && v != ">=" {
+			return "must be <, >, <=, >= or null"
+		}
+	case kDate:
+		if _, ok := parseLocal(&v); !ok {
+			return "must be an ISO 8601 local date or date-time without offset"
+		}
+	case kAnalyte:
+		if _, ok := analytes.Lookup(v); !ok {
+			return "must be an analyte code from docs/analytes.md, or null for unknown"
+		}
+	}
+	return ""
 }
 
 func compareStrings(a, b string) int {
