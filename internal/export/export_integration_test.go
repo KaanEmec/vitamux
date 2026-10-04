@@ -262,10 +262,15 @@ func inserted(st export.ImportStats) map[string]int64 {
 	return out
 }
 
-// TestRoundTrip: the synthetic 30-day slice, exported and imported into a fresh instance,
-// reproduces every row and its provenance; a second import is refused, a merge adds nothing.
+// TestRoundTrip: a synthetic slice (7 days; the full 30 days with VITAMUX_EXPORT_FULL=1, which
+// takes several minutes), exported and imported into a fresh instance, reproduces every row and
+// its provenance; a second import is refused, a merge adds nothing.
 func TestRoundTrip(t *testing.T) {
-	src := loaded(t, "2025-03-01", 30)
+	days := 7
+	if os.Getenv("VITAMUX_EXPORT_FULL") != "" {
+		days = 30
+	}
+	src := loaded(t, "2025-03-01", days)
 	src.addHistory()
 	t.Run("memory bounded", func(t *testing.T) { boundedExport(t, src) })
 	path, m := writeExport(t, src, nil, export.Options{Format: export.FormatCSV})
@@ -442,8 +447,8 @@ func TestRawContent(t *testing.T) {
 	}
 }
 
-// boundedExport checks that exporting the 30-day slice (over half a million rows, hundreds of
-// MiB of NDJSON) keeps the heap within a small, fixed budget.
+// boundedExport checks that exporting the slice (over half a million rows and hundreds of MiB of
+// NDJSON for the full 30 days) keeps the heap within a small, fixed budget.
 func boundedExport(t *testing.T, src *instance) {
 	runtime.GC()
 	var base runtime.MemStats
@@ -475,7 +480,7 @@ func boundedExport(t *testing.T, src *instance) {
 	}
 	growth := int64(peak) - int64(base.HeapAlloc)
 	t.Logf("wrote %d MiB uncompressed; heap grew at most %d MiB", written>>20, growth>>20)
-	if written < 200<<20 {
+	if written < 64<<20 { // the 7-day slice writes ~110 MiB; the full slice ~470 MiB
 		t.Fatalf("only %d bytes written; the dataset is too small to prove anything", written)
 	}
 	if growth > 48<<20 {

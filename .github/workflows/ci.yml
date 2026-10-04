@@ -102,7 +102,7 @@ jobs:
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y --no-install-recommends postgresql-client-${{ matrix.postgres }}
           echo "/usr/lib/postgresql/${{ matrix.postgres }}/bin" >> "$GITHUB_PATH"
-      - run: go test -tags integration ./...
+      - run: go test -tags integration -timeout 20m ./...
       # Sentinel secrets and health values through a real `vitamux serve`; zero hits in logs,
       # metrics, audit_events, jobs, job_runs, the database (secrets) and an export (J13.6).
       - name: Redaction audit

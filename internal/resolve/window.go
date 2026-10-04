@@ -158,7 +158,13 @@ func NightOf(end time.Time, z normalize.Zone, tl normalize.Timeline, anchor time
 
 // WithEpisode narrows a local_night window to the night's main episode; Kind, Date and Key stay.
 func (w Window) WithEpisode(e Episode) Window {
-	w.Start, w.End = e.Start, e.End
+	// Keep the window's own location (the owner's zone from DayWindows): episode times come from
+	// database scans in the process zone, and explanations format clock times in the window's zone.
+	loc := w.Start.Location()
+	if w.Start.IsZero() {
+		loc = w.End.Location()
+	}
+	w.Start, w.End = e.Start.In(loc), e.End.In(loc)
 	return w
 }
 

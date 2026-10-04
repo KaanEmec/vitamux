@@ -132,7 +132,9 @@ func (gv *GroupValue) windowStatistic(ws WithinSource, keys []int64, means []flo
 		for _, m := range means[i : i+n] {
 			sum += m
 		}
-		if v := sum / float64(n); at < 0 || v < best {
+		// Ties within float noise keep the earliest span, so the choice does not depend on the
+		// summation order of equal bucket means (which differs between platforms and PG versions).
+		if v := sum / float64(n); at < 0 || v < best-1e-9 {
 			best, at = v, i
 		}
 	}
