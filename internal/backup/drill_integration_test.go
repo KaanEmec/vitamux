@@ -8,12 +8,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -56,6 +58,21 @@ func TestRestoreDrill(t *testing.T) {
 
 	// Source instance: a five-day slice plus real blob files for its raw payloads.
 	srcURL, srcApp := dbtest.Migrated(t)
+	// pg_dump refuses a server newer than itself; skip locally when the majors differ.
+	var serverVersion string // SHOW returns text
+	if err := srcApp.QueryRow(ctx, "SHOW server_version_num").Scan(&serverVersion); err != nil {
+		t.Fatal(err)
+	}
+	serverNum, _ := strconv.Atoi(serverVersion)
+	if out, err := exec.CommandContext(ctx, "pg_dump", "--version").Output(); err == nil {
+		var major int
+		if _, err := fmt.Sscanf(strings.TrimSpace(string(out)), "pg_dump (PostgreSQL) %d", &major); err == nil && major != serverNum/10000 {
+			if os.Getenv("CI") != "" {
+				t.Fatalf("pg_dump %d does not match server %d", major, serverNum/10000)
+			}
+			t.Skipf("pg_dump %d does not match server %d", major, serverNum/10000)
+		}
+	}
 	stats, err := fixtureload.Load(ctx, srcApp, generate(t))
 	if err != nil {
 		t.Fatal(err)

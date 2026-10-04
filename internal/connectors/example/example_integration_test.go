@@ -132,8 +132,10 @@ func TestSyncThroughRuntime(t *testing.T) {
 		deadline := time.Now().Add(20 * time.Second)
 		for {
 			var n int
+			// Any queued job counts: run_at comes from the process clock, which can trail the
+			// database clock by a few milliseconds, so "due" alone would return too early.
 			if err := pool.QueryRow(ctx,
-				`SELECT count(*) FROM jobs WHERE status = 'running' OR (status = 'queued' AND run_at <= now())`).Scan(&n); err != nil {
+				`SELECT count(*) FROM jobs WHERE status IN ('running', 'queued')`).Scan(&n); err != nil {
 				t.Fatal(err)
 			}
 			if n == 0 {
