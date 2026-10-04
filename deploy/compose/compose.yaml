@@ -82,6 +82,8 @@ services:
       VITAMUX_BACKUP_KEEP: ${VITAMUX_BACKUP_KEEP:-3}
       VITAMUX_WITHINGS_CLIENT_ID: ${VITAMUX_WITHINGS_CLIENT_ID:-}
       VITAMUX_WITHINGS_CLIENT_SECRET_FILE: /run/secrets/withings_client_secret
+      VITAMUX_SIDECARS: ${VITAMUX_SIDECARS:-} # e.g. example_sidecar=http://example-sidecar:8090
+      VITAMUX_SIDECAR_EXAMPLE_SIDECAR_SECRET_FILE: /secrets/sidecar-example_sidecar.secret
       GOMEMLIMIT: 400MiB # keep the Go heap under mem_limit
     secrets: [database_url, withings_client_secret]
     volumes:
@@ -134,11 +136,37 @@ services:
     restart: "no"
     environment:
       VITAMUX_MASTER_KEY_FILE: /secrets/master.key
+      VITAMUX_SIDECARS: ${VITAMUX_SIDECARS:-}
+      VITAMUX_SIDECAR_EXAMPLE_SIDECAR_SECRET_FILE: /secrets/sidecar-example_sidecar.secret
     volumes:
       - vitamux-secrets:/secrets
     network_mode: none
     mem_limit: 64m
     healthcheck: {disable: true}
+
+  # Synthetic example sidecar (examples/sidecar-python/README.md): docker compose --profile sidecar-example up -d.
+  # It joins only the internal network, so it has no route out, and it never publishes a port.
+  example-sidecar:
+    <<: *hardened
+    profiles: [sidecar-example]
+    build: ../../examples/sidecar-python
+    image: ${VITAMUX_SIDECAR_EXAMPLE_IMAGE:-vitamux-sidecar-example:local}
+    user: "65532:65532" # the vitamux image's uid, which owns the shared 0600 secret file
+    restart: unless-stopped
+    environment:
+      SIDECAR_SECRET_FILE: /secrets/sidecar-example_sidecar.secret
+    volumes:
+      - vitamux-secrets:/secrets:ro
+    tmpfs:
+      - /tmp:size=8m,mode=1777
+    networks: [backend]
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8090/healthz', timeout=2)"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
 
 networks:
   backend:

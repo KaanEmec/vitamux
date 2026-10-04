@@ -22,7 +22,7 @@ updates:
       actions: {patterns: ["*"]}
 
   - package-ecosystem: docker # Dockerfile base image digests
-    directory: /
+    directories: [/, /examples/sidecar-python]
     schedule: {interval: weekly, day: monday}
     groups:
       base-images: {patterns: ["*"]}
