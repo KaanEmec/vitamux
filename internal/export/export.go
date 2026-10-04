@@ -128,12 +128,7 @@ func Write(ctx context.Context, d *db.DB, blobs *blob.Store, w io.Writer, o Opti
 		for _, t := range refTables {
 			if err := e.file(t.name+".ndjson", func() (int64, error) {
 				rows, err := t.rows(q, ctx)
-				for _, r := range rows {
-					if err == nil {
-						err = e.emit(r)
-					}
-				}
-				return 0, err
+				return all(e, rows, err)
 			}); err != nil {
 				return err
 			}
