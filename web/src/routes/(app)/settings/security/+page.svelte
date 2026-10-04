@@ -10,6 +10,7 @@
 	import TextField from '#lib/components/TextField.svelte';
 	import { session, setSession } from '#lib/session.svelte.ts';
 	import { when } from '#lib/settings/format.ts';
+	import Card from '#lib/settings/Card.svelte';
 	import Notice from '#lib/settings/Notice.svelte';
 
 	let problem = $state<Problem | null>(null);
@@ -126,23 +127,22 @@
 
 <svelte:head><title>Security · Vitamux</title></svelte:head>
 
+<p class="lede">Your password, two-factor authentication and the sessions signed in to this server.</p>
+
 <ProblemAlert {problem} fields={['code', 'password', 'totp_code', 'recovery_code', 'current_password', 'new_password']} />
 {#if notice}<Notice>{notice}</Notice>{/if}
 
-<section aria-labelledby="password-h">
-	<h2 id="password-h">Password</h2>
+<Card title="Password" id="password-h" description="Changing the password signs out every other session.">
 	<form onsubmit={changePassword}>
 		<TextField label="Current password" name="current_password" type="password" bind:value={currentPassword} error={errors.current_password} autocomplete="current-password" required />
 		<TextField label="New password" name="new_password" type="password" bind:value={newPassword} error={errors.new_password} hint="At least 12 characters. Other sessions are signed out." autocomplete="new-password" minlength={12} required />
 		<button class="btn primary" type="submit" disabled={busy}>Change password</button>
 	</form>
-</section>
+</Card>
 
-<section aria-labelledby="totp-h">
-	<h2 id="totp-h">Two-factor authentication</h2>
-
+<Card title="Two-factor authentication" id="totp-h">
 	{#if recovery}
-		<div class="card">
+		<div class="callout">
 			<strong>Recovery codes</strong>
 			<p>Save these codes somewhere safe. Each works once if you lose your authenticator, and they are not shown again.</p>
 			<ul class="secret" aria-label="Recovery codes">
@@ -183,32 +183,35 @@
 		<p><StatusIcon status="off" /> Two-factor authentication is off.</p>
 		<button class="btn primary" type="button" onclick={enroll} disabled={busy}>Set up two-factor</button>
 	{/if}
-</section>
+</Card>
 
-<section aria-labelledby="sessions-h">
-	<h2 id="sessions-h">Sessions</h2>
+<Card title="Sessions" id="sessions-h">
+	{#snippet aside()}
+		<button class="btn sm" type="button" onclick={() => revoke(others.map((s) => s.id), 'Other sessions signed out.')} disabled={busy || others.length === 0}>Sign out other sessions</button>
+	{/snippet}
 	{#if sessions === null}
 		<p class="muted" role="status">Loading sessions…</p>
 	{:else}
-		<table>
-			<caption class="visually-hidden">Sessions</caption>
-			<thead>
-				<tr><th scope="col">Signed in</th><th scope="col">Last active</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
-			</thead>
-			<tbody>
-				{#each sessions as s (s.id)}
-					<tr>
-						<td>{when(s.created_at)}</td>
-						<td>{when(s.last_seen_at)}</td>
-						<td>
-							{#if s.current}This browser{:else}
-								<button class="btn" type="button" onclick={() => revoke([s.id], 'Session signed out.')} disabled={busy} aria-label="Sign out session from {when(s.created_at)}">Sign out</button>
-							{/if}
-						</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
+		<div class="table-wrap">
+			<table>
+				<caption class="visually-hidden">Sessions</caption>
+				<thead>
+					<tr><th scope="col">Signed in</th><th scope="col">Last active</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+				</thead>
+				<tbody>
+					{#each sessions as s (s.id)}
+						<tr>
+							<td>{when(s.created_at)}</td>
+							<td>{when(s.last_seen_at)}</td>
+							<td>
+								{#if s.current}This browser{:else}
+									<button class="btn sm" type="button" onclick={() => revoke([s.id], 'Session signed out.')} disabled={busy} aria-label="Sign out session from {when(s.created_at)}">Sign out</button>
+								{/if}
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	{/if}
-	<button class="btn" type="button" onclick={() => revoke(others.map((s) => s.id), 'Other sessions signed out.')} disabled={busy || others.length === 0}>Sign out other sessions</button>
-</section>
+</Card>

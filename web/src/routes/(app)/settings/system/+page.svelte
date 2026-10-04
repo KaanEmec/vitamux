@@ -8,6 +8,7 @@
 	import { api, type Problem } from '#lib/api/client.ts';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import StatusIcon from '#lib/components/StatusIcon.svelte';
+	import Card from '#lib/settings/Card.svelte';
 	import { bytes, when } from '#lib/settings/format.ts';
 	import { asNumber, facts, isObj, lastBackup, list, loadStatus, pick, type Obj } from '#lib/settings/status.ts';
 
@@ -41,8 +42,9 @@
 
 <svelte:head><title>System · Vitamux</title></svelte:head>
 
-<section aria-labelledby="versions">
-	<h2 id="versions">Versions</h2>
+<p class="lede">Versions, storage and anything that needs attention on this server.</p>
+
+<Card title="Versions" id="versions">
 	<ProblemAlert problem={versionProblem} />
 	{#if version}
 		<dl>
@@ -51,24 +53,22 @@
 			{#each versions as [k, v] (k)}<dt>{k}</dt><dd><code>{v}</code></dd>{/each}
 		</dl>
 	{/if}
-</section>
+</Card>
 
 {#if !loaded}
 	<p class="muted" role="status">Loading system status…</p>
 {:else if statusProblem}
 	<p class="muted"><StatusIcon status="info" /> System status is not available from this server yet.</p>
 {:else}
-	<section aria-labelledby="storage">
-		<h2 id="storage">Storage</h2>
+	<Card title="Storage" id="storage">
 		<dl>
 			<dt>Database</dt><dd>{bytes(dbSize)}</dd>
 			<dt>Blobs (PDFs, raw files, exports)</dt><dd>{bytes(blobSize)}</dd>
 			<dt>Last backup</dt><dd>{backupAt ? when(backupAt) : 'None recorded'}</dd>
 		</dl>
-	</section>
+	</Card>
 
-	<section aria-labelledby="degraded">
-		<h2 id="degraded">Degraded connections</h2>
+	<Card title="Degraded connections" id="degraded">
 		{#if degraded.length === 0}
 			<p><StatusIcon status="ok" /> No connection is degraded.</p>
 		{:else}
@@ -82,10 +82,9 @@
 				{/each}
 			</ul>
 		{/if}
-	</section>
+	</Card>
 
-	<section aria-labelledby="failing">
-		<h2 id="failing">Failing jobs</h2>
+	<Card title="Failing jobs" id="failing">
 		{#if failing.length === 0}
 			<p><StatusIcon status="ok" /> No job is failing.</p>
 		{:else}
@@ -98,7 +97,7 @@
 				{/each}
 			</ul>
 		{/if}
-	</section>
+	</Card>
 {/if}
 
 <style>

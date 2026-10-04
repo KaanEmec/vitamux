@@ -42,38 +42,53 @@
 {#if origins.length === 0}
 	<p class="muted">No origins yet. They appear once a device has synced.</p>
 {:else}
-	<table>
-		<caption class="visually-hidden">Origins</caption>
-		<thead>
-			<tr><th scope="col">App</th><th scope="col">Transport</th><th scope="col">State</th><th scope="col">Relays</th></tr>
-		</thead>
-		<tbody>
-			{#each origins as o (o.id)}
-				<tr>
-					<th scope="row">{label(o)}{#if o.name}<br /><code class="muted">{o.origin_key}</code>{/if}</th>
-					<td>{o.provider}</td>
-					<td>
-						{#if o.is_native}<StatusIcon status="ok" /> Native
-						{:else if o.relayed_provider}<StatusIcon status="info" /> Relayed from {targetName(o.relayed_provider)}
-						{:else}<StatusIcon status="off" /> Direct{/if}
-					</td>
-					<td>
-						{#if o.is_native}
-							–
-						{:else}
-							<select
-								aria-label="Vendor relayed by {label(o)}"
-								value={o.relayed_provider ?? ''}
-								disabled={busy}
-								onchange={(e) => classify(o, e.currentTarget.value)}
-							>
-								<option value="">Nothing (records its own data)</option>
-								{#each targets as t (t.code)}<option value={t.code}>{t.name}</option>{/each}
-							</select>
-						{/if}
-					</td>
-				</tr>
-			{/each}
-		</tbody>
-	</table>
+	<div class="table-wrap">
+		<table>
+			<caption class="visually-hidden">Origins</caption>
+			<thead>
+				<tr><th scope="col">App</th><th scope="col">Transport</th><th scope="col">State</th><th scope="col">Relays</th></tr>
+			</thead>
+			<tbody>
+				{#each origins as o (o.id)}
+					<tr>
+						<th scope="row">{label(o)}{#if o.name}<br /><code class="muted">{o.origin_key}</code>{/if}</th>
+						<td>{o.provider}</td>
+						<td>
+							{#if o.is_native}<StatusIcon status="ok" /> Native
+							{:else if o.relayed_provider}<StatusIcon status="info" /> Relayed from {targetName(o.relayed_provider)}
+							{:else}<StatusIcon status="off" /> Direct{/if}
+						</td>
+						<td>
+							{#if o.is_native}
+								–
+							{:else}
+								<select
+									aria-label="Vendor relayed by {label(o)}"
+									value={o.relayed_provider ?? ''}
+									disabled={busy}
+									onchange={(e) => classify(o, e.currentTarget.value)}
+								>
+									<option value="">Nothing (records its own data)</option>
+									{#each targets as t (t.code)}<option value={t.code}>{t.name}</option>{/each}
+								</select>
+							{/if}
+						</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	</div>
 {/if}
+
+<style>
+	select {
+		min-height: var(--control-h-sm);
+		padding: 0 var(--space-2);
+		font: inherit;
+		font-size: var(--text-sm);
+		color: var(--color-text);
+		background: var(--color-inset);
+		border: 1px solid var(--color-border-strong);
+		border-radius: var(--radius-sm);
+	}
+</style>

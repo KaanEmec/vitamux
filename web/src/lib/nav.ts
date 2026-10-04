@@ -1,5 +1,5 @@
 // Navigation (docs/architecture/frontend.md#navigation): the six sections in sidebar order,
-// the Settings pages, and where a metric opens. Each section is a route under src/routes/(app)/;
+// the Settings pages (in groups), and where a metric opens. Each section is a route under src/routes/(app)/;
 // sub-pages live below the section's path. `also` lists other paths that belong to a section.
 import { icons } from './ui/icons.ts';
 
@@ -13,14 +13,14 @@ export const sections = [
 ] as const;
 
 export const settingsPages = [
-	{ href: '/settings', label: 'Profile' },
-	{ href: '/settings/devices', label: 'Devices' },
-	{ href: '/settings/api-keys', label: 'API keys' },
-	{ href: '/settings/ai', label: 'AI providers' },
-	{ href: '/settings/retention', label: 'Retention' },
-	{ href: '/settings/backups', label: 'Backups and export' },
-	{ href: '/settings/security', label: 'Security' },
-	{ href: '/settings/system', label: 'System' }
+	{ group: 'You', href: '/settings', label: 'Profile' },
+	{ group: 'Sources', href: '/settings/devices', label: 'Devices' },
+	{ group: 'Sources', href: '/settings/ai', label: 'AI providers' },
+	{ group: 'Access', href: '/settings/api-keys', label: 'API keys' },
+	{ group: 'Access', href: '/settings/security', label: 'Security' },
+	{ group: 'Data', href: '/settings/retention', label: 'Retention' },
+	{ group: 'Data', href: '/settings/backups', label: 'Backups and export' },
+	{ group: 'System', href: '/settings/system', label: 'System status' }
 ] as const;
 
 /** Where a metric opens (the command palette, cards). The daily view until Explore has metric pages. */

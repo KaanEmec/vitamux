@@ -1,6 +1,7 @@
 <!--
 	Lab results section: one h1 and links to the documents (upload and review) and to the
-	confirmed results. Pages below set their own <title> and h2.
+	confirmed results. A review (/lab/documents/…) is a focused view with its own breadcrumb and
+	h1. Pages set their own <title>.
 -->
 <script lang="ts">
 	import { page } from '$app/state';
@@ -8,15 +9,17 @@
 
 	let { children } = $props();
 
-	// Review pages (/lab/documents/…) belong to the documents tab.
 	const path = $derived(page.url.pathname);
+	const review = $derived(path.startsWith('/lab/documents/'));
 	const tabs = $derived([
-		{ href: '/lab', label: 'Documents', current: path === '/lab' || path.startsWith('/lab/documents/') },
-		{ href: '/lab/results', label: 'Results', current: path === '/lab/results' }
+		{ href: '/lab', label: 'Documents', current: path === '/lab' },
+		{ href: '/lab/results', label: 'Results', current: path === '/lab/results' || path.startsWith('/lab/analytes/') }
 	]);
 </script>
 
-<h1>Lab results</h1>
-<Tabs label="Lab views" items={tabs} />
+{#if !review}
+	<h1>Lab results</h1>
+	<Tabs label="Lab views" items={tabs} />
+{/if}
 
 {@render children()}
