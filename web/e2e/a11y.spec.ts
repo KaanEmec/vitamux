@@ -9,6 +9,7 @@ import { test as devicesTest } from './devices-fake';
 import { test as labTest, syntheticPdf } from './lab-fake';
 import { test as rulesTest } from './rules-fake';
 import { test as settingsTest } from './settings-fake';
+import { test as viewsTest } from './views-fake';
 import { test as anonTest } from './fake-api';
 
 /** Waits for the page to settle, then fails on serious or critical axe violations (light and dark). */
@@ -125,4 +126,11 @@ devicesTest('Settings › Devices: pairing code, devices, origins, resync dialog
 	await page.getByRole('button', { name: 'Resync Synthetic iPhone' }).click();
 	await expect(page.getByRole('dialog')).toBeVisible();
 	await scan(page, '/settings/devices (resync dialog)');
+});
+
+viewsTest('Specialised views: sleep, blood pressure, body composition, workouts, events, lab analyte', async ({ page }) => {
+	for (const path of ['/explore/sleep', '/explore/blood-pressure', '/explore/body-composition', '/explore/workouts', '/explore/events', '/lab/analytes/glucose']) {
+		await page.goto(path);
+		await scan(page, path);
+	}
 });
