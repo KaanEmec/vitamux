@@ -3,8 +3,8 @@
 ## Technology
 
 - SvelteKit with `adapter-static`, SSR off, TypeScript. Built in CI and embedded in `vitamux` with `go:embed`; Node is needed only at build time.
-- Generated OpenAPI client; an own SVG chart kit in `lib/charts/`, lazy-loaded ([ADR-0020](../adr/0020-chart-kit.md); a 14,400-point day renders well under 500 ms); `pdf.js` lazy-loaded for lab review (dynamic import in `lib/lab/PdfViewer.svelte`, no WebAssembly; the row outline is an SVG over the canvas). Geist and Geist Mono are self-hosted (`@fontsource-variable/*`). No component framework.
-- Budget: ≤ 300 KiB gzip initial JS, excluding the lazy chunks; the chart code behind one lazy import ≤ 40 KiB gzip. Strict CSP (no inline scripts or style attributes; CSSOM through `style:` directives is fine).
+- Generated OpenAPI client; a chart kit in `lib/charts/` on LayerChart, lazy-loaded ([ADR-0022](../adr/0022-layerchart.md); a 14,400-point day renders well under 500 ms); `pdf.js` lazy-loaded for lab review (dynamic import in `lib/lab/PdfViewer.svelte`, no WebAssembly; the row outline is an SVG over the canvas). Geist and Geist Mono are self-hosted (`@fontsource-variable/*`). No component framework.
+- Budget: ≤ 300 KiB gzip initial JS, excluding the lazy chunks; the chart code behind one lazy import ≤ 150 KiB gzip (`npm run budget`). Strict CSP (no inline scripts or style attributes; CSSOM through `style:` directives is fine).
 - Accessibility: keyboard navigation, labelled controls, status shown by shape and colour (never colour alone). Responsive, but not a mobile app.
 
 Alternatives rejected: htmx (the rule builder, charts, and PDF review need real JS anyway) and React (heavier, more churn).
