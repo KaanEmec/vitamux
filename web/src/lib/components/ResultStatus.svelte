@@ -1,53 +1,58 @@
 <!--
-	Status of a resolved value (direct, fallback, calculated, overridden, no_data): an icon
-	whose shape differs per status, always followed by its text label.
+	Data status of a resolved value (direct, fallback, calculated, overridden, partial, no data):
+	its shape and colour (lib/ui/status.ts), always followed by its word.
 -->
-<script lang="ts" module>
-	export const statusLabels: Record<string, string> = {
-		direct: 'Direct',
-		fallback: 'Fallback',
-		calculated: 'Calculated',
-		overridden: 'Overridden',
-		no_data: 'No data'
-	};
-</script>
-
 <script lang="ts">
-	import StatusIcon, { type Status } from './StatusIcon.svelte';
+	import { dataStatus, displayStatus, ringPath } from '../ui/status.ts';
 
-	let { status }: { status: string } = $props();
+	let { status, partial = false }: { status: string; partial?: boolean } = $props();
 
-	const icon: Record<string, Status> = { direct: 'ok', fallback: 'warn', calculated: 'info', no_data: 'off' };
+	const s = $derived(displayStatus(status, partial));
+	const g = $derived(dataStatus[s]);
 </script>
 
-<span class="result-status">
-	{#if status === 'overridden'}
-		<!-- Diamond with a pen stroke: manual value, distinct from every StatusIcon shape. -->
-		<svg class="override-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-			<path d="M8 .8L15.2 8 8 15.2.8 8z" fill="currentColor" />
-			<path d="M5.2 10.8l.5-2 4.2-4.2 1.5 1.5-4.2 4.2z" class="glyph" />
-		</svg>
-	{:else}
-		<StatusIcon status={icon[status] ?? 'pending'} />
-	{/if}
-	{statusLabels[status] ?? status}
+<span class={['result-status', s]}>
+	<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+		{#if g.ring}<path d={ringPath} class="ring" />{/if}
+		{#if g.shape}<path d={g.shape} class="shape" />{/if}
+	</svg>
+	{g.label}
 </span>
 
 <style>
 	.result-status {
 		display: inline-flex;
-		gap: var(--space-1);
+		gap: var(--space-2);
 		align-items: center;
 		white-space: nowrap;
 	}
-	.override-icon {
+	svg {
 		flex: none;
-		color: var(--color-accent);
 	}
-	.glyph {
+	.shape {
+		fill: currentColor;
+	}
+	.ring {
 		fill: none;
-		stroke: var(--color-surface);
+		stroke: currentColor;
 		stroke-width: 1.4;
-		stroke-linejoin: round;
+	}
+	.direct svg {
+		color: var(--status-direct);
+	}
+	.fallback svg {
+		color: var(--status-fallback);
+	}
+	.calculated svg {
+		color: var(--status-calculated);
+	}
+	.overridden svg {
+		color: var(--status-overridden);
+	}
+	.partial svg {
+		color: var(--status-partial);
+	}
+	.no_data svg {
+		color: var(--status-none);
 	}
 </style>

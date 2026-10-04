@@ -6,7 +6,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { api, type Problem, type Schemas } from '#lib/api/client.ts';
-	import Hypnogram, { stageLabels, stageOrder } from '#lib/components/Hypnogram.svelte';
+	import { stageOrder } from '#lib/charts/sleep.ts';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import ProvenanceDialog from '#lib/components/ProvenanceDialog.svelte';
 	import { addDays, clock, duration, isDate, today } from '#lib/data/format.ts';
@@ -122,18 +122,16 @@
 				{/each}
 			</dl>
 			{#if s.has_stages && s.stages?.length}
-				<div class="hyp">
-					<ul class="row-labels">
-						{#each rows as r (r)}<li>{stageLabels[r]}</li>{/each}
-					</ul>
+				{@const stages = s.stages}
+				{#await import('#lib/charts/Hypnogram.svelte') then { default: Hypnogram }}
 					<Hypnogram
-						stages={s.stages}
+						{stages}
 						{rows}
 						{from}
 						{to}
 						label="Sleep stages of {label(s)}, {clock(s.start_at, s.tz_offset_min)} to {clock(s.end_at, s.tz_offset_min)}"
 					/>
-				</div>
+				{/await}
 			{:else}
 				<p class="muted">This source reported no sleep stages.</p>
 			{/if}
@@ -188,22 +186,6 @@
 	.totals dd {
 		margin: 0;
 		font-variant-numeric: tabular-nums;
-	}
-	.hyp {
-		display: grid;
-		grid-template-columns: 5rem 1fr;
-		gap: var(--space-2);
-		align-items: start;
-	}
-	.row-labels {
-		display: grid;
-		grid-auto-rows: 20px; /* matches rowHeight in Hypnogram.svelte */
-		margin: 0;
-		padding: 0;
-		list-style: none;
-		font-size: var(--text-xs);
-		line-height: 20px;
-		color: var(--color-text-muted);
 	}
 	.legend {
 		margin-bottom: var(--space-3);

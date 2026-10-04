@@ -8,6 +8,7 @@
 	import HealthBadge from '#lib/components/HealthBadge.svelte';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import UnofficialBadge from '#lib/components/UnofficialBadge.svelte';
+	import Tabs from '#lib/ui/Tabs.svelte';
 	import BackfillsTab from '#lib/connections/BackfillsTab.svelte';
 	import HistoryTab from '#lib/connections/HistoryTab.svelte';
 	import OverviewTab from '#lib/connections/OverviewTab.svelte';
@@ -65,15 +66,7 @@
 <ProblemAlert {problem} />
 
 {#if connection}
-	<nav aria-label="Connection sections">
-		<ul class="tabs">
-			{#each tabs as t (t.id)}
-				<li>
-					<a href="?tab={t.id}" aria-current={tab === t.id ? 'page' : undefined} data-sveltekit-reset="false">{t.label}</a>
-				</li>
-			{/each}
-		</ul>
-	</nav>
+	<Tabs label="Connection sections" items={tabs.map((t) => ({ href: `?tab=${t.id}`, label: t.label, current: tab === t.id }))} />
 
 	<section aria-label={tabs.find((t) => t.id === tab)?.label}>
 		{#if tab === 'overview'}
@@ -106,29 +99,5 @@
 	}
 	.head h1 {
 		margin: 0;
-	}
-	.tabs {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-1);
-		margin: 0 0 var(--space-5);
-		padding: 0;
-		list-style: none;
-		border-bottom: 1px solid var(--color-border);
-	}
-	.tabs a {
-		display: block;
-		padding: var(--space-2) var(--space-4);
-		color: var(--color-text);
-		text-decoration: none;
-		border-bottom: 3px solid transparent;
-	}
-	.tabs a:hover {
-		background: var(--color-surface-2);
-	}
-	.tabs a[aria-current='page'] {
-		font-weight: 600;
-		color: var(--color-accent);
-		border-bottom-color: var(--color-accent);
 	}
 </style>

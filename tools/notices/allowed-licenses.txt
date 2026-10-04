@@ -14,3 +14,6 @@ CC0-1.0
 Python-2.0
 # Reviewed 2026-10-03: permissive (minimatch, web dev tooling).
 BlueOak-1.0.0
+# Reviewed 2026-10-04: SIL Open Font License for the Geist and Geist Mono fonts bundled unmodified
+# in the SPA; OFL allows bundling with any software (docs/architecture/project.md#license-and-notices).
+OFL-1.1

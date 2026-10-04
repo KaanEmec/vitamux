@@ -279,7 +279,7 @@
 		margin: 0;
 	}
 	.value {
-		font-size: var(--text-xl);
+		font-size: var(--text-2xl);
 		font-weight: 600;
 	}
 	.meta {

@@ -1,5 +1,5 @@
-/* Element defaults and the few shared classes (.btn, .field, .card, .visually-hidden).
-   Component-specific styling stays in the component's <style> block. */
+/* Element defaults and the few shared classes (.btn, .field, .card, .muted, .visually-hidden,
+   .src-*). Components (lib/ui, lib/charts) keep their own styling in their <style> block. */
 *,
 *::before,
 *::after {
@@ -11,25 +11,44 @@ body {
 	font-family: var(--font-sans);
 	font-size: var(--text-md);
 	line-height: var(--leading);
+	font-variant-numeric: tabular-nums;
 	color: var(--color-text);
 	background: var(--color-bg);
+	-webkit-font-smoothing: antialiased;
 }
 
 h1,
 h2,
 h3 {
-	line-height: 1.25;
 	margin: 0 0 var(--space-3);
+	font-weight: 600;
+	line-height: 1.25;
 }
 h1 {
-	font-size: var(--text-xl);
+	font-size: var(--text-2xl);
+	letter-spacing: var(--tracking-tight);
 }
 h2 {
 	font-size: var(--text-lg);
 }
+h3 {
+	font-size: var(--text-md);
+}
 
 a {
-	color: var(--color-accent);
+	color: var(--color-link);
+	text-underline-offset: 0.2em;
+}
+
+code,
+kbd {
+	font-family: var(--font-mono);
+	font-size: 0.95em;
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+	accent-color: var(--color-accent);
 }
 
 :focus-visible {
@@ -54,47 +73,78 @@ a {
 }
 
 .card {
+	padding: var(--space-5);
 	background: var(--color-surface);
 	border: 1px solid var(--color-border);
-	border-radius: var(--radius-md);
-	padding: var(--space-5);
-	box-shadow: var(--shadow-1);
+	border-radius: var(--radius-lg);
 }
 
-/* Buttons: .btn (secondary), .btn.primary, .btn.link (looks like a link). */
+/* Buttons: .btn (secondary), .primary, .ghost, .danger, .link (looks like a link); .sm is compact.
+   lib/ui/Button.svelte renders the same classes. */
 .btn {
 	display: inline-flex;
 	align-items: center;
+	justify-content: center;
 	gap: var(--space-2);
-	padding: var(--space-2) var(--space-4);
+	min-height: 2.5rem;
+	padding: 0 var(--space-4);
 	font: inherit;
+	font-weight: 500;
 	color: var(--color-text);
+	text-decoration: none;
+	white-space: nowrap;
 	background: var(--color-surface);
-	border: 1px solid var(--color-border);
-	border-radius: var(--radius-sm);
+	border: 1px solid var(--color-border-strong);
+	border-radius: var(--radius-md);
 	cursor: pointer;
 }
 .btn:hover {
 	background: var(--color-surface-2);
 }
 .btn.primary {
+	font-weight: 600;
 	color: var(--color-on-accent);
 	background: var(--color-accent);
 	border-color: var(--color-accent);
 }
 .btn.primary:hover {
 	background: var(--color-accent-hover);
+	border-color: var(--color-accent-hover);
+}
+.btn.ghost {
+	color: var(--color-link);
+	background: transparent;
+	border-color: transparent;
+}
+.btn.ghost:hover {
+	background: var(--color-surface-2);
+}
+.btn.danger {
+	color: var(--color-error);
+	background: transparent;
+	border-color: color-mix(in srgb, var(--color-error) 45%, transparent);
+}
+.btn.danger:hover {
+	background: var(--color-error-bg);
 }
 .btn.link {
+	min-height: 0;
 	padding: 0;
-	color: var(--color-accent);
+	font-weight: inherit;
+	color: var(--color-link);
+	white-space: normal;
 	background: none;
 	border: 0;
 	text-decoration: underline;
 }
+.btn.sm {
+	min-height: var(--control-h-sm);
+	padding: 0 var(--space-3);
+	font-size: var(--text-sm);
+}
 .btn:disabled {
-	opacity: 0.6;
-	cursor: progress;
+	opacity: 0.55;
+	cursor: not-allowed;
 }
 
 /* Form fields: see components/TextField.svelte. */
@@ -104,27 +154,75 @@ a {
 	margin-bottom: var(--space-4);
 }
 .field label {
-	font-weight: 600;
 	font-size: var(--text-sm);
+	font-weight: 500;
 }
-.field input {
+.field input,
+.field select,
+.field textarea {
+	min-height: var(--control-h);
 	padding: var(--space-2) var(--space-3);
 	font: inherit;
 	color: var(--color-text);
-	background: var(--color-surface);
-	border: 1px solid var(--color-border);
-	border-radius: var(--radius-sm);
+	background: var(--color-inset);
+	border: 1px solid var(--color-border-strong);
+	border-radius: var(--radius-md);
 }
-.field input[aria-invalid='true'] {
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+	border-color: var(--color-accent);
+	outline: none;
+	box-shadow: var(--focus-ring);
+}
+.field [aria-invalid='true'] {
 	border-color: var(--color-error);
 }
 .field .error {
+	font-size: var(--text-xs);
 	color: var(--color-error);
-	font-size: var(--text-sm);
 }
 .field .hint {
+	font-size: var(--text-xs);
 	color: var(--color-text-muted);
-	font-size: var(--text-sm);
+}
+
+/* Source colour: an element with .src-<provider> (lib/charts/colors.ts) sets --src for its
+   children (series strokes, chip dots). */
+.src-apple_health {
+	--src: var(--src-apple-health);
+}
+.src-whoop {
+	--src: var(--src-whoop);
+}
+.src-withings {
+	--src: var(--src-withings);
+}
+.src-garmin {
+	--src: var(--src-garmin);
+}
+.src-manual {
+	--src: var(--src-manual);
+}
+.src-other-1 {
+	--src: var(--src-other-1);
+}
+.src-other-2 {
+	--src: var(--src-other-2);
+}
+.src-other-3 {
+	--src: var(--src-other-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		transition-duration: 0.01ms !important;
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		scroll-behavior: auto !important;
+	}
 }
 
 /* SvelteKit's route announcer hides itself with an inline style attribute, which the

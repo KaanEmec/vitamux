@@ -11,10 +11,11 @@
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import ProvenanceDialog, { type ProvenanceEntity } from '#lib/components/ProvenanceDialog.svelte';
 	import ResultStatus from '#lib/components/ResultStatus.svelte';
-	import SeriesChart, { type ChartSeries } from '#lib/components/SeriesChart.svelte';
 	import StatusIcon, { type Status } from '#lib/components/StatusIcon.svelte';
 	import { formatValue, metricLabel } from '#lib/data/format.ts';
 	import { readAll } from '#lib/data/paging.ts';
+	import type { Series } from '#lib/charts/types.ts';
+	import Skeleton from '#lib/ui/Skeleton.svelte';
 
 	type Source = Schemas['SourcesDrilldown']['sources'][number];
 	type Query = NonNullable<NonNullable<import('#lib/api/schema.d.ts').paths['/api/v1/measurements']['get']['parameters']>['query']>;
@@ -31,7 +32,7 @@
 	let overrides = $state<Schemas['Override'][]>([]);
 	let overridesProblem = $state<Problem | null>(null);
 	let actionProblem = $state<Problem | null>(null);
-	let chart = $state<{ series: ChartSeries[]; unit: string } | null>(null);
+	let chart = $state<{ series: Series[]; unit: string } | null>(null);
 	/** First loaded record id per source (same order as `sources`), for the provenance trace. */
 	let recordIds = $state<(string | null)[]>([]);
 	let chartProblem = $state<Problem | null>(null);
@@ -103,7 +104,7 @@
 
 	async function loadChart() {
 		loadingChart = true;
-		const series: ChartSeries[] = [];
+		const series: Series[] = [];
 		const ids: (string | null)[] = [];
 		let unit = '';
 		const loaded = await Promise.all(
@@ -125,14 +126,14 @@
 			const xs: number[] = [];
 			const ys: number[] = [];
 			for (const m of r.items) {
-				const x = Date.parse(m.start_at) / 1000;
+				const x = Date.parse(m.start_at);
 				if (xs.length && x === xs[xs.length - 1]) ys[ys.length - 1] = m.value;
 				else {
 					xs.push(x);
 					ys.push(m.value);
 				}
 			}
-			series.push({ label: label(sources[i]), xs, ys });
+			series.push({ label: label(sources[i]), source: sources[i].provider, xs, ys });
 		});
 		recordIds = ids;
 		chart = { series, unit };
@@ -212,14 +213,19 @@
 	<h3 id="chart-h">Every source over the day</h3>
 	<ProblemAlert problem={chartProblem} />
 	{#if loadingChart}
-		<p class="muted">Loading series…</p>
+		<Skeleton variant="chart" label="Loading series" />
 	{:else if chart && chart.series.length}
-		<SeriesChart
-			series={chart.series}
-			unit={chart.unit}
-			{timezone}
-			summary="{metricLabel(metric)} on {date}: {chart.series.map((s) => s.label).join(', ')}"
-		/>
+		{@const c = chart}
+		{#await import('#lib/charts/TimeSeries.svelte')}
+			<Skeleton variant="chart" label="Loading chart" />
+		{:then { default: TimeSeries }}
+			<TimeSeries
+				series={c.series}
+				unit={c.unit}
+				timezone={timezone || undefined}
+				label="{metricLabel(metric)} on {date}: {c.series.map((s) => s.label).join(', ')}"
+			/>
+		{/await}
 	{:else}
 		<p class="muted">No measurements from any source on this day.</p>
 	{/if}
@@ -356,7 +362,7 @@
 		font-size: var(--text-lg);
 	}
 	.value {
-		font-size: var(--text-xl);
+		font-size: var(--text-2xl);
 		font-variant-numeric: tabular-nums;
 	}
 	.explanation {

@@ -5,7 +5,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { api, type Problem, type Schemas } from '#lib/api/client.ts';
-	import CoverageHeatmap from '#lib/components/CoverageHeatmap.svelte';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import StatusIcon from '#lib/components/StatusIcon.svelte';
 	import { ladder, lastDays, opLabel, windowLabel, type Rule } from '#lib/rules/rule.ts';
@@ -91,7 +90,7 @@
 				{#if coverage}
 					{@const rows = rowsFor(e.metric)}
 					{#if rows.length}
-						<CoverageHeatmap {rows} start={coverage.start_date} caption="{e.metric} coverage, last 90 days" />
+						{#await import('#lib/charts/CoverageStrip.svelte') then { default: CoverageStrip }}<CoverageStrip {rows} start={coverage.start_date} caption="{e.metric} coverage, last 90 days" />{/await}
 					{:else}
 						<p class="muted small">No data in the last 90 days.</p>
 					{/if}

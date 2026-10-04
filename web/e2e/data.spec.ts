@@ -107,7 +107,6 @@ test('the resolved endpoints being unavailable is shown, not fatal', async ({ pa
 
 test('a 14,400-point day renders in under 500 ms', async ({ page }) => {
 	await page.goto('/data/day/heart_rate/' + fallbackDay);
-	await expect(page.locator('.chart canvas')).toBeVisible();
 	await expect(page.getByRole('group', { name: /Heart rate on/ })).toBeVisible();
 	const ms = await page.evaluate(async () => {
 		// The chart marks its own data-join-to-paint time (SeriesChart.svelte).
@@ -118,8 +117,9 @@ test('a 14,400-point day renders in under 500 ms', async ({ page }) => {
 	});
 	console.log(`14,400-point chart render: ${ms.toFixed(1)} ms`);
 	expect(ms).toBeLessThan(500);
-	// Both sources are in the legend, each with its own dash/colour.
-	await expect(page.locator('.u-legend .u-series')).toHaveCount(3); // x + 2 sources
+	// Both sources are in the chart's table fallback (and its legend, each with its own dash and colour).
+	await page.getByText('Show as a table').click();
+	await expect(page.getByRole('table', { name: /Heart rate on/ }).getByRole('columnheader')).toHaveCount(3); // time + 2 sources
 });
 
 test('sleep: stages of every source on one axis', async ({ page }) => {

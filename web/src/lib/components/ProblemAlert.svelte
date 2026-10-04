@@ -33,16 +33,20 @@
 <style>
 	.problem {
 		display: flex;
-		gap: var(--space-2);
+		gap: var(--space-3);
 		align-items: flex-start;
-		padding: var(--space-3);
+		padding: var(--space-3) var(--space-4);
 		margin-bottom: var(--space-4);
 		background: var(--color-error-bg);
-		border: 1px solid var(--color-error);
-		border-radius: var(--radius-sm);
+		border: 1px solid color-mix(in srgb, var(--color-error) 40%, transparent);
+		border-radius: var(--radius-md);
 	}
 	.problem :global(.status-icon) {
 		margin-top: 0.2em;
+		color: var(--color-error);
+	}
+	strong {
+		font-weight: 600;
 	}
 	ul {
 		margin: var(--space-1) 0 0;

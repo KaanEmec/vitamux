@@ -5,7 +5,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { api, type Problem, type Schemas } from '#lib/api/client.ts';
-	import CoverageHeatmap from '#lib/components/CoverageHeatmap.svelte';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import StatusIcon from '#lib/components/StatusIcon.svelte';
 	import RuleDiff from '#lib/rules/RuleDiff.svelte';
@@ -137,7 +136,7 @@
 		{#if !coverage}
 			<p class="muted">Coverage is not available yet.</p>
 		{:else if rows.length}
-			<CoverageHeatmap {rows} start={coverage.start_date} caption="{metric} coverage per source" />
+			{#await import('#lib/charts/CoverageStrip.svelte') then { default: CoverageStrip }}<CoverageStrip {rows} start={coverage.start_date} caption="{metric} coverage per source" />{/await}
 		{:else}
 			<p class="muted">No data in the last 90 days.</p>
 		{/if}
