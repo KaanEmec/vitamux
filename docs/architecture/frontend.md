@@ -28,16 +28,16 @@ Alternatives rejected: htmx (the rule builder, charts, and PDF review need real 
    - sleep hypnogram comparison; workout clusters.
 4. **Rules**: metric catalogue with a 90-day per-source coverage heatmap; guided builder; version history, diff, activate.
 5. **Lab results**: upload, consent dialog naming provider and model, review (`lab/documents/[id]`: PDF page with the row outlined beside the row editor), confirmed results by analyte with history, delete keeping or deleting results ([lab-documents.md](lab-documents.md)).
-6. **Settings**: profile and timezone periods, devices (Apple pairing, origins; E15), API keys, AI providers, retention, backups and export, security (password, TOTP, sessions), system status.
+6. **Settings**: profile and timezone periods, devices (Apple pairing QR with countdown, device list with requested types, possibly-denied hints, resync and revoke; origin classification as native, relayed or direct; E15), API keys, AI providers, retention, backups and export, security (password, TOTP, sessions), system status.
 
 ## Rule builder
 
 The builder (`src/routes/(app)/rules/new`) follows [resolution.md](resolution.md) in five steps and starts from the rule in effect, a saved version, or an empty rule:
 
 1. **Metric**: from the catalogue (`GET /rules`, plus `GET /metrics` codes without a rule).
-2. **Sources**: ordered groups of selectors (ORed lists of ANDed conditions) with values seen in the active rules as suggestions; up/down buttons to reorder; exclusions; a relay-exclusion suggestion.
+2. **Sources**: ordered groups of selectors (ORed lists of ANDed conditions) with values seen in the data and the active rules as suggestions and one-click chips for origins, device types and relayed or direct (`GET /origins`, `GET /source-devices`); up/down buttons to reorder; exclusions; a relay-exclusion suggestion.
 3. **Strategy**: plain-language cards ("Use the first source with data", "Average the sources", "Take the highest", …) and within-group options. A sum (across or within groups) cannot be saved until the duplicate-risk checkbox adds `cross_source_sum_duplicate_risk`.
 4. **Window and quality**: window (the server checks it against the metric), coverage, plausible range, flags, staleness, wear, sleep alignment, `follow` and `compose`. Extensions the form does not edit (`contexts`) are kept.
 5. **Review**: the rule JSON, its diff against the rule in effect, and the last 14 days for the draft versus the active rule with a per-day diff and explanations (`POST /resolution/preview`; "preview unavailable" on 404/503).
 
-Saving (`POST /rules/{metric}/versions`) creates a new version; server field errors return to their step and input. The metric page (`rules/[metric]`) lists versions with a field diff between any two and activates any of them. The catalogue and metric pages show the 90-day `GET /coverage` heatmap when the endpoint answers.
+Saving (`POST /rules/{metric}/versions`) creates a new version; server field errors return to their step and input. The metric page (`rules/[metric]`) lists versions with a field diff between any two and activates any of them. The catalogue and metric pages show the 90-day `GET /coverage` heatmap when the endpoint answers; the metric page filters it by origin app.

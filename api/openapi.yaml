@@ -141,6 +141,74 @@ paths:
         '403': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
 
+  /api/ingest/v1/devices/pair:
+    post:
+      tags: [ingest]
+      operationId: pairDevice
+      summary: Exchange a pairing code for a device token
+      description: >
+        Unauthenticated: the single-use code (POST /api/v1/devices/pairing-codes, valid for 10
+        minutes) is the credential. Creates a device client on the owner's apple_health push
+        connection, creating that connection the first time. Wrong codes are throttled per address
+        (429 with Retry-After).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [code, name]
+              properties:
+                code: {type: string, minLength: 1, maxLength: 32, description: 'Case, spaces and dashes are ignored.'}
+                name: {type: string, minLength: 1, maxLength: 100, description: Device name shown to the owner.}
+      responses:
+        '201':
+          description: Paired. The token is shown only here.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DevicePairing'}
+        '422': {$ref: '#/components/responses/Problem'}
+        '429': {$ref: '#/components/responses/Problem'}
+
+  /api/ingest/v1/devices/self:
+    get:
+      tags: [ingest]
+      operationId: getDeviceSelf
+      summary: The calling device's configuration, including pending anchor resets
+      security:
+        - clientToken: []
+      responses:
+        '200':
+          description: Device configuration.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DeviceSelf'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+
+  /api/ingest/v1/devices/self/rotate-token:
+    post:
+      tags: [ingest]
+      operationId: rotateDeviceToken
+      summary: Replace the calling device's token; the old one stops working at once
+      security:
+        - clientToken: []
+      responses:
+        '200':
+          description: The new token, shown only here.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [token]
+                properties:
+                  token: {type: string, pattern: '^vmx_cli_[0-9a-f]{32}_[A-Za-z0-9_-]{43}$'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+
   # ---------------------------------------------------------------- catalogue
   /api/v1/metrics:
     get:
@@ -771,6 +839,7 @@ paths:
         - $ref: '#/components/parameters/StartDateRequired'
         - $ref: '#/components/parameters/EndDateRequired'
         - $ref: '#/components/parameters/MetricFilter'
+        - $ref: '#/components/parameters/OriginFilter'
       responses:
         '200':
           description: Coverage per source and day.
@@ -1275,7 +1344,7 @@ paths:
     get:
       tags: [devices]
       operationId: listDevices
-      summary: List paired devices
+      summary: List paired devices, newest first, including revoked ones
       security: [{session: []}, {apiKey: ['read:config']}]
       responses:
         '200':
@@ -1294,7 +1363,8 @@ paths:
     post:
       tags: [devices]
       operationId: createPairingCode
-      summary: Create a short-lived pairing code
+      summary: Create a single-use pairing code, valid for 10 minutes
+      description: At most 5 codes per 10 minutes (429 with Retry-After). 503 without VITAMUX_PUBLIC_URL.
       security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
       responses:
         '201':
@@ -1304,27 +1374,46 @@ paths:
               schema: {$ref: '#/components/schemas/PairingCode'}
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
+        '429': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
 
   /api/v1/devices/{id}/request-anchor-reset:
     post:
       tags: [devices]
       operationId: requestDeviceAnchorReset
-      summary: Ask the device to resync from scratch on its next contact
+      summary: Ask the device to resync types from scratch on its next contact
+      description: >
+        The device reads the request from GET /api/ingest/v1/devices/self. Re-sent samples are
+        deduplicated by UUID.
       security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                types:
+                  type: array
+                  maxItems: 64
+                  description: HealthKit type identifiers; omitted or empty resets every type.
+                  items: {type: string, pattern: '^HK[A-Za-z0-9]{1,126}$'}
       responses:
         '204':
           description: Requested.
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
         '404': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
 
   /api/v1/devices/{id}/revoke:
     post:
       tags: [devices]
       operationId: revokeDevice
-      summary: Revoke a device's token
+      summary: Revoke a device's token; its next request is 401
       security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ID'
@@ -1334,6 +1423,81 @@ paths:
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
         '404': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/origins:
+    get:
+      tags: [devices]
+      operationId: listOrigins
+      summary: List the apps (origins) data was recorded by, with their native or relayed state
+      description: >
+        Every origin seen inside a transport provider such as apple_health, by provider and key.
+        relay_targets are the vendors an origin can be classified as relaying.
+      security: [{session: []}, {apiKey: ['read:config']}]
+      responses:
+        '200':
+          description: Origins and the vendors they may relay.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [origins, relay_targets]
+                properties:
+                  origins: {type: array, items: {$ref: '#/components/schemas/DataOrigin'}}
+                  relay_targets: {type: array, items: {$ref: '#/components/schemas/RelayTarget'}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/origins/{id}:
+    patch:
+      tags: [devices]
+      operationId: classifyOrigin
+      summary: Set or clear the vendor an origin relays
+      description: >
+        The `relayed` rule selector and the all-sources view read the new state at once; resolved
+        results are recomputed. The edit is audited and wins over the known relay defaults, which only seed
+        new origins.
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [relayed_provider]
+              properties:
+                relayed_provider:
+                  type: [string, 'null']
+                  description: A code from relay_targets, or null for an origin that records its own data.
+      responses:
+        '204':
+          description: Classified.
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/source-devices:
+    get:
+      tags: [devices]
+      operationId: listSourceDevices
+      summary: List the devices measurements were recorded on (not the paired apps)
+      description: The values the device_type and device_model rule selectors match.
+      security: [{session: []}, {apiKey: ['read:config']}]
+      responses:
+        '200':
+          description: Devices.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [devices]
+                properties:
+                  devices: {type: array, items: {$ref: '#/components/schemas/SourceDevice'}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
 
   # ---------------------------------------------------------------- documents and labs
   /api/v1/documents:
@@ -2857,7 +3021,8 @@ components:
       type: object
       description: >-
         Share of local hours with data per source and local day, from the hourly aggregates. A source
-        is a provider; its row of a metric has one entry per day from start_date.
+        is a provider; its row of a metric has one entry per day from start_date. With origin, only
+        the hours those apps contributed count.
       additionalProperties: false
       required: [start_date, end_date, rows]
       properties:
@@ -3565,8 +3730,100 @@ components:
         interval_seconds: {type: integer, minimum: 60}
         lookback_seconds: {type: integer, minimum: 0}
         enabled: {type: boolean}
-    PairedDevice: {type: object, description: Open object.}
-    PairingCode: {type: object, description: Open object.}
+    PairedDevice:
+      type: object
+      description: A device paired with a pairing code (an ingest client of kind device).
+      additionalProperties: false
+      required: [id, name, connection_id, created_at, last_seen_at, last_sync_at, revoked_at, types, possibly_denied, anchor_resets]
+      properties:
+        id: {type: string, format: uuid, description: The device_id returned by pairing.}
+        name: {type: string}
+        connection_id: {type: string, pattern: '^conn_[0-9a-f]{32}$'}
+        created_at: {type: string, format: date-time}
+        last_seen_at: {type: [string, 'null'], format: date-time, description: Last authenticated request (to the minute).}
+        last_sync_at: {type: [string, 'null'], format: date-time, description: When its newest batch arrived.}
+        revoked_at: {type: [string, 'null'], format: date-time}
+        types:
+          type: array
+          items: {type: string}
+          description: HealthKit types in the connection's last healthkit.samples.v1 heartbeat checkpoint; empty until the device sends one.
+        possibly_denied:
+          type: array
+          items: {type: string}
+          description: >
+            Requested types the connection stored nothing for in the last 7 days, while the device
+            was paired for longer and seen within them. HealthKit does not reveal read denial, so
+            this is a hint: a type can also be silent because there is nothing new to record. Types
+            are tracked per connection, which paired devices share. Empty for a revoked device.
+        anchor_resets: {type: array, items: {$ref: '#/components/schemas/AnchorReset'}}
+    DataOrigin:
+      type: object
+      description: An app that recorded data inside a transport provider, e.g. a HealthKit bundle id.
+      additionalProperties: false
+      required: [id, provider, origin_key, name, is_native, relayed_provider, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        provider: {type: string, description: The transport provider code, e.g. apple_health.}
+        origin_key: {type: string, description: 'The `origin_key` rule selector value.'}
+        name: {type: [string, 'null']}
+        is_native: {type: boolean, description: Recorded by the platform itself, such as Apple's own apps.}
+        relayed_provider: {type: [string, 'null'], description: The vendor whose data the app relays; null when it records its own.}
+        created_at: {type: string, format: date-time, description: When the origin was first seen.}
+    RelayTarget:
+      type: object
+      additionalProperties: false
+      required: [code, name]
+      properties:
+        code: {type: string}
+        name: {type: string}
+    SourceDevice:
+      type: object
+      additionalProperties: false
+      required: [id, provider, device_type, manufacturer, model]
+      properties:
+        id: {$ref: '#/components/schemas/DeviceID'}
+        provider: {type: string}
+        device_type: {type: [string, 'null'], description: 'The `device_type` rule selector value, e.g. watch.'}
+        manufacturer: {type: [string, 'null']}
+        model: {type: [string, 'null'], description: 'The `device_model` rule selector value.'}
+    AnchorReset:
+      type: object
+      additionalProperties: false
+      required: [type, requested_at]
+      properties:
+        type: {type: string, description: 'A HealthKit type identifier, or * for every type.'}
+        requested_at: {type: string, format: date-time, description: The latest request for this type.}
+    PairingCode:
+      type: object
+      additionalProperties: false
+      required: [code, expires_at, url, qr_payload]
+      properties:
+        code: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$', description: Crockford base32; single use.}
+        expires_at: {type: string, format: date-time}
+        url: {type: string, format: uri, description: The public base URL (VITAMUX_PUBLIC_URL) the app pairs against.}
+        qr_payload: {type: string, description: 'Text for the QR code: the JSON object {"url", "code"} and nothing else.'}
+    DevicePairing:
+      type: object
+      additionalProperties: false
+      required: [device_id, connection_id, token]
+      properties:
+        device_id: {type: string, format: uuid}
+        connection_id: {type: string, pattern: '^conn_[0-9a-f]{32}$'}
+        token: {type: string, pattern: '^vmx_cli_[0-9a-f]{32}_[A-Za-z0-9_-]{43}$', description: 'Client token with scope ingest:<connection_id>; store it in the Keychain.'}
+    DeviceSelf:
+      type: object
+      additionalProperties: false
+      required: [device_id, connection_id, name, anchor_resets]
+      properties:
+        device_id: {type: string, format: uuid}
+        connection_id: {type: string, pattern: '^conn_[0-9a-f]{32}$'}
+        name: {type: string}
+        anchor_resets:
+          type: array
+          items: {$ref: '#/components/schemas/AnchorReset'}
+          description: >
+            Every reset the owner requested, kept by the server. Apply those whose requested_at is
+            after the last reset applied for that type (* covers every type).
     Document:
       type: object
       description: A stored lab PDF. A deleted document keeps only its id, status, sizes and times.

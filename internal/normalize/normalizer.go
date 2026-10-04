@@ -48,6 +48,7 @@ type Output struct {
 	Groups       []Group        `json:"groups,omitempty"`
 	Sleep        []SleepSession `json:"sleep,omitempty"`
 	Workouts     []Workout      `json:"workouts,omitempty"`
+	Events       []Event        `json:"events,omitempty"`
 	Tombstones   []Key          `json:"tombstones,omitempty"` // upstream deletions, by stable id
 	Warnings     []Warning      `json:"warnings,omitempty"`
 }
@@ -174,6 +175,22 @@ type Segment struct {
 	Data  json.RawMessage `json:"data,omitempty"`
 }
 
+// Event is a typed health event (an alert or result) with an optional level or value; Code is a
+// catalogue event code (catalog.LookupEvent). End is nil for an instant.
+type Event struct {
+	Code    string          `json:"code"`
+	Start   time.Time       `json:"start"`
+	End     *time.Time      `json:"end,omitempty"`
+	Zone    Zone            `json:"zone,omitzero"`
+	Value   *float64        `json:"value,omitempty"`
+	Level   string          `json:"level,omitempty"`
+	Context json.RawMessage `json:"context,omitempty"`
+	Flags   Flags           `json:"flags,omitempty"`
+	Device  string          `json:"device,omitempty"`
+	Origin  string          `json:"origin,omitempty"`
+	Key     Key             `json:"key,omitzero"`
+}
+
 // Warning is a non-fatal finding (unknown field or type, skipped record). Detail must not carry
 // health values or secrets.
 type Warning struct {
@@ -292,6 +309,28 @@ func (o Output) Validate() error {
 			return err
 		}
 		if err := src(what, w.Device, w.Origin, w.Key); err != nil {
+			return err
+		}
+	}
+	for i, e := range o.Events {
+		what := fmt.Sprintf("event %d", i)
+		ev, ok := catalog.LookupEvent(e.Code)
+		switch {
+		case !ok:
+			return invalid("%s: unknown event %q", what, e.Code)
+		case !ev.AllowsLevel(e.Level):
+			return invalid("%s: level %q not allowed for %s", what, e.Level, e.Code)
+		case e.Start.IsZero() || (e.End != nil && e.End.Before(e.Start)):
+			return invalid("%s: start, and an end not before it, are required", what)
+		case e.Value != nil && !finite(*e.Value):
+			return invalid("%s: non-finite value", what)
+		case len(e.Context) > 0 && !json.Valid(e.Context):
+			return invalid("%s: context is not JSON", what)
+		}
+		if err := validZone(what, e.Zone); err != nil {
+			return err
+		}
+		if err := src(what, e.Device, e.Origin, e.Key); err != nil {
 			return err
 		}
 	}

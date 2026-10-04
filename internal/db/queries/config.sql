@@ -109,6 +109,9 @@ DELETE FROM sleep_sessions WHERE connection_id = @connection_id;
 -- name: DeleteConnectionWorkouts :execrows
 DELETE FROM workouts WHERE connection_id = @connection_id;
 
+-- name: DeleteConnectionEvents :execrows
+DELETE FROM health_events WHERE connection_id = @connection_id;
+
 -- name: ReleaseConnectionRawBlobs :exec
 -- One blob reference per raw row goes away (hold blob.LockShared); the sweeper removes unreferenced files.
 UPDATE blobs b SET refcount = b.refcount - c.n

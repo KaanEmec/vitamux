@@ -5,6 +5,7 @@ import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { test as connTest, expect, ids } from './connections-fake';
 import { test as dataTest, fallbackDay } from './data-fake';
+import { test as devicesTest } from './devices-fake';
 import { test as labTest, syntheticPdf } from './lab-fake';
 import { test as rulesTest } from './rules-fake';
 import { test as settingsTest } from './settings-fake';
@@ -98,4 +99,16 @@ settingsTest('Settings pages', async ({ page }) => {
 		await page.goto(path);
 		await scan(page, path);
 	}
+});
+
+devicesTest('Settings › Devices: pairing code, devices, origins, resync dialog', async ({ page }) => {
+	await page.goto('/settings/devices');
+	await expect(page.getByRole('row', { name: /Synthetic iPhone/ })).toBeVisible();
+	await scan(page, '/settings/devices');
+	await page.getByRole('button', { name: 'Create pairing code' }).click();
+	await expect(page.getByRole('img', { name: /Pairing QR code/ })).toBeVisible();
+	await scan(page, '/settings/devices (pairing code)');
+	await page.getByRole('button', { name: 'Resync Synthetic iPhone' }).click();
+	await expect(page.getByRole('dialog')).toBeVisible();
+	await scan(page, '/settings/devices (resync dialog)');
 });

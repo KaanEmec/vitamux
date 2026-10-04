@@ -1,0 +1,57 @@
+{
+  "synthetic": true,
+  "normalizer": "apple_health.export",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "hk:0414a457589c433fb875e75fd8e51bf8",
+        "type": "bp_monitor",
+        "manufacturer": "Synthetic Medical",
+        "model": "BPM 1"
+      }
+    ],
+    "origins": [
+      {
+        "key": "export:Synthetic Cuff App",
+        "name": "Synthetic Cuff App"
+      }
+    ],
+    "groups": [
+      {
+        "kind": "bp_reading",
+        "measured_at": "2026-09-14T07:05:00+02:00",
+        "device": "hk:0414a457589c433fb875e75fd8e51bf8",
+        "origin": "export:Synthetic Cuff App",
+        "key": {
+          "record_type": "HKCorrelationTypeIdentifierBloodPressure",
+          "external_id": "A662A1F9EAE96CF883CCD015E2242ED8"
+        },
+        "components": [
+          {
+            "metric": "bp_diastolic",
+            "kind": "sample",
+            "start": "2026-09-14T07:05:00+02:00",
+            "value": 79,
+            "unit": "mmHg",
+            "flags": 1
+          },
+          {
+            "metric": "bp_systolic",
+            "kind": "sample",
+            "start": "2026-09-14T07:05:00+02:00",
+            "value": 121,
+            "unit": "mmHg",
+            "flags": 1
+          }
+        ]
+      }
+    ],
+    "tombstones": [
+      {
+        "record_type": "HKCorrelationTypeIdentifierBloodPressure",
+        "external_id": "11658E9329F72990037E7AEA06075D7B"
+      }
+    ]
+  }
+}

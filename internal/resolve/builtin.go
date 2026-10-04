@@ -33,9 +33,21 @@ func BuiltinRef(metric string, version int) string {
 
 // NoBuiltin lists the catalogue codes that ship without a built-in, with the reason. The
 // owner picks a source at onboarding; until then only the all-sources view shows them.
-var NoBuiltin = map[string]string{
-	"skin_temperature": "the value depends on where the device is worn, so there is no neutral order; the owner picks one source",
-}
+var NoBuiltin = func() map[string]string {
+	m := map[string]string{
+		"skin_temperature": "the value depends on where the device is worn, so there is no neutral order; the owner picks one source",
+	}
+	// The Apple Health bridge codes (J15.2) have no researched ladder yet.
+	for _, code := range []string{"distance_cycling", "distance_swimming", "distance_wheelchair", "floors_climbed",
+		"basal_energy", "exercise_time", "stand_time", "stand_hours", "walking_heart_rate", "breathing_disturbances",
+		"wrist_temperature_sleeping", "basal_body_temperature", "waist_circumference", "blood_glucose", "diet_energy",
+		"diet_protein", "diet_carbohydrate", "diet_fat_total", "diet_fat_saturated", "diet_fat_monounsaturated",
+		"diet_fat_polyunsaturated", "diet_fiber", "diet_sugar", "diet_cholesterol", "diet_water", "diet_caffeine",
+		"walking_steadiness", "walking_asymmetry", "walking_double_support", "walking_step_length"} {
+		m[code] = "added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source"
+	}
+	return m
+}()
 
 // Builtins returns the latest version of every built-in, in catalogue order. Each call builds
 // fresh values, so callers may modify the result.

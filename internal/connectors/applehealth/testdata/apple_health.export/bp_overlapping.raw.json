@@ -1,0 +1,28 @@
+{
+ "synthetic": true,
+ "type": "HKCorrelationTypeIdentifierBloodPressure",
+ "records": [
+  {
+   "attrs": {"type": "HKCorrelationTypeIdentifierBloodPressure", "sourceName": "Synthetic Cuff App", "sourceVersion": "3.1",
+    "device": "<<HKDevice: 0x600002a1b4e0>, name:Synthetic Cuff, manufacturer:Synthetic Medical, model:BPM 1>",
+    "creationDate": "2026-09-14 07:05:00 +0200", "startDate": "2026-09-14 07:05:00 +0200", "endDate": "2026-09-14 07:05:00 +0200"},
+   "metadata": {"HKWasUserEntered": "1"},
+   "records": [
+    {"attrs": {"type": "HKQuantityTypeIdentifierBloodPressureDiastolic", "sourceName": "Synthetic Cuff App", "unit": "mmHg", "value": "79",
+     "startDate": "2026-09-14 07:05:00 +0200", "endDate": "2026-09-14 07:05:00 +0200"}},
+    {"attrs": {"type": "HKQuantityTypeIdentifierBloodPressureSystolic", "sourceName": "Synthetic Cuff App", "unit": "mmHg", "value": "121",
+     "startDate": "2026-09-14 07:05:00 +0200", "endDate": "2026-09-14 07:05:00 +0200"}}
+   ]
+  }
+ ],
+ "overlapping": [
+  {
+   "attrs": {"type": "HKCorrelationTypeIdentifierBloodPressure", "sourceName": "Synthetic Cuff App", "sourceVersion": "3.1",
+    "creationDate": "2026-09-13 07:05:00 +0200", "startDate": "2026-09-13 07:05:00 +0200", "endDate": "2026-09-13 07:05:00 +0200"},
+   "records": [
+    {"attrs": {"type": "HKQuantityTypeIdentifierBloodPressureDiastolic", "unit": "mmHg", "value": "80"}},
+    {"attrs": {"type": "HKQuantityTypeIdentifierBloodPressureSystolic", "unit": "mmHg", "value": "125"}}
+   ]
+  }
+ ]
+}

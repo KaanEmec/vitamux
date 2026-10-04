@@ -14,6 +14,9 @@ Raw uploads from clients, devices and importers (docs/architecture/connectors.md
 | `GET` | `/api/ingest/v1/batches/{batch_id}` | `client` | Batch status, including normalization outcomes |
 | `POST` | `/api/ingest/v1/batches/{batch_id}/blobs` | `client` | Upload one binary file (FIT, GPX, export zip) |
 | `POST` | `/api/ingest/v1/heartbeat` | `client` | Report client checkpoint and health |
+| `POST` | `/api/ingest/v1/devices/pair` | `public` | Exchange a pairing code for a device token |
+| `GET` | `/api/ingest/v1/devices/self` | `client` | The calling device's configuration, including pending anchor resets |
+| `POST` | `/api/ingest/v1/devices/self/rotate-token` | `client` | Replace the calling device's token; the old one stops working at once |
 
 ## catalogue
 
@@ -113,10 +116,13 @@ Paired devices such as the Apple Health bridge (docs/architecture/apple-health.m
 
 | Method | Path | Access | Summary |
 | --- | --- | --- | --- |
-| `GET` | `/api/v1/devices` | `read:config`, planned | List paired devices |
-| `POST` | `/api/v1/devices/pairing-codes` | `write:config`, CSRF, planned | Create a short-lived pairing code |
-| `POST` | `/api/v1/devices/{id}/request-anchor-reset` | `write:config`, CSRF, planned | Ask the device to resync from scratch on its next contact |
-| `POST` | `/api/v1/devices/{id}/revoke` | `write:config`, CSRF, planned | Revoke a device's token |
+| `GET` | `/api/v1/devices` | `read:config` | List paired devices, newest first, including revoked ones |
+| `POST` | `/api/v1/devices/pairing-codes` | `write:config`, CSRF | Create a single-use pairing code, valid for 10 minutes |
+| `POST` | `/api/v1/devices/{id}/request-anchor-reset` | `write:config`, CSRF | Ask the device to resync types from scratch on its next contact |
+| `POST` | `/api/v1/devices/{id}/revoke` | `write:config`, CSRF | Revoke a device's token; its next request is 401 |
+| `GET` | `/api/v1/origins` | `read:config` | List the apps (origins) data was recorded by, with their native or relayed state |
+| `PATCH` | `/api/v1/origins/{id}` | `write:config`, CSRF | Set or clear the vendor an origin relays |
+| `GET` | `/api/v1/source-devices` | `read:config` | List the devices measurements were recorded on (not the paired apps) |
 
 ## documents
 

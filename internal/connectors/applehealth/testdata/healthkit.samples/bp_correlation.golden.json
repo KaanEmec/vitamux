@@ -1,0 +1,94 @@
+{
+  "synthetic": true,
+  "normalizer": "healthkit.samples",
+  "version": 2,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "hk:ca5243de82d0de36f663fe37acdf45a1",
+        "type": "bp_monitor",
+        "manufacturer": "Withings",
+        "model": "BPM Connect"
+      }
+    ],
+    "origins": [
+      {
+        "key": "com.apple.Health",
+        "name": "Health"
+      },
+      {
+        "key": "com.withings.wiScaleNG",
+        "name": "Withings"
+      }
+    ],
+    "groups": [
+      {
+        "kind": "bp_reading",
+        "measured_at": "2026-09-14T07:45:00+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "device": "hk:ca5243de82d0de36f663fe37acdf45a1",
+        "origin": "com.withings.wiScaleNG",
+        "key": {
+          "record_type": "HKCorrelationTypeIdentifierBloodPressure",
+          "external_id": "6F0D0000-0000-4000-8000-000000000015"
+        },
+        "components": [
+          {
+            "metric": "bp_diastolic",
+            "kind": "sample",
+            "start": "2026-09-14T07:45:00+02:00",
+            "value": 78,
+            "unit": "mmHg"
+          },
+          {
+            "metric": "bp_systolic",
+            "kind": "sample",
+            "start": "2026-09-14T07:45:00+02:00",
+            "value": 124,
+            "unit": "mmHg"
+          }
+        ]
+      },
+      {
+        "kind": "bp_reading",
+        "measured_at": "2026-09-14T20:00:00+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "origin": "com.apple.Health",
+        "key": {
+          "record_type": "HKCorrelationTypeIdentifierBloodPressure",
+          "external_id": "6F0D0000-0000-4000-8000-000000000016"
+        },
+        "components": [
+          {
+            "metric": "bp_diastolic",
+            "kind": "sample",
+            "start": "2026-09-14T20:00:00+02:00",
+            "value": 81,
+            "unit": "mmHg",
+            "flags": 1
+          },
+          {
+            "metric": "bp_pulse",
+            "kind": "sample",
+            "start": "2026-09-14T20:00:00+02:00",
+            "value": 66,
+            "unit": "bpm",
+            "flags": 1
+          },
+          {
+            "metric": "bp_systolic",
+            "kind": "sample",
+            "start": "2026-09-14T20:00:00+02:00",
+            "value": 129,
+            "unit": "mmHg",
+            "flags": 1
+          }
+        ]
+      }
+    ]
+  }
+}

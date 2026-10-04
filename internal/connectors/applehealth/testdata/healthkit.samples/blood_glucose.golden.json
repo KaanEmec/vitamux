@@ -1,0 +1,31 @@
+{
+  "synthetic": true,
+  "normalizer": "healthkit.samples",
+  "version": 2,
+  "output": {
+    "origins": [
+      {
+        "key": "com.apple.Health",
+        "name": "Health"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "blood_glucose",
+        "kind": "sample",
+        "start": "2026-09-14T07:10:00+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "value": 95,
+        "unit": "mg/dL glucose",
+        "flags": 1,
+        "origin": "com.apple.Health",
+        "key": {
+          "record_type": "HKQuantityTypeIdentifierBloodGlucose",
+          "external_id": "6F0D0000-0000-4000-8000-000000000008"
+        }
+      }
+    ]
+  }
+}

@@ -43,12 +43,18 @@ func newToken(prefix string) (id uuid.UUID, token string, hash []byte, err error
 	if err != nil {
 		return uuid.Nil, "", nil, err
 	}
+	token, hash, err = tokenFor(prefix, id)
+	return id, token, hash, err
+}
+
+// tokenFor returns a token with a fresh secret for the row id, and the secret's hash.
+func tokenFor(prefix string, id uuid.UUID) (token string, hash []byte, err error) {
 	secret := make([]byte, secretLen)
 	if _, err := rand.Read(secret); err != nil {
-		return uuid.Nil, "", nil, err
+		return "", nil, err
 	}
 	sum := sha256.Sum256(secret)
-	return id, prefix + hex.EncodeToString(id[:]) + "_" + base64.RawURLEncoding.EncodeToString(secret), sum[:], nil
+	return prefix + hex.EncodeToString(id[:]) + "_" + base64.RawURLEncoding.EncodeToString(secret), sum[:], nil
 }
 
 // ParseToken splits a vmx_pat_/vmx_cli_ token into its prefix, row id and secret hash.

@@ -3,6 +3,7 @@
 	resolution.md#selectors-and-validation. Field errors use keys like "spec.groups.0.match.1".
 -->
 <script lang="ts">
+	import type { Chip } from './chips.ts';
 	import { selectorFields, selectorLabels, type Selector, type SelectorField } from './rule.ts';
 
 	let {
@@ -10,13 +11,16 @@
 		kind,
 		errorPrefix,
 		errors,
-		suggestions
+		suggestions,
+		chips = []
 	}: {
 		list: Selector[];
 		kind: string;
 		errorPrefix: string;
 		errors: Record<string, string>;
 		suggestions: Partial<Record<SelectorField, string[]>>;
+		/** One-click selectors (origins, device types, relayed or direct). */
+		chips?: Chip[];
 	} = $props();
 
 	const uid = $props.id();
@@ -104,6 +108,13 @@
 <button class="btn" type="button" onclick={() => list.push({ provider: '' })}>
 	{list.length ? `Or ${kind.toLowerCase()}…` : `Add ${kind.toLowerCase()}`}
 </button>
+{#if chips.length}
+	<div class="chips" role="group" aria-label="Add a {kind.toLowerCase()} from your sources">
+		{#each chips as c (c.label)}
+			<button class="chip" type="button" onclick={() => list.push({ ...c.selector })}>+ {c.label}</button>
+		{/each}
+	</div>
+{/if}
 
 <style>
 	.selector {
@@ -135,6 +146,25 @@
 	}
 	input[aria-invalid='true'] {
 		border-color: var(--color-error);
+	}
+	.chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-1);
+		margin-top: var(--space-2);
+	}
+	.chip {
+		padding: var(--space-1) var(--space-2);
+		font: inherit;
+		font-size: var(--text-sm);
+		color: var(--color-text);
+		background: var(--color-surface-2);
+		border: 1px solid var(--color-border);
+		border-radius: 999px;
+		cursor: pointer;
+	}
+	.chip:hover {
+		border-color: var(--color-accent);
 	}
 	.error {
 		margin: 0;

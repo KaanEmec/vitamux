@@ -1,0 +1,108 @@
+{
+ "synthetic": true,
+ "type": "HKQuantityTypeIdentifierHeartRate",
+ "anchor": {
+  "before_hash": "synthetic-before",
+  "after_hash": "synthetic-after",
+  "query_started_at": "2026-09-14T08:00:03+02:00"
+ },
+ "samples": [
+  {
+   "uuid": "6F0D0000-0000-4000-8000-000000000001",
+   "start": "2026-09-14T07:31:05.120+02:00",
+   "end": "2026-09-14T07:31:05.120+02:00",
+   "value": 61,
+   "unit": "count/min",
+   "source_revision": {
+    "bundle_id": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+    "name": "Synthetic Watch",
+    "version": "11.0",
+    "product_type": "Watch7,1",
+    "os_version": "11.0.0"
+   },
+   "device": {
+    "name": "Synthetic Watch",
+    "manufacturer": "Apple Inc.",
+    "model": "Watch",
+    "hardware_version": "Watch7,1",
+    "software_version": "11.0"
+   },
+   "metadata": {
+    "HKMetadataKeyHeartRateMotionContext": 1,
+    "HKTimeZone": "Europe/Amsterdam"
+   },
+   "was_user_entered": false
+  },
+  {
+   "uuid": "6F0D0000-0000-4000-8000-000000000002",
+   "start": "2026-09-14T18:02:00+02:00",
+   "end": "2026-09-14T18:02:00+02:00",
+   "value": 142,
+   "unit": "count/min",
+   "source_revision": {
+    "bundle_id": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+    "name": "Synthetic Watch",
+    "version": "11.0",
+    "product_type": "Watch7,1",
+    "os_version": "11.0.0"
+   },
+   "device": {
+    "name": "Synthetic Watch",
+    "manufacturer": "Apple Inc.",
+    "model": "Watch",
+    "hardware_version": "Watch7,1",
+    "software_version": "11.0"
+   },
+   "metadata": {
+    "HKMetadataKeyHeartRateMotionContext": 2,
+    "HKTimeZone": "Europe/Amsterdam"
+   },
+   "was_user_entered": false
+  },
+  {
+   "uuid": "6F0D0000-0000-4000-8000-000000000003",
+   "start": "2026-09-14T23:40:00+02:00",
+   "end": "2026-09-14T23:40:00+02:00",
+   "value": 55,
+   "unit": "count/min",
+   "source_revision": {
+    "bundle_id": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+    "name": "Synthetic Watch",
+    "version": "11.0",
+    "product_type": "Watch7,1",
+    "os_version": "11.0.0"
+   },
+   "device": {
+    "name": "Synthetic Watch",
+    "manufacturer": "Apple Inc.",
+    "model": "Watch",
+    "hardware_version": "Watch7,1",
+    "software_version": "11.0"
+   },
+   "was_user_entered": false
+  },
+  {
+   "uuid": "6F0D0000-0000-4000-8000-000000000004",
+   "start": "2026-09-14T23:41:00+02:00",
+   "end": "2026-09-14T23:41:00+02:00",
+   "value": 0.9,
+   "unit": "count/s",
+   "source_revision": {
+    "bundle_id": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+    "name": "Synthetic Watch",
+    "version": "11.0",
+    "product_type": "Watch7,1",
+    "os_version": "11.0.0"
+   },
+   "device": {
+    "name": "Synthetic Watch",
+    "manufacturer": "Apple Inc.",
+    "model": "Watch",
+    "hardware_version": "Watch7,1",
+    "software_version": "11.0"
+   },
+   "was_user_entered": false
+  }
+ ],
+ "deleted": []
+}

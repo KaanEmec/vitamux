@@ -20,6 +20,8 @@
 	let versions = $state<Version[] | null>(null);
 	let problem = $state<Problem | null>(null);
 	let coverage = $state<Coverage | null>(null);
+	let origins = $state<Schemas['DataOrigin'][]>([]);
+	let origin = $state('');
 	let activated = $state<number | null>(null);
 	let busy = $state(false);
 	let left = $state(0);
@@ -45,7 +47,13 @@
 		problem = null;
 		activated = null;
 		void load(m);
-		void getCoverage(range.start, range.end, m).then((c) => (coverage = c));
+	});
+	$effect(() => {
+		const [m, o] = [metric, origin];
+		void getCoverage(range.start, range.end, m, o).then((c) => (coverage = c));
+	});
+	$effect(() => {
+		void api.GET('/api/v1/origins').then(({ data }) => (origins = data?.origins ?? []));
 	});
 
 	async function activate(v: Version) {
@@ -117,6 +125,15 @@
 
 	<section aria-labelledby="coverage">
 		<h2 id="coverage">Coverage, last 90 days</h2>
+		{#if origins.length}
+			<div class="field">
+				<label for="coverage-origin">Origin app</label>
+				<select id="coverage-origin" bind:value={origin}>
+					<option value="">All apps</option>
+					{#each origins as o (o.id)}<option value={o.origin_key}>{o.name || o.origin_key}</option>{/each}
+				</select>
+			</div>
+		{/if}
 		{#if !coverage}
 			<p class="muted">Coverage is not available yet.</p>
 		{:else if rows.length}

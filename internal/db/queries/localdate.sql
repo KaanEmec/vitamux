@@ -55,6 +55,15 @@ WHERE user_id = @user_id
 ORDER BY end_at, id
 LIMIT @batch;
 
+-- name: ListEventsForLocalDate :many
+SELECT id, start_at AS at, local_date FROM health_events
+WHERE user_id = @user_id
+  AND tz_offset_min IS NULL AND superseded_at IS NULL AND deleted_at IS NULL
+  AND start_at >= @from_at AND start_at < @until_at
+  AND (start_at, id) > (@after_at::timestamptz, @after_id::uuid)
+ORDER BY start_at, id
+LIMIT @batch;
+
 -- name: SetMeasurementLocalDates :exec
 UPDATE measurements m SET local_date = v.d
 FROM (SELECT unnest(@ids::bigint[]) AS id, unnest(@dates::date[]) AS d) AS v WHERE m.id = v.id;
@@ -70,6 +79,10 @@ FROM (SELECT unnest(@ids::uuid[]) AS id, unnest(@dates::date[]) AS d) AS v WHERE
 -- name: SetSleepSessionDates :exec
 UPDATE sleep_sessions s SET sleep_date = v.d
 FROM (SELECT unnest(@ids::uuid[]) AS id, unnest(@dates::date[]) AS d) AS v WHERE s.id = v.id;
+
+-- name: SetEventLocalDates :exec
+UPDATE health_events e SET local_date = v.d
+FROM (SELECT unnest(@ids::uuid[]) AS id, unnest(@dates::date[]) AS d) AS v WHERE e.id = v.id;
 
 -- name: MarkLocalDatesDirty :exec
 INSERT INTO resolution_dirty (user_id, metric_id, local_date)

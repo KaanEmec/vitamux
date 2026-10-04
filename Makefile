@@ -77,13 +77,14 @@ golden: ## Run golden tests (E07)
 	go test ./... -run Golden
 
 # Every Fuzz* target, as package:Target. CI runs them briefly (ci.yml, go job) and nightly for longer
-# (.github/workflows/fuzz.yml); a new target is added here and nowhere else. HealthKit payloads: E15.
+# (.github/workflows/fuzz.yml); a new target is added here and nowhere else.
 FUZZTIME ?= 10s
 FUZZ_TARGETS := \
 	internal/ingest:FuzzDecodeBatch internal/ingest:FuzzDecodeHeartbeat \
 	internal/resolve:FuzzParseRule \
 	internal/documents:FuzzValidatePDF internal/documents:FuzzDecodeExtraction \
 	internal/connectors/withings:FuzzNormalizeMeasures internal/connectors/withings:FuzzParseNotification \
+	internal/connectors/applehealth:FuzzNormalizeSamples internal/imports:FuzzParseExport \
 	internal/connectors:FuzzStateVerify \
 	internal/api:FuzzCursorDecode
 

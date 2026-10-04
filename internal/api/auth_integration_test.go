@@ -9,6 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -91,7 +92,7 @@ func newAuthEnv(t *testing.T, development bool) *authEnv {
 	}
 	logs := &syncBuffer{}
 	rt, err := newRouter(obs.NewLogger(logs, slog.LevelDebug), newUITestFS(),
-		Options{Auth: svc, Development: development, DB: d, Blobs: blobs})
+		Options{Auth: svc, Development: development, DB: d, Blobs: blobs, PublicURL: &url.URL{Scheme: "https", Host: "vitamux.example.test"}})
 	if err != nil {
 		t.Fatal(err)
 	}

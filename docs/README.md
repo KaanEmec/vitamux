@@ -17,6 +17,8 @@ Precedence when documents disagree: `CLAUDE.md` (product brief) > ADRs in `docs/
 | [operations/upgrade.md](operations/upgrade.md) | Image bump, migrate, drain, rollback rules | Releases, migrations |
 | [operations/key-rotation.md](operations/key-rotation.md) | Master key rotation and what gets re-sealed | Anything sealed with the master key |
 | [operations/troubleshooting.md](operations/troubleshooting.md) | `/readyz` failures, schema mismatch, `needs_reauth`, degraded streams, cache verify | Health checks, connection states, error messages |
+| [apple/HealthBridgeApp/README.md](../apple/HealthBridgeApp/README.md) | Build the iOS app from source (team, signing, capabilities), pair it, privacy statement, background-timing limits | Installing or changing the Apple Health app |
+| [apple-health-device-checklist.md](apple-health-device-checklist.md) | Physical-iPhone test checks and results table for the Apple Health app | Device campaign (J15.7), release sign-off |
 | [faq.md](faq.md) | What Vitamux is and is not, data ownership, sources, roadmap | Product questions |
 | [api-reference.md](api-reference.md) | Generated: operations by tag with access (`go run ./tools/apiref`) | API consumers; regenerate after spec or `authz.yaml` changes |
 | [adapters.md](adapters.md) | Writing a connector step by step; toy example in `internal/connectors/example` | New connectors and normalizers |

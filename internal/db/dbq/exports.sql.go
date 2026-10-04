@@ -243,6 +243,42 @@ func (q *Queries) ExportDevices(ctx context.Context, arg ExportDevicesParams) ([
 	return items, nil
 }
 
+const exportHealthEvents = `-- name: ExportHealthEvents :many
+SELECT id, to_jsonb(t)::jsonb AS row FROM health_events t
+WHERE user_id = $1 AND id > $2::uuid ORDER BY id LIMIT $3
+`
+
+type ExportHealthEventsParams struct {
+	UserID uuid.UUID
+	After  uuid.UUID
+	Lim    int32
+}
+
+type ExportHealthEventsRow struct {
+	ID  uuid.UUID
+	Row json.RawMessage
+}
+
+func (q *Queries) ExportHealthEvents(ctx context.Context, arg ExportHealthEventsParams) ([]ExportHealthEventsRow, error) {
+	rows, err := q.db.Query(ctx, exportHealthEvents, arg.UserID, arg.After, arg.Lim)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportHealthEventsRow
+	for rows.Next() {
+		var i ExportHealthEventsRow
+		if err := rows.Scan(&i.ID, &i.Row); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const exportImportItems = `-- name: ExportImportItems :many
 SELECT t.id, to_jsonb(t)::jsonb AS row FROM import_items t JOIN import_runs r ON r.id = t.import_run_id
 WHERE r.user_id = $1 AND t.id > $2::bigint ORDER BY t.id LIMIT $3
@@ -1318,6 +1354,21 @@ func (q *Queries) ImportDevices(ctx context.Context, batch json.RawMessage) ([]I
 	return items, nil
 }
 
+const importHealthEvents = `-- name: ImportHealthEvents :execrows
+INSERT INTO health_events
+SELECT (p).* FROM jsonb_populate_recordset(NULL::health_events, $1::jsonb) p
+WHERE NOT EXISTS (SELECT 1 FROM health_events t WHERE t.dedupe_key = p.dedupe_key AND t.superseded_at IS NULL)
+ON CONFLICT DO NOTHING
+`
+
+func (q *Queries) ImportHealthEvents(ctx context.Context, batch json.RawMessage) (int64, error) {
+	result, err := q.db.Exec(ctx, importHealthEvents, batch)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const importImportItems = `-- name: ImportImportItems :execrows
 INSERT INTO import_items OVERRIDING SYSTEM VALUE
 SELECT (p).* FROM jsonb_populate_recordset(NULL::import_items, $1::jsonb) p
@@ -1729,6 +1780,22 @@ func (q *Queries) InsertExport(ctx context.Context, arg InsertExportParams) erro
 		arg.Format,
 		arg.IncludeRaw,
 	)
+	return err
+}
+
+const linkImportedHealthEvents = `-- name: LinkImportedHealthEvents :exec
+UPDATE health_events t SET superseded_by = v.new_id
+FROM (SELECT unnest($1::uuid[]) AS id, unnest($2::uuid[]) AS new_id) v
+WHERE t.id = v.id AND t.superseded_by IS NULL AND t.superseded_at IS NOT NULL
+`
+
+type LinkImportedHealthEventsParams struct {
+	Ids    []uuid.UUID
+	NewIds []uuid.UUID
+}
+
+func (q *Queries) LinkImportedHealthEvents(ctx context.Context, arg LinkImportedHealthEventsParams) error {
+	_, err := q.db.Exec(ctx, linkImportedHealthEvents, arg.Ids, arg.NewIds)
 	return err
 }
 

@@ -1,0 +1,23 @@
+{
+ "synthetic": true,
+ "type": "HKWorkoutTypeIdentifier",
+ "records": [
+  {
+   "attrs": {"workoutActivityType": "HKWorkoutActivityTypeRunning", "duration": "30.5", "durationUnit": "min",
+    "sourceName": "Synthetic Watch", "sourceVersion": "11.0",
+    "device": "<<HKDevice: 0x600002a1b2c0>, name:Synthetic Watch, manufacturer:Apple Inc., model:Watch, hardware:Watch7,1, software:11.0>",
+    "creationDate": "2026-09-14 18:30:30 +0200", "startDate": "2026-09-14 18:00:00 +0200", "endDate": "2026-09-14 18:30:30 +0200"},
+   "metadata": {"HKIndoorWorkout": "0", "HKTimeZone": "Europe/Amsterdam"},
+   "statistics": [
+    {"type": "HKQuantityTypeIdentifierActiveEnergyBurned", "startDate": "2026-09-14 18:00:00 +0200", "endDate": "2026-09-14 18:30:30 +0200", "sum": "310.5", "unit": "kcal"},
+    {"type": "HKQuantityTypeIdentifierDistanceWalkingRunning", "startDate": "2026-09-14 18:00:00 +0200", "endDate": "2026-09-14 18:30:30 +0200", "sum": "3.2", "unit": "mi"}
+   ]
+  },
+  {
+   "attrs": {"workoutActivityType": "HKWorkoutActivityTypeCycling", "duration": "1", "durationUnit": "hr",
+    "totalDistance": "20", "totalDistanceUnit": "km", "totalEnergyBurned": "2000", "totalEnergyBurnedUnit": "kJ",
+    "sourceName": "Synthetic Bike App", "sourceVersion": "2.0",
+    "creationDate": "2026-09-15 08:00:00 +0200", "startDate": "2026-09-15 07:00:00 +0200", "endDate": "2026-09-15 08:00:00 +0200"}
+  }
+ ]
+}

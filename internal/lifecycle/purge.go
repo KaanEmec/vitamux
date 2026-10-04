@@ -71,6 +71,7 @@ func Purge(ctx context.Context, d *db.DB, user uuid.UUID, actor string, dryRun b
 			step{"measurement_groups", q.PurgeGroups},
 			step{"sleep_sessions", q.PurgeSleep},
 			step{"workouts", q.PurgeWorkouts},
+			step{"health_events", q.PurgeEvents},
 			step{"import_items", q.PurgeImportItems},
 			step{"import_runs", q.PurgeImportRuns},
 		); err != nil {

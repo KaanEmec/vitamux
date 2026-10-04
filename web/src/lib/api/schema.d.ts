@@ -78,6 +78,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ingest/v1/devices/pair": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exchange a pairing code for a device token
+         * @description Unauthenticated: the single-use code (POST /api/v1/devices/pairing-codes, valid for 10 minutes) is the credential. Creates a device client on the owner's apple_health push connection, creating that connection the first time. Wrong codes are throttled per address (429 with Retry-After).
+         */
+        post: operations["pairDevice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ingest/v1/devices/self": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The calling device's configuration, including pending anchor resets */
+        get: operations["getDeviceSelf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ingest/v1/devices/self/rotate-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replace the calling device's token; the old one stops working at once */
+        post: operations["rotateDeviceToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/metrics": {
         parameters: {
             query?: never;
@@ -842,7 +896,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List paired devices */
+        /** List paired devices, newest first, including revoked ones */
         get: operations["listDevices"];
         put?: never;
         post?: never;
@@ -861,7 +915,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create a short-lived pairing code */
+        /**
+         * Create a single-use pairing code, valid for 10 minutes
+         * @description At most 5 codes per 10 minutes (429 with Retry-After). 503 without VITAMUX_PUBLIC_URL.
+         */
         post: operations["createPairingCode"];
         delete?: never;
         options?: never;
@@ -878,7 +935,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Ask the device to resync from scratch on its next contact */
+        /**
+         * Ask the device to resync types from scratch on its next contact
+         * @description The device reads the request from GET /api/ingest/v1/devices/self. Re-sent samples are deduplicated by UUID.
+         */
         post: operations["requestDeviceAnchorReset"];
         delete?: never;
         options?: never;
@@ -895,8 +955,68 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Revoke a device's token */
+        /** Revoke a device's token; its next request is 401 */
         post: operations["revokeDevice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/origins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the apps (origins) data was recorded by, with their native or relayed state
+         * @description Every origin seen inside a transport provider such as apple_health, by provider and key. relay_targets are the vendors an origin can be classified as relaying.
+         */
+        get: operations["listOrigins"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/origins/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Set or clear the vendor an origin relays
+         * @description The `relayed` rule selector and the all-sources view read the new state at once; resolved results are recomputed. The edit is audited and wins over the known relay defaults, which only seed new origins.
+         */
+        patch: operations["classifyOrigin"];
+        trace?: never;
+    };
+    "/api/v1/source-devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the devices measurements were recorded on (not the paired apps)
+         * @description The values the device_type and device_model rule selectors match.
+         */
+        get: operations["listSourceDevices"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1945,7 +2065,7 @@ export interface components {
             /** @description Error class of the last run; never a message. */
             error_class: string | null;
         };
-        /** @description Share of local hours with data per source and local day, from the hourly aggregates. A source is a provider; its row of a metric has one entry per day from start_date. */
+        /** @description Share of local hours with data per source and local day, from the hourly aggregates. A source is a provider; its row of a metric has one entry per day from start_date. With origin, only the hours those apps contributed count. */
         Coverage: {
             /** Format: date */
             start_date: string;
@@ -2673,10 +2793,104 @@ export interface components {
             lookback_seconds?: number;
             enabled?: boolean;
         };
-        /** @description Open object. */
-        PairedDevice: Record<string, never>;
-        /** @description Open object. */
-        PairingCode: Record<string, never>;
+        /** @description A device paired with a pairing code (an ingest client of kind device). */
+        PairedDevice: {
+            /**
+             * Format: uuid
+             * @description The device_id returned by pairing.
+             */
+            id: string;
+            name: string;
+            connection_id: string;
+            /** Format: date-time */
+            created_at: string;
+            /**
+             * Format: date-time
+             * @description Last authenticated request (to the minute).
+             */
+            last_seen_at: string | null;
+            /**
+             * Format: date-time
+             * @description When its newest batch arrived.
+             */
+            last_sync_at: string | null;
+            /** Format: date-time */
+            revoked_at: string | null;
+            /** @description HealthKit types in the connection's last healthkit.samples.v1 heartbeat checkpoint; empty until the device sends one. */
+            types: string[];
+            /** @description Requested types the connection stored nothing for in the last 7 days, while the device was paired for longer and seen within them. HealthKit does not reveal read denial, so this is a hint: a type can also be silent because there is nothing new to record. Types are tracked per connection, which paired devices share. Empty for a revoked device. */
+            possibly_denied: string[];
+            anchor_resets: components["schemas"]["AnchorReset"][];
+        };
+        /** @description An app that recorded data inside a transport provider, e.g. a HealthKit bundle id. */
+        DataOrigin: {
+            /** Format: uuid */
+            id: string;
+            /** @description The transport provider code */
+            provider: string;
+            /** @description The `origin_key` rule selector value. */
+            origin_key: string;
+            name: string | null;
+            /** @description Recorded by the platform itself */
+            is_native: boolean;
+            /** @description The vendor whose data the app relays; null when it records its own. */
+            relayed_provider: string | null;
+            /**
+             * Format: date-time
+             * @description When the origin was first seen.
+             */
+            created_at: string;
+        };
+        RelayTarget: {
+            code: string;
+            name: string;
+        };
+        SourceDevice: {
+            id: components["schemas"]["DeviceID"];
+            provider: string;
+            /** @description The `device_type` rule selector value, e.g. watch. */
+            device_type: string | null;
+            manufacturer: string | null;
+            /** @description The `device_model` rule selector value. */
+            model: string | null;
+        };
+        AnchorReset: {
+            /** @description A HealthKit type identifier, or * for every type. */
+            type: string;
+            /**
+             * Format: date-time
+             * @description The latest request for this type.
+             */
+            requested_at: string;
+        };
+        PairingCode: {
+            /** @description Crockford base32; single use. */
+            code: string;
+            /** Format: date-time */
+            expires_at: string;
+            /**
+             * Format: uri
+             * @description The public base URL (VITAMUX_PUBLIC_URL) the app pairs against.
+             */
+            url: string;
+            /** @description Text for the QR code: the JSON object {"url", "code"} and nothing else. */
+            qr_payload: string;
+        };
+        DevicePairing: {
+            /** Format: uuid */
+            device_id: string;
+            connection_id: string;
+            /** @description Client token with scope ingest:<connection_id>; store it in the Keychain. */
+            token: string;
+        };
+        DeviceSelf: {
+            /** Format: uuid */
+            device_id: string;
+            connection_id: string;
+            name: string;
+            /** @description Every reset the owner requested, kept by the server. Apply those whose requested_at is after the last reset applied for that type (* covers every type). */
+            anchor_resets: components["schemas"]["AnchorReset"][];
+        };
         /** @description A stored lab PDF. A deleted document keeps only its id, status, sizes and times. */
         Document: {
             id: string;
@@ -3277,6 +3491,83 @@ export interface operations {
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+        };
+    };
+    pairDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Case, spaces and dashes are ignored. */
+                    code: string;
+                    /** @description Device name shown to the owner. */
+                    name: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Paired. The token is shown only here. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DevicePairing"];
+                };
+            };
+            422: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    getDeviceSelf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Device configuration. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceSelf"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+        };
+    };
+    rotateDeviceToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The new token, shown only here. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        token: string;
+                    };
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
         };
     };
     listMetrics: {
@@ -4064,6 +4355,8 @@ export interface operations {
                 end_date: components["parameters"]["EndDateRequired"];
                 /** @description Metric code; repeatable. */
                 metric?: components["parameters"]["MetricFilter"];
+                /** @description Origin key (e.g. a HealthKit bundle id); repeatable. */
+                origin?: components["parameters"]["OriginFilter"];
             };
             header?: never;
             path?: never;
@@ -4745,6 +5038,8 @@ export interface operations {
             };
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     requestDeviceAnchorReset: {
@@ -4756,7 +5051,14 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description HealthKit type identifiers; omitted or empty resets every type. */
+                    types?: string[];
+                };
+            };
+        };
         responses: {
             /** @description Requested. */
             204: {
@@ -4768,6 +5070,7 @@ export interface operations {
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
         };
     };
     revokeDevice: {
@@ -4791,6 +5094,86 @@ export interface operations {
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+        };
+    };
+    listOrigins: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Origins and the vendors they may relay. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        origins: components["schemas"]["DataOrigin"][];
+                        relay_targets: components["schemas"]["RelayTarget"][];
+                    };
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+        };
+    };
+    classifyOrigin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description A code from relay_targets, or null for an origin that records its own data. */
+                    relayed_provider: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Classified. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listSourceDevices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Devices. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        devices: components["schemas"]["SourceDevice"][];
+                    };
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
         };
     };
     listDocuments: {

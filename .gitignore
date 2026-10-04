@@ -21,3 +21,5 @@ tmp/
 /data/
 /fixtures/generated/
 /vitamux
+.build/
+.swiftpm/

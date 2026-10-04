@@ -1,0 +1,63 @@
+{
+  "synthetic": true,
+  "normalizer": "apple_health.export",
+  "version": 1,
+  "output": {
+    "origins": [
+      {
+        "key": "export:Synthetic Watch",
+        "name": "Synthetic Watch"
+      }
+    ],
+    "sleep": [
+      {
+        "start": "2026-09-14T23:20:00+02:00",
+        "end": "2026-09-15T06:50:00+02:00",
+        "stages": [
+          {
+            "stage": "in_bed",
+            "start": "2026-09-14T23:20:00+02:00",
+            "end": "2026-09-15T06:50:00+02:00"
+          },
+          {
+            "stage": "light",
+            "start": "2026-09-14T23:35:00+02:00",
+            "end": "2026-09-15T01:00:00+02:00"
+          },
+          {
+            "stage": "deep",
+            "start": "2026-09-15T01:00:00+02:00",
+            "end": "2026-09-15T01:45:00+02:00"
+          }
+        ],
+        "origin": "export:Synthetic Watch",
+        "key": {
+          "record_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "external_id": "EF11280605BB48901DEE0E06533E4D33"
+        }
+      },
+      {
+        "start": "2026-09-15T13:00:00+02:00",
+        "end": "2026-09-15T13:30:00+02:00",
+        "stages": [
+          {
+            "stage": "asleep_unspecified",
+            "start": "2026-09-15T13:00:00+02:00",
+            "end": "2026-09-15T13:30:00+02:00"
+          }
+        ],
+        "origin": "export:Synthetic Watch",
+        "key": {
+          "record_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "external_id": "82BD9FE9E27D516707E19537981AAD26"
+        }
+      }
+    ],
+    "warnings": [
+      {
+        "code": "unknown_category_value",
+        "detail": "956688d79553e37997ceb16235f9f452"
+      }
+    ]
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "synthetic": true,
+  "normalizer": "healthkit.samples",
+  "version": 2,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "type": "watch",
+        "manufacturer": "Apple Inc.",
+        "model": "Watch",
+        "hardware_version": "Watch7,1",
+        "software_version": "11.0"
+      }
+    ],
+    "origins": [
+      {
+        "key": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "name": "Synthetic Watch",
+        "native": true
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "stand_hours",
+        "kind": "interval",
+        "start": "2026-09-14T09:00:00+02:00",
+        "end": "2026-09-14T10:00:00+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "value": 1,
+        "unit": "count",
+        "device": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "key": {
+          "record_type": "HKCategoryTypeIdentifierAppleStandHour",
+          "external_id": "6F0D0000-0000-4000-8000-00000000001A"
+        }
+      },
+      {
+        "metric": "stand_hours",
+        "kind": "interval",
+        "start": "2026-09-14T10:00:00+02:00",
+        "end": "2026-09-14T11:00:00+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "value": 0,
+        "unit": "count",
+        "device": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "key": {
+          "record_type": "HKCategoryTypeIdentifierAppleStandHour",
+          "external_id": "6F0D0000-0000-4000-8000-00000000001B"
+        }
+      }
+    ]
+  }
+}

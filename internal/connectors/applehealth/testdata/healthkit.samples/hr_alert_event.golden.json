@@ -1,0 +1,44 @@
+{
+  "synthetic": true,
+  "normalizer": "healthkit.samples",
+  "version": 2,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "type": "watch",
+        "manufacturer": "Apple Inc.",
+        "model": "Watch",
+        "hardware_version": "Watch7,1",
+        "software_version": "11.0"
+      }
+    ],
+    "origins": [
+      {
+        "key": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "name": "Synthetic Watch",
+        "native": true
+      }
+    ],
+    "events": [
+      {
+        "code": "high_heart_rate_alert",
+        "start": "2026-09-14T15:20:00+02:00",
+        "end": "2026-09-14T15:30:00+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "context": {
+          "HKMetadataKeyHeartRateEventThreshold": "120 count/min",
+          "HKTimeZone": "Europe/Amsterdam"
+        },
+        "device": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "key": {
+          "record_type": "HKCategoryTypeIdentifierHighHeartRateEvent",
+          "external_id": "6F0D0000-0000-4000-8000-000000000009"
+        }
+      }
+    ]
+  }
+}

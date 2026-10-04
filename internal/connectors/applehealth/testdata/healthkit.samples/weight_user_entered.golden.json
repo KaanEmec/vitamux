@@ -1,0 +1,41 @@
+{
+  "synthetic": true,
+  "normalizer": "healthkit.samples",
+  "version": 2,
+  "output": {
+    "origins": [
+      {
+        "key": "com.apple.Health",
+        "name": "Health"
+      }
+    ],
+    "groups": [
+      {
+        "kind": "body_composition",
+        "measured_at": "2026-09-14T07:05:00+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "origin": "com.apple.Health",
+        "key": {
+          "record_type": "HKQuantityTypeIdentifierBodyMass",
+          "external_id": "6F0D0000-0000-4000-8000-000000000007"
+        },
+        "components": [
+          {
+            "metric": "weight",
+            "kind": "sample",
+            "start": "2026-09-14T07:05:00+02:00",
+            "zone": {
+              "tz": "Europe/Amsterdam"
+            },
+            "value": 72.4,
+            "unit": "kg",
+            "flags": 1,
+            "origin": "com.apple.Health"
+          }
+        ]
+      }
+    ]
+  }
+}

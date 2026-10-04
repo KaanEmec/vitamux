@@ -13,7 +13,7 @@ Adding a code means appending it to `internal/catalog` in the job that needs it 
 - **Derived codes** have no rows of their own. Resolution computes them from a source metric (rule [extension](resolution.md#extensions) E2), so they get a catalogue entry for rules and APIs without breaking the rule below. The implemented ones (`resting_heart_rate_nocturnal`, `spo2_night_min`) carry `DerivedFrom` and are listed in [metrics.md](../metrics.md#derived).
 - **Calculated values are never stored as measurements.** BMI, MAP, pulse pressure, time-in-range, GMI and sleep debt come from resolution or views. A value the *provider* reports (e.g., BMI from a scale) is stored as-is with its origin.
 - **Canonical units** use SI-style units, kept readable: s for durations, m for distances, kg, kcal, °C, mmol/L, % (0–100). The source value and unit are kept whenever conversion changed the value ([data-model.md](data-model.md#measurements)).
-- **Phase:** codes marked below are not implemented yet; the J07.1 seed (`v1`, MVP) is implemented and listed in [metrics.md](../metrics.md). `J08.6` = Withings activity and sleep (post-MVP) · `E15` = needed by the Apple bridge · `later` = backlog, added with the first connector that needs it. A connector that needs a code not yet in the catalogue adds it in its own job.
+- **Phase:** codes marked below are not implemented yet; the J07.1 seed (`v1`, MVP) and the Apple bridge codes (J15.2) are implemented and listed in [metrics.md](../metrics.md). `J08.6` = Withings activity and sleep (post-MVP) · `later` = backlog, added with the first connector that needs it. A connector that needs a code not yet in the catalogue adds it in its own job.
 - **Withings `meastype` codes** were verified against the official `getmeas` reference in [J08.1](../providers/withings.md#assumptions-checked). Measures outside `bp_reading` and `body_composition` (SpO2, temperature, VO2max) are stored as plain samples.
 
 Kinds: `S` sample · `I` interval · `C` cumulative · `D` daily_value. Aggregation values are defined in [resolution.md](resolution.md#within-source-aggregation). HK ids omit the `HKQuantityTypeIdentifier` / `HKCategoryTypeIdentifier` prefix. W = Withings `meastype`.
@@ -22,20 +22,12 @@ Kinds: `S` sample · `I` interval · `C` cumulative · `D` daily_value. Aggregat
 
 | Code | Unit | Kinds | Aggregation | Apple HK | W | Phase |
 | --- | --- | --- | --- | --- | --- | --- |
-| `distance_cycling` | m | I D | additive | DistanceCycling | | E15 |
-| `distance_swimming` | m | I | additive | DistanceSwimming | | E15 |
-| `distance_wheelchair` | m | I | additive | DistanceWheelchair | | E15 |
 | `distance_rowing`, `distance_paddle`, `distance_skating`, `distance_xc_ski`, `distance_downhill_snow` | m | I | additive | DistanceRowing, DistancePaddleSports, DistanceSkatingSports, DistanceCrossCountrySkiing, DistanceDownhillSnowSports | | later |
-| `floors_climbed` | count | I D | additive | FlightsClimbed | | E15 |
 | `elevation_gain` | m | I D | additive | | | J08.6 |
-| `basal_energy` | kcal | I D | additive | BasalEnergyBurned | | E15 |
 | `total_energy` | kcal | D | daily_summary | | | J08.6 |
-| `exercise_time` | s | I D | additive | AppleExerciseTime | | E15 |
 | `intensity_moderate_time`, `intensity_vigorous_time` | s | I D | additive | | | J08.6 |
 | `sedentary_time` | s | D | daily_summary | | | later |
 | `move_time` | s | I | additive | AppleMoveTime | | later |
-| `stand_time` | s | I | additive | AppleStandTime | | E15 |
-| `stand_hours` | count | D | daily_summary | AppleStandHour (category) | | E15 |
 | `daylight_time` | s | I | additive | TimeInDaylight | | later |
 | `wheelchair_pushes` | count | I | additive | PushCount | | later |
 | `swim_strokes` | count | I | additive | SwimmingStrokeCount | | later |
@@ -53,7 +45,6 @@ Kinds: `S` sample · `I` interval · `C` cumulative · `D` daily_value. Aggregat
 
 | Code | Unit | Kinds | Aggregation | Apple HK | W | Phase |
 | --- | --- | --- | --- | --- | --- | --- |
-| `walking_heart_rate` | bpm | D | daily_summary | WalkingHeartRateAverage | | E15 |
 | `sleeping_heart_rate` | bpm | D | daily_summary | | | later |
 | `heart_rate_recovery_1min` | bpm | S | latest | HeartRateRecoveryOneMinute | | later |
 | `rr_interval` | s | S | raw series, not resolved | HKHeartbeatSeriesSample | | later |
@@ -75,7 +66,6 @@ Cuffless estimates from calibrated optical watches get their own codes, so they 
 
 | Code | Unit | Kinds | Aggregation | Apple HK | W | Phase |
 | --- | --- | --- | --- | --- | --- | --- |
-| `breathing_disturbances` | events/h | D | daily_summary | AppleSleepingBreathingDisturbances | | E15 |
 | `apnea_hypopnea_index` | events/h | D | daily_summary | | | J08.6 |
 | `fev1`, `fvc` | L | S | latest | ForcedExpiratoryVolume1, ForcedVitalCapacity | | later |
 | `peak_expiratory_flow` | L/min | S | latest | PeakExpiratoryFlowRate | | later |
@@ -86,8 +76,6 @@ Cuffless estimates from calibrated optical watches get their own codes, so they 
 | Code | Unit | Kinds | Aggregation | Apple HK | W | Phase |
 | --- | --- | --- | --- | --- | --- | --- |
 | `sleep_temperature_deviation` | °C (delta from baseline) | D | daily_summary, selection only | | | later |
-| `wrist_temperature_sleeping` | °C | D | daily_summary | AppleSleepingWristTemperature | | E15 |
-| `basal_body_temperature` | °C | S | latest | BasalBodyTemperature | | E15 |
 
 `sleep_temperature_deviation` is a provider delta, not an absolute value, so it never shares a code with absolute temperatures.
 
@@ -95,10 +83,7 @@ Cuffless estimates from calibrated optical watches get their own codes, so they 
 
 | Code | Unit | Kinds | Aggregation | Apple HK | W | Phase |
 | --- | --- | --- | --- | --- | --- | --- |
-| `bmi` | kg/m² | S | latest (provider-reported only) | BodyMassIndex | | E15 |
-| `lean_body_mass` | kg | S | latest | LeanBodyMass | | E15 |
 | `fat_free_mass_<segment>`, `fat_mass_<segment>`, `muscle_mass_<segment>` with segment in `trunk`, `left_arm`, `right_arm`, `left_leg`, `right_leg` | kg | S | latest | | 173, 174, 175 | later |
-| `waist_circumference` | m | S | latest | WaistCircumference | | E15 |
 | `hip_circumference`, `chest_circumference`, `arm_circumference`, `thigh_circumference` | m | S | latest | | | later |
 
 `lean_body_mass` and `fat_free_mass` are separate codes (decision 2 below).
@@ -107,7 +92,6 @@ Cuffless estimates from calibrated optical watches get their own codes, so they 
 
 | Code | Unit | Kinds | Aggregation | Apple HK | W | Phase |
 | --- | --- | --- | --- | --- | --- | --- |
-| `blood_glucose` | mmol/L | S | intensive 5 min | BloodGlucose | | E15 |
 | `insulin_basal`, `insulin_bolus` | IU | I | additive | InsulinDelivery (reason in metadata) | | later |
 | `blood_ketones` | mmol/L | S | latest | | | later |
 | `blood_lactate` | mmol/L | S | latest | | | later |
@@ -120,11 +104,6 @@ The CGM trend arrow and meal or fasting context belong in `context`. TIR, TAR, T
 
 | Code | Unit | Apple HK | Phase |
 | --- | --- | --- | --- |
-| `diet_energy` | kcal | DietaryEnergyConsumed | E15 |
-| `diet_protein`, `diet_carbohydrate`, `diet_fat_total`, `diet_fat_saturated`, `diet_fat_monounsaturated`, `diet_fat_polyunsaturated`, `diet_fiber`, `diet_sugar` | g | Dietary… (same names) | E15 |
-| `diet_cholesterol` | mg | DietaryCholesterol | E15 |
-| `diet_water` | mL | DietaryWater | E15 |
-| `diet_caffeine` | mg | DietaryCaffeine | E15 |
 | `diet_sodium`, `diet_potassium`, `diet_calcium`, `diet_magnesium`, `diet_iron`, `diet_zinc`, `diet_phosphorus`, `diet_chloride`, `diet_copper`, `diet_manganese` | mg | Dietary… | later |
 | `diet_selenium`, `diet_chromium`, `diet_iodine`, `diet_molybdenum` | µg | Dietary… | later |
 | `diet_vitamin_a`, `diet_folate`, `diet_vitamin_b12`, `diet_vitamin_d`, `diet_vitamin_k`, `diet_biotin` | µg | Dietary… | later |
@@ -136,10 +115,6 @@ HealthKit food correlations become a meal group (proposed group kind `meal`), wi
 
 | Code | Unit | Kinds | Aggregation | Apple HK | Phase |
 | --- | --- | --- | --- | --- | --- |
-| `walking_steadiness` | % | S | latest | AppleWalkingSteadiness | E15 |
-| `walking_asymmetry` | % | S | intensive 5 min | WalkingAsymmetryPercentage | E15 |
-| `walking_double_support` | % | S | intensive 5 min | WalkingDoubleSupportPercentage | E15 |
-| `walking_step_length` | m | S | intensive 5 min | WalkingStepLength | E15 |
 | `stair_ascent_speed`, `stair_descent_speed` | m/s | S | intensive 5 min | StairAscentSpeed, StairDescentSpeed | later |
 | `six_minute_walk_distance` | m | S | latest | SixMinuteWalkTestDistance | later |
 | `falls` | count | I | additive | NumberOfTimesFallen | later |
@@ -207,16 +182,14 @@ Each score is added together with its connector. They are never pooled across pr
 
 Garmin and WHOOP codes (e.g., `garmin_body_battery`, `garmin_stress`, `whoop_recovery`, `whoop_strain`) belong to [E16](migration-reference.md) and are added there.
 
-## Events (proposed storage)
+## Events
 
-These are typed events with a value or level, not numbers that can be resolved. Today no table holds them, and the MVP needs none. **Open question, decided in [J15.1](../plan/E15-apple-health/J15.1-platform-contract.md):** one `health_events` table (code, start/end, level or value text, context) vs one table per family.
+These are typed events with a value or level, not numbers that can be resolved. **Decided in [ADR-0014](../adr/0014-healthkit-contract.md): one `health_events` table** (code, start/end, level or value, context), not one table per family. Implemented codes are in [metrics.md](../metrics.md#events) (`internal/catalog/events.go`); the rows below are not implemented yet.
 
 | Family | Codes | Sources | Phase |
 | --- | --- | --- | --- |
 | ECG recording | `ecg_recording` (waveform blob, classification, average HR) | HKElectrocardiogram; Withings heart list (no job yet) | later |
 | Rhythm results | `afib_ecg_result` (W 130), `afib_ppg_result` (W 139), `irregular_rhythm_alert` | Withings; HK IrregularHeartRhythmEvent | later |
-| HR alerts | `high_heart_rate_alert`, `low_heart_rate_alert`, `low_cardio_fitness_alert` | HK HighHeartRateEvent, LowHeartRateEvent, LowCardioFitnessEvent | E15 |
-| Other alerts | `hypertension_alert`, `sleep_apnea_alert`, `walking_steadiness_alert`, `environment_audio_alert`, `headphone_audio_alert` | HK HypertensionEvent, SleepApneaEvent, AppleWalkingSteadinessEvent, EnvironmentalAudioExposureEvent, HeadphoneAudioExposureEvent | E15 |
 | Cycle tracking | `menstrual_flow`, `intermenstrual_bleeding`, `ovulation_test`, `pregnancy_test`, `progesterone_test`, `cervical_mucus`, `sexual_activity`, `contraceptive`, `pregnancy`, `lactation`, cycle-deviation alerts | HK categories with the same names | later |
 | Mind | `mindful_session`, `state_of_mind` (valence, labels) | HK MindfulSession, HKStateOfMind | later |
 | Hygiene | `handwashing`, `toothbrushing` | HK HandwashingEvent, ToothbrushingEvent | later |
@@ -226,7 +199,7 @@ These are typed events with a value or level, not numbers that can be resolved. 
 
 ## Open questions and decisions
 
-1. Event storage shape (above): open, decided in [J15.1](../plan/E15-apple-health/J15.1-platform-contract.md).
+1. **Decided ([ADR-0014](../adr/0014-healthkit-contract.md)): events live in one `health_events` table.**
 2. **Decided (J07.1): `fat_free_mass` and `lean_body_mass` are separate codes.** Withings `fat_free_mass` (5) and HK `LeanBodyMass` are not known to share a definition, and a wrong merge cannot be undone in stored data. Withings maps to `fat_free_mass`, HealthKit to `lean_body_mass` (E15). Revisit only with evidence that a provider defines them identically.
 3. **Decided (J07.1): `hrv_rmssd` is split.** `hrv_rmssd` holds samples (`sample`, `intensive`); `hrv_rmssd_nightly` holds the provider's overnight average (`daily_value`, `daily_summary`). A 5-min sample series and a nightly mean are different methods, and averaging samples over a whole day would mix waking values into a sleep-time metric. Both are in the v1 seed and are not combinable. `hrv_sdnn` stays separate from both.
 4. **Decided (J07.1): one code per body segment.** A segment is a different quantity, not a context of one, and rules and windows see only codes. The codes are `<quantity>_<segment>` (the row above) and arrive with the first connector that reports segments.

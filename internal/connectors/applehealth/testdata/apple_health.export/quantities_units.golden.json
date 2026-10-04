@@ -1,0 +1,78 @@
+{
+  "synthetic": true,
+  "normalizer": "apple_health.export",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "hk:3b7e3a028155ecf392f2abb6ca502025",
+        "type": "scale",
+        "manufacturer": "Synthetic Scales",
+        "model": "Body Scale 2"
+      }
+    ],
+    "origins": [
+      {
+        "key": "export:Health",
+        "name": "Health"
+      },
+      {
+        "key": "export:Synthetic Scale App",
+        "name": "Synthetic Scale App"
+      }
+    ],
+    "groups": [
+      {
+        "kind": "body_composition",
+        "measured_at": "2026-09-14T07:00:00+02:00",
+        "origin": "export:Health",
+        "key": {
+          "record_type": "HKQuantityTypeIdentifierBodyMass",
+          "external_id": "F9ADDCD447240929CA7718679F2F1B7F"
+        },
+        "components": [
+          {
+            "metric": "weight",
+            "kind": "sample",
+            "start": "2026-09-14T07:00:00+02:00",
+            "value": 72.801575385,
+            "unit": "kg",
+            "flags": 1,
+            "origin": "export:Health"
+          }
+        ]
+      },
+      {
+        "kind": "body_composition",
+        "measured_at": "2026-09-15T07:00:00+02:00",
+        "device": "hk:3b7e3a028155ecf392f2abb6ca502025",
+        "origin": "export:Synthetic Scale App",
+        "key": {
+          "record_type": "HKQuantityTypeIdentifierBodyMass",
+          "external_id": "DFB2E1467F2D2EEE00661690F1035756"
+        },
+        "components": [
+          {
+            "metric": "weight",
+            "kind": "sample",
+            "start": "2026-09-15T07:00:00+02:00",
+            "value": 72.4,
+            "unit": "kg",
+            "device": "hk:3b7e3a028155ecf392f2abb6ca502025",
+            "origin": "export:Synthetic Scale App"
+          }
+        ]
+      }
+    ],
+    "warnings": [
+      {
+        "code": "unexpected_value_or_unit",
+        "detail": "bf2ab5fb2e65d5933d9f4e74c8db8039"
+      },
+      {
+        "code": "bad_interval",
+        "detail": "b0166f4f473f797a37f46e1e3d51320f"
+      }
+    ]
+  }
+}

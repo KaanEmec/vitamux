@@ -375,6 +375,21 @@ var tables = []table{
 		insert: execrows((*dbq.Queries).ImportWorkoutSegments),
 	},
 	{
+		name: "health_events",
+		export: func(e *exporter) (int64, error) {
+			return uuidKeyed(e, func(after uuid.UUID) ([]dbq.ExportHealthEventsRow, error) {
+				return e.q.ExportHealthEvents(e.ctx, dbq.ExportHealthEventsParams{UserID: e.user, After: after, Lim: pageSize})
+			}, func(r dbq.ExportHealthEventsRow) (uuid.UUID, json.RawMessage) { return r.ID, r.Row })
+		},
+		patch:  func(im *importer, r row) (bool, error) { return true, im.canonical(r) },
+		insert: execrows((*dbq.Queries).ImportHealthEvents),
+		link: func(im *importer) error {
+			return im.linkUUID("health_events", func(ctx context.Context, ids, by []uuid.UUID) error {
+				return im.q.LinkImportedHealthEvents(ctx, dbq.LinkImportedHealthEventsParams{Ids: ids, NewIds: by})
+			})
+		},
+	},
+	{
 		// input_id is a measurements.id without a foreign key; an override whose row a merge
 		// skipped is then reported as ignored, as after any correction.
 		name: "manual_overrides",
@@ -504,6 +519,7 @@ var withoutFile = map[string]string{ //nolint:unused,nolintlint // read by TestE
 	"recovery_codes":      "secrets",
 	"credentials":         "secrets: connections are exported without them and need re-authorization",
 	"oauth_states":        "short-lived login state",
+	"pairing_codes":       "short-lived pairing state",
 	"idempotency_keys":    "per-client request replay state",
 	"known_relay_origins": "seeded defaults",
 	"schedules":           "operational: recreated from connector descriptors",

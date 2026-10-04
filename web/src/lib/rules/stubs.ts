@@ -14,10 +14,10 @@ export interface Coverage {
 	rows: { metric: string; source: string; days: number[] }[];
 }
 
-/** GET /coverage; null while the endpoint is not available. */
-export async function getCoverage(start: string, end: string, metric?: string): Promise<Coverage | null> {
+/** GET /coverage, optionally for one metric and one origin app; null while the endpoint is not available. */
+export async function getCoverage(start: string, end: string, metric?: string, origin?: string): Promise<Coverage | null> {
 	const { data, error } = await api.GET('/api/v1/coverage', {
-		params: { query: { start_date: start, end_date: end, metric: metric ? [metric] : undefined } }
+		params: { query: { start_date: start, end_date: end, metric: metric ? [metric] : undefined, origin: origin ? [origin] : undefined } }
 	});
 	if (error) return null;
 	const c = data as unknown as Coverage;

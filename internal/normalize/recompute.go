@@ -12,7 +12,7 @@ import (
 )
 
 // Recomputed counts the rows whose local date changed, per table.
-type Recomputed struct{ Measurements, Groups, Workouts, SleepSessions int }
+type Recomputed struct{ Measurements, Groups, Workouts, SleepSessions, Events int }
 
 var recomputeBatch int32 = 2000 // a var so tests can force paging
 
@@ -115,6 +115,19 @@ func RecomputeLocalDates(ctx context.Context, d *db.DB, userID uuid.UUID, r Rang
 		},
 		set: func(q *dbq.Queries, ch []item, dates []time.Time) error {
 			return q.SetSleepSessionDates(ctx, dbq.SetSleepSessionDatesParams{Ids: uids(ch), Dates: dates})
+		},
+	})
+	if err != nil {
+		return out, err
+	}
+	out.Events, err = recomputeTable(ctx, d, tl, from, until, tableOps{
+		list: func(q *dbq.Queries, c cursor) ([]item, error) {
+			rows, err := q.ListEventsForLocalDate(ctx, dbq.ListEventsForLocalDateParams{
+				UserID: userID, FromAt: from, UntilAt: until, AfterAt: c.at, AfterID: c.uid, Batch: recomputeBatch})
+			return mapItems(rows, func(r dbq.ListEventsForLocalDateRow) item { return item{uid: r.ID, at: r.At, date: r.LocalDate} }), err
+		},
+		set: func(q *dbq.Queries, ch []item, dates []time.Time) error {
+			return q.SetEventLocalDates(ctx, dbq.SetEventLocalDatesParams{Ids: uids(ch), Dates: dates})
 		},
 	})
 	return out, err

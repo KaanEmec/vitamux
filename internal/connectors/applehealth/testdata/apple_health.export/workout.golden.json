@@ -1,0 +1,59 @@
+{
+  "synthetic": true,
+  "normalizer": "apple_health.export",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "type": "watch",
+        "manufacturer": "Apple Inc.",
+        "model": "Watch",
+        "hardware_version": "Watch7,1",
+        "software_version": "11.0"
+      }
+    ],
+    "origins": [
+      {
+        "key": "export:Synthetic Bike App",
+        "name": "Synthetic Bike App"
+      },
+      {
+        "key": "export:Synthetic Watch",
+        "name": "Synthetic Watch"
+      }
+    ],
+    "workouts": [
+      {
+        "start": "2026-09-14T18:00:00+02:00",
+        "end": "2026-09-14T18:30:30+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "sport": "running",
+        "provider_sport": "running",
+        "distance_m": 5149.9008,
+        "energy_kcal": 310.5,
+        "device": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "origin": "export:Synthetic Watch",
+        "key": {
+          "record_type": "HKWorkoutTypeIdentifier",
+          "external_id": "F48CD1A0F3434719FB5169B710108D60"
+        }
+      },
+      {
+        "start": "2026-09-15T07:00:00+02:00",
+        "end": "2026-09-15T08:00:00+02:00",
+        "sport": "cycling",
+        "provider_sport": "cycling",
+        "distance_m": 20000,
+        "energy_kcal": 478.0114722753346,
+        "origin": "export:Synthetic Bike App",
+        "key": {
+          "record_type": "HKWorkoutTypeIdentifier",
+          "external_id": "52AA2200C4232EA726A1276147D6D17F"
+        }
+      }
+    ]
+  }
+}

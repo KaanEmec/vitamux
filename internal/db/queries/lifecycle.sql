@@ -31,6 +31,8 @@ WHERE r.user_id = @user_id AND p.code = @provider AND r.stored_at < @cutoff::tim
     AND ((x.superseded_at IS NULL AND x.deleted_at IS NULL) OR x.normalizer_version_id IN (SELECT id FROM stale)))
   AND NOT EXISTS (SELECT 1 FROM workouts x WHERE x.raw_payload_id = r.id
     AND ((x.superseded_at IS NULL AND x.deleted_at IS NULL) OR x.normalizer_version_id IN (SELECT id FROM stale)))
+  AND NOT EXISTS (SELECT 1 FROM health_events x WHERE x.raw_payload_id = r.id
+    AND ((x.superseded_at IS NULL AND x.deleted_at IS NULL) OR x.normalizer_version_id IN (SELECT id FROM stale)))
 ORDER BY r.id
 LIMIT @max_rows
 FOR UPDATE OF r SKIP LOCKED;
@@ -50,7 +52,8 @@ WHERE r.user_id = @user_id AND p.code = @provider AND r.stored_at < @cutoff::tim
     OR EXISTS (SELECT 1 FROM measurements x WHERE x.raw_payload_id = r.id AND x.normalizer_version_id IN (SELECT id FROM stale))
     OR EXISTS (SELECT 1 FROM measurement_groups x WHERE x.raw_payload_id = r.id AND x.normalizer_version_id IN (SELECT id FROM stale))
     OR EXISTS (SELECT 1 FROM sleep_sessions x WHERE x.raw_payload_id = r.id AND x.normalizer_version_id IN (SELECT id FROM stale))
-    OR EXISTS (SELECT 1 FROM workouts x WHERE x.raw_payload_id = r.id AND x.normalizer_version_id IN (SELECT id FROM stale)));
+    OR EXISTS (SELECT 1 FROM workouts x WHERE x.raw_payload_id = r.id AND x.normalizer_version_id IN (SELECT id FROM stale))
+    OR EXISTS (SELECT 1 FROM health_events x WHERE x.raw_payload_id = r.id AND x.normalizer_version_id IN (SELECT id FROM stale)));
 
 -- name: DetachPrunedRaw :exec
 -- Clears every reference to raw payloads about to be pruned: inactive canonical rows keep their
@@ -73,6 +76,11 @@ WITH m AS (
   WHERE raw_payload_id = ANY(@ids::bigint[]) OR deleted_by_raw_id = ANY(@ids::bigint[])
 ), w AS (
   UPDATE workouts SET
+    raw_payload_id = CASE WHEN raw_payload_id = ANY(@ids::bigint[]) THEN NULL ELSE raw_payload_id END,
+    deleted_by_raw_id = CASE WHEN deleted_by_raw_id = ANY(@ids::bigint[]) THEN NULL ELSE deleted_by_raw_id END
+  WHERE raw_payload_id = ANY(@ids::bigint[]) OR deleted_by_raw_id = ANY(@ids::bigint[])
+), e AS (
+  UPDATE health_events SET
     raw_payload_id = CASE WHEN raw_payload_id = ANY(@ids::bigint[]) THEN NULL ELSE raw_payload_id END,
     deleted_by_raw_id = CASE WHEN deleted_by_raw_id = ANY(@ids::bigint[]) THEN NULL ELSE deleted_by_raw_id END
   WHERE raw_payload_id = ANY(@ids::bigint[]) OR deleted_by_raw_id = ANY(@ids::bigint[])
@@ -124,6 +132,13 @@ DELETE FROM workouts WHERE id IN (
     AND NOT EXISTS (SELECT 1 FROM workouts o WHERE o.superseded_by = w.id)
   LIMIT @max_rows);
 
+-- name: PruneSupersededEvents :execrows
+DELETE FROM health_events WHERE id IN (
+  SELECT e.id FROM health_events e
+  WHERE e.user_id = @user_id AND e.superseded_at < @cutoff::timestamptz
+    AND NOT EXISTS (SELECT 1 FROM health_events o WHERE o.superseded_by = e.id)
+  LIMIT @max_rows);
+
 -- name: PruneIdempotencyKeys :execrows
 DELETE FROM idempotency_keys k USING clients c
 WHERE c.id = k.client_id AND c.user_id = @user_id AND k.created_at < @cutoff::timestamptz;
@@ -154,6 +169,9 @@ DELETE FROM sleep_sessions WHERE user_id = @user_id;
 
 -- name: PurgeWorkouts :execrows
 DELETE FROM workouts WHERE user_id = @user_id;
+
+-- name: PurgeEvents :execrows
+DELETE FROM health_events WHERE user_id = @user_id;
 
 -- name: PurgeResolutionDirty :execrows
 DELETE FROM resolution_dirty WHERE user_id = @user_id;

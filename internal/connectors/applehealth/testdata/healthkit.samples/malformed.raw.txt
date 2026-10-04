@@ -1,0 +1,2 @@
+synthetic: true
+this is not a samples page

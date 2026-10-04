@@ -9,6 +9,7 @@
 
 	const tabs = [
 		{ href: '/settings', label: 'Profile' },
+		{ href: '/settings/devices', label: 'Devices' },
 		{ href: '/settings/api-keys', label: 'API keys' },
 		{ href: '/settings/ai', label: 'AI providers' },
 		{ href: '/settings/retention', label: 'Retention' },

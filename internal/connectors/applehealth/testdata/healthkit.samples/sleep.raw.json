@@ -1,0 +1,228 @@
+{
+ "synthetic": true,
+ "type": "HKCategoryTypeIdentifierSleepAnalysis",
+ "anchor": {
+  "before_hash": "synthetic-before",
+  "after_hash": "synthetic-after",
+  "query_started_at": "2026-09-14T08:00:03+02:00"
+ },
+ "samples": [
+  {
+   "uuid": "6F0D0000-0000-4000-8000-00000000000C",
+   "start": "2026-09-13T23:10:00+02:00",
+   "end": "2026-09-13T23:40:00+02:00",
+   "value": 3,
+   "source_revision": {
+    "bundle_id": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+    "name": "Synthetic Watch",
+    "version": "11.0",
+    "product_type": "Watch7,1",
+    "os_version": "11.0.0"
+   },
+   "device": {
+    "name": "Synthetic Watch",
+    "manufacturer": "Apple Inc.",
+    "model": "Watch",
+    "hardware_version": "Watch7,1",
+    "software_version": "11.0"
+   },
+   "metadata": {
+    "HKTimeZone": "Europe/Amsterdam"
+   },
+   "was_user_entered": false
+  },
+  {
+   "uuid": "6F0D0000-0000-4000-8000-00000000000D",
+   "start": "2026-09-13T23:40:00+02:00",
+   "end": "2026-09-14T00:30:00+02:00",
+   "value": 4,
+   "source_revision": {
+    "bundle_id": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+    "name": "Synthetic Watch",
+    "version": "11.0",
+    "product_type": "Watch7,1",
+    "os_version": "11.0.0"
+   },
+   "device": {
+    "name": "Synthetic Watch",
+    "manufacturer": "Apple Inc.",
+    "model": "Watch",
+    "hardware_version": "Watch7,1",
+    "software_version": "11.0"
+   },
+   "metadata": {
+    "HKTimeZone": "Europe/Amsterdam"
+   },
+   "was_user_entered": false
+  },
+  {
+   "uuid": "6F0D0000-0000-4000-8000-00000000000E",
+   "start": "2026-09-14T00:30:00+02:00",
+   "end": "2026-09-14T02:00:00+02:00",
+   "value": 3,
+   "source_revision": {
+    "bundle_id": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+    "name": "Synthetic Watch",
+    "version": "11.0",
+    "product_type": "Watch7,1",
+    "os_version": "11.0.0"
+   },
+   "device": {
+    "name": "Synthetic Watch",
+    "manufacturer": "Apple Inc.",
+    "model": "Watch",
+    "hardware_version": "Watch7,1",
+    "software_version": "11.0"
+   },
+   "metadata": {
+    "HKTimeZone": "Europe/Amsterdam"
+   },
+   "was_user_entered": false
+  },
+  {
+   "uuid": "6F0D0000-0000-4000-8000-00000000000F",
+   "start": "2026-09-14T02:00:00+02:00",
+   "end": "2026-09-14T02:40:00+02:00",
+   "value": 5,
+   "source_revision": {
+    "bundle_id": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+    "name": "Synthetic Watch",
+    "version": "11.0",
+    "product_type": "Watch7,1",
+    "os_version": "11.0.0"
+   },
+   "device": {
+    "name": "Synthetic Watch",
+    "manufacturer": "Apple Inc.",
+    "model": "Watch",
+    "hardware_version": "Watch7,1",
+    "software_version": "11.0"
+   },
+   "metadata": {
+    "HKTimeZone": "Europe/Amsterdam"
+   },
+   "was_user_entered": false
+  },
+  {
+   "uuid": "6F0D0000-0000-4000-8000-000000000010",
+   "start": "2026-09-14T02:40:00+02:00",
+   "end": "2026-09-14T02:50:00+02:00",
+   "value": 2,
+   "source_revision": {
+    "bundle_id": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+    "name": "Synthetic Watch",
+    "version": "11.0",
+    "product_type": "Watch7,1",
+    "os_version": "11.0.0"
+   },
+   "device": {
+    "name": "Synthetic Watch",
+    "manufacturer": "Apple Inc.",
+    "model": "Watch",
+    "hardware_version": "Watch7,1",
+    "software_version": "11.0"
+   },
+   "metadata": {
+    "HKTimeZone": "Europe/Amsterdam"
+   },
+   "was_user_entered": false
+  },
+  {
+   "uuid": "6F0D0000-0000-4000-8000-000000000011",
+   "start": "2026-09-14T02:50:00+02:00",
+   "end": "2026-09-14T06:45:00+02:00",
+   "value": 3,
+   "source_revision": {
+    "bundle_id": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+    "name": "Synthetic Watch",
+    "version": "11.0",
+    "product_type": "Watch7,1",
+    "os_version": "11.0.0"
+   },
+   "device": {
+    "name": "Synthetic Watch",
+    "manufacturer": "Apple Inc.",
+    "model": "Watch",
+    "hardware_version": "Watch7,1",
+    "software_version": "11.0"
+   },
+   "metadata": {
+    "HKTimeZone": "Europe/Amsterdam"
+   },
+   "was_user_entered": false
+  },
+  {
+   "uuid": "6F0D0000-0000-4000-8000-000000000012",
+   "start": "2026-09-14T14:00:00+02:00",
+   "end": "2026-09-14T14:35:00+02:00",
+   "value": 1,
+   "source_revision": {
+    "bundle_id": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+    "name": "Synthetic Watch",
+    "version": "11.0",
+    "product_type": "Watch7,1",
+    "os_version": "11.0.0"
+   },
+   "device": {
+    "name": "Synthetic Watch",
+    "manufacturer": "Apple Inc.",
+    "model": "Watch",
+    "hardware_version": "Watch7,1",
+    "software_version": "11.0"
+   },
+   "metadata": {
+    "HKTimeZone": "Europe/Amsterdam"
+   },
+   "was_user_entered": false
+  },
+  {
+   "uuid": "6F0D0000-0000-4000-8000-000000000013",
+   "start": "2026-09-13T22:55:00+02:00",
+   "end": "2026-09-14T06:50:00+02:00",
+   "value": 0,
+   "source_revision": {
+    "bundle_id": "com.apple.health.00000000-0000-4000-8000-0000000000A2",
+    "name": "Synthetic Phone",
+    "version": "26.0",
+    "product_type": "iPhone17,1",
+    "os_version": "26.0.0"
+   },
+   "device": {
+    "name": "Synthetic Phone",
+    "manufacturer": "Apple Inc.",
+    "model": "iPhone",
+    "hardware_version": "iPhone17,1",
+    "software_version": "26.0"
+   },
+   "metadata": {
+    "HKTimeZone": "Europe/Amsterdam"
+   },
+   "was_user_entered": false
+  },
+  {
+   "uuid": "6F0D0000-0000-4000-8000-000000000014",
+   "start": "2026-09-14T06:50:00+02:00",
+   "end": "2026-09-14T06:55:00+02:00",
+   "value": 7,
+   "source_revision": {
+    "bundle_id": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+    "name": "Synthetic Watch",
+    "version": "11.0",
+    "product_type": "Watch7,1",
+    "os_version": "11.0.0"
+   },
+   "device": {
+    "name": "Synthetic Watch",
+    "manufacturer": "Apple Inc.",
+    "model": "Watch",
+    "hardware_version": "Watch7,1",
+    "software_version": "11.0"
+   },
+   "metadata": {
+    "HKTimeZone": "Europe/Amsterdam"
+   },
+   "was_user_entered": false
+  }
+ ],
+ "deleted": []
+}

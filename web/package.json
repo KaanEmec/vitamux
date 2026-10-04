@@ -44,6 +44,7 @@
   "dependencies": {
     "openapi-fetch": "0.17.0",
     "pdfjs-dist": "6.4.299",
+    "qrcode-generator": "2.0.4",
     "uplot": "1.6.32"
   }
 }
