@@ -107,9 +107,12 @@ func (cn *Connector) Fetch(ctx context.Context, conn connectors.Conn, _ connecto
 	case res.StatusCode != http.StatusOK:
 		return connectors.FetchResult{}, fmt.Errorf("%w: example: HTTP %d", connectors.ErrPermanent, res.StatusCode)
 	}
-	body, err := io.ReadAll(io.LimitReader(res.Body, maxBody))
+	body, err := io.ReadAll(io.LimitReader(res.Body, maxBody+1)) // one byte past the limit detects oversize
 	if err != nil {
 		return connectors.FetchResult{}, fmt.Errorf("%w: example: reading body: %w", connectors.ErrTransient, err)
+	}
+	if len(body) > maxBody {
+		return connectors.FetchResult{}, fmt.Errorf("%w: example: body over %d bytes", connectors.ErrPermanent, maxBody)
 	}
 	request := ingest.Request{Endpoint: endpoint, Params: map[string]any{}}
 	for k := range params {
