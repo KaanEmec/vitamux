@@ -50,8 +50,8 @@ func TestDescribe(t *testing.T) {
 		d.Streams[0].Interval != time.Hour || d.AuthKind != connectors.AuthInteractiveMFA {
 		t.Fatalf("descriptor: %+v", d)
 	}
-	if f.calls["/v1/describe"] != 1 || len(reported) != 1 {
-		t.Fatalf("%d describes, %d reports", f.calls["/v1/describe"], len(reported))
+	if f.called("/v1/describe") != 1 || len(reported) != 1 {
+		t.Fatalf("%d describes, %d reports", f.called("/v1/describe"), len(reported))
 	}
 
 	// A minute later the next use describes again; the same upstream is not reported twice,
@@ -61,8 +61,8 @@ func TestDescribe(t *testing.T) {
 	c.Describe()
 	f.do(func() { f.desc.Upstream.Version = "1.2.4" })
 	stale()
-	if d := c.Describe(); d.Upstream.Version != "1.2.4" || f.calls["/v1/describe"] != 3 || len(reported) != 2 {
-		t.Fatalf("after upstream bump: %+v, %d describes, %d reports", d.Upstream, f.calls["/v1/describe"], len(reported))
+	if d := c.Describe(); d.Upstream.Version != "1.2.4" || f.called("/v1/describe") != 3 || len(reported) != 2 {
+		t.Fatalf("after upstream bump: %+v, %d describes, %d reports", d.Upstream, f.called("/v1/describe"), len(reported))
 	}
 
 	// The sidecar goes away: the placeholder (unavailable) until it is back.
@@ -71,7 +71,7 @@ func TestDescribe(t *testing.T) {
 	if d := c.Describe(); d.Available() {
 		t.Fatal("unreachable sidecar still available")
 	}
-	if d := c.Describe(); d.Available() || f.calls["/v1/describe"] != 3 {
+	if d := c.Describe(); d.Available() || f.called("/v1/describe") != 3 {
 		t.Fatal("unreachable sidecar described again within a minute")
 	}
 }

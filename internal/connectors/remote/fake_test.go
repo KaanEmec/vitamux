@@ -79,6 +79,12 @@ func (f *fakeSidecar) do(fn func()) {
 	fn()
 }
 
+func (f *fakeSidecar) called(path string) int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.calls[path]
+}
+
 func (f *fakeSidecar) add(n int, start time.Time) {
 	f.do(func() {
 		for range n {
