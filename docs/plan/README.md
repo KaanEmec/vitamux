@@ -43,6 +43,7 @@ Conventions:
 | [E19](E19-whoop/README.md) | WHOOP connector (unofficial sidecar) | v0.3.0 | E17, G5 |
 | [E20](E20-guided-setup/README.md) | Guided source setup in the web panel | v0.2.1 | E11, E17; E18, E19 for J20.4–J20.5 |
 | [E21](E21-visualisation/README.md) | Panel redesign, dashboard and data exploration | v0.2.0 | E11, E12, E15, E17–E19 (shipped in v0.1.1) |
+| [E22](E22-ios-app/README.md) | Vitamux iOS app (replaces Vitamux Bridge; full Apple Watch data) | v0.4.0 | E15, E21, G6 (J22.1 and J22.15 can start now) |
 
 ```mermaid
 flowchart LR
@@ -61,6 +62,8 @@ flowchart LR
   E18 & E19 --> E20
   E15 & E18 & E19 --> E21
   E21 -->|G7| E20
+  E15 & E21 --> E22
+  E20 -->|G6| E22
 ```
 
 ## Gates
@@ -75,6 +78,7 @@ flowchart LR
 | G5 | v0.2.0 released (E15 and E17) | J15.9 | E18 and E19 releases |
 | G6 | v0.3.0 released (E18, E19 and E20) | J19.7 | — |
 | G7 | v0.2.0 released (E21) | J21.13 | E20 UI jobs (build on the E21 kit) |
+| G8 | v0.4.0 released (E22, the iOS app) | J22.23 | — |
 
 ## Parallel streams
 
@@ -88,3 +92,4 @@ flowchart LR
 8. J18.1 and J19.1 (upstream and API verification) can start at any time. The rest of E18 and E19 follows J17.3; they run in parallel with each other and with E15.
 9. J20.1–J20.3 (setup ADR, app-credential store, Withings wizard) can start now. J20.4 follows J17.2, and J20.5 follows J18.2 and J19.2.
 10. J21.1, J21.2, J21.5 and J21.6 (design spec, chart ADR, inventory and summary APIs) can start now. J21.3 (design system and shell) can land before E20's UI jobs so they build on it.
+11. J22.1 (app ADR) and J22.15 (Watch data contract) can start now; app sessions, the native auth return and VitamuxKit (J22.2–J22.4) follow J22.1. Once J22.5 lands, the screen jobs J22.7–J22.13 and Apple Health (J22.14) run in parallel; the setup wizards in J22.11 follow E20. The Watch kit and server jobs (J22.16, J22.17) run alongside them.

@@ -1,6 +1,6 @@
 # Apple Health bridge
 
-This document is for epic E15. Platform facts were checked in [J15.1](../plan/E15-apple-health/J15.1-platform-contract.md) on 2026-10-04 against Apple's HealthKit documentation and the Xcode 27 SDK headers (cited as [Apple docs][apple-docs] below). What only a phone can answer is listed in the [device checklist](../apple-health-device-checklist.md).
+This document is for epic E15. [E22](../plan/E22-ios-app/README.md) moves the app into the Vitamux iOS app and adds every Apple Watch type ([ios-app › Apple Watch](ios-app.md#apple-watch)). Platform facts were checked in [J15.1](../plan/E15-apple-health/J15.1-platform-contract.md) on 2026-10-04 against Apple's HealthKit documentation and the Xcode 27 SDK headers (cited as [Apple docs][apple-docs] below). What only a phone can answer is listed in the [device checklist](../apple-health-device-checklist.md).
 
 [apple-docs]: https://developer.apple.com/documentation/healthkit
 

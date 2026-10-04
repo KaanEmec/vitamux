@@ -131,7 +131,7 @@ deploy/compose/, coolify/, sql/   docs/ (this tree, adr/)
 LICENSE NOTICE THIRD_PARTY_NOTICES.md SECURITY.md
 ```
 
-The Swift package and app (`apple/`) and `internal/connectors/applehealth` arrive with [E15](../plan/E15-apple-health/README.md).
+The Swift package and app (`apple/`) and `internal/connectors/applehealth` arrive with [E15](../plan/E15-apple-health/README.md). [E22](../plan/E22-ios-app/README.md) adds `apple/VitamuxKit` and replaces `apple/HealthBridgeApp` with `apple/VitamuxApp` ([ios-app.md](ios-app.md)).
 
 ## Glossary
 

@@ -53,6 +53,7 @@ Memory stays bounded through batching: normalize 5,000 rows per transaction, COP
 - Weighted means, expression language, partitioning or dense series storage, S3 blob backend, HA.
 - Passkeys (TOTP in MVP), multi-user UI, outbound webhooks, FHIR export.
 - Ultrahuman, Oura, Android Health Connect (same push pattern), watchOS app, HealthKit write-back, App Store distribution.
+- iOS app ([E22](../plan/E22-ios-app/README.md), v0.4.0): iPad layouts, APNs push and certificate pinning are deferred.
 - Any interpretation of health or lab data: never.
 
 ## Risks
