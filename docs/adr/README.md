@@ -20,5 +20,6 @@ ADRs record decisions that code depends on. Keep each one short and link to the 
 | [0017](0017-sidecar-protocol.md) | Sidecar protocol `vitamux-connector/1`: HTTP + JSON + NDJSON pages, frozen, additive only within v1 | Accepted |
 | [0018](0018-garmin-upstream.md) | Garmin Connect through a sidecar wrapping `python-garminconnect` | Accepted |
 | [0019](0019-whoop-upstream.md) | WHOOP through a sidecar wrapping `@dofek/whoop` (private API, 6 s HR) | Accepted |
-| [0020](0020-chart-kit.md) | Hand-written SVG chart kit (lazy chunk ≤ 40 KiB gzip); uPlot removed | Accepted |
+| [0020](0020-chart-kit.md) | Hand-written SVG chart kit (lazy chunk ≤ 40 KiB gzip); uPlot removed | Superseded by 0022 |
 | [0021](0021-source-setup.md) | Source setup in the panel: sealed provider apps and panel sidecars, environment wins, setup states | Proposed |
+| [0022](0022-layerchart.md) | LayerChart for the chart kit (lazy chunk ≤ 150 KiB gzip); supersedes 0020 | Accepted |

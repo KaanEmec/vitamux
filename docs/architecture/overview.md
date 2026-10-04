@@ -48,7 +48,7 @@ ADRs are written during implementation (J01.1 and the owning jobs).
 | ADR-007 | Execution modes | in-process, push, remote sidecar (v0.2.0) → one ingest pipeline | [connectors.md](connectors.md#execution-modes) |
 | ADR-008/009 | Rules and sleep date | Typed rule schema v1; `sleep_date` = local wake date | [ADR-0008](../adr/0008-rule-schema.md), [ADR-0009](../adr/0009-sleep-date-night-window.md) |
 | ADR-010 | Frontend | SvelteKit static SPA embedded via `go:embed` | No extra container; Node only at build time |
-| ADR-020 | Charts | Own SVG chart kit, lazy-loaded; no chart library | [ADR-0020](../adr/0020-chart-kit.md) |
+| ADR-020 | Charts | LayerChart behind our own chart kit, lazy-loaded | [ADR-0022](../adr/0022-layerchart.md) |
 | ADR-021 | Source setup | Provider apps and panel sidecars sealed in PostgreSQL, the environment wins, a setup state per provider; no Docker socket | [ADR-0021](../adr/0021-source-setup.md) |
 | ADR-011 | Secrets | Master key file, HKDF purposes, AES-256-GCM, single-flight token refresh | [security.md](security.md#keys-and-secrets) |
 | ADR-012 | License | MIT + DCO (decided 2026-10-03) | Simplest permissive license; compatible with every planned dependency |
