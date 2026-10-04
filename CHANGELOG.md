@@ -2,6 +2,24 @@
 
 Newest first. Before a final release, `scripts/release-notes.sh --changelog vX.Y.Z` adds its section from the Conventional Commits since the previous final tag; edit it and add upgrade notes under "Breaking changes" before tagging. The release workflow refuses a final tag without its section and uses it as the release notes. Release candidates are described on their GitHub releases only.
 
+## v0.2.7 (2026-10-04)
+
+### Web UI
+
+- Connections › <connection> › **Devices**: set each device's type (watch, band, ring, phone, scale, …) and name, and **merge** a device into another, e.g. Garmin's wellness stand-in into the watch that records workouts. A merge moves all of the device's records, and later syncs land on the target. A type you set is not overwritten by syncs.
+
+### API
+
+- `PATCH /api/v1/source-devices/{id}` and `POST /api/v1/source-devices/{id}/merge`. `GET /api/v1/source-devices` adds `name`, `merged_into`, the connection and, with `include=records`, record counts.
+
+### Connectors
+
+- Garmin VO2max is attributed to the Garmin wearable like the other wellness data (`garmin.training` v4).
+
+### Breaking changes
+
+None. Migration 00030 adds the device columns. To move existing Garmin VO2max rows: `vitamux reprocess --normalizer garmin.training`.
+
 ## v0.2.6 (2026-10-04)
 
 ### Connectors
