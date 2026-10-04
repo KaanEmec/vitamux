@@ -102,10 +102,10 @@ func (rt *Runtime) Handle(ctx context.Context, j jobs.Job) error {
 	}
 	r, err := rt.prepare(ctx, *j.ConnectionID, p.Stream)
 	if errors.Is(err, errStreamGone) && p.ScheduleID != uuid.Nil {
-		// The connector dropped the stream (e.g. a sidecar update): retire its schedule
-		// instead of failing the connection.
-		rt.log.Info("schedule disabled: stream no longer declared", "connection_id", *j.ConnectionID, "stream", p.Stream)
-		return rt.db.Q().DisableSchedule(ctx, p.ScheduleID)
+		// The connector dropped the stream (e.g. a sidecar update): retire it instead of
+		// failing the connection.
+		rt.log.Info("stream retired: no longer declared", "connection_id", *j.ConnectionID, "stream", p.Stream)
+		return rt.db.Q().RetireStream(ctx, dbq.RetireStreamParams{ConnectionID: *j.ConnectionID, Stream: p.Stream})
 	}
 	if err != nil {
 		if r.c != nil { // an unreachable sidecar counts as a failed sync
