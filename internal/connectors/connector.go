@@ -36,16 +36,31 @@ const (
 
 func advancesCursor(mode string) bool { return mode == ModeIncremental || mode == ModeManual }
 
-// Descriptor is what a connector declares about itself; the registry validates it.
+// Descriptor is what a connector declares about itself; the registry validates it. A Remote
+// descriptor without streams is the placeholder of a sidecar that has not described itself yet
+// (unreachable): it is registered but not Available.
 type Descriptor struct {
 	Provider     string // providers.code, e.g. "withings"
+	Name         string // display name (providers.name of a sidecar); empty shows the code
 	Version      string
-	Official     bool // false ⇒ the UI shows an "unofficial API" warning
+	Official     bool      // false ⇒ the UI shows an "unofficial API" warning; new connections start paused
+	Remote       bool      // served by a sidecar (connection mode 'remote'); set by the core, never by a sidecar
+	Upstream     *Upstream // the third-party package a sidecar wraps; nil for first-party connectors
 	AuthKind     AuthKind
 	Streams      []StreamSpec
 	RateLimits   []RateLimitSpec // all apply at once, per provider
 	Capabilities Capabilities
 }
+
+// Upstream identifies the third-party package behind a sidecar (connections.upstream).
+type Upstream struct {
+	Package   string `json:"package"`
+	Version   string `json:"version"`
+	SourceURL string `json:"source_url"`
+}
+
+// Available reports whether the connector can serve calls: false for a sidecar placeholder.
+func (d Descriptor) Available() bool { return !d.Remote || len(d.Streams) > 0 }
 
 // StreamSpec is one stream's defaults. EnsureSchedules turns them into schedules.
 type StreamSpec struct {
@@ -78,8 +93,8 @@ type Connector interface {
 }
 
 // Authenticator refreshes provider credentials. Connectors whose AuthKind keeps tokens
-// implement it. Refresh maps a refused refresh token to ErrReauthRequired. Interactive
-// bootstrap (Begin, Continue) joins this interface with the first OAuth flow (J08.2).
+// implement it. Refresh maps a refused refresh token to ErrReauthRequired. The interactive
+// bootstrap is Interactive (auth.go).
 type Authenticator interface {
 	Refresh(ctx context.Context, c Conn, cred Credentials) (Credentials, error)
 }
@@ -110,12 +125,15 @@ type WorkUnit struct {
 }
 
 // FetchResult reports one page. NextCursor nil keeps the cursor. RetryAfter asks the runtime
-// to pause the provider (e.g. a soft quota) after storing this page.
+// to pause the provider (e.g. a soft quota) after storing this page. Credentials, when the
+// provider rotated them during the fetch, are stored in the page's transaction, before the next
+// page or anything else uses them.
 type FetchResult struct {
 	NextCursor    json.RawMessage
 	HighWatermark time.Time // newest source time seen; zero = unknown
 	Done          bool      // the unit is complete
 	RetryAfter    time.Duration
+	Credentials   *Credentials
 }
 
 // Credentials are a connection's decrypted provider tokens. They print as [redacted].

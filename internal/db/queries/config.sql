@@ -5,7 +5,7 @@
 -- name: ListOwnerConnections :many
 -- One connection when id is set, else all of the owner's.
 SELECT c.id, p.code AS provider, c.mode, c.status, c.last_success_at, c.last_error_class, c.consecutive_failures,
-       c.created_at, c.updated_at, r.blocked_until
+       c.created_at, c.updated_at, r.blocked_until, c.upstream
 FROM connections c JOIN providers p ON p.id = c.provider_id
 LEFT JOIN provider_rate_state r ON r.provider_id = c.provider_id
 WHERE c.user_id = @user_id AND (sqlc.narg(id)::uuid IS NULL OR c.id = sqlc.narg(id)::uuid)

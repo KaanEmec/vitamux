@@ -102,6 +102,9 @@ func (rt *Runtime) Handle(ctx context.Context, j jobs.Job) error {
 	}
 	r, err := rt.prepare(ctx, *j.ConnectionID, p.Stream)
 	if err != nil {
+		if r.c != nil { // an unreachable sidecar counts as a failed sync
+			return rt.settle(ctx, r, p.Stream, err)
+		}
 		return err
 	}
 	// A block set before a restart or by another process: no provider call until it ends.
@@ -139,12 +142,15 @@ func (rt *Runtime) prepare(ctx context.Context, connectionID uuid.UUID, stream s
 		return syncRun{}, jobs.Permanent(fmt.Errorf("%w: no connector registered for %s", ErrPermanent, row.Provider))
 	}
 	d := c.Describe()
-	if _, ok := d.stream(stream); !ok {
-		return syncRun{}, jobs.Permanent(fmt.Errorf("%w: %s has no stream %q", ErrPermanent, row.Provider, stream))
-	}
 	r := syncRun{
 		conn: Conn{ID: row.ID, UserID: row.UserID, Provider: row.Provider, Config: row.Config, HTTP: rt.clients.get(d)},
 		c:    c,
+	}
+	if !d.Available() {
+		return r, fmt.Errorf("%w: the %s sidecar is unavailable", ErrTransient, row.Provider)
+	}
+	if _, ok := d.stream(stream); !ok {
+		return syncRun{}, jobs.Permanent(fmt.Errorf("%w: %s has no stream %q", ErrPermanent, row.Provider, stream))
 	}
 	if d.AuthKind.needsRefresh() {
 		r.auth = c.(Authenticator) // checked by NewRegistry
@@ -248,7 +254,7 @@ func (rt *Runtime) page(ctx context.Context, r syncRun, u WorkUnit, advance bool
 			for i := range sink.items {
 				sink.items[i].Quarantine = true
 			}
-			if cerr := rt.commit(ctx, r.conn, u.Stream, sink.items, nil, nil); cerr != nil {
+			if cerr := rt.commit(ctx, r.conn, u.Stream, sink.items, nil, nil, nil); cerr != nil {
 				return FetchResult{}, cerr
 			}
 			return FetchResult{}, err
@@ -264,17 +270,22 @@ func (rt *Runtime) page(ctx context.Context, r syncRun, u WorkUnit, advance bool
 		if !res.Done {
 			final = nil
 		}
-		return res, rt.commit(ctx, r.conn, u.Stream, sink.items, adv, final)
+		return res, rt.commit(ctx, r.conn, u.Stream, sink.items, adv, res.Credentials, final)
 	}
 }
 
 // commit stores items, enqueues their normalization and, given adv, advances the stream
 // cursor in the same transaction, so a cursor never moves past records that are not stored.
-// final, if set, runs in that transaction too. A crash leaves at most orphan blob files for
-// the sweeper.
-func (rt *Runtime) commit(ctx context.Context, c Conn, stream string, items []ingest.RawItem, adv *FetchResult, final func(*dbq.Queries) error) error {
+// rotated (credentials the provider rotated during the fetch) and final, if set, are stored in
+// that transaction too. A crash leaves at most orphan blob files for the sweeper.
+func (rt *Runtime) commit(ctx context.Context, c Conn, stream string, items []ingest.RawItem, adv *FetchResult, rotated *Credentials, final func(*dbq.Queries) error) error {
 	var stored []ingest.Result
 	err := rt.db.Tx(ctx, func(q *dbq.Queries) error {
+		if rotated != nil {
+			if err := rt.creds.save(ctx, q, c.ID, *rotated); err != nil {
+				return err
+			}
+		}
 		if len(items) > 0 {
 			b, err := ingest.CreateBatch(ctx, q, ingest.BatchInfo{UserID: c.UserID, ConnectionID: c.ID, SourceKind: ingest.SourceSync})
 			if err != nil {

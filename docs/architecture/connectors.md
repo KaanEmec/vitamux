@@ -17,8 +17,11 @@ Every mode ends in the same pipeline: raw store → normalize → canonical writ
 ```go
 type Descriptor struct {
     Provider     string        // "withings"
+    Name         string        // display name
     Version      string
-    Official     bool          // false ⇒ UI shows an "unofficial API" warning
+    Official     bool          // false ⇒ UI shows an "unofficial API" warning; new connections start paused
+    Remote       bool          // served by a sidecar (core-set; connection mode 'remote'); no streams = unreachable placeholder
+    Upstream     *Upstream     // package, version, source URL of the third-party package a sidecar wraps
     AuthKind     AuthKind      // OAuth2 | InteractiveMFA | DevicePairing | None
     Streams      []StreamSpec  // name, default schedule, correction lookback, max backfill, unit size
     RateLimits   []RateLimitSpec
@@ -32,11 +35,12 @@ type Connector interface {
 type Authenticator interface { // AuthKind OAuth2 or InteractiveMFA
     Refresh(ctx context.Context, c Conn, cred Credentials) (Credentials, error)
 }
-type Interactive interface { // the bootstrap, e.g. the OAuth authorization-code flow
-    Begin(ctx context.Context, in AuthInput) (AuthStep, error)                // consent URL; no provider call
-    Continue(ctx context.Context, c Conn, in AuthInput) (Authorized, error) // callback → credentials + provider account id
+type Interactive interface { // the bootstrap: OAuth authorization code, prompts (credentials, MFA), or both
+    Begin(ctx context.Context, in AuthInput) (AuthStep, error)                // first step; no provider call
+    Continue(ctx context.Context, c Conn, in AuthInput) (Authorized, error) // callback or prompt values → credentials + account id, or Next step
 }
-type FetchResult struct { NextCursor json.RawMessage; HighWatermark time.Time; Done bool; RetryAfter time.Duration }
+type AuthStep struct { RedirectURL string; Prompt *AuthPrompt; Session []byte } // Session: opaque, sealed server-side
+type FetchResult struct { NextCursor json.RawMessage; HighWatermark time.Time; Done bool; RetryAfter time.Duration; Credentials *Credentials }
 ```
 
 Code: [`internal/connectors`](../../internal/connectors). `NewRegistry(connectors...)` validates descriptors; `EnsureSchedules` turns stream defaults into schedules; `Runtime.Handle` is the `sync` job handler. `Conn.HTTP` is the provider's rate-limited client: it waits for the token buckets, refuses calls while the provider is blocked, and turns a 429 into `RateLimitedError`. Only incremental and manual runs advance the stream cursor; correction runs keep their progress in the job checkpoint.
@@ -57,7 +61,7 @@ Each failure sets `connections.last_error_class` and, except rate limits, increm
 
 The core does these so connectors stay small:
 
-1. **Credentials**: decrypt; refresh single-flight under `SELECT … FOR UPDATE` on the credential row; persist a rotated token before using it.
+1. **Credentials**: decrypt; refresh single-flight under `SELECT … FOR UPDATE` on the credential row; persist a rotated token before using it (credentials a fetch returns are stored in its page transaction).
 2. **Rate limits**: an in-process token bucket per provider, plus a shared `blocked_until` in PostgreSQL that honours `Retry-After` across restarts.
 3. **Raw-first**: blob write + fsync → `raw_payloads` insert → `normalize_batch` job (when anything new was stored) → cursor advance, all in one transaction. A crash leaves at most an orphan blob, which the sweeper collects after 24 h.
 4. **Cursors**: JSON cursor + `high_watermark` per (connection, stream). A cursor advances only together with its raw rows.
@@ -69,13 +73,14 @@ The core does these so connectors stay small:
 
 ## OAuth connection flow
 
-Code: `internal/connectors/auth.go` (`Runtime.BeginAuth`, `CompleteAuth`, `Disconnect`, reusable `StateSigner`), routes in `internal/api/oauth.go`.
+Code: `internal/connectors/auth.go` (`Runtime.BeginAuth`, `ContinueAuth`, `CompleteAuth`, `Disconnect`, reusable `StateSigner`), routes in `internal/api/oauth.go`.
 
 1. `POST /api/v1/providers/{provider}/auth/begin` (new account) or `POST /api/v1/connections/{id}/auth/begin` (reauthorize), owner session only. It stores an `oauth_states` row (user, session, provider, connection, 10 min expiry) and answers `{"redirect_url"}` with a `state` = row id + HMAC (`session-signing` key) over the id and a random browser binding, which is also set as cookie `vitamux_oauth` (`HttpOnly; SameSite=Lax; Path=/oauth/`). The session cookie is `SameSite=Strict`, so it does not come back on the provider's redirect; the binding cookie does.
 2. `GET /oauth/{provider}/callback` (public; `HEAD` → 204, no side effects) verifies the HMAC with the cookie, then deletes the row in one statement: single use, and refused when expired, for another provider, or after its session ended. Only then does the connector exchange the code.
 3. `account_key` = SHA-256 of the provider account id. A new account gets a connection; the same account again (reconnect) reuses its connection (`UNIQUE (user, provider, account_key)`) and gets fresh credentials; a reauthorization must sign in to the connection's own account (otherwise nothing changes). The connection becomes `active`, default schedules are ensured, a first manual sync is queued, and the event is audited.
-4. The callback redirects to `/connections?connected=<provider>` or `/connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable`.
-5. Disconnect (`DELETE /api/v1/connections/{id}?data=keep`) deletes the credentials and sets `disabled`; data, cursors and schedules stay, and connecting the same account again revives the connection. `?data=delete` removes the connection with its data instead ([api.md](api.md#owner-endpoints-apiv1)).
+4. A prompt step answers `{"state", "prompt": {message, fields: [{name, label, kind: text|password|code}]}}` instead of a redirect; the UI posts `{state, values}` to `POST /api/v1/providers/{provider}/auth/continue` (owner session; the binding cookie is also set for `Path=/api/v1/providers/`). Each step consumes its state row and the next step gets a new one, so a state works once; any error ends the flow. A step's `Session` (e.g. a PKCE verifier or a login session) is sealed into `oauth_states.session` (purpose `credentials`, AAD `auth-session:<id>`) and handed back to `Continue`, never to the browser; owner values are passed through, never stored or logged. The last step finishes as in 3, except that a new connection of an unofficial connector starts `paused` with no first sync.
+5. The callback redirects to `/connections?connected=<provider>` or `/connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable`.
+6. Disconnect (`DELETE /api/v1/connections/{id}?data=keep`) deletes the credentials and sets `disabled`; data, cursors and schedules stay, and connecting the same account again revives the connection. `?data=delete` removes the connection with its data instead ([api.md](api.md#owner-endpoints-apiv1)).
 
 ## Push ingest contract
 

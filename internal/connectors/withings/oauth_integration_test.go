@@ -25,19 +25,22 @@ const binding = "synthetic-binding"
 // begin starts an authorization and returns the state from the consent URL.
 func (e *env) begin(t *testing.T, conn *uuid.UUID) string {
 	t.Helper()
-	target, err := e.rt.BeginAuth(t.Context(), connectors.AuthRequest{
+	step, state, err := e.rt.BeginAuth(t.Context(), connectors.AuthRequest{
 		UserID: e.user, SessionID: e.session, Provider: Provider, ConnectionID: conn, Binding: binding,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	u, err := url.Parse(target)
+	if step.Prompt != nil || step.Session != nil {
+		t.Fatalf("withings begins with a redirect only: %+v", step)
+	}
+	u, err := url.Parse(step.RedirectURL)
 	if err != nil {
 		t.Fatal(err)
 	}
 	q := u.Query()
 	if u.Path != "/oauth2_user/authorize2" || q.Get("response_type") != "code" || q.Get("client_id") != clientID ||
-		q.Get("scope") != "user.metrics" || q.Get("redirect_uri") != callback || q.Get("state") == "" {
+		q.Get("scope") != "user.metrics" || q.Get("redirect_uri") != callback || q.Get("state") != state {
 		t.Fatalf("consent URL has wrong parameters: path %s, keys %v", u.Path, keys(q))
 	}
 	return q.Get("state")
@@ -196,10 +199,10 @@ func TestOAuthLifecycle(t *testing.T) {
 	}
 
 	// Begin refuses unknown providers and other users' connections.
-	if _, err := e.rt.BeginAuth(ctx, connectors.AuthRequest{UserID: e.user, SessionID: e.session, Provider: "oura", Binding: binding}); !errors.Is(err, connectors.ErrAuthUnavailable) {
+	if _, _, err := e.rt.BeginAuth(ctx, connectors.AuthRequest{UserID: e.user, SessionID: e.session, Provider: "oura", Binding: binding}); !errors.Is(err, connectors.ErrAuthUnavailable) {
 		t.Fatalf("unknown provider: %v", err)
 	}
-	if _, err := e.rt.BeginAuth(ctx, connectors.AuthRequest{UserID: uuid.New(), SessionID: e.session, ConnectionID: &id, Binding: binding}); !errors.Is(err, db.ErrNotFound) {
+	if _, _, err := e.rt.BeginAuth(ctx, connectors.AuthRequest{UserID: uuid.New(), SessionID: e.session, ConnectionID: &id, Binding: binding}); !errors.Is(err, db.ErrNotFound) {
 		t.Fatalf("foreign connection: %v", err)
 	}
 }

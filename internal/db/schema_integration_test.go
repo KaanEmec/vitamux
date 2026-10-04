@@ -56,10 +56,25 @@ func TestAppRolePrivileges(t *testing.T) {
 		{"TRUNCATE audit_events", codeForbidden},
 		{"TRUNCATE jobs", codeForbidden},
 		{"INSERT INTO providers (code, name) VALUES ('fake', 'Fake')", codeForbidden},
+		{"UPDATE providers SET name = 'Renamed'", codeForbidden},
+		{"SELECT register_provider('Not A Code', 'Bad')", "23514"},
 		{"UPDATE metric_catalog SET code = code", codeForbidden},
 		{"INSERT INTO known_relay_origins (provider_id, origin_pattern, relayed_provider_id) VALUES (1, 'org.example.%', 1)", ""},
 	} {
 		assertCode(t, app, []string{tc.stmt}, tc.wantCode)
+	}
+	// Sidecar providers are added only through register_provider; a known code is kept.
+	for _, stmt := range []string{"SELECT register_provider('fake_sidecar', 'Fake sidecar')", "SELECT register_provider('withings', 'Renamed')"} {
+		if _, err := app.Exec(t.Context(), stmt); err != nil {
+			t.Fatalf("%s: %v", stmt, err)
+		}
+	}
+	var names string
+	if err := app.QueryRow(t.Context(), "SELECT string_agg(name, ',' ORDER BY code) FROM providers WHERE code IN ('fake_sidecar', 'withings')").Scan(&names); err != nil {
+		t.Fatal(err)
+	}
+	if names != "Fake sidecar,Withings" {
+		t.Fatalf("providers after register_provider: %s", names)
 	}
 }
 

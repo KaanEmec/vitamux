@@ -358,7 +358,7 @@ func (q *Queries) ListOverridesPage(ctx context.Context, arg ListOverridesPagePa
 const listOwnerConnections = `-- name: ListOwnerConnections :many
 
 SELECT c.id, p.code AS provider, c.mode, c.status, c.last_success_at, c.last_error_class, c.consecutive_failures,
-       c.created_at, c.updated_at, r.blocked_until
+       c.created_at, c.updated_at, r.blocked_until, c.upstream
 FROM connections c JOIN providers p ON p.id = c.provider_id
 LEFT JOIN provider_rate_state r ON r.provider_id = c.provider_id
 WHERE c.user_id = $1 AND ($2::uuid IS NULL OR c.id = $2::uuid)
@@ -381,6 +381,7 @@ type ListOwnerConnectionsRow struct {
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 	BlockedUntil        *time.Time
+	Upstream            []byte
 }
 
 // Owner configuration endpoints (J10.4, docs/architecture/api.md#owner-endpoints-apiv1). Every
@@ -407,6 +408,7 @@ func (q *Queries) ListOwnerConnections(ctx context.Context, arg ListOwnerConnect
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.BlockedUntil,
+			&i.Upstream,
 		); err != nil {
 			return nil, err
 		}
