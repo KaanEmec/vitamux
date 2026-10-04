@@ -1,0 +1,30 @@
+{
+  "synthetic": true,
+  "normalizer": "withings.measures",
+  "version": 2,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "synthetic-thermometer-01",
+        "type": "thermometer",
+        "manufacturer": "Withings",
+        "model": "Thermo"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "body_temperature",
+        "kind": "sample",
+        "start": "2025-01-02T09:26:40Z",
+        "value": 36.8,
+        "unit": "°C",
+        "device": "synthetic-thermometer-01",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000012",
+          "component": "body_temperature"
+        }
+      }
+    ]
+  }
+}

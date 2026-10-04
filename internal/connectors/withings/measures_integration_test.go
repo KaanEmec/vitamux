@@ -76,7 +76,7 @@ func (f *fakeMeasure) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		grps = append(grps, map[string]any{"grpid": g.id, "attrib": 0, "date": g.date, "created": g.date + 60,
 			"modified": g.modified, "category": 1, "deviceid": "synthetic-device", "hash_deviceid": "synthetic-device",
-			"measures": ms, "model_id": model, "comment": nil})
+			"measures": ms, "modelid": model, "comment": nil})
 	}
 	more := 0
 	if end < len(sel) {

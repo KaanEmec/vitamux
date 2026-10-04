@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -25,10 +26,12 @@ import (
 // fakeWithings scripts the Withings behaviour the lifecycle depends on
 // (docs/providers/withings.md): codes exchanged once, every refresh rotates the pair, the old
 // refresh token dies as soon as the new access token is used, a revoked grant refuses every
-// token, notify profiles are per appli, and getmeas is fakeMeasure's stateful dataset.
+// token, notify profiles are per appli, getmeas is fakeMeasure's stateful dataset, and
+// activity, intraday and sleep serve one static watch day, a relayed day and one night.
 type fakeWithings struct {
 	t       *testing.T
 	measure *fakeMeasure
+	hour    time.Time // the activity data sits in the hours before it
 
 	mu                       sync.Mutex
 	codes                    map[string]bool
@@ -98,7 +101,13 @@ func (f *fakeWithings) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		f.seq++
 		f.oldRefr, f.access, f.refresh = f.refresh, fmt.Sprintf("synthetic-access-%d", f.seq), fmt.Sprintf("synthetic-refresh-%d", f.seq)
 		f.reply(w, 0, map[string]any{"userid": 1234567, "access_token": f.access, "refresh_token": f.refresh,
-			"expires_in": 10800, "scope": "user.metrics", "token_type": "Bearer"})
+			"expires_in": 10800, "scope": "user.metrics,user.activity", "token_type": "Bearer"})
+	case "/v2/measure", "/v2/sleep":
+		if !f.authorized(r) {
+			f.reply(w, 401, map[string]any{})
+			return
+		}
+		f.reply(w, 0, f.v2(form))
 	case "/notify":
 		if !f.authorized(r) {
 			f.reply(w, 401, map[string]any{})
@@ -131,6 +140,50 @@ func (f *fakeWithings) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "unexpected path", http.StatusNotFound)
 	}
+}
+
+// v2 answers getactivity, getintradayactivity, sleep getsummary and sleep get. Withings sends an
+// empty series as [].
+func (f *fakeWithings) v2(form url.Values) map[string]any {
+	num := func(k string) int64 { n, _ := strconv.ParseInt(form.Get(k), 10, 64); return n }
+	h, watch := f.hour.Unix(), map[string]any{"hash_deviceid": "synthetic-watch", "deviceid": "synthetic-watch", "model": "ScanWatch", "modelid": 93}
+	night := [2]int64{h - 10*3600, h - 4*3600}
+	with := func(m map[string]any) map[string]any { maps.Copy(m, watch); return m }
+	switch form.Get("action") {
+	case "getactivity":
+		day := f.hour.In(time.FixedZone("", 3600)).Format(time.DateOnly)
+		return map[string]any{"more": false, "offset": 0, "activities": []any{
+			map[string]any{"date": day, "timezone": "Europe/Berlin", "hash_deviceid": "synthetic-watch", "deviceid": "synthetic-watch",
+				"brand": 1, "is_tracker": true, "steps": 6400, "distance": 4800, "elevation": 4, "calories": 310, "totalcalories": 2100},
+			map[string]any{"date": day, "timezone": "Europe/Berlin", "hash_deviceid": nil, "deviceid": nil, "brand": 18, "steps": 900}}}
+	case "getintradayactivity":
+		series := map[string]any{}
+		for ts, e := range map[int64]map[string]any{
+			h - 3*3600: {"steps": 120, "duration": 60}, h - 3*3600 + 60: {"heart_rate": 88}, h - 2*3600: {"steps": 40, "duration": 60},
+		} {
+			if ts >= num("startdate") && ts <= num("enddate") {
+				series[strconv.FormatInt(ts, 10)] = with(e)
+			}
+		}
+		if len(series) == 0 {
+			return map[string]any{"series": []any{}}
+		}
+		return map[string]any{"series": series}
+	case "getsummary":
+		return map[string]any{"more": 0, "offset": 0, "series": []any{map[string]any{"id": 77, "timezone": "Europe/Berlin",
+			"model_id": 63, "hash_deviceid": "synthetic-sleep-analyzer", "startdate": night[0], "enddate": night[1],
+			"date": time.Unix(night[1], 0).In(time.FixedZone("", 3600)).Format(time.DateOnly),
+			"data": map[string]any{"wakeupcount": 1, "sleep_score": 80, "total_sleep_time": 19800}}}}
+	case "get":
+		if num("startdate") != night[0] {
+			f.t.Errorf("fake withings: sleep get outside the night")
+		}
+		return map[string]any{"series": []any{
+			map[string]any{"startdate": night[0], "enddate": night[0] + 1800, "state": 0, "model_id": 63},
+			map[string]any{"startdate": night[0] + 1800, "enddate": night[1], "state": 1, "model_id": 63}}}
+	}
+	f.t.Errorf("fake withings: unexpected v2 action")
+	return map[string]any{}
 }
 
 // authorized checks the bearer token. Using the newest access token kills the previous refresh
@@ -167,7 +220,7 @@ func TestLifecycle(t *testing.T) {
 	ctx := t.Context()
 	t1 := unix("2026-01-01T00:00:00Z")
 	measure := &fakeMeasure{pageSize: 25, now: t1}
-	f := &fakeWithings{t: t, measure: measure, codes: map[string]bool{}, subs: map[int]string{}}
+	f := &fakeWithings{t: t, measure: measure, codes: map[string]bool{}, subs: map[int]string{}, hour: time.Now().UTC().Truncate(time.Hour)}
 	srv := httptest.NewServer(f)
 	t.Cleanup(srv.Close)
 	e := setup(t, srv.URL)
@@ -199,7 +252,7 @@ func TestLifecycle(t *testing.T) {
 	q := func(sql string) int { t.Helper(); return e.count(sql, id) }
 	expect := func(step string, raw, groups, bpGroups int, lastupdate int64, status string) {
 		t.Helper()
-		if n := q(`SELECT count(*) FROM raw_payloads WHERE connection_id = $1`); n != raw {
+		if n := q(`SELECT count(*) FROM raw_payloads WHERE connection_id = $1 AND stream = 'withings.measures'`); n != raw {
 			t.Fatalf("%s: %d raw rows, want %d", step, n, raw)
 		}
 		if n := q(`SELECT count(*) FROM raw_payloads WHERE connection_id = $1 AND status <> 'normalized'`); n != 0 {
@@ -260,6 +313,7 @@ func TestLifecycle(t *testing.T) {
 	e.run(t)
 	e.allSucceeded(t)
 	expect("first sync", total, total, bps, t1, "active")
+	otherStreams(t, e, id)
 
 	// 3. Backfill the same two months in 30-day units: re-fetched groups are no-ops, and a
 	// backfill never moves the stream cursor.
@@ -418,12 +472,55 @@ func TestLifecycle(t *testing.T) {
 	if n := q(`SELECT count(*) FROM connections WHERE id = $1 AND hook_token_hash IS NULL`); n != 1 || e.count(`SELECT count(*) FROM jobs`) != jobsBefore {
 		t.Fatal("off: hook kept or a job enqueued")
 	}
-	if n := q(`SELECT count(*) FROM schedules WHERE connection_id = $1 AND enabled`); n != 2 {
+	if n := q(`SELECT count(*) FROM schedules WHERE connection_id = $1 AND enabled`); n != 8 {
 		t.Fatalf("off: %d schedules enabled, polling must stay", n)
 	}
 	for _, h := range []string{hook, newHook} {
 		if strings.Contains(e.logs.String(), strings.TrimPrefix(h, publicURL+"/webhooks/withings/")) {
 			t.Error("logs contain a hook token")
 		}
+	}
+}
+
+// otherStreams checks the activity, intraday and sleep streams after the first sync: one record
+// per day and device, per hour and per night; activity steps on the watch that intraday typed
+// (so they take part in the steps built-in); the relayed day flagged; one night with stages.
+// Syncing the streams again stores nothing new.
+func otherStreams(t *testing.T, e *env, id uuid.UUID) {
+	t.Helper()
+	ctx := t.Context()
+	raw := func() string {
+		return fmt.Sprint(e.count(`SELECT count(*) FROM raw_payloads WHERE connection_id = $1 AND stream = $2`, id, StreamActivity),
+			e.count(`SELECT count(*) FROM raw_payloads WHERE connection_id = $1 AND stream = $2`, id, StreamIntraday),
+			e.count(`SELECT count(*) FROM raw_payloads WHERE connection_id = $1 AND stream = $2`, id, StreamSleep))
+	}
+	if got := raw(); got != "2 2 1" {
+		t.Fatalf("other streams: raw activity, intraday, sleep %s, want 2 2 1", got)
+	}
+	for sql, want := range map[string]int{
+		`SELECT count(*) FROM measurements m JOIN metric_catalog c ON c.id = m.metric_id JOIN devices d ON d.id = m.device_id
+		 WHERE m.connection_id = $1 AND c.code = 'steps' AND m.kind = 'daily_value' AND d.device_type = 'watch'`: 1,
+		`SELECT count(*) FROM measurements m JOIN data_origins o ON o.id = m.origin_id
+		 WHERE m.connection_id = $1 AND o.origin_key = 'relay:brand:18' AND m.quality_flags & 8 <> 0`: 1,
+		`SELECT count(*) FROM measurements m JOIN metric_catalog c ON c.id = m.metric_id
+		 WHERE m.connection_id = $1 AND c.code = 'steps' AND m.kind = 'interval'`: 2,
+		`SELECT count(*) FROM sleep_sessions s JOIN devices d ON d.id = s.device_id
+		 WHERE s.connection_id = $1 AND s.has_stages AND d.device_type = 'under_mattress'`: 1,
+		`SELECT count(*) FROM sync_cursors WHERE connection_id = $1 AND stream <> 'withings.measures'`: 3,
+	} {
+		if n := e.count(sql, id); n != want {
+			t.Fatalf("other streams: %d rows, want %d: %s", n, want, sql)
+		}
+	}
+	for _, s := range []string{StreamActivity, StreamIntraday, StreamSleep} {
+		if _, _, err := jobs.Enqueue(ctx, e.d.Q(), jobs.NewJob{Kind: jobs.KindSync, ConnectionID: &id, Exclusive: true,
+			Payload: jobs.SyncPayload{Stream: s, Mode: connectors.ModeIncremental, Slot: time.Now()}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	e.run(t)
+	e.allSucceeded(t)
+	if got := raw(); got != "2 2 1" {
+		t.Fatalf("other streams again: raw %s, want 2 2 1", got)
 	}
 }

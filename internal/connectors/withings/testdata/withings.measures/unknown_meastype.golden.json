@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "withings.measures",
-  "version": 1,
+  "version": 2,
   "output": {
     "devices": [
       {
@@ -27,10 +27,6 @@
       }
     ],
     "warnings": [
-      {
-        "code": "unknown_meastype",
-        "detail": "type 130"
-      },
       {
         "code": "unknown_meastype",
         "detail": "type 9999"

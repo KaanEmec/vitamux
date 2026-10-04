@@ -1,0 +1,30 @@
+{
+  "synthetic": true,
+  "normalizer": "withings.measures",
+  "version": 2,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "synthetic-sleep-analyzer-01",
+        "type": "under_mattress",
+        "manufacturer": "Withings",
+        "model": "Sleep Analyzer"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "heart_rate",
+        "kind": "sample",
+        "start": "2025-01-02T04:00:00Z",
+        "value": 58,
+        "unit": "bpm",
+        "device": "synthetic-sleep-analyzer-01",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000010",
+          "component": "heart_rate"
+        }
+      }
+    ]
+  }
+}

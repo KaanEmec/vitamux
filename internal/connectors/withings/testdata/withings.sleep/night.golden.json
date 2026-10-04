@@ -1,0 +1,222 @@
+{
+  "synthetic": true,
+  "normalizer": "withings.sleep",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "synthetic-sleep-analyzer-01",
+        "type": "under_mattress",
+        "manufacturer": "Withings"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "sleep_awakenings",
+        "kind": "daily_value",
+        "start": "2025-01-01T23:00:00Z",
+        "end": "2025-01-02T23:00:00Z",
+        "zone": {
+          "tz": "Europe/Berlin"
+        },
+        "value": 2,
+        "unit": "count",
+        "device": "synthetic-sleep-analyzer-01",
+        "key": {
+          "record_type": "sleep",
+          "external_id": "3100000001",
+          "component": "sleep_awakenings"
+        }
+      },
+      {
+        "metric": "sleep_snoring_time",
+        "kind": "daily_value",
+        "start": "2025-01-01T23:00:00Z",
+        "end": "2025-01-02T23:00:00Z",
+        "zone": {
+          "tz": "Europe/Berlin"
+        },
+        "value": 420,
+        "unit": "s",
+        "device": "synthetic-sleep-analyzer-01",
+        "key": {
+          "record_type": "sleep",
+          "external_id": "3100000001",
+          "component": "sleep_snoring_time"
+        }
+      },
+      {
+        "metric": "sleep_snoring_episodes",
+        "kind": "daily_value",
+        "start": "2025-01-01T23:00:00Z",
+        "end": "2025-01-02T23:00:00Z",
+        "zone": {
+          "tz": "Europe/Berlin"
+        },
+        "value": 3,
+        "unit": "count",
+        "device": "synthetic-sleep-analyzer-01",
+        "key": {
+          "record_type": "sleep",
+          "external_id": "3100000001",
+          "component": "sleep_snoring_episodes"
+        }
+      },
+      {
+        "metric": "apnea_hypopnea_index",
+        "kind": "daily_value",
+        "start": "2025-01-01T23:00:00Z",
+        "end": "2025-01-02T23:00:00Z",
+        "zone": {
+          "tz": "Europe/Berlin"
+        },
+        "value": 4,
+        "unit": "events/h",
+        "device": "synthetic-sleep-analyzer-01",
+        "key": {
+          "record_type": "sleep",
+          "external_id": "3100000001",
+          "component": "apnea_hypopnea_index"
+        }
+      },
+      {
+        "metric": "withings_sleep_score",
+        "kind": "daily_value",
+        "start": "2025-01-01T23:00:00Z",
+        "end": "2025-01-02T23:00:00Z",
+        "zone": {
+          "tz": "Europe/Berlin"
+        },
+        "value": 81,
+        "unit": "index",
+        "device": "synthetic-sleep-analyzer-01",
+        "key": {
+          "record_type": "sleep",
+          "external_id": "3100000001",
+          "component": "withings_sleep_score"
+        }
+      },
+      {
+        "metric": "withings_breathing_quality",
+        "kind": "daily_value",
+        "start": "2025-01-01T23:00:00Z",
+        "end": "2025-01-02T23:00:00Z",
+        "zone": {
+          "tz": "Europe/Berlin"
+        },
+        "value": 12,
+        "unit": "index",
+        "device": "synthetic-sleep-analyzer-01",
+        "key": {
+          "record_type": "sleep",
+          "external_id": "3100000001",
+          "component": "withings_breathing_quality"
+        }
+      },
+      {
+        "metric": "sleeping_heart_rate",
+        "kind": "daily_value",
+        "start": "2025-01-01T23:00:00Z",
+        "end": "2025-01-02T23:00:00Z",
+        "zone": {
+          "tz": "Europe/Berlin"
+        },
+        "value": 57,
+        "unit": "bpm",
+        "device": "synthetic-sleep-analyzer-01",
+        "key": {
+          "record_type": "sleep",
+          "external_id": "3100000001",
+          "component": "sleeping_heart_rate"
+        }
+      },
+      {
+        "metric": "respiratory_rate_nightly",
+        "kind": "daily_value",
+        "start": "2025-01-01T23:00:00Z",
+        "end": "2025-01-02T23:00:00Z",
+        "zone": {
+          "tz": "Europe/Berlin"
+        },
+        "value": 14,
+        "unit": "breaths/min",
+        "device": "synthetic-sleep-analyzer-01",
+        "key": {
+          "record_type": "sleep",
+          "external_id": "3100000001",
+          "component": "respiratory_rate_nightly"
+        }
+      }
+    ],
+    "sleep": [
+      {
+        "start": "2025-01-01T21:30:00Z",
+        "end": "2025-01-02T05:30:00Z",
+        "zone": {
+          "tz": "Europe/Berlin"
+        },
+        "stages": [
+          {
+            "stage": "awake",
+            "start": "2025-01-01T21:30:00Z",
+            "end": "2025-01-01T21:45:00Z"
+          },
+          {
+            "stage": "light",
+            "start": "2025-01-01T21:45:00Z",
+            "end": "2025-01-01T22:45:00Z"
+          },
+          {
+            "stage": "deep",
+            "start": "2025-01-01T22:45:00Z",
+            "end": "2025-01-01T23:45:00Z"
+          },
+          {
+            "stage": "rem",
+            "start": "2025-01-01T23:45:00Z",
+            "end": "2025-01-02T00:45:00Z"
+          },
+          {
+            "stage": "light",
+            "start": "2025-01-02T00:45:00Z",
+            "end": "2025-01-02T01:45:00Z"
+          },
+          {
+            "stage": "out_of_bed",
+            "start": "2025-01-02T01:45:00Z",
+            "end": "2025-01-02T01:55:00Z"
+          },
+          {
+            "stage": "asleep_unspecified",
+            "start": "2025-01-02T01:55:00Z",
+            "end": "2025-01-02T03:45:00Z"
+          },
+          {
+            "stage": "asleep_unspecified",
+            "start": "2025-01-02T03:45:00Z",
+            "end": "2025-01-02T05:20:00Z"
+          }
+        ],
+        "totals": {
+          "asleep_s": 26100,
+          "deep_s": 3600,
+          "light_s": 10800,
+          "rem_s": 3600,
+          "awake_s": 1500,
+          "latency_s": 900
+        },
+        "device": "synthetic-sleep-analyzer-01",
+        "key": {
+          "record_type": "sleep",
+          "external_id": "3100000001"
+        }
+      }
+    ],
+    "warnings": [
+      {
+        "code": "unknown_sleep_state",
+        "detail": "state 99"
+      }
+    ]
+  }
+}

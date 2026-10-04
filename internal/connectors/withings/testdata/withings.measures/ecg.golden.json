@@ -1,0 +1,69 @@
+{
+  "synthetic": true,
+  "normalizer": "withings.measures",
+  "version": 2,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "synthetic-watch-01",
+        "type": "watch",
+        "manufacturer": "Withings",
+        "model": "ScanWatch"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "ecg_qrs",
+        "kind": "sample",
+        "start": "2025-01-02T12:13:20Z",
+        "value": 0.092,
+        "unit": "s",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000013",
+          "component": "ecg_qrs"
+        }
+      },
+      {
+        "metric": "ecg_pr",
+        "kind": "sample",
+        "start": "2025-01-02T12:13:20Z",
+        "value": 0.158,
+        "unit": "s",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000013",
+          "component": "ecg_pr"
+        }
+      },
+      {
+        "metric": "ecg_qt",
+        "kind": "sample",
+        "start": "2025-01-02T12:13:20Z",
+        "value": 0.384,
+        "unit": "s",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000013",
+          "component": "ecg_qt"
+        }
+      },
+      {
+        "metric": "ecg_qtc",
+        "kind": "sample",
+        "start": "2025-01-02T12:13:20Z",
+        "value": 0.402,
+        "unit": "s",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000013",
+          "component": "ecg_qtc"
+        }
+      }
+    ]
+  }
+}

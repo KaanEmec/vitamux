@@ -1,0 +1,156 @@
+{
+  "synthetic": true,
+  "normalizer": "withings.measures",
+  "version": 2,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "synthetic-scale-02",
+        "type": "scale",
+        "manufacturer": "Withings",
+        "model": "Body Scan"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "withings_metabolic_age",
+        "kind": "sample",
+        "start": "2025-01-02T06:40:00Z",
+        "value": 34,
+        "unit": "years",
+        "device": "synthetic-scale-02",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000011",
+          "component": "withings_metabolic_age"
+        }
+      },
+      {
+        "metric": "withings_esc",
+        "kind": "sample",
+        "start": "2025-01-02T06:40:00Z",
+        "value": 68,
+        "unit": "µS",
+        "device": "synthetic-scale-02",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000011",
+          "component": "withings_esc"
+        }
+      },
+      {
+        "metric": "withings_nerve_health_score",
+        "kind": "sample",
+        "start": "2025-01-02T06:40:00Z",
+        "value": 71,
+        "unit": "index",
+        "device": "synthetic-scale-02",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000011",
+          "component": "withings_nerve_health_score"
+        }
+      },
+      {
+        "metric": "withings_nerve_response_score",
+        "kind": "sample",
+        "start": "2025-01-02T06:40:00Z",
+        "value": 64,
+        "unit": "index",
+        "device": "synthetic-scale-02",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000011",
+          "component": "withings_nerve_response_score"
+        }
+      }
+    ],
+    "groups": [
+      {
+        "kind": "body_composition",
+        "measured_at": "2025-01-02T06:40:00Z",
+        "context": {
+          "attrib": 0
+        },
+        "device": "synthetic-scale-02",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000011",
+          "component": "body_composition"
+        },
+        "components": [
+          {
+            "metric": "weight",
+            "kind": "sample",
+            "start": "2025-01-02T06:40:00Z",
+            "value": 80.1,
+            "unit": "kg"
+          },
+          {
+            "metric": "fat_free_mass_trunk",
+            "kind": "sample",
+            "start": "2025-01-02T06:40:00Z",
+            "value": 29.5,
+            "unit": "kg"
+          },
+          {
+            "metric": "fat_free_mass_right_arm",
+            "kind": "sample",
+            "start": "2025-01-02T06:40:00Z",
+            "value": 4.1,
+            "unit": "kg"
+          },
+          {
+            "metric": "fat_free_mass_left_arm",
+            "kind": "sample",
+            "start": "2025-01-02T06:40:00Z",
+            "value": 4,
+            "unit": "kg"
+          },
+          {
+            "metric": "fat_free_mass_left_leg",
+            "kind": "sample",
+            "start": "2025-01-02T06:40:00Z",
+            "value": 11.2,
+            "unit": "kg"
+          },
+          {
+            "metric": "fat_free_mass_right_leg",
+            "kind": "sample",
+            "start": "2025-01-02T06:40:00Z",
+            "value": 11.3,
+            "unit": "kg"
+          },
+          {
+            "metric": "fat_mass_trunk",
+            "kind": "sample",
+            "start": "2025-01-02T06:40:00Z",
+            "value": 9.5,
+            "unit": "kg"
+          },
+          {
+            "metric": "muscle_mass_left_leg",
+            "kind": "sample",
+            "start": "2025-01-02T06:40:00Z",
+            "value": 10.5,
+            "unit": "kg"
+          }
+        ]
+      }
+    ],
+    "warnings": [
+      {
+        "code": "duplicate_meastype",
+        "detail": "type 173"
+      },
+      {
+        "code": "unknown_position",
+        "detail": "type 174"
+      },
+      {
+        "code": "not_body_temperature",
+        "detail": "type 12"
+      }
+    ]
+  }
+}

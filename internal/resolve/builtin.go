@@ -315,7 +315,7 @@ func builtins() []Builtin {
 		Rule{Metric: FamilySleep, Window: night, Strategy: Strategy{Op: OpEventPriority},
 			Quality: &Quality{MaxStaleness: "36h", Sleep: &SleepQuality{MatchOverlap: new(0.5)}},
 			Groups: biLadder(biBrand(provOura), biAppleDevice("apple_watch", "Watch"), biBrand(provFitbit),
-				// The Withings normalizer reports its under-mattress sensor as sleep_monitor.
+				// withings.measures v1 reported its under-mattress sensor as sleep_monitor.
 				biGroup("under_mattress", Selector{DeviceType: "under_mattress"}, Selector{DeviceType: "sleep_monitor"}),
 				biBrand(provSamsung), biBrand(provWhoop), biBrand(provGarmin), biBrand(provPolar), biBrand(provXiaomi), biBrand(provAmazfit))}))
 }

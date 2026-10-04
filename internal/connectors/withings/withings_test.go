@@ -42,6 +42,23 @@ func TestPlan(t *testing.T) {
 	if _, err := w.Plan(t.Context(), connectors.Conn{}, connectors.PlanRequest{Mode: connectors.ModeCorrection}); !errors.Is(err, connectors.ErrPermanent) {
 		t.Fatalf("correction without window: %v", err)
 	}
+	// Activity and sleep answer without an updatetime: the next lastupdate is the slot minus the overlap.
+	slot := time.Date(2025, 1, 31, 10, 20, 0, 0, time.UTC)
+	us, err = w.Plan(t.Context(), connectors.Conn{}, connectors.PlanRequest{Mode: connectors.ModeIncremental, Stream: StreamSleep,
+		Cursor: json.RawMessage(`{"lastupdate":100}`), To: slot})
+	if err != nil || string(us[0].Cursor) != `{"lastupdate":100,"updatetime":1738315200}` {
+		t.Fatalf("sleep: %v %s", err, us[0].Cursor)
+	}
+	// Intraday widens to whole hours: from the stored start, or the last week before the first sync.
+	us, err = w.Plan(t.Context(), connectors.Conn{}, connectors.PlanRequest{Mode: connectors.ModeManual, Stream: StreamIntraday, To: slot})
+	if err != nil || !us[0].From.Equal(time.Date(2025, 1, 24, 10, 0, 0, 0, time.UTC)) || !us[0].To.Equal(time.Date(2025, 1, 31, 11, 0, 0, 0, time.UTC)) {
+		t.Fatalf("intraday first sync: %v %+v", err, us)
+	}
+	us, err = w.Plan(t.Context(), connectors.Conn{}, connectors.PlanRequest{Mode: connectors.ModeIncremental, Stream: StreamIntraday,
+		Cursor: json.RawMessage(`{"start":1738306800}`), To: slot})
+	if err != nil || us[0].From.Unix() != 1738306800 || us[0].Cursor != nil {
+		t.Fatalf("intraday: %v %+v", err, us)
+	}
 }
 
 func TestDecodePage(t *testing.T) {

@@ -1,5 +1,6 @@
-// Package withings is the official Withings connector: OAuth 2.0 connection, the
-// withings.measures stream and its normalizer. Verified API facts: docs/providers/withings.md.
+// Package withings is the official Withings connector: OAuth 2.0 connection, the measures,
+// activity, intraday and sleep streams and their normalizers. Verified API facts:
+// docs/providers/withings.md.
 package withings
 
 import (
@@ -17,11 +18,14 @@ import (
 
 const (
 	Provider       = "withings"
-	StreamMeasures = "withings.measures"
+	StreamMeasures = "withings.measures" // getmeas
+	StreamActivity = "withings.activity" // getactivity
+	StreamIntraday = "withings.intraday" // getintradayactivity
+	StreamSleep    = "withings.sleep"    // sleep getsummary and get
 
 	defaultAuthURL = "https://account.withings.com/oauth2_user/authorize2"
 	defaultAPIURL  = "https://wbsapi.withings.net"
-	scope          = "user.metrics"
+	scope          = "user.metrics,user.activity"
 	maxBody        = 32 << 20 // a getmeas page of years of groups stays far below this
 )
 
@@ -56,15 +60,18 @@ func New(cfg Config) *Connector {
 	return &Connector{cfg: cfg}
 }
 
-// Describe declares the measures stream: hourly lastupdate polling, a daily 7-day correction
-// window, 30-day backfill units, and the 120 requests per minute of the standard plan.
+// Describe declares the streams: hourly polling, a daily correction window (7 days, intraday 2),
+// 30-day backfill units (intraday 1 day), and the 120 requests per minute of the standard plan.
 func (*Connector) Describe() connectors.Descriptor {
+	const day, years = 24 * time.Hour, 20 * 365 * 24 * time.Hour
 	return connectors.Descriptor{
-		Provider: Provider, Name: "Withings", Version: "1", Official: true, AuthKind: connectors.AuthOAuth2,
-		Streams: []connectors.StreamSpec{{
-			Name: StreamMeasures, Interval: time.Hour, Lookback: 7 * 24 * time.Hour,
-			MaxBackfill: 20 * 365 * 24 * time.Hour, UnitSize: 30 * 24 * time.Hour,
-		}},
+		Provider: Provider, Name: "Withings", Version: "2", Official: true, AuthKind: connectors.AuthOAuth2,
+		Streams: []connectors.StreamSpec{
+			{Name: StreamMeasures, Interval: time.Hour, Lookback: 7 * day, MaxBackfill: years, UnitSize: 30 * day},
+			{Name: StreamActivity, Interval: time.Hour, Lookback: 7 * day, MaxBackfill: years, UnitSize: 30 * day},
+			{Name: StreamIntraday, Interval: time.Hour, Lookback: 2 * day, MaxBackfill: years, UnitSize: day},
+			{Name: StreamSleep, Interval: time.Hour, Lookback: 7 * day, MaxBackfill: years, UnitSize: 30 * day},
+		},
 		RateLimits:   []connectors.RateLimitSpec{{Requests: 120, Per: time.Minute}},
 		Capabilities: connectors.Capabilities{Incremental: true, Backfill: true, Webhooks: true, ManualSync: true},
 	}

@@ -254,17 +254,17 @@ func TestConnectionEndpoints(t *testing.T) {
 	e.call(e.user, "POST /api/v1/connections/{id}/sync", one+"/sync", "", http.StatusConflict, nil)
 	e.exec(`UPDATE connections SET status = 'active' WHERE id = $1`, e.conn)
 
-	// Two quick manual syncs queue one job; both requests are audited.
+	// Two quick manual syncs queue one job per Withings stream; both requests are audited.
 	var s1, s2 oapi.SyncQueued
 	e.audited(2, func() {
 		e.call(e.user, "POST /api/v1/connections/{id}/sync", one+"/sync", "", http.StatusAccepted, &s1)
 		e.call(e.user, "POST /api/v1/connections/{id}/sync", one+"/sync", "", http.StatusAccepted, &s2)
 	})
-	if len(s1.Jobs) != 1 || len(s2.Jobs) != 1 || s1.Jobs[0].ID != s2.Jobs[0].ID || s1.Jobs[0].Status != oapi.JobStatusQueued {
+	if len(s1.Jobs) != 4 || len(s2.Jobs) != 4 || s1.Jobs[0].ID != s2.Jobs[0].ID || s1.Jobs[0].Status != oapi.JobStatusQueued {
 		t.Fatalf("syncs: %+v / %+v", s1, s2)
 	}
-	if n := e.count(`SELECT count(*) FROM jobs WHERE connection_id = $1 AND kind = 'sync'`, e.conn); n != 1 {
-		t.Fatalf("sync jobs: %d, want 1", n)
+	if n := e.count(`SELECT count(*) FROM jobs WHERE connection_id = $1 AND kind = 'sync'`, e.conn); n != 4 {
+		t.Fatalf("sync jobs: %d, want 4", n)
 	}
 	e.call(e.user, "POST /api/v1/connections/{id}/sync", "/api/v1/connections/"+push.ID+"/sync", "", http.StatusConflict, nil)
 
@@ -272,7 +272,16 @@ func TestConnectionEndpoints(t *testing.T) {
 	e.exec(`INSERT INTO sync_cursors (connection_id, stream, cursor, high_watermark) VALUES ($1, 'withings.measures', '{"lastupdate": 1}', now())`, e.conn)
 	var streams struct{ Streams []oapi.Stream }
 	e.call(e.user, "GET /api/v1/connections/{id}/streams", one+"/streams", "", http.StatusOK, &streams)
-	if len(streams.Streams) != 1 || !streams.Streams[0].HasCursor || len(streams.Streams[0].Schedules) != 2 {
+	cursors := 0
+	for _, st := range streams.Streams {
+		if st.HasCursor {
+			cursors++
+		}
+		if len(st.Schedules) != 2 {
+			t.Fatalf("streams: %+v", streams.Streams)
+		}
+	}
+	if len(streams.Streams) != 4 || cursors != 1 {
 		t.Fatalf("streams: %+v", streams.Streams)
 	}
 	reset := "POST /api/v1/connections/{id}/streams/{stream}/reset-cursor"
@@ -417,7 +426,7 @@ func TestScheduleJobTimezoneSettingEndpoints(t *testing.T) {
 	e := newCfgEnv(t)
 	var scheds struct{ Schedules []oapi.Schedule }
 	e.call(e.user, "GET /api/v1/schedules", "/api/v1/schedules?connection="+e.cid, "", http.StatusOK, &scheds)
-	if len(scheds.Schedules) != 2 {
+	if len(scheds.Schedules) != 8 {
 		t.Fatalf("schedules: %+v", scheds)
 	}
 	e.call(e.user, "GET /api/v1/schedules", "/api/v1/schedules?connection=bad", "", http.StatusUnprocessableEntity, nil)

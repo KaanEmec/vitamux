@@ -1,0 +1,1 @@
+{"synthetic": true, "timezone": "Europe/Berlin", "measuregrp": {"grpid": 98765000000012, "attrib": 0, "date": 1735810000, "created": 1735810060, "modified": 1735810060, "category": 1, "deviceid": "synthetic-thermometer-01", "hash_deviceid": "synthetic-thermometer-01", "measures": [{"value": 3680, "type": 12, "unit": -2}], "model": "Thermo", "modelid": null, "comment": null}}

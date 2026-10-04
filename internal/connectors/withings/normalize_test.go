@@ -7,9 +7,12 @@ import (
 	"github.com/KaanEmec/vitamux/internal/normalize/normtest"
 )
 
-func TestGoldenMeasures(t *testing.T) {
-	normtest.Golden(t, Normalizer{}, normalize.RawPayload{Stream: StreamMeasures, ContentType: "application/json"},
-		normalize.Env{Provider: Provider})
+func TestGoldenStreams(t *testing.T) {
+	for _, n := range Normalizers() {
+		t.Run(n.ID(), func(t *testing.T) {
+			normtest.Golden(t, n, normalize.RawPayload{Stream: n.ID(), ContentType: "application/json"}, normalize.Env{Provider: Provider})
+		})
+	}
 }
 
 func TestDecimal(t *testing.T) {

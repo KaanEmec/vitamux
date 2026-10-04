@@ -140,7 +140,7 @@ func (e *env) newSession() {
 // or running.
 func (e *env) run(t *testing.T) {
 	t.Helper()
-	reg, err := normalize.NewRegistry(Normalizer{})
+	reg, err := normalize.NewRegistry(Normalizers()...)
 	if err != nil {
 		t.Fatal(err)
 	}
