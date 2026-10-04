@@ -51,6 +51,8 @@ export class ExploreApi {
 	layout = { version: 1, cards: [{ metric: 'steps', size: 'M', hidden: false }], is_default: true };
 	/** Bodies of PUT /settings/dashboard. */
 	saved: Json[] = [];
+	/** GET /sources/series answers no sources. */
+	noSources = false;
 
 	constructor(
 		private page: Page,
@@ -135,7 +137,7 @@ export class ExploreApi {
 		};
 		return json(r, 200, {
 			metric: q.get('metric'), unit: 'bpm', aggregation: 'daily_summary', grain: 'day', timezone: 'Europe/Amsterdam', behind: false,
-			sources: [source('garmin', 52), source('apple_health', 54)]
+			sources: this.noSources ? [] : [source('garmin', 52), source('apple_health', 54)]
 		});
 	}
 

@@ -94,8 +94,16 @@ test('metric detail: stats header, range, overlays, compare, source strip and th
 	await expect(chart).toBeVisible();
 	const region = page.getByRole('region', { name: 'Resting heart rate chart' });
 	await expect(region.getByText('7-day range')).toBeVisible();
-	// The source behind each day, coloured by provider, summarised in words.
-	await expect(page.getByRole('img', { name: 'Source per day: Whoop 29, Garmin 1, none 0 of 30 days' })).toBeVisible();
+	// The source behind each day is a toggle, off until chosen and kept for the next visit.
+	const strip = page.getByRole('img', { name: /^Source per day/ });
+	const stripToggle = page.getByRole('group', { name: 'Series' }).getByRole('button', { name: 'Source per day' });
+	await expect(stripToggle).toHaveAttribute('aria-pressed', 'false');
+	await expect(strip).toHaveCount(0);
+	await stripToggle.click();
+	await expect(strip).toHaveAccessibleName('Source per day: Whoop 29, Garmin 1, none 0 of 30 days');
+	await page.reload();
+	await expect(stripToggle).toHaveAttribute('aria-pressed', 'true');
+	await expect(strip).toBeVisible();
 	const values = page.getByRole('region', { name: 'Values' });
 	await expect(values.getByRole('row')).toHaveCount(31); // header + first 30 days
 	await expect(values.getByRole('row', { name: /Sep 14, 2026/ })).toContainText(/52 bpm\s*Fallback\s*Garmin\s*Built-in/);
@@ -175,11 +183,27 @@ lensTest('the rule lens beside the chart: window counts, draft preview, save and
 	await expect(history.getByRole('button', { name: 'Activate version 2' })).toBeVisible();
 });
 
+test('nothing resolved: the sources own series are drawn, with the reason', async ({ page }) => {
+	await page.goto('/explore/spo2?range=1M&end=2026-09-16'); // no resolved value; the sources have points
+	const region = page.getByRole('region', { name: 'Spo2 chart' });
+	await expect(page.getByRole('group', { name: /each source per day/ })).toBeVisible();
+	await expect(page.getByText('No values in this range')).toHaveCount(0);
+	await expect(page.getByText(/Nothing resolved in this range, so each source’s own values are shown/)).toBeVisible();
+	const toggles = page.getByRole('group', { name: 'Series' });
+	for (const name of ['Garmin', 'Apple Health']) await expect(toggles.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
+	await expect(region).toBeVisible();
+});
+
+test('a metric without resolved or source values still says so', async ({ page, explore }) => {
+	explore.noSources = true;
+	await page.goto('/explore/spo2?range=1M&end=2026-09-16');
+	await expect(page.getByText('No values in this range')).toBeVisible();
+});
+
 test('metric detail at 390 px: no page scroll, the lens stacks under the chart', async ({ page }) => {
 	await page.setViewportSize({ width: 390, height: 844 });
 	await page.goto(detail);
 	await expect(page.getByRole('group', { name: /resolved per day/ })).toBeVisible();
-	await expect(page.getByRole('img', { name: /^Source per day/ })).toBeVisible();
 	await page.getByRole('button', { name: 'How it’s calculated' }).click();
 	const lens = page.getByRole('complementary', { name: 'How this is calculated' });
 	await expect(lens).toBeVisible(); // inline, not a sheet

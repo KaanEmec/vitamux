@@ -44,6 +44,7 @@ var defaultDashboard = []oapi.DashboardCard{
 	{Metric: "spo2", Size: oapi.S},
 	{Metric: "respiratory_rate", Size: oapi.S},
 	{Metric: "active_energy", Size: oapi.S},
+	{Metric: "total_energy", Size: oapi.S},
 }
 
 func (o *owner) GetDashboardLayout(ctx context.Context, _ oapi.GetDashboardLayoutRequestObject) (oapi.GetDashboardLayoutResponseObject, error) {

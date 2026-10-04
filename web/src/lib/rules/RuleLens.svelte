@@ -404,7 +404,7 @@
 					</div>
 				{/if}
 				<div class="field wide">
-					<label class="lbl" for="{uid}-cov">Minimum coverage · {coverage ? `${coverage}%` : 'none'}</label>
+					<label class="lbl" for="{uid}-cov">Minimum coverage · {coverage ? `${coverage}%` : 'none (opt-in)'}</label>
 					<input
 						id="{uid}-cov"
 						type="range"

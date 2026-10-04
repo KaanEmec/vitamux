@@ -5,7 +5,7 @@
 // All values are synthetic and deterministic.
 //
 // Seed: the curated default layout; sleep, resting heart rate, HRV (RMSSD), steps, VO2 max,
-// weight, blood pressure, SpO2 (a fallback), respiratory rate and active energy have data;
+// weight, blood pressure, SpO2 (a fallback), respiratory rate, active and total energy have data;
 // HRV (SDNN) has none, so its card stays hidden. Steps of today are partial. A Withings
 // connection needs reauthorization and the last backup is ten days old (two alerts). The
 // dismissed alert keys are stored with the layout; `reauthSince` dates the reauthorization
@@ -35,7 +35,8 @@ export const defaultLayout: Card[] = (
 		['blood_pressure', 'S'],
 		['spo2', 'S'],
 		['respiratory_rate', 'S'],
-		['active_energy', 'S']
+		['active_energy', 'S'],
+		['total_energy', 'S']
 	] as [string, Card['size']][]
 ).map(([metric, size]) => ({ metric, size, hidden: false }));
 
@@ -67,7 +68,8 @@ const specs: Record<string, Spec> = {
 	weight: { unit: 'kg', base: 74.5, amp: 0.8, agg: 'latest', group: 'scale', provider: 'withings', section: 'Body composition' },
 	spo2: { unit: '%', base: 96, amp: 1, agg: 'intensive', group: 'whoop', provider: 'whoop', status: 'fallback', section: 'Respiration and oxygen' },
 	respiratory_rate: { unit: 'breaths/min', base: 14, amp: 1, agg: 'intensive', group: 'apple_watch', provider: 'apple_health', section: 'Respiration and oxygen' },
-	active_energy: { unit: 'kcal', base: 700, amp: 150, agg: 'additive', group: 'apple_watch', provider: 'apple_health', section: 'Activity' }
+	active_energy: { unit: 'kcal', base: 700, amp: 150, agg: 'additive', group: 'apple_watch', provider: 'apple_health', section: 'Activity' },
+	total_energy: { unit: 'kcal', base: 2400, amp: 300, agg: 'additive', group: 'whoop', provider: 'whoop', section: 'Activity' }
 };
 
 // A catalogue slice: the codes above plus parts of the two families and one more body metric.
@@ -148,6 +150,7 @@ export class DashboardApi {
 		if (path === '/resolved/trend') return this.trend(r, url.searchParams);
 		if (path === '/resolved/sleep') return this.sleep(r, url.searchParams);
 		if (path === '/sleep') return this.sessions(r, url.searchParams);
+		if (path === '/inventory') return this.inventory(r);
 		if (path === '/metrics') return json(r, 200, { metrics: catalogue });
 		if (path === '/resolved/summary') return this.summary(r, url.searchParams);
 		if (path === '/providers') return json(r, 200, { providers });
@@ -171,6 +174,20 @@ export class DashboardApi {
 			timezone: 'Europe/Amsterdam',
 			metrics: Object.fromEntries(metrics.map((m) => [m, { ...this.metric(m, on), ...(compare ? { comparisons: this.comparisons(m, on) } : {}) }]))
 		});
+	}
+
+	/** The metrics with data, as inventory items: what edit mode offers beside the saved layout. */
+	private inventory(r: Route) {
+		const base = { count: 100, days: 90, first_date: '2026-06-01', last_date: today(), providers: [], devices: [], origins: [] };
+		const items = this.empty
+			? []
+			: [
+					...Object.keys(specs).map((code) => ({ ...base, kind: 'metric', code, metric: catalogue.find((m) => m.code === code) })),
+					{ ...base, kind: 'sleep', code: 'sleep' },
+					{ ...base, kind: 'group', code: 'bp_reading' },
+					{ ...base, kind: 'event', code: 'irregular_rhythm' }
+				];
+		return json(r, 200, { items, aggregates_pending: false });
 	}
 
 	private has(code: string) {

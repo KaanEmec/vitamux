@@ -14,7 +14,7 @@ test('the default layout: hero, cards, sources, delta, alerts and health', async
 	// Cards in layout order; HRV (SDNN) has no data, so its card waits.
 	await expect(card(page, 'Sleep')).toBeVisible();
 	expect(await titles(page)).toEqual(
-		['Sleep', 'Resting heart rate', 'HRV · nightly RMSSD', 'Steps', 'VO₂ max', 'Weight', 'Blood pressure', 'SpO₂', 'Respiratory rate', 'Active energy']
+		['Sleep', 'Resting heart rate', 'HRV · nightly RMSSD', 'Steps', 'VO₂ max', 'Weight', 'Blood pressure', 'SpO₂', 'Respiratory rate', 'Active energy', 'Total energy']
 	);
 
 	const sleep = card(page, 'Sleep');
@@ -55,11 +55,11 @@ test('customize: reorder, resize, hide, add, save, and the layout survives a rel
 	await expect(bar).toBeVisible();
 	// The first card cannot move earlier, the last cannot move later.
 	await expect(page.getByRole('button', { name: 'Move Sleep earlier' })).toBeDisabled();
-	await expect(page.getByRole('button', { name: 'Move Active energy later' })).toBeDisabled();
+	await expect(page.getByRole('button', { name: 'Move Total energy later' })).toBeDisabled();
 
 	// Reorder with the keyboard buttons.
 	await page.getByRole('button', { name: 'Move Weight earlier' }).click();
-	await expect(page.getByRole('status').filter({ hasText: 'Weight is now card 6 of 11.' })).toBeAttached();
+	await expect(page.getByRole('status').filter({ hasText: 'Weight is now card 6 of 12.' })).toBeAttached();
 	expect((await titles(page)).slice(4, 8)).toEqual(['Steps', 'Weight', 'VO₂ max', 'Blood pressure']);
 
 	// Resize and hide.
@@ -99,9 +99,36 @@ test('customize: reorder, resize, hide, add, save, and the layout survives a rel
 	await page.reload();
 	await expect(card(page, 'Sleep')).toBeVisible();
 	expect(await titles(page)).toEqual(
-		['Sleep', 'Resting heart rate', 'HRV · nightly RMSSD', 'Steps', 'Weight', 'VO₂ max', 'Blood pressure', 'Respiratory rate', 'Active energy']
+		['Sleep', 'Resting heart rate', 'HRV · nightly RMSSD', 'Steps', 'Weight', 'VO₂ max', 'Blood pressure', 'Respiratory rate', 'Active energy', 'Total energy']
 	);
 	await expect(card(page, 'SpO₂')).toHaveCount(0);
+});
+
+test('the default layout has a total-energy card with its value', async ({ page }) => {
+	await page.goto('/');
+	const total = card(page, 'Total energy');
+	await expect(total).toBeVisible();
+	await expect(total.getByText('kcal')).toBeVisible();
+	await expect(total.getByRole('link', { name: 'Total energy', exact: true })).toHaveAttribute('href', '/explore/total_energy');
+});
+
+test('edit mode offers cards for metrics with data that are not in the saved layout', async ({ page, dash }) => {
+	dash.stored = defaultLayout.filter((c) => c.metric !== 'total_energy' && c.metric !== 'sleep');
+	await page.goto('/');
+	await expect(card(page, 'Total energy')).toHaveCount(0);
+	await page.getByRole('button', { name: 'Customize' }).click();
+	const offer = page.getByRole('heading', { name: /^With data, not on your dashboard/ });
+	await expect(offer).toBeVisible();
+	// Only metrics with data, one card each: no events, nothing already pinned.
+	await expect(page.getByRole('button', { name: 'Add Sleep' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Add Steps' })).toHaveCount(0);
+	await expect(page.getByRole('button', { name: /Add Irregular rhythm/ })).toHaveCount(0);
+	await page.getByRole('button', { name: 'Add Total energy' }).click();
+	await expect(card(page, 'Total energy')).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Add Total energy' })).toHaveCount(0);
+	await page.getByRole('button', { name: 'Save' }).click();
+	await expect.poll(() => dash.puts.length).toBe(1);
+	expect(dash.puts[0].cards.at(-1)).toEqual({ metric: 'total_energy', size: 'S', hidden: false });
 });
 
 test('drag a card to a new place', async ({ page, dash }) => {
