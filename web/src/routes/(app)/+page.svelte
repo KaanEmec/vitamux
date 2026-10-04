@@ -59,6 +59,7 @@
 
 	const requested = $derived(isDate(page.url.searchParams.get('date')) ? page.url.searchParams.get('date')! : undefined);
 	const additive = $derived(new Set(catalogue.filter((m) => m.aggregation === 'additive').map((m) => m.code)));
+	const sections = $derived(new Map(catalogue.map((m) => [m.code, m.section])));
 	const cards = $derived(editing ? draft : (layout ?? []));
 	const visible = $derived(cards.filter((c) => !c.hidden));
 	const hidden = $derived(draft.filter((c) => c.hidden));
@@ -251,6 +252,7 @@
 			{#each shown as c, i (c.metric)}
 				<MetricCard
 					code={c.metric}
+					section={sections.get(c.metric)}
 					label={cardLabel(c.metric)}
 					size={c.size}
 					view={views[c.metric] ?? null}

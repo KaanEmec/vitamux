@@ -12,27 +12,32 @@
 </span>
 
 <style>
+	/* A source chip is tinted with its source colour; without a source it is neutral. */
 	.chip {
+		--tone: var(--src, var(--color-neutral));
 		display: inline-flex;
 		align-items: center;
-		gap: var(--space-2);
-		min-height: 1.625rem;
-		padding: 0 var(--space-3);
+		gap: 0.375rem;
+		min-height: 1.5rem;
+		padding: 0 0.625rem;
 		font-size: var(--text-xs);
+		font-weight: 500;
 		white-space: nowrap;
-		background: var(--color-surface-2);
-		border: 1px solid transparent;
+		color: color-mix(in srgb, var(--tone) 55%, var(--color-text));
+		background: color-mix(in srgb, var(--tone) 10%, var(--color-surface));
+		border: 1px solid color-mix(in srgb, var(--tone) 32%, var(--color-surface));
 		border-radius: var(--radius-pill);
 	}
 	.dashed {
 		color: var(--color-text-muted);
 		background: transparent;
-		border: 1px dashed var(--color-border-strong);
+		border-style: dashed;
+		border-color: var(--color-border-strong);
 	}
 	.dot {
-		width: 0.4375rem;
-		height: 0.4375rem;
-		background: var(--src, var(--color-neutral));
+		width: 0.375rem;
+		height: 0.375rem;
+		background: var(--tone);
 		border-radius: 50%;
 	}
 </style>

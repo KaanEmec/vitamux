@@ -36,6 +36,7 @@
 </div>
 
 <style>
+	/* Period pills: the selected option is a light pill on the dark track. */
 	.segmented {
 		display: inline-flex;
 		gap: 2px;
@@ -49,14 +50,15 @@
 		align-items: center;
 		justify-content: center;
 		min-width: 2.25rem;
-		min-height: 2.125rem;
+		min-height: var(--control-h-sm);
 		padding: 0 var(--space-3);
 		font: inherit;
 		font-size: var(--text-sm);
+		font-weight: 500;
 		color: var(--color-text-muted);
 		background: transparent;
 		border: 0;
-		border-radius: var(--radius-xs);
+		border-radius: var(--radius-sm);
 		cursor: pointer;
 	}
 	button:has(:global(.icon)) {
@@ -66,8 +68,8 @@
 		color: var(--color-text);
 	}
 	button[aria-pressed='true'] {
-		font-weight: 600;
-		color: var(--color-text);
-		background: var(--color-selected);
+		color: var(--color-on-pill);
+		background: var(--color-pill);
+		box-shadow: var(--shadow-1);
 	}
 </style>
