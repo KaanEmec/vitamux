@@ -2534,6 +2534,8 @@ export interface components {
             cards: components["schemas"]["DashboardCard"][];
             /** @description Hero stat-tile metrics in order, a metric at most once, each a catalogue code or rule family. Omit to keep the default; an empty list shows none. */
             hero?: string[];
+            /** @description Keys of the dashboard alerts the owner dismissed (opaque to the server; the panel builds them from an alert's kind, subject and start). Omit for none; the panel drops keys whose alert is gone when it next saves. */
+            dismissed?: string[];
         };
         DashboardLayout: {
             /** @enum {integer} */
@@ -2541,6 +2543,8 @@ export interface components {
             cards: components["schemas"]["DashboardCard"][];
             /** @description The metrics of the hero stat tiles, in order (catalogue codes or rule families). The curated default (steps, resting_heart_rate, hrv_rmssd_nightly, weight) while the stored layout has none; an empty list when the owner chose none. Codes no longer in the catalogue are dropped. */
             hero: string[];
+            /** @description Keys of the dismissed dashboard alerts; empty until one is dismissed. */
+            dismissed: string[];
             /** @description No layout is stored; this is the curated default. */
             is_default: boolean;
         };

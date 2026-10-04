@@ -7,7 +7,9 @@
 // Seed: the curated default layout; sleep, resting heart rate, HRV (RMSSD), steps, VO2 max,
 // weight, blood pressure, SpO2 (a fallback), respiratory rate and active energy have data;
 // HRV (SDNN) has none, so its card stays hidden. Steps of today are partial. A Withings
-// connection needs reauthorization and the last backup is ten days old (two alerts).
+// connection needs reauthorization and the last backup is ten days old (two alerts). The
+// dismissed alert keys are stored with the layout; `reauthSince` dates the reauthorization
+// problem (the connection's last success), so changing it is a new occurrence.
 // `empty` removes all data and connections (a fresh install).
 import type { Page, Route } from '@playwright/test';
 import { test as base, expect } from './fake-api';
@@ -98,7 +100,17 @@ export class DashboardApi {
 	/** The saved hero tiles; null keeps the default. */
 	storedHero: string[] | null = null;
 	/** Bodies of PUT /settings/dashboard, in order. */
-	puts: { version: number; cards: Card[]; hero?: string[] }[] = [];
+	puts: { version: number; cards: Card[]; hero?: string[]; dismissed?: string[] }[] = [];
+	/** The saved keys of dismissed alerts. */
+	dismissed: string[] = [];
+	/** The last success of the Withings connection that needs reauthorization (fixed, so its alert key is stable). */
+	reauthSince = '2026-09-20T10:00:00Z';
+	/** The newest backup (fixed, so its alert key is stable). */
+	backupAt = new Date(Date.now() - 10 * 24 * hour).toISOString();
+	/** Delay of PUT /settings/dashboard in ms, to observe the optimistic hide. */
+	putDelay = 0;
+	/** Status of PUT /settings/dashboard; 503 simulates a failed save. */
+	putStatus = 200;
 	/** Query strings of GET /resolved/series and /resolved/trend, in order. */
 	charts: string[] = [];
 	/** A fresh install: no data, no connections. */
@@ -120,14 +132,17 @@ export class DashboardApi {
 		const method = r.request().method();
 		if (path === '/settings/dashboard' && method === 'GET') {
 			if (this.layoutStatus !== 200) return problem(r, this.layoutStatus, 'unavailable', 'not ready');
-			return json(r, 200, { version: 1, cards: this.stored ?? defaultLayout, hero: this.storedHero ?? defaultHero, is_default: this.stored === null });
+			return json(r, 200, { version: 1, cards: this.stored ?? defaultLayout, hero: this.storedHero ?? defaultHero, dismissed: this.dismissed, is_default: this.stored === null });
 		}
 		if (path === '/settings/dashboard' && method === 'PUT') {
-			const body = r.request().postDataJSON() as { version: number; cards: Card[]; hero?: string[] };
+			const body = r.request().postDataJSON() as { version: number; cards: Card[]; hero?: string[]; dismissed?: string[] };
 			this.puts.push(body);
+			if (this.putStatus !== 200) return problem(r, this.putStatus, 'unavailable', 'not ready');
 			this.stored = body.cards;
 			if (body.hero) this.storedHero = body.hero;
-			return json(r, 200, { version: 1, cards: body.cards, hero: this.storedHero ?? defaultHero, is_default: false });
+			this.dismissed = body.dismissed ?? [];
+			const answer = { version: 1, cards: body.cards, hero: this.storedHero ?? defaultHero, dismissed: this.dismissed, is_default: false };
+			return this.putDelay ? new Promise<void>((done) => setTimeout(done, this.putDelay)).then(() => json(r, 200, answer)) : json(r, 200, answer);
 		}
 		if (path === '/resolved/series') return this.series(r, url.searchParams);
 		if (path === '/resolved/trend') return this.trend(r, url.searchParams);
@@ -137,11 +152,11 @@ export class DashboardApi {
 		if (path === '/resolved/summary') return this.summary(r, url.searchParams);
 		if (path === '/providers') return json(r, 200, { providers });
 		if (path === '/connections') {
-			const list = this.empty ? [] : [connection('conn_' + 'a'.repeat(32), 'apple_health', { mode: 'push', official: null }), connection('conn_' + 'b'.repeat(32), 'withings', { status: 'needs_reauth', health: 'needs_reauth', consecutive_failures: 1 })];
+			const list = this.empty ? [] : [connection('conn_' + 'a'.repeat(32), 'apple_health', { mode: 'push', official: null }), connection('conn_' + 'b'.repeat(32), 'withings', { status: 'needs_reauth', health: 'needs_reauth', consecutive_failures: 1, last_success_at: this.reauthSince })];
 			return json(r, 200, { connections: list });
 		}
 		if (path === '/jobs') return json(r, 200, { jobs: [], has_more: false });
-		if (path === '/system/status') return json(r, 200, { last_backup_at: this.empty ? null : new Date(Date.now() - 10 * 24 * hour).toISOString() });
+		if (path === '/system/status') return json(r, 200, { last_backup_at: this.empty ? null : this.backupAt });
 		return r.fallback();
 	}
 

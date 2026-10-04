@@ -505,3 +505,65 @@ func TestDashboardLayout(t *testing.T) {
 		t.Fatalf("empty layout: %+v", l)
 	}
 }
+
+// Dismissed alert keys (J23.10) ride in the layout: always listed, optional on write, bounded.
+func TestDashboardDismissed(t *testing.T) {
+	e := newCfgEnv(t)
+	const get, put, path = "GET /api/v1/settings/dashboard", "PUT /api/v1/settings/dashboard", "/api/v1/settings/dashboard"
+	body := func(dismissed any) string {
+		b, err := json.Marshal(map[string]any{"version": 1, "cards": []any{}, "dismissed": dismissed})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	var l oapi.DashboardLayout
+	e.call(e.user, get, path, "", http.StatusOK, &l)
+	if l.Dismissed == nil || len(l.Dismissed) != 0 {
+		t.Fatalf("default dismissed: %#v", l.Dismissed)
+	}
+	keys := []string{"reauth:conn_a:2026-09-01T08:00:00Z", "backup:2026-09-20T03:00:00Z"}
+	e.call(e.user, put, path, body(keys), http.StatusOK, &l)
+	if !slices.Equal(l.Dismissed, keys) {
+		t.Fatalf("put answer: %v", l.Dismissed)
+	}
+	e.call(e.user, get, path, "", http.StatusOK, &l)
+	if !slices.Equal(l.Dismissed, keys) {
+		t.Fatalf("read back: %v", l.Dismissed)
+	}
+	e.call(e.other, get, path, "", http.StatusOK, &l)
+	if len(l.Dismissed) != 0 {
+		t.Fatalf("another owner's keys: %v", l.Dismissed)
+	}
+	// Omitting the list stores none; the server prunes nothing on its own.
+	e.call(e.user, put, path, `{"version": 1, "cards": []}`, http.StatusOK, &l)
+	e.call(e.user, get, path, "", http.StatusOK, &l)
+	if l.Dismissed == nil || len(l.Dismissed) != 0 {
+		t.Fatalf("omitted: %#v", l.Dismissed)
+	}
+
+	many := make([]string, 101)
+	for i := range many {
+		many[i] = strings.Repeat("x", i+1)
+	}
+	for _, c := range []struct {
+		dismissed any
+		pointer   string
+	}{
+		{many, "/dismissed"},
+		{[]string{"a", ""}, "/dismissed/1"},
+		{[]string{strings.Repeat("x", 201)}, "/dismissed/0"},
+		{[]string{"a", "a"}, "/dismissed/1"},
+	} {
+		var p problem
+		e.call(e.user, put, path, body(c.dismissed), http.StatusUnprocessableEntity, &p)
+		if len(p.Errors) == 0 || p.Errors[0].Pointer != c.pointer {
+			t.Errorf("pointer for %s: %+v", c.pointer, p.Errors)
+		}
+	}
+	// A list at the limit passes.
+	e.call(e.user, put, path, body(many[:100]), http.StatusOK, &l)
+	if len(l.Dismissed) != 100 {
+		t.Fatalf("limit: %d", len(l.Dismissed))
+	}
+}

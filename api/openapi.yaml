@@ -3687,10 +3687,16 @@ components:
           maxItems: 4
           items: {type: string}
           description: Hero stat-tile metrics in order, a metric at most once, each a catalogue code or rule family. Omit to keep the default; an empty list shows none.
+        dismissed:
+          type: array
+          maxItems: 100
+          uniqueItems: true
+          items: {type: string, minLength: 1, maxLength: 200}
+          description: Keys of the dashboard alerts the owner dismissed (opaque to the server; the panel builds them from an alert's kind, subject and start). Omit for none; the panel drops keys whose alert is gone when it next saves.
     DashboardLayout:
       type: object
       additionalProperties: false
-      required: [version, cards, hero, is_default]
+      required: [version, cards, hero, dismissed, is_default]
       properties:
         version: {type: integer, enum: [1]}
         cards: {type: array, items: {$ref: '#/components/schemas/DashboardCard'}}
@@ -3702,6 +3708,11 @@ components:
             The metrics of the hero stat tiles, in order (catalogue codes or rule families). The
             curated default (steps, resting_heart_rate, hrv_rmssd_nightly, weight) while the stored
             layout has none; an empty list when the owner chose none. Codes no longer in the catalogue are dropped.
+        dismissed:
+          type: array
+          maxItems: 100
+          items: {type: string}
+          description: Keys of the dismissed dashboard alerts; empty until one is dismissed.
         is_default: {type: boolean, description: No layout is stored; this is the curated default.}
 
     # ------------------------------------------------ system

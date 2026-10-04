@@ -174,6 +174,109 @@ test('the layout endpoint not being ready leaves the metrics empty', async ({ pa
 	await expect(page.getByRole('region', { name: 'Alerts' }).getByText('Withings needs reauthorization.')).toBeVisible();
 });
 
+const reauth = 'Withings needs reauthorization.';
+const alerts = (page: Page) => page.getByRole('region', { name: 'Alerts' });
+const dismissButton = (page: Page, text: string | RegExp) => alerts(page).getByRole('button', { name: typeof text === 'string' ? `Dismiss: ${text}` : text });
+
+test('dismissing an alert hides it at once, saves its key and survives a reload', async ({ page, dash }) => {
+	dash.putDelay = 400;
+	await page.goto('/');
+	await expect(alerts(page).getByText(reauth)).toBeVisible();
+	const button = dismissButton(page, reauth);
+	const box = await button.boundingBox();
+	expect(box!.width).toBeGreaterThanOrEqual(44);
+	expect(box!.height).toBeGreaterThanOrEqual(44);
+
+	await button.click();
+	// Optimistic: gone before the save answers; the other alert stays and the count appears.
+	await expect(alerts(page).getByText(reauth)).toHaveCount(0);
+	await expect(alerts(page).getByText(/The last backup is from/)).toBeVisible();
+	await expect(alerts(page).getByRole('button', { name: '1 dismissed · Show' })).toBeVisible();
+	await expect.poll(() => dash.puts.length).toBe(1);
+	expect(dash.puts[0].dismissed).toEqual([`reauth:conn_${'b'.repeat(32)}:2026-09-20T10:00:00Z`]);
+	expect(dash.puts[0].cards.length).toBeGreaterThan(0);
+
+	// Dismissing only hides it here: Connections still shows the state.
+	await page.reload();
+	await expect(alerts(page).getByText(/The last backup is from/)).toBeVisible();
+	await expect(alerts(page).getByText(reauth)).toHaveCount(0);
+	await expect(alerts(page).getByRole('button', { name: '1 dismissed · Show' })).toBeVisible();
+});
+
+test('Show lists the dismissed alerts and Restore brings one back', async ({ page, dash }) => {
+	await page.goto('/');
+	await dismissButton(page, reauth).click();
+	await dismissButton(page, /^Dismiss: The last backup/).click();
+	await expect(alerts(page).getByText('Nothing needs your attention.')).toHaveCount(0);
+	await expect(alerts(page).getByText('No open alerts.')).toBeVisible();
+	await expect.poll(() => dash.puts.length).toBe(2);
+
+	await alerts(page).getByRole('button', { name: '2 dismissed · Show' }).click();
+	await expect(alerts(page).getByText(reauth)).toBeVisible();
+	await expect(alerts(page).getByText(/The last backup is from/)).toBeVisible();
+	await expect(alerts(page).getByRole('button', { name: '2 dismissed · Hide' })).toBeVisible();
+
+	await alerts(page).getByRole('button', { name: `Restore: ${reauth}` }).click();
+	await expect.poll(() => dash.puts.length).toBe(3);
+	expect(dash.puts[2].dismissed).toHaveLength(1);
+	await expect(alerts(page).getByRole('button', { name: `Dismiss: ${reauth}` })).toBeVisible();
+	await expect(alerts(page).getByRole('button', { name: '1 dismissed · Hide' })).toBeVisible();
+	await alerts(page).getByRole('button', { name: '1 dismissed · Hide' }).click();
+	await expect(alerts(page).getByText(/The last backup is from/)).toHaveCount(0);
+	await page.reload();
+	await expect(alerts(page).getByText(reauth)).toBeVisible();
+	await expect(alerts(page).getByRole('button', { name: '1 dismissed · Show' })).toBeVisible();
+});
+
+test('a new occurrence of the problem shows again, and the old key is pruned on the next save', async ({ page, dash }) => {
+	await page.goto('/');
+	await dismissButton(page, reauth).click();
+	await expect.poll(() => dash.puts.length).toBe(1);
+
+	// The connection recovered and needs reauthorization again: a later success dates it anew.
+	dash.reauthSince = '2026-09-28T10:00:00Z';
+	await page.reload();
+	await expect(alerts(page).getByText(reauth)).toBeVisible();
+	await expect(alerts(page).getByRole('button', { name: /dismissed/ })).toHaveCount(0); // the old key matches nothing
+
+	// The old key's alert is gone, so dismissing the backup alert saves without it.
+	await dismissButton(page, /^Dismiss: The last backup/).click();
+	await expect.poll(() => dash.puts.length).toBe(2);
+	expect(dash.puts[1].dismissed).toEqual([expect.stringMatching(/^backup:/)]);
+});
+
+test('a failed save brings the alert back with the problem', async ({ page, dash }) => {
+	dash.putStatus = 503;
+	await page.goto('/');
+	await dismissButton(page, reauth).click();
+	await expect(alerts(page).getByText(reauth)).toBeVisible();
+	await expect(page.getByRole('alert')).toBeVisible();
+});
+
+test('the layout saved in edit mode keeps the dismissed alerts', async ({ page, dash }) => {
+	dash.dismissed = ['reauth:keep'];
+	await page.goto('/');
+	await page.getByRole('button', { name: 'Customize' }).click();
+	await page.getByRole('button', { name: 'Save' }).click();
+	await expect.poll(() => dash.puts.length).toBe(1);
+	expect(dash.puts[0].dismissed).toEqual(['reauth:keep']);
+});
+
+test('no serious axe violations with dismissed alerts shown, light and dark', async ({ page, dash }) => {
+	await page.goto('/');
+	await dismissButton(page, reauth).click();
+	await expect.poll(() => dash.puts.length).toBe(1);
+	for (const showing of [false, true]) {
+		if (showing) await alerts(page).getByRole('button', { name: '1 dismissed · Show' }).click();
+		for (const scheme of ['light', 'dark'] as const) {
+			await page.emulateMedia({ colorScheme: scheme });
+			const { violations } = await new AxeBuilder({ page }).include('[aria-label="Alerts"]').analyze();
+			const blocking = violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+			expect(blocking.map((v) => `alerts shown=${showing} [${scheme}]: ${v.id} ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
+		}
+	}
+});
+
 test('no serious axe violations: view and edit mode, light and dark, desktop and phone', async ({ page }) => {
 	const scan = async (what: string) => {
 		await page.waitForLoadState('networkidle');

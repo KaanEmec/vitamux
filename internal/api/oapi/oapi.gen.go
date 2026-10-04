@@ -2040,6 +2040,9 @@ type DashboardCardSize string
 type DashboardLayout struct {
 	Cards []DashboardCard `json:"cards"`
 
+	// Dismissed Keys of the dismissed dashboard alerts; empty until one is dismissed.
+	Dismissed []string `json:"dismissed"`
+
 	// Hero The metrics of the hero stat tiles, in order (catalogue codes or rule families). The curated default (steps, resting_heart_rate, hrv_rmssd_nightly, weight) while the stored layout has none; an empty list when the owner chose none. Codes no longer in the catalogue are dropped.
 	Hero []string `json:"hero"`
 
@@ -2055,6 +2058,9 @@ type DashboardLayoutVersion int
 type DashboardLayoutInput struct {
 	// Cards In display order; a metric at most once.
 	Cards []DashboardCard `json:"cards"`
+
+	// Dismissed Keys of the dashboard alerts the owner dismissed (opaque to the server; the panel builds them from an alert's kind, subject and start). Omit for none; the panel drops keys whose alert is gone when it next saves.
+	Dismissed *[]string `json:"dismissed,omitempty"`
 
 	// Hero Hero stat-tile metrics in order, a metric at most once, each a catalogue code or rule family. Omit to keep the default; an empty list shows none.
 	Hero *[]string `json:"hero,omitempty"`

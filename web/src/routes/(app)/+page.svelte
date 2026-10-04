@@ -51,8 +51,13 @@
 	// ---- alerts and connection health ------------------------------------------------------------
 	let connections = $state<Connection[] | null>(null);
 	let connectionsProblem = $state<Problem | null>(null);
-	let jobs = $state<Schemas['Job'][]>([]);
+	let jobs = $state<Schemas['Job'][] | null>(null);
 	let lastBackup = $state<string | null>(null);
+	let statusLoaded = $state(false);
+	// Keys of the dismissed alerts (the layout's `dismissed`), saved on each change.
+	let dismissed = $state<string[]>([]);
+	let dismissProblem = $state<Problem | null>(null);
+	let dismissSaves = Promise.resolve();
 
 	// ---- edit mode -----------------------------------------------------------------------------
 	let editing = $state(false);
@@ -102,6 +107,7 @@
 			} else {
 				layout = data.cards;
 				hero = data.hero ?? defaultHero;
+				dismissed = data.dismissed ?? [];
 			}
 		});
 		void api.GET('/api/v1/metrics').then(({ data }) => {
@@ -116,7 +122,10 @@
 			const since = Date.now() - week;
 			jobs = (data?.jobs ?? []).filter((j) => Date.parse(j.finished_at ?? j.created_at) >= since);
 		});
-		void api.GET('/api/v1/system/status').then(({ data }) => (lastBackup = data?.last_backup_at ?? null));
+		void api.GET('/api/v1/system/status').then(({ data }) => {
+			lastBackup = data?.last_backup_at ?? null;
+			statusLoaded = true;
+		});
 	});
 
 	// Summaries are fetched for the tiles and cards on screen, and again for one shown or pinned
@@ -176,14 +185,30 @@
 	async function save() {
 		saving = true;
 		saveProblem = null;
-		const { data, error } = await api.PUT('/api/v1/settings/dashboard', { body: { version: 1, cards: draft, hero: heroDraft } });
+		const { data, error } = await api.PUT('/api/v1/settings/dashboard', { body: { version: 1, cards: draft, hero: heroDraft, dismissed } });
 		saving = false;
 		if (error) saveProblem = error;
 		else {
 			layout = data.cards;
 			hero = data.hero ?? heroDraft;
+			dismissed = data.dismissed ?? dismissed;
 			editing = false;
 		}
+	}
+
+	// Dismissing hides at once and saves the layout with the new keys (one save after another);
+	// a failed save brings the alerts back.
+	function dismiss(next: string[]) {
+		const before = dismissed;
+		dismissed = next;
+		dismissProblem = null;
+		dismissSaves = dismissSaves.then(async () => {
+			const { error } = await api.PUT('/api/v1/settings/dashboard', { body: { version: 1, cards: layout ?? [], hero, dismissed: next } });
+			if (error) {
+				dismissed = before;
+				dismissProblem = error;
+			}
+		});
 	}
 
 	const change = (metric: string, c: Partial<Card>) => (draft = patch(draft, metric, c));
@@ -245,10 +270,11 @@
 	</div>
 </div>
 
-{#if connections === null}
+{#if connections === null || jobs === null || !statusLoaded || layout === null}
 	<p class="muted" role="status">Loading…</p>
 {:else}
-	<Alerts {connections} {jobs} {lastBackup} />
+	<Alerts {connections} {jobs} {lastBackup} {dismissed} ondismiss={layoutMissing || layoutProblem ? undefined : dismiss} />
+	<ProblemAlert problem={dismissProblem} />
 {/if}
 
 {#if editing}
