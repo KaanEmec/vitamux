@@ -39,6 +39,27 @@ func (e AnalyteAliasSource) Valid() bool {
 	}
 }
 
+// Defines values for AppCredentialsVerificationResult.
+const (
+	Invalid      AppCredentialsVerificationResult = "invalid"
+	Unverifiable AppCredentialsVerificationResult = "unverifiable"
+	Valid        AppCredentialsVerificationResult = "valid"
+)
+
+// Valid indicates whether the value is a known member of the AppCredentialsVerificationResult enum.
+func (e AppCredentialsVerificationResult) Valid() bool {
+	switch e {
+	case Invalid:
+		return true
+	case Unverifiable:
+		return true
+	case Valid:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AuthPromptStepPromptFieldsKind.
 const (
 	Code     AuthPromptStepPromptFieldsKind = "code"
@@ -867,6 +888,51 @@ func (e ProviderAuthKind) Valid() bool {
 	}
 }
 
+// Defines values for ProviderSetupState.
+const (
+	Connected           ProviderSetupState = "connected"
+	NeedsAppCredentials ProviderSetupState = "needs_app_credentials"
+	NeedsPublicURL      ProviderSetupState = "needs_public_url"
+	NeedsSidecar        ProviderSetupState = "needs_sidecar"
+	Ready               ProviderSetupState = "ready"
+)
+
+// Valid indicates whether the value is a known member of the ProviderSetupState enum.
+func (e ProviderSetupState) Valid() bool {
+	switch e {
+	case Connected:
+		return true
+	case NeedsAppCredentials:
+		return true
+	case NeedsPublicURL:
+		return true
+	case NeedsSidecar:
+		return true
+	case Ready:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProviderSidecarSource.
+const (
+	ProviderSidecarSourceEnvironment ProviderSidecarSource = "environment"
+	ProviderSidecarSourcePanel       ProviderSidecarSource = "panel"
+)
+
+// Valid indicates whether the value is a known member of the ProviderSidecarSource enum.
+func (e ProviderSidecarSource) Valid() bool {
+	switch e {
+	case ProviderSidecarSourceEnvironment:
+		return true
+	case ProviderSidecarSourcePanel:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ResolvedPointStatus.
 const (
 	ResolvedPointStatusCalculated ResolvedPointStatus = "calculated"
@@ -978,6 +1044,75 @@ func (e Scope) Valid() bool {
 	case WriteConfig:
 		return true
 	case WriteDocuments:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SetupProblemCode.
+const (
+	PublicURLIPHost      SetupProblemCode = "public_url_ip_host"
+	PublicURLNotHTTPS    SetupProblemCode = "public_url_not_https"
+	PublicURLPort        SetupProblemCode = "public_url_port"
+	PublicURLTooLong     SetupProblemCode = "public_url_too_long"
+	SidecarFailed        SetupProblemCode = "sidecar_failed"
+	SidecarSecretMissing SetupProblemCode = "sidecar_secret_missing"
+	SidecarUnreachable   SetupProblemCode = "sidecar_unreachable"
+)
+
+// Valid indicates whether the value is a known member of the SetupProblemCode enum.
+func (e SetupProblemCode) Valid() bool {
+	switch e {
+	case PublicURLIPHost:
+		return true
+	case PublicURLNotHTTPS:
+		return true
+	case PublicURLPort:
+		return true
+	case PublicURLTooLong:
+		return true
+	case SidecarFailed:
+		return true
+	case SidecarSecretMissing:
+		return true
+	case SidecarUnreachable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SidecarSource.
+const (
+	SidecarSourceEnvironment SidecarSource = "environment"
+	SidecarSourcePanel       SidecarSource = "panel"
+)
+
+// Valid indicates whether the value is a known member of the SidecarSource enum.
+func (e SidecarSource) Valid() bool {
+	switch e {
+	case SidecarSourceEnvironment:
+		return true
+	case SidecarSourcePanel:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SidecarEnableInstall.
+const (
+	Compose SidecarEnableInstall = "compose"
+	Coolify SidecarEnableInstall = "coolify"
+)
+
+// Valid indicates whether the value is a known member of the SidecarEnableInstall enum.
+func (e SidecarEnableInstall) Valid() bool {
+	switch e {
+	case Compose:
+		return true
+	case Coolify:
 		return true
 	default:
 		return false
@@ -1619,6 +1754,35 @@ type AnchorReset struct {
 	Type string `json:"type"`
 }
 
+// AppCredentialsInput defines model for AppCredentialsInput.
+type AppCredentialsInput struct {
+	ClientID string `json:"client_id"`
+
+	// ClientSecret Write-only; never returned.
+	ClientSecret string `json:"client_secret"`
+}
+
+// AppCredentialsStatus The owner's application at the provider; the secret is write-only and never shown.
+type AppCredentialsStatus struct {
+	ClientID *string `json:"client_id"`
+
+	// ManagedByEnvironment Set by VITAMUX_<PROVIDER>_CLIENT_ID and _SECRET(_FILE)
+	ManagedByEnvironment bool `json:"managed_by_environment"`
+	Set                  bool `json:"set"`
+
+	// UpdatedAt Last change in the panel; null when unset or set by the environment.
+	UpdatedAt *time.Time `json:"updated_at"`
+}
+
+// AppCredentialsVerification defines model for AppCredentialsVerification.
+type AppCredentialsVerification struct {
+	Message string                           `json:"message"`
+	Result  AppCredentialsVerificationResult `json:"result"`
+}
+
+// AppCredentialsVerificationResult defines model for AppCredentialsVerification.Result.
+type AppCredentialsVerificationResult string
+
 // AuthContinueInput defines model for AuthContinueInput.
 type AuthContinueInput struct {
 	State string `json:"state"`
@@ -1827,6 +1991,13 @@ type CreatedAPIKey struct {
 
 	// Token Shown in this response only.
 	Token string `json:"token"`
+}
+
+// CreatedSidecar defines model for CreatedSidecar.
+type CreatedSidecar struct {
+	// Secret The shared bearer secret (64 hex characters), shown only here: give it to the sidecar as its VITAMUX_SIDECAR_SECRET_FILE.
+	Secret  string  `json:"secret"`
+	Sidecar Sidecar `json:"sidecar"`
 }
 
 // DashboardCard defines model for DashboardCard.
@@ -2756,19 +2927,37 @@ type ProvenanceVersion struct {
 
 // Provider A provider served by a registered connector.
 type Provider struct {
+	// AppCredentials Null for a provider that does not run on the owner's own application.
+	AppCredentials *AppCredentialsStatus `json:"app_credentials"`
+
 	// AuthKind Null while a sidecar has not described itself.
 	AuthKind *ProviderAuthKind `json:"auth_kind"`
 
 	// Available False while a sidecar is unreachable or has not described itself.
-	Available bool   `json:"available"`
-	Code      string `json:"code"`
-	Name      string `json:"name"`
+	Available bool `json:"available"`
+
+	// CallbackURL The OAuth callback to register at the provider, ${VITAMUX_PUBLIC_URL}/oauth/<provider>/callback; null for providers without a redirect.
+	CallbackURL *string `json:"callback_url"`
+	Code        string  `json:"code"`
+
+	// Connections The caller's connections of this provider that are not disconnected.
+	Connections int    `json:"connections"`
+	Name        string `json:"name"`
 
 	// Official False for an unofficial API; its new connections start paused.
 	Official bool `json:"official"`
 
+	// Problems What stands in the way of setup; in development the public URL problems are warnings.
+	Problems []SetupProblem `json:"problems"`
+
 	// Remote Served by a sidecar.
 	Remote bool `json:"remote"`
+
+	// SetupState The first that applies: needs_sidecar (the sidecar does not answer; see sidecar.enable and problems), connected (a connection that is not disconnected exists), needs_public_url (production only: the provider would refuse the callback; see problems), needs_app_credentials (set them with putProviderAppCredentials), ready.
+	SetupState ProviderSetupState `json:"setup_state"`
+
+	// Sidecar Null for an in-process connector.
+	Sidecar *ProviderSidecar `json:"sidecar"`
 
 	// Upstream The third-party package a sidecar connector wraps.
 	Upstream *Upstream `json:"upstream,omitempty"`
@@ -2776,6 +2965,24 @@ type Provider struct {
 
 // ProviderAuthKind Null while a sidecar has not described itself.
 type ProviderAuthKind string
+
+// ProviderSetupState The first that applies: needs_sidecar (the sidecar does not answer; see sidecar.enable and problems), connected (a connection that is not disconnected exists), needs_public_url (production only: the provider would refuse the callback; see problems), needs_app_credentials (set them with putProviderAppCredentials), ready.
+type ProviderSetupState string
+
+// ProviderSidecar How a sidecar provider is registered and, for a bundled one, how to turn it on.
+type ProviderSidecar struct {
+	// Bundled Shipped with the release Compose files (garmin
+	Bundled bool `json:"bundled"`
+
+	// Enable For a bundled sidecar, the line to add and what to run, for this install (VITAMUX_INSTALL) or for each when unknown; empty otherwise.
+	Enable []SidecarEnable `json:"enable"`
+
+	// Source environment (VITAMUX_SIDECARS) is read-only; panel ones can be removed.
+	Source ProviderSidecarSource `json:"source"`
+}
+
+// ProviderSidecarSource environment (VITAMUX_SIDECARS) is read-only; panel ones can be removed.
+type ProviderSidecarSource string
 
 // RawRef The row's raw payload; with include=provenance, when the row has one.
 type RawRef struct {
@@ -3268,6 +3475,46 @@ type Settings struct {
 	// WithingsNotifications Withings notification subscriptions (polling runs either way); needs VITAMUX_PUBLIC_URL.
 	WithingsNotifications *bool `json:"withings.notifications,omitempty"`
 }
+
+// SetupProblem defines model for SetupProblem.
+type SetupProblem struct {
+	Code SetupProblemCode `json:"code"`
+
+	// Message What to do
+	Message string `json:"message"`
+}
+
+// SetupProblemCode defines model for SetupProblem.Code.
+type SetupProblemCode string
+
+// Sidecar defines model for Sidecar.
+type Sidecar struct {
+	// Available The sidecar answered its last describe.
+	Available bool `json:"available"`
+	Bundled   bool `json:"bundled"`
+
+	// CreatedAt Panel sidecars only.
+	CreatedAt *time.Time    `json:"created_at"`
+	Name      string        `json:"name"`
+	Source    SidecarSource `json:"source"`
+	URL       string        `json:"url"`
+}
+
+// SidecarSource defines model for Sidecar.Source.
+type SidecarSource string
+
+// SidecarEnable defines model for SidecarEnable.
+type SidecarEnable struct {
+	// Apply What to run afterwards.
+	Apply   string               `json:"apply"`
+	Install SidecarEnableInstall `json:"install"`
+
+	// Line Compose: the .env line, e.g. COMPOSE_PROFILES=garmin (comma-separate several profiles). Coolify: the environment variable, e.g. GARMIN_SIDECAR=1.
+	Line string `json:"line"`
+}
+
+// SidecarEnableInstall defines model for SidecarEnable.Install.
+type SidecarEnableInstall string
 
 // SleepMember defines model for SleepMember.
 type SleepMember struct {
@@ -4057,6 +4304,12 @@ type ListOverridesParams struct {
 // GetProvenanceParamsEntity defines parameters for GetProvenance.
 type GetProvenanceParamsEntity string
 
+// DeleteProviderAppCredentialsParams defines parameters for DeleteProviderAppCredentials.
+type DeleteProviderAppCredentialsParams struct {
+	// Confirm true removes them even while connections use them.
+	Confirm *bool `form:"confirm,omitempty" json:"confirm,omitempty"`
+}
+
 // ContinueProviderAuth200JSONResponseBody defines parameters for ContinueProviderAuth.
 type ContinueProviderAuth200JSONResponseBody struct {
 	union json.RawMessage
@@ -4144,6 +4397,21 @@ type GetResolvedSourcesParams struct {
 type ListSchedulesParams struct {
 	// Connection Only this connection's schedules.
 	Connection *ConnectionID `form:"connection,omitempty" json:"connection,omitempty"`
+}
+
+// CreateSidecarJSONBody defines parameters for CreateSidecar.
+type CreateSidecarJSONBody struct {
+	// Name Provider code the sidecar describes.
+	Name string `json:"name"`
+
+	// URL Base URL, e.g. http://my-sidecar:8080; it must resolve to a loopback, private or link-local address.
+	URL string `json:"url"`
+}
+
+// DeleteSidecarParams defines parameters for DeleteSidecar.
+type DeleteSidecarParams struct {
+	// Confirm true removes it even while connections of its provider exist.
+	Confirm *bool `form:"confirm,omitempty" json:"confirm,omitempty"`
 }
 
 // ListSleepParams defines parameters for ListSleep.
@@ -4322,6 +4590,9 @@ type ClassifyOriginJSONRequestBody ClassifyOriginJSONBody
 // CreateOverrideJSONRequestBody defines body for CreateOverride for application/json ContentType.
 type CreateOverrideJSONRequestBody = OverrideInput
 
+// PutProviderAppCredentialsJSONRequestBody defines body for PutProviderAppCredentials for application/json ContentType.
+type PutProviderAppCredentialsJSONRequestBody = AppCredentialsInput
+
 // ContinueProviderAuthJSONRequestBody defines body for ContinueProviderAuth for application/json ContentType.
 type ContinueProviderAuthJSONRequestBody = AuthContinueInput
 
@@ -4342,6 +4613,9 @@ type UpdateSettingsJSONRequestBody = Settings
 
 // PutDashboardLayoutJSONRequestBody defines body for PutDashboardLayout for application/json ContentType.
 type PutDashboardLayoutJSONRequestBody = DashboardLayoutInput
+
+// CreateSidecarJSONRequestBody defines body for CreateSidecar for application/json ContentType.
+type CreateSidecarJSONRequestBody CreateSidecarJSONBody
 
 // CreateTimezonePeriodJSONRequestBody defines body for CreateTimezonePeriod for application/json ContentType.
 type CreateTimezonePeriodJSONRequestBody = TimezonePeriodInput
@@ -4708,15 +4982,27 @@ type ServerInterface interface {
 	// GetProvenance Trace a record back to its raw payload, batch and normalizer
 	// (GET /api/v1/provenance/{entity}/{id})
 	GetProvenance(w http.ResponseWriter, r *http.Request, entity GetProvenanceParamsEntity, id ID)
-	// ListProviders List the providers a connector serves (in-process and sidecars)
+	// ListProviders List the providers a connector serves (in-process and sidecars), with their setup state
 	// (GET /api/v1/providers)
 	ListProviders(w http.ResponseWriter, r *http.Request)
+	// DeleteProviderAppCredentials Remove the stored app credentials of a provider
+	// (DELETE /api/v1/providers/{provider}/app-credentials)
+	DeleteProviderAppCredentials(w http.ResponseWriter, r *http.Request, provider string, params DeleteProviderAppCredentialsParams)
+	// PutProviderAppCredentials Set the owner's own app credentials of a provider (write-only)
+	// (PUT /api/v1/providers/{provider}/app-credentials)
+	PutProviderAppCredentials(w http.ResponseWriter, r *http.Request, provider string)
+	// VerifyProviderAppCredentials Check the current app credentials with the provider, without a user grant
+	// (POST /api/v1/providers/{provider}/app-credentials/verify)
+	VerifyProviderAppCredentials(w http.ResponseWriter, r *http.Request, provider string)
 	// BeginProviderAuth Connect an account of a provider (OAuth redirect or credential prompt)
 	// (POST /api/v1/providers/{provider}/auth/begin)
 	BeginProviderAuth(w http.ResponseWriter, r *http.Request, provider string)
 	// ContinueProviderAuth Answer an authorization prompt (credentials, an MFA code)
 	// (POST /api/v1/providers/{provider}/auth/continue)
 	ContinueProviderAuth(w http.ResponseWriter, r *http.Request, provider string)
+	// ProbeProvider Check a sidecar provider again now ("Check again")
+	// (POST /api/v1/providers/{provider}/probe)
+	ProbeProvider(w http.ResponseWriter, r *http.Request, provider string)
 	// PreviewResolution Resolve a draft rule over a range without writing anything
 	// (POST /api/v1/resolution/preview)
 	PreviewResolution(w http.ResponseWriter, r *http.Request)
@@ -4771,6 +5057,15 @@ type ServerInterface interface {
 	// PutDashboardLayout Replace the dashboard layout
 	// (PUT /api/v1/settings/dashboard)
 	PutDashboardLayout(w http.ResponseWriter, r *http.Request)
+	// ListSidecars List the sidecar connectors, from the environment and added in the panel
+	// (GET /api/v1/sidecars)
+	ListSidecars(w http.ResponseWriter, r *http.Request)
+	// CreateSidecar Add a sidecar connector; its shared secret is returned once
+	// (POST /api/v1/sidecars)
+	CreateSidecar(w http.ResponseWriter, r *http.Request)
+	// DeleteSidecar Remove a sidecar added in the panel
+	// (DELETE /api/v1/sidecars/{name})
+	DeleteSidecar(w http.ResponseWriter, r *http.Request, name string, params DeleteSidecarParams)
 	// ListSleep List sleep sessions
 	// (GET /api/v1/sleep)
 	ListSleep(w http.ResponseWriter, r *http.Request, params ListSleepParams)
@@ -7317,6 +7612,100 @@ func (siw *ServerInterfaceWrapper) ListProviders(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// DeleteProviderAppCredentials operation middleware
+func (siw *ServerInterfaceWrapper) DeleteProviderAppCredentials(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", r.PathValue("provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteProviderAppCredentialsParams
+
+	// ------------- Optional query parameter "confirm" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "confirm", r.URL.Query(), &params.Confirm, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "confirm"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "confirm", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteProviderAppCredentials(w, r, provider, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutProviderAppCredentials operation middleware
+func (siw *ServerInterfaceWrapper) PutProviderAppCredentials(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", r.PathValue("provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutProviderAppCredentials(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// VerifyProviderAppCredentials operation middleware
+func (siw *ServerInterfaceWrapper) VerifyProviderAppCredentials(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", r.PathValue("provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.VerifyProviderAppCredentials(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // BeginProviderAuth operation middleware
 func (siw *ServerInterfaceWrapper) BeginProviderAuth(w http.ResponseWriter, r *http.Request) {
 
@@ -7360,6 +7749,32 @@ func (siw *ServerInterfaceWrapper) ContinueProviderAuth(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ContinueProviderAuth(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ProbeProvider operation middleware
+func (siw *ServerInterfaceWrapper) ProbeProvider(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", r.PathValue("provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ProbeProvider(w, r, provider)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -7999,6 +8414,76 @@ func (siw *ServerInterfaceWrapper) PutDashboardLayout(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PutDashboardLayout(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSidecars operation middleware
+func (siw *ServerInterfaceWrapper) ListSidecars(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSidecars(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateSidecar operation middleware
+func (siw *ServerInterfaceWrapper) CreateSidecar(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateSidecar(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteSidecar operation middleware
+func (siw *ServerInterfaceWrapper) DeleteSidecar(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteSidecarParams
+
+	// ------------- Optional query parameter "confirm" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "confirm", r.URL.Query(), &params.Confirm, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "confirm"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "confirm", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteSidecar(w, r, name, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -8880,6 +9365,13 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/connections/{id}", wrapper.UpdateConnection)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/connections/{id}/auth/begin", wrapper.BeginConnectionAuth)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/providers/{provider}/auth/begin", wrapper.BeginProviderAuth)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/providers/{provider}/app-credentials", wrapper.DeleteProviderAppCredentials)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/providers/{provider}/app-credentials", wrapper.PutProviderAppCredentials)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/providers/{provider}/app-credentials/verify", wrapper.VerifyProviderAppCredentials)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/providers/{provider}/probe", wrapper.ProbeProvider)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/sidecars", wrapper.ListSidecars)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/sidecars", wrapper.CreateSidecar)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/sidecars/{name}", wrapper.DeleteSidecar)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/providers", wrapper.ListProviders)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/providers/{provider}/auth/continue", wrapper.ContinueProviderAuth)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/connections/{id}/sync", wrapper.SyncConnection)
@@ -14069,6 +14561,298 @@ func (response ListProviders503ApplicationProblemPlusJSONResponse) VisitListProv
 	return err
 }
 
+type DeleteProviderAppCredentialsRequestObject struct {
+	Provider string `json:"provider"`
+	Params   DeleteProviderAppCredentialsParams
+}
+
+type DeleteProviderAppCredentialsResponseObject interface {
+	VisitDeleteProviderAppCredentialsResponse(w http.ResponseWriter) error
+}
+
+type DeleteProviderAppCredentials204Response struct {
+}
+
+func (response DeleteProviderAppCredentials204Response) VisitDeleteProviderAppCredentialsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteProviderAppCredentials401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response DeleteProviderAppCredentials401ApplicationProblemPlusJSONResponse) VisitDeleteProviderAppCredentialsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteProviderAppCredentials403ApplicationProblemPlusJSONResponse Problem
+
+func (response DeleteProviderAppCredentials403ApplicationProblemPlusJSONResponse) VisitDeleteProviderAppCredentialsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteProviderAppCredentials404ApplicationProblemPlusJSONResponse Problem
+
+func (response DeleteProviderAppCredentials404ApplicationProblemPlusJSONResponse) VisitDeleteProviderAppCredentialsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteProviderAppCredentials409ApplicationProblemPlusJSONResponse Problem
+
+func (response DeleteProviderAppCredentials409ApplicationProblemPlusJSONResponse) VisitDeleteProviderAppCredentialsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteProviderAppCredentials503ApplicationProblemPlusJSONResponse Problem
+
+func (response DeleteProviderAppCredentials503ApplicationProblemPlusJSONResponse) VisitDeleteProviderAppCredentialsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutProviderAppCredentialsRequestObject struct {
+	Provider string `json:"provider"`
+	Body     *PutProviderAppCredentialsJSONRequestBody
+}
+
+type PutProviderAppCredentialsResponseObject interface {
+	VisitPutProviderAppCredentialsResponse(w http.ResponseWriter) error
+}
+
+type PutProviderAppCredentials200JSONResponse Provider
+
+func (response PutProviderAppCredentials200JSONResponse) VisitPutProviderAppCredentialsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutProviderAppCredentials401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response PutProviderAppCredentials401ApplicationProblemPlusJSONResponse) VisitPutProviderAppCredentialsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutProviderAppCredentials403ApplicationProblemPlusJSONResponse Problem
+
+func (response PutProviderAppCredentials403ApplicationProblemPlusJSONResponse) VisitPutProviderAppCredentialsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutProviderAppCredentials404ApplicationProblemPlusJSONResponse Problem
+
+func (response PutProviderAppCredentials404ApplicationProblemPlusJSONResponse) VisitPutProviderAppCredentialsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutProviderAppCredentials409ApplicationProblemPlusJSONResponse Problem
+
+func (response PutProviderAppCredentials409ApplicationProblemPlusJSONResponse) VisitPutProviderAppCredentialsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutProviderAppCredentials422ApplicationProblemPlusJSONResponse Problem
+
+func (response PutProviderAppCredentials422ApplicationProblemPlusJSONResponse) VisitPutProviderAppCredentialsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutProviderAppCredentials503ApplicationProblemPlusJSONResponse Problem
+
+func (response PutProviderAppCredentials503ApplicationProblemPlusJSONResponse) VisitPutProviderAppCredentialsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyProviderAppCredentialsRequestObject struct {
+	Provider string `json:"provider"`
+}
+
+type VerifyProviderAppCredentialsResponseObject interface {
+	VisitVerifyProviderAppCredentialsResponse(w http.ResponseWriter) error
+}
+
+type VerifyProviderAppCredentials200JSONResponse AppCredentialsVerification
+
+func (response VerifyProviderAppCredentials200JSONResponse) VisitVerifyProviderAppCredentialsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyProviderAppCredentials401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response VerifyProviderAppCredentials401ApplicationProblemPlusJSONResponse) VisitVerifyProviderAppCredentialsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyProviderAppCredentials403ApplicationProblemPlusJSONResponse Problem
+
+func (response VerifyProviderAppCredentials403ApplicationProblemPlusJSONResponse) VisitVerifyProviderAppCredentialsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyProviderAppCredentials404ApplicationProblemPlusJSONResponse Problem
+
+func (response VerifyProviderAppCredentials404ApplicationProblemPlusJSONResponse) VisitVerifyProviderAppCredentialsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyProviderAppCredentials429ApplicationProblemPlusJSONResponse Problem
+
+func (response VerifyProviderAppCredentials429ApplicationProblemPlusJSONResponse) VisitVerifyProviderAppCredentialsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyProviderAppCredentials503ApplicationProblemPlusJSONResponse Problem
+
+func (response VerifyProviderAppCredentials503ApplicationProblemPlusJSONResponse) VisitVerifyProviderAppCredentialsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type BeginProviderAuthRequestObject struct {
 	Provider string `json:"provider"`
 }
@@ -14224,9 +15008,103 @@ func (response ContinueProviderAuth422ApplicationProblemPlusJSONResponse) VisitC
 	return err
 }
 
+type ContinueProviderAuth429ApplicationProblemPlusJSONResponse Problem
+
+func (response ContinueProviderAuth429ApplicationProblemPlusJSONResponse) VisitContinueProviderAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ContinueProviderAuth503ApplicationProblemPlusJSONResponse Problem
 
 func (response ContinueProviderAuth503ApplicationProblemPlusJSONResponse) VisitContinueProviderAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ProbeProviderRequestObject struct {
+	Provider string `json:"provider"`
+}
+
+type ProbeProviderResponseObject interface {
+	VisitProbeProviderResponse(w http.ResponseWriter) error
+}
+
+type ProbeProvider200JSONResponse Provider
+
+func (response ProbeProvider200JSONResponse) VisitProbeProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ProbeProvider401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response ProbeProvider401ApplicationProblemPlusJSONResponse) VisitProbeProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ProbeProvider403ApplicationProblemPlusJSONResponse Problem
+
+func (response ProbeProvider403ApplicationProblemPlusJSONResponse) VisitProbeProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ProbeProvider404ApplicationProblemPlusJSONResponse Problem
+
+func (response ProbeProvider404ApplicationProblemPlusJSONResponse) VisitProbeProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ProbeProvider503ApplicationProblemPlusJSONResponse Problem
+
+func (response ProbeProvider503ApplicationProblemPlusJSONResponse) VisitProbeProviderResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -15546,6 +16424,256 @@ func (response PutDashboardLayout422ApplicationProblemPlusJSONResponse) VisitPut
 	return err
 }
 
+type ListSidecarsRequestObject struct {
+}
+
+type ListSidecarsResponseObject interface {
+	VisitListSidecarsResponse(w http.ResponseWriter) error
+}
+
+type ListSidecars200JSONResponse struct {
+	Sidecars []Sidecar `json:"sidecars"`
+}
+
+func (response ListSidecars200JSONResponse) VisitListSidecarsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSidecars401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response ListSidecars401ApplicationProblemPlusJSONResponse) VisitListSidecarsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSidecars403ApplicationProblemPlusJSONResponse Problem
+
+func (response ListSidecars403ApplicationProblemPlusJSONResponse) VisitListSidecarsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSidecars503ApplicationProblemPlusJSONResponse Problem
+
+func (response ListSidecars503ApplicationProblemPlusJSONResponse) VisitListSidecarsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSidecarRequestObject struct {
+	Body *CreateSidecarJSONRequestBody
+}
+
+type CreateSidecarResponseObject interface {
+	VisitCreateSidecarResponse(w http.ResponseWriter) error
+}
+
+type CreateSidecar201JSONResponse CreatedSidecar
+
+func (response CreateSidecar201JSONResponse) VisitCreateSidecarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSidecar401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response CreateSidecar401ApplicationProblemPlusJSONResponse) VisitCreateSidecarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSidecar403ApplicationProblemPlusJSONResponse Problem
+
+func (response CreateSidecar403ApplicationProblemPlusJSONResponse) VisitCreateSidecarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSidecar409ApplicationProblemPlusJSONResponse Problem
+
+func (response CreateSidecar409ApplicationProblemPlusJSONResponse) VisitCreateSidecarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSidecar422ApplicationProblemPlusJSONResponse Problem
+
+func (response CreateSidecar422ApplicationProblemPlusJSONResponse) VisitCreateSidecarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSidecar503ApplicationProblemPlusJSONResponse Problem
+
+func (response CreateSidecar503ApplicationProblemPlusJSONResponse) VisitCreateSidecarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteSidecarRequestObject struct {
+	Name   string `json:"name"`
+	Params DeleteSidecarParams
+}
+
+type DeleteSidecarResponseObject interface {
+	VisitDeleteSidecarResponse(w http.ResponseWriter) error
+}
+
+type DeleteSidecar204Response struct {
+}
+
+func (response DeleteSidecar204Response) VisitDeleteSidecarResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteSidecar401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response DeleteSidecar401ApplicationProblemPlusJSONResponse) VisitDeleteSidecarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteSidecar403ApplicationProblemPlusJSONResponse Problem
+
+func (response DeleteSidecar403ApplicationProblemPlusJSONResponse) VisitDeleteSidecarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteSidecar404ApplicationProblemPlusJSONResponse Problem
+
+func (response DeleteSidecar404ApplicationProblemPlusJSONResponse) VisitDeleteSidecarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteSidecar409ApplicationProblemPlusJSONResponse Problem
+
+func (response DeleteSidecar409ApplicationProblemPlusJSONResponse) VisitDeleteSidecarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteSidecar503ApplicationProblemPlusJSONResponse Problem
+
+func (response DeleteSidecar503ApplicationProblemPlusJSONResponse) VisitDeleteSidecarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListSleepRequestObject struct {
 	Params ListSleepParams
 }
@@ -16675,15 +17803,27 @@ type StrictServerInterface interface {
 	// GetProvenance Trace a record back to its raw payload, batch and normalizer
 	// (GET /api/v1/provenance/{entity}/{id})
 	GetProvenance(ctx context.Context, request GetProvenanceRequestObject) (GetProvenanceResponseObject, error)
-	// ListProviders List the providers a connector serves (in-process and sidecars)
+	// ListProviders List the providers a connector serves (in-process and sidecars), with their setup state
 	// (GET /api/v1/providers)
 	ListProviders(ctx context.Context, request ListProvidersRequestObject) (ListProvidersResponseObject, error)
+	// DeleteProviderAppCredentials Remove the stored app credentials of a provider
+	// (DELETE /api/v1/providers/{provider}/app-credentials)
+	DeleteProviderAppCredentials(ctx context.Context, request DeleteProviderAppCredentialsRequestObject) (DeleteProviderAppCredentialsResponseObject, error)
+	// PutProviderAppCredentials Set the owner's own app credentials of a provider (write-only)
+	// (PUT /api/v1/providers/{provider}/app-credentials)
+	PutProviderAppCredentials(ctx context.Context, request PutProviderAppCredentialsRequestObject) (PutProviderAppCredentialsResponseObject, error)
+	// VerifyProviderAppCredentials Check the current app credentials with the provider, without a user grant
+	// (POST /api/v1/providers/{provider}/app-credentials/verify)
+	VerifyProviderAppCredentials(ctx context.Context, request VerifyProviderAppCredentialsRequestObject) (VerifyProviderAppCredentialsResponseObject, error)
 	// BeginProviderAuth Connect an account of a provider (OAuth redirect or credential prompt)
 	// (POST /api/v1/providers/{provider}/auth/begin)
 	BeginProviderAuth(ctx context.Context, request BeginProviderAuthRequestObject) (BeginProviderAuthResponseObject, error)
 	// ContinueProviderAuth Answer an authorization prompt (credentials, an MFA code)
 	// (POST /api/v1/providers/{provider}/auth/continue)
 	ContinueProviderAuth(ctx context.Context, request ContinueProviderAuthRequestObject) (ContinueProviderAuthResponseObject, error)
+	// ProbeProvider Check a sidecar provider again now ("Check again")
+	// (POST /api/v1/providers/{provider}/probe)
+	ProbeProvider(ctx context.Context, request ProbeProviderRequestObject) (ProbeProviderResponseObject, error)
 	// PreviewResolution Resolve a draft rule over a range without writing anything
 	// (POST /api/v1/resolution/preview)
 	PreviewResolution(ctx context.Context, request PreviewResolutionRequestObject) (PreviewResolutionResponseObject, error)
@@ -16738,6 +17878,15 @@ type StrictServerInterface interface {
 	// PutDashboardLayout Replace the dashboard layout
 	// (PUT /api/v1/settings/dashboard)
 	PutDashboardLayout(ctx context.Context, request PutDashboardLayoutRequestObject) (PutDashboardLayoutResponseObject, error)
+	// ListSidecars List the sidecar connectors, from the environment and added in the panel
+	// (GET /api/v1/sidecars)
+	ListSidecars(ctx context.Context, request ListSidecarsRequestObject) (ListSidecarsResponseObject, error)
+	// CreateSidecar Add a sidecar connector; its shared secret is returned once
+	// (POST /api/v1/sidecars)
+	CreateSidecar(ctx context.Context, request CreateSidecarRequestObject) (CreateSidecarResponseObject, error)
+	// DeleteSidecar Remove a sidecar added in the panel
+	// (DELETE /api/v1/sidecars/{name})
+	DeleteSidecar(ctx context.Context, request DeleteSidecarRequestObject) (DeleteSidecarResponseObject, error)
 	// ListSleep List sleep sessions
 	// (GET /api/v1/sleep)
 	ListSleep(ctx context.Context, request ListSleepRequestObject) (ListSleepResponseObject, error)
@@ -18718,6 +19867,92 @@ func (sh *strictHandler) ListProviders(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// DeleteProviderAppCredentials operation middleware
+func (sh *strictHandler) DeleteProviderAppCredentials(w http.ResponseWriter, r *http.Request, provider string, params DeleteProviderAppCredentialsParams) {
+	var request DeleteProviderAppCredentialsRequestObject
+
+	request.Provider = provider
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteProviderAppCredentials(ctx, request.(DeleteProviderAppCredentialsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteProviderAppCredentials")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteProviderAppCredentialsResponseObject); ok {
+		if err := validResponse.VisitDeleteProviderAppCredentialsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PutProviderAppCredentials operation middleware
+func (sh *strictHandler) PutProviderAppCredentials(w http.ResponseWriter, r *http.Request, provider string) {
+	var request PutProviderAppCredentialsRequestObject
+
+	request.Provider = provider
+
+	var body PutProviderAppCredentialsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutProviderAppCredentials(ctx, request.(PutProviderAppCredentialsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutProviderAppCredentials")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutProviderAppCredentialsResponseObject); ok {
+		if err := validResponse.VisitPutProviderAppCredentialsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// VerifyProviderAppCredentials operation middleware
+func (sh *strictHandler) VerifyProviderAppCredentials(w http.ResponseWriter, r *http.Request, provider string) {
+	var request VerifyProviderAppCredentialsRequestObject
+
+	request.Provider = provider
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.VerifyProviderAppCredentials(ctx, request.(VerifyProviderAppCredentialsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "VerifyProviderAppCredentials")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(VerifyProviderAppCredentialsResponseObject); ok {
+		if err := validResponse.VisitVerifyProviderAppCredentialsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // BeginProviderAuth operation middleware
 func (sh *strictHandler) BeginProviderAuth(w http.ResponseWriter, r *http.Request, provider string) {
 	var request BeginProviderAuthRequestObject
@@ -18770,6 +20005,32 @@ func (sh *strictHandler) ContinueProviderAuth(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ContinueProviderAuthResponseObject); ok {
 		if err := validResponse.VisitContinueProviderAuthResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ProbeProvider operation middleware
+func (sh *strictHandler) ProbeProvider(w http.ResponseWriter, r *http.Request, provider string) {
+	var request ProbeProviderRequestObject
+
+	request.Provider = provider
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ProbeProvider(ctx, request.(ProbeProviderRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ProbeProvider")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ProbeProviderResponseObject); ok {
+		if err := validResponse.VisitProbeProviderResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -19270,6 +20531,88 @@ func (sh *strictHandler) PutDashboardLayout(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PutDashboardLayoutResponseObject); ok {
 		if err := validResponse.VisitPutDashboardLayoutResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListSidecars operation middleware
+func (sh *strictHandler) ListSidecars(w http.ResponseWriter, r *http.Request) {
+	var request ListSidecarsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListSidecars(ctx, request.(ListSidecarsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListSidecars")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListSidecarsResponseObject); ok {
+		if err := validResponse.VisitListSidecarsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateSidecar operation middleware
+func (sh *strictHandler) CreateSidecar(w http.ResponseWriter, r *http.Request) {
+	var request CreateSidecarRequestObject
+
+	var body CreateSidecarJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateSidecar(ctx, request.(CreateSidecarRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateSidecar")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateSidecarResponseObject); ok {
+		if err := validResponse.VisitCreateSidecarResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteSidecar operation middleware
+func (sh *strictHandler) DeleteSidecar(w http.ResponseWriter, r *http.Request, name string, params DeleteSidecarParams) {
+	var request DeleteSidecarRequestObject
+
+	request.Name = name
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteSidecar(ctx, request.(DeleteSidecarRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteSidecar")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteSidecarResponseObject); ok {
+		if err := validResponse.VisitDeleteSidecarResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

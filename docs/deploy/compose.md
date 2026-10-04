@@ -20,7 +20,7 @@ Enforced by the policy test `deploy/compose/compose_test.go` (runs in the `go` C
 
 ## Sidecars
 
-Optional sidecars are overlay files, `sidecars/<name>/compose.yaml`, enabled with `COMPOSE_FILE` and `COMPOSE_PROFILES` ([install#sidecars](../install.md#sidecars)). Policy for them, as in the template ([sidecars.md](../sidecars.md#layout)): no database network (`frontend` only), 256 MiB, read-only root, `cap_drop: ALL`, `no-new-privileges`, a healthcheck, and a shared secret file instead of an environment value.
+The bundled Garmin and WHOOP sidecars are services of this file behind the profiles `garmin` and `whoop`; other sidecars are overlay files like [`sidecars/_template/compose.yaml`](../../sidecars/_template/compose.yaml) ([install#sidecars](../install.md#sidecars)). Policy for them, as in the template ([sidecars.md](../sidecars.md#layout)): no database network (`frontend` only), 256 MiB, read-only root, `cap_drop: ALL`, `no-new-privileges`, a healthcheck, and a shared secret file instead of an environment value.
 
 ## Upgrade
 

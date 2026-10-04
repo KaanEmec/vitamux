@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -255,6 +256,19 @@ func (a *audit) run(user, password, lab, aiModel string) (err error) {
 	a.health = append(a.health, weight)
 	a.do(req{method: "POST", path: "/api/v1/measurements/manual", bearer: pat, ctype: "application/json",
 		body: fmt.Appendf(nil, `{"metric":"weight","unit":"kg","value":%s,"start_at":"2026-09-14T07:00:00+02:00"}`, weight)}, 201)
+
+	// Source setup (ADR-0021): the Withings app secret is entered through the API (write-only;
+	// verify fails at the dead proxy), and a sidecar added in the panel gets a generated secret.
+	appSecret := os.Getenv("REDACTION_AUDIT_WITHINGS_SECRET")
+	if appSecret == "" {
+		return errors.New("REDACTION_AUDIT_WITHINGS_SECRET is not set")
+	}
+	a.do(req{method: "PUT", path: "/api/v1/providers/withings/app-credentials", body: map[string]string{"client_id": "audit-client", "client_secret": appSecret}}, 200)
+	a.do(req{method: "POST", path: "/api/v1/providers/withings/app-credentials/verify"}, 503)
+	side := a.json(req{method: "POST", path: "/api/v1/sidecars", body: map[string]string{"name": "audit_sidecar", "url": "http://127.0.0.1:9"}}, 201)
+	a.secrets = append(a.secrets, str(side, "secret"))
+	a.do(req{method: "POST", path: "/api/v1/providers/audit_sidecar/probe"}, 200)
+	a.do(req{method: "GET", path: "/api/v1/providers"}, 200)
 
 	// Withings: the authorization begins, the token exchange (client secret, sentinel code)
 	// fails at the dead proxy, and a webhook with an unknown token is refused.

@@ -15,6 +15,7 @@ export const sections = [
 
 export const settingsPages = [
 	{ group: 'You', href: '/settings', label: 'Profile' },
+	{ group: 'Sources', href: '/settings/sources', label: 'Sources' },
 	{ group: 'Sources', href: '/settings/devices', label: 'Devices' },
 	{ group: 'Sources', href: '/settings/ai', label: 'AI providers' },
 	{ group: 'Access', href: '/settings/api-keys', label: 'API keys' },

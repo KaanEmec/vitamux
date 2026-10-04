@@ -1,33 +1,26 @@
 package main
 
 import (
-	"context"
-	"log/slog"
-	"sync"
-	"time"
-
 	"github.com/KaanEmec/vitamux/internal/config"
 	"github.com/KaanEmec/vitamux/internal/connectors"
 	"github.com/KaanEmec/vitamux/internal/connectors/remote"
-	"github.com/KaanEmec/vitamux/internal/db"
 )
 
-// startupDescribe bounds the describe of every sidecar at startup; startup never waits longer.
-const startupDescribe = 3 * time.Second
-
-// sidecarConnectors returns a connector per configured sidecar. Each is described in
-// parallel; an unreachable one is registered as a placeholder and described again on use
-// (docs/architecture/connectors.md#remote-sidecar-mode).
-func sidecarConnectors(ctx context.Context, sidecars []config.Sidecar, d *db.DB, log *slog.Logger) []connectors.Connector {
-	out := make([]connectors.Connector, len(sidecars))
-	ctx, cancel := context.WithTimeout(ctx, startupDescribe)
-	defer cancel()
-	var wg sync.WaitGroup
+// envSidecars converts VITAMUX_SIDECARS for the sidecar manager, which registers them next to
+// the panel's (docs/architecture/connectors.md#remote-sidecar-mode).
+func envSidecars(sidecars []config.Sidecar) []remote.EnvSidecar {
+	out := make([]remote.EnvSidecar, len(sidecars))
 	for i, s := range sidecars {
-		c := remote.New(remote.Options{Name: s.Name, URL: s.URL, Secret: s.Secret.Value(), Log: log, OnDescribe: remote.Recorder(d)})
-		out[i] = c
-		wg.Go(func() { _ = c.Discover(ctx) }) // failures are logged by the connector
+		out[i] = remote.EnvSidecar{Name: s.Name, URL: s.URL, Secret: s.Secret.Value(), SecretFile: s.SecretFile}
 	}
-	wg.Wait()
 	return out
+}
+
+// envApps returns the provider app credentials the environment sets (ADR-0021: they win).
+func envApps(cfg config.Config) map[string]connectors.AppCredentials {
+	m := map[string]connectors.AppCredentials{}
+	if cfg.WithingsClientID != "" && cfg.WithingsClientSecret.IsSet() {
+		m["withings"] = connectors.AppCredentials{ClientID: cfg.WithingsClientID, ClientSecret: cfg.WithingsClientSecret.Value()}
+	}
+	return m
 }

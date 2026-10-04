@@ -25,11 +25,25 @@ The container healthcheck (`vitamux healthcheck`) probes the same endpoint, so `
 
 `docker compose run --rm migrate migrate status` lists applied and pending migrations.
 
+## Source setup
+
+Connections › **Connect a source** shows each provider's setup state ([ADR-0021](../adr/0021-source-setup.md)) and explains a refusal in plain words. The usual causes:
+
+| The panel says | Cause | Fix |
+| --- | --- | --- |
+| Needs an https public address | `VITAMUX_PUBLIC_URL` is http, an IP or localhost, uses another port than 443, or makes the callback longer than 255 characters | Set it to the https domain of your proxy and restart |
+| Refused the client id and secret | Withings rejected them at **Save and check** | Copy both again from the Withings developer dashboard |
+| Withings shows a redirect URI error | The callback URL registered in the Withings app differs from the panel's | Copy the callback URL from step 1 of the wizard into the Withings app |
+| Connecting Withings failed … check the client id, the secret and the callback URL | The exchange after the Withings sign-in was refused (`auth_error=exchange_failed`) | **Review the app setup**, or replace the credentials under Settings › Sources |
+| Not available: its sidecar is not running | The bundled sidecar is off, or its secret file is missing | Add the line the card shows ([install#sidecars](../install.md#sidecars)), apply it, then **Check again** |
+| Did not accept the email or password / the verification code | Wrong password, or a wrong or expired code | Start again; use the newest code |
+| Is limiting sign-in attempts | The provider rate-limits sign-ins | Wait the time shown, then start again |
+
 ## A connection says `needs_reauth`
 
 The provider refused the stored credentials: the refresh token was revoked (app removed in the provider account, password change), expired, or rotated without being saved. Syncs and schedules stop; nothing is retried.
 
-Fix: open the connection and choose **Reauthorize** on its Overview tab (it calls `POST /api/v1/connections/{id}/auth/begin`) and sign in to the **same** provider account; another account is refused with `account_mismatch`. Data, cursors and schedules are kept, and a sync is queued right away. If it comes back soon after, check that `VITAMUX_WITHINGS_CLIENT_ID` and the secret file still match the provider application, and that the host clock is right.
+Fix: open the connection and choose **Reauthorize** on its Overview tab (it calls `POST /api/v1/connections/{id}/auth/begin`) and sign in to the **same** provider account; another account is refused with `account_mismatch`. Data, cursors and schedules are kept, and a sync is queued right away. If it comes back soon after, check that the Withings app credentials (Settings › Sources, or `VITAMUX_WITHINGS_CLIENT_ID` and the secret file) still match the provider application, and that the host clock is right.
 
 ## A stream is `degraded` (`schema_drift`)
 

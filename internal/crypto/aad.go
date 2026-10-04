@@ -14,3 +14,10 @@ func TOTPAAD(userID uuid.UUID) []byte { return []byte("users.totp:" + userID.Str
 // AuthSessionAAD binds a sealed oauth_states.session to its pending authorization step
 // (purpose Credentials).
 func AuthSessionAAD(stateID uuid.UUID) []byte { return []byte("auth-session:" + stateID.String()) }
+
+// ProviderAppAAD binds a sealed provider_app_credentials.ciphertext to its provider (purpose
+// Credentials, ADR-0021).
+func ProviderAppAAD(provider string) []byte { return []byte("provider_app:" + provider) }
+
+// SidecarAAD binds a sealed sidecars.ciphertext to its sidecar (purpose Credentials).
+func SidecarAAD(name string) []byte { return []byte("sidecar:" + name) }

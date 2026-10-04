@@ -27,7 +27,8 @@ var errDryRun = errors.New("dry run")
 // Purge deletes everything of user in one transaction, in dependency order: canonical rows, import
 // records, raw payloads and batches, documents (document keys first: crypto-shredding), exports
 // and their jobs, clients, connections (with credentials, schedules, cursors and jobs), devices,
-// origins, sessions, API keys, settings, and finally the user with rules, overrides and the rest
+// origins, sessions, API keys, settings, the provider app credentials and panel sidecars it
+// entered, and finally the user with rules, overrides and the rest
 // of the cascade. Blob references are released; blob.Sweep removes the files. Audit events stay,
 // unlinked from the user (they never hold health values), plus one user.purged event with the
 // counts. dryRun rolls everything back and only reports the counts. db.ErrNotFound if there is no
@@ -97,6 +98,8 @@ func Purge(ctx context.Context, d *db.DB, user uuid.UUID, actor string, dryRun b
 			step{"sessions", q.PurgeSessions},
 			step{"api_keys", q.PurgeAPIKeys},
 			step{"settings", q.PurgeSettings},
+			step{"provider_app_credentials", q.PurgeProviderApps},
+			step{"sidecars", q.PurgeSidecars},
 		); err != nil {
 			return err
 		}

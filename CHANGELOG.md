@@ -2,6 +2,34 @@
 
 Newest first. Before a final release, `scripts/release-notes.sh --changelog vX.Y.Z` adds its section from the Conventional Commits since the previous final tag; edit it and add upgrade notes under "Breaking changes" before tagging. The release workflow refuses a final tag without its section and uses it as the release notes. Release candidates are described on their GitHub releases only.
 
+## v0.2.1 (2026-10-04)
+
+Every source is set up from the web panel (epic E20), built on the v0.2.0 design system.
+
+### Web UI
+
+- Connect a source: one card per provider with its setup state and the next step. It is the Connections page on a fresh install, and the Dashboard leads to it.
+- Withings: a three-step wizard shows the callback URL to register, takes the client id and secret, checks them and starts the sign-in. No `.env` edit or restart.
+- Garmin and WHOOP: the panel shows the one line that turns the sidecar on (Compose or Coolify) and a Check again button, then one sign-in dialog with email, password and MFA code.
+- Settings › Sources: replace or delete app credentials, and add your own sidecar (its shared secret is shown once).
+- Plain-language errors for a wrong secret, a callback mismatch, an http public URL, a refused sign-in, rate limits and a sidecar that is not running.
+
+### API
+
+- `GET /api/v1/providers` adds `setup_state`, `callback_url`, `problems`, `app_credentials`, `sidecar` and `connections`.
+- `PUT`, `DELETE` and `POST …/verify` on `/api/v1/providers/{provider}/app-credentials`, and `POST /api/v1/providers/{provider}/probe`.
+- `GET`, `POST` and `DELETE /api/v1/sidecars` for sidecars added in the panel.
+- `POST /api/v1/providers/{provider}/auth/continue` answers 422 when the provider refuses the sign-in and 429 with `Retry-After` when rate limited.
+
+### Deployment
+
+- App credentials entered in the panel are sealed in PostgreSQL and covered by key rotation, backup and restore. An environment value still wins and shows as managed by the environment.
+- The bundled Garmin and WHOOP sidecars are registered by default and get their shared secrets on start. Turn one on with `COMPOSE_PROFILES=garmin,whoop` (Compose) or `GARMIN_SIDECAR=1` / `WHOOP_SIDECAR=1` (Coolify).
+
+### Breaking changes
+
+None. The Withings environment variables are now optional overrides of the panel value.
+
 ## v0.2.0 (2026-10-04)
 
 The web panel is redesigned (epic E21): a dashboard, Explore for everything Vitamux has stored, and rules you can change while looking at the data.

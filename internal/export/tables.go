@@ -532,6 +532,9 @@ var withoutFile = map[string]string{ //nolint:unused,nolintlint // read by TestE
 	"resolution_dirty":    "derived: the importer marks imported days",
 	"exports":             "the exports themselves",
 	"document_keys":       "secrets: lab PDFs, filenames and raw extractor responses stay sealed and are never exported",
+	// Source setup (ADR-0021): instance setup with sealed secrets, entered again on the target.
+	"provider_app_credentials": "secrets: the owner's provider app, set up again in the panel",
+	"sidecars":                 "secrets: sidecars added in the panel, added again on the target",
 	// Rebuildable resolution state (J09.9).
 	"resolved_cache": "derived: recomputed on read", "source_hourly_aggregates": "derived: rebuilt from resolution_dirty",
 }

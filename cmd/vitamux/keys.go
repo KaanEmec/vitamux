@@ -56,7 +56,8 @@ func keys(args []string, stdout, stderr io.Writer) int {
 	defer pool.Close()
 
 	n, err := rotateKeys(ctx, db.New(pool), kr, rotateBatchSize, 0)
-	fmt.Fprintf(stdout, "current key id: %s\ncredentials: %d re-sealed\nusers.totp: %d re-sealed\n", kr.KeyID(), n.Credentials, n.TOTP)
+	fmt.Fprintf(stdout, "current key id: %s\ncredentials: %d re-sealed\nusers.totp: %d re-sealed\nprovider_app_credentials: %d re-sealed\nsidecars: %d re-sealed\n",
+		kr.KeyID(), n.Credentials, n.TOTP, n.ProviderApps, n.Sidecars)
 	if err != nil {
 		fmt.Fprintf(stderr, "keys rotate: %v (run it again to continue)\n", err)
 		return 1
@@ -65,7 +66,7 @@ func keys(args []string, stdout, stderr io.Writer) int {
 }
 
 // rotated counts the values re-sealed per table.
-type rotated struct{ Credentials, TOTP, Documents int }
+type rotated struct{ Credentials, TOTP, Documents, ProviderApps, Sidecars int }
 
 // rotateKeys re-seals every value whose key_id differs from kr's current key, batchSize rows
 // per transaction. A batch commits only whole, so an interrupted run leaves every row sealed
@@ -115,6 +116,38 @@ func rotateKeys(ctx context.Context, d *db.DB, kr *crypto.Keyring, batchSize, ma
 		{&n.Documents, func(q *dbq.Queries) (int, error) {
 			return documents.RotateKeyBatch(ctx, q, kr, int32(batchSize)) //nolint:gosec // small constant
 		}},
+		{&n.ProviderApps, func(q *dbq.Queries) (int, error) {
+			rows, err := q.LockProviderAppsToRotate(ctx, dbq.LockProviderAppsToRotateParams{KeyID: id, Batch: int32(batchSize)}) //nolint:gosec // small constant
+			if err != nil {
+				return 0, err
+			}
+			for _, r := range rows {
+				sealed, err := reseal(kr, r.Ciphertext, crypto.ProviderAppAAD(r.Provider))
+				if err != nil {
+					return 0, fmt.Errorf("provider_app_credentials %s: %w", r.Provider, err)
+				}
+				if err := q.ResealProviderApp(ctx, dbq.ResealProviderAppParams{Ciphertext: sealed, KeyID: id, Provider: r.Provider}); err != nil {
+					return 0, err
+				}
+			}
+			return len(rows), nil
+		}},
+		{&n.Sidecars, func(q *dbq.Queries) (int, error) {
+			rows, err := q.LockSidecarsToRotate(ctx, dbq.LockSidecarsToRotateParams{KeyID: id, Batch: int32(batchSize)}) //nolint:gosec // small constant
+			if err != nil {
+				return 0, err
+			}
+			for _, r := range rows {
+				sealed, err := reseal(kr, r.Ciphertext, crypto.SidecarAAD(r.Name))
+				if err != nil {
+					return 0, fmt.Errorf("sidecars %s: %w", r.Name, err)
+				}
+				if err := q.ResealSidecar(ctx, dbq.ResealSidecarParams{Ciphertext: sealed, KeyID: id, Name: r.Name}); err != nil {
+					return 0, err
+				}
+			}
+			return len(rows), nil
+		}},
 	}
 
 	var err error
@@ -140,7 +173,8 @@ steps:
 		return audit.Record(ctx, q, audit.Event{
 			Actor:  audit.System,
 			Action: "keys.rotate",
-			Detail: map[string]any{"credentials": n.Credentials, "users_totp": n.TOTP, "document_keys": n.Documents},
+			Detail: map[string]any{"credentials": n.Credentials, "users_totp": n.TOTP, "document_keys": n.Documents,
+				"provider_app_credentials": n.ProviderApps, "sidecars": n.Sidecars},
 		})
 	})
 	return n, errors.Join(err, auditErr)

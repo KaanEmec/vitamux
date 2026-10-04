@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/url"
 	"sync"
 	"time"
@@ -26,7 +27,13 @@ type Options struct {
 	Name   string   // provider code; the sidecar's describe must report it
 	URL    *url.URL // base URL; it must resolve to a private address
 	Secret string   // shared bearer secret
-	Log    *slog.Logger
+	// SecretFile is read on use while Secret is empty, until it exists (a bundled sidecar's
+	// secret may be generated after startup).
+	SecretFile string
+	// Optional marks a bundled sidecar whose container may simply be off: describing it while
+	// it is unreachable logs at debug level, not as a warning.
+	Optional bool
+	Log      *slog.Logger
 	// OnDescribe runs after a successful describe whose name or upstream differs from the last
 	// one it accepted (always after the first): register the provider, record the upstream.
 	// An error makes the next describe call it again.
@@ -42,12 +49,14 @@ type Connector struct {
 	name       string
 	cl         *client
 	log        *slog.Logger
+	optional   bool
 	onDescribe func(context.Context, connectors.Descriptor) error
 
 	refreshing sync.Mutex // one describe at a time
 	mu         sync.Mutex
 	d          connectors.Descriptor
 	checked    time.Time // last describe attempt
+	lastErr    error     // of the last describe attempt
 	reported   string    // name and upstream last accepted by onDescribe
 }
 
@@ -66,8 +75,10 @@ func newConnector(o Options, l limits) *Connector {
 	if log == nil {
 		log = slog.New(slog.DiscardHandler)
 	}
+	cl := newClient(o.URL, o.Secret, l)
+	cl.secretFile = o.SecretFile
 	return &Connector{
-		name: o.Name, cl: newClient(o.URL, o.Secret, l), log: log.With("provider", o.Name), onDescribe: o.OnDescribe,
+		name: o.Name, cl: cl, log: log.With("provider", o.Name), optional: o.Optional, onDescribe: o.OnDescribe,
 		d: placeholder(o.Name),
 	}
 }
@@ -111,11 +122,15 @@ func (c *Connector) refresh(ctx context.Context) error {
 	defer c.refreshing.Unlock()
 	d, err := c.describe(ctx)
 	c.mu.Lock()
-	c.checked, c.d = time.Now(), d
+	c.checked, c.d, c.lastErr = time.Now(), d, err
 	reported := c.reported
 	c.mu.Unlock()
 	if err != nil {
-		c.log.Warn("sidecar unavailable", "err", err)
+		level := slog.LevelWarn
+		if c.optional && SetupProblem(err) != ProblemFailed {
+			level = slog.LevelDebug // a bundled sidecar that is off: needs_sidecar, not an error
+		}
+		c.log.Log(ctx, level, "sidecar unavailable", "err", err)
 		return err
 	}
 	key, _ := json.Marshal([]any{d.Name, d.Upstream})
@@ -130,6 +145,42 @@ func (c *Connector) refresh(ctx context.Context) error {
 	c.reported = string(key)
 	c.mu.Unlock()
 	return nil
+}
+
+// Probe describes the sidecar now, ignoring the once-a-minute cache ("Check again").
+func (c *Connector) Probe(ctx context.Context) error { return c.Discover(ctx) }
+
+// Problem codes of a sidecar that does not serve (setup readiness problems, ADR-0021).
+const (
+	ProblemSecretMissing = "sidecar_secret_missing" // the shared secret file does not exist yet
+	ProblemUnreachable   = "sidecar_unreachable"    // nothing answers at the URL (container off)
+	ProblemFailed        = "sidecar_failed"         // it answers, but describe fails
+)
+
+// SetupProblem classifies a describe error: "" for nil.
+func SetupProblem(err error) string {
+	var op *net.OpError
+	var dns *net.DNSError
+	switch {
+	case err == nil:
+		return ""
+	case errors.Is(err, errSecretMissing):
+		return ProblemSecretMissing
+	case errors.As(err, &op), errors.As(err, &dns), errors.Is(err, context.DeadlineExceeded):
+		return ProblemUnreachable
+	}
+	return ProblemFailed
+}
+
+// LastProblem is the SetupProblem of the last describe attempt, "" once the sidecar described
+// itself; before the first attempt it is ProblemUnreachable.
+func (c *Connector) LastProblem() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.checked.IsZero() {
+		return ProblemUnreachable
+	}
+	return SetupProblem(c.lastErr)
 }
 
 // describe fetches and checks the descriptor; on error it returns the placeholder.

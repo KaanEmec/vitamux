@@ -25,9 +25,12 @@ const (
 	maxBody        = 32 << 20 // a getmeas page of years of groups stays far below this
 )
 
-// Config is the self-hoster's Withings application. AuthURL and APIURL default to Withings;
-// tests point them at a fake.
+// Config is the self-hoster's Withings application. App is read on every authorization,
+// exchange, refresh and verify (connectors.Apps: environment first, then the panel value);
+// without it ClientID and ClientSecret are used (tests). AuthURL and APIURL default to
+// Withings; tests point them at a fake.
 type Config struct {
+	App                    connectors.AppSource
 	ClientID, ClientSecret string
 	AuthURL, APIURL        string
 }
@@ -40,6 +43,9 @@ type Connector struct {
 // New returns the connector. Without a client id and secret it still syncs nothing and
 // refuses to start an authorization (connectors.ErrAuthUnavailable).
 func New(cfg Config) *Connector {
+	if cfg.App == nil {
+		cfg.App = connectors.StaticApp(cfg.ClientID, cfg.ClientSecret)
+	}
 	if cfg.AuthURL == "" {
 		cfg.AuthURL = defaultAuthURL
 	}

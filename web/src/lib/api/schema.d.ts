@@ -815,6 +815,111 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/providers/{provider}/app-credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the owner's own app credentials of a provider (write-only)
+         * @description Stores the client id and secret of the owner's application at the provider (e.g. the Withings developer app), sealed; the next authorization, exchange and refresh use them, without a restart (docs/adr/0021-source-setup.md). The secret is never returned. 409 while the environment sets them (managed_by_environment). Audited as provider_app.set. Owner session only.
+         */
+        put: operations["putProviderAppCredentials"];
+        post?: never;
+        /**
+         * Remove the stored app credentials of a provider
+         * @description 409 while connections hold tokens that refresh with these credentials, unless confirm=true (those connections then need new credentials before their next refresh), and while the environment sets them. Audited as provider_app.delete. Owner session only.
+         */
+        delete: operations["deleteProviderAppCredentials"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/providers/{provider}/app-credentials/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check the current app credentials with the provider, without a user grant
+         * @description valid or invalid where the provider can check them (Withings: a signed nonce request); unverifiable where it needs a user grant, and the first connect checks them. 404 when none are set; 429 or 503 when the provider is rate limiting or unreachable. Audited as provider_app.verify. Owner session only.
+         */
+        post: operations["verifyProviderAppCredentials"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/providers/{provider}/probe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check a sidecar provider again now ("Check again")
+         * @description Describes the provider's sidecar at once instead of waiting for the once-a-minute re-check, and answers the provider with its new setup state. Other providers are answered as they are.
+         */
+        post: operations["probeProvider"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sidecars": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the sidecar connectors, from the environment and added in the panel */
+        get: operations["listSidecars"];
+        put?: never;
+        /**
+         * Add a sidecar connector; its shared secret is returned once
+         * @description Registers a sidecar at a private-network URL under a provider code. Vitamux generates the shared bearer secret, stores it sealed and returns it once, to configure the sidecar with; the provider is needs_sidecar until the sidecar answers describe (probeProvider checks again). Audited as sidecar.add. Owner session only.
+         */
+        post: operations["createSidecar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sidecars/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a sidecar added in the panel
+         * @description 409 for a sidecar of the environment, and while connections of its provider exist unless confirm=true (they stop syncing). Audited as sidecar.remove. Owner session only.
+         */
+        delete: operations["deleteSidecar"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/providers": {
         parameters: {
             query?: never;
@@ -822,7 +927,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List the providers a connector serves (in-process and sidecars) */
+        /**
+         * List the providers a connector serves (in-process and sidecars), with their setup state
+         * @description Each provider carries what the panel needs to set it up (docs/adr/0021-source-setup.md): setup_state, readiness problems, the OAuth callback URL to register, its app credentials (never the secret) and, for a sidecar, how to turn it on. A sidecar is re-checked on this call at most once a minute; probeProvider checks at once.
+         */
         get: operations["listProviders"];
         put?: never;
         post?: never;
@@ -843,7 +951,7 @@ export interface paths {
         put?: never;
         /**
          * Answer an authorization prompt (credentials, an MFA code)
-         * @description Sends the owner's values for the prompt the state names. The state is single use: the answer is the next step with a new state, or the connection once authorized. Any error ends the flow; begin again. Owner session only, with the binding cookie of begin.
+         * @description Sends the owner's values for the prompt the state names. The state is single use: the answer is the next step with a new state, or the connection once authorized. Any error ends the flow; begin again: 422 when the provider refused the values (a wrong password or code), 429 with Retry-After while it limits sign-ins, 503 when the provider or its sidecar is unavailable. Owner session only, with the binding cookie of begin.
          */
         post: operations["continueProviderAuth"];
         delete?: never;
@@ -1747,7 +1855,7 @@ export interface paths {
         };
         /**
          * OAuth redirect target; completes the authorization and redirects to the UI
-         * @description Authorized by the signed, single-use `state` and the browser-binding cookie, not by the session. Always answers 303 to /connections?connected=<provider> or /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable. HEAD answers 204 without side effects. A provider without a connector is 404.
+         * @description Authorized by the signed, single-use `state` and the browser-binding cookie, not by the session. Always answers 303 to /connections?connected=<provider> or /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable&provider=<provider>. HEAD answers 204 without side effects. A provider without a connector is 404.
          */
         get: operations["oauthCallback"];
         put?: never;
@@ -3100,6 +3208,88 @@ export interface components {
             /** @description False while a sidecar is unreachable or has not described itself. */
             available: boolean;
             upstream?: components["schemas"]["Upstream"];
+            /**
+             * @description The first that applies: needs_sidecar (the sidecar does not answer; see sidecar.enable and problems), connected (a connection that is not disconnected exists), needs_public_url (production only: the provider would refuse the callback; see problems), needs_app_credentials (set them with putProviderAppCredentials), ready.
+             * @enum {string}
+             */
+            setup_state: "needs_sidecar" | "connected" | "needs_public_url" | "needs_app_credentials" | "ready";
+            /** @description The OAuth callback to register at the provider, ${VITAMUX_PUBLIC_URL}/oauth/<provider>/callback; null for providers without a redirect. */
+            callback_url: string | null;
+            /** @description What stands in the way of setup; in development the public URL problems are warnings. */
+            problems: components["schemas"]["SetupProblem"][];
+            /** @description Null for a provider that does not run on the owner's own application. */
+            app_credentials: components["schemas"]["AppCredentialsStatus"] | null;
+            /** @description Null for an in-process connector. */
+            sidecar: components["schemas"]["ProviderSidecar"] | null;
+            /** @description The caller's connections of this provider that are not disconnected. */
+            connections: number;
+        };
+        SetupProblem: {
+            /** @enum {string} */
+            code: "public_url_not_https" | "public_url_ip_host" | "public_url_port" | "public_url_too_long" | "sidecar_unreachable" | "sidecar_secret_missing" | "sidecar_failed";
+            /** @description What to do */
+            message: string;
+        };
+        /** @description The owner's application at the provider; the secret is write-only and never shown. */
+        AppCredentialsStatus: {
+            set: boolean;
+            /** @description Set by VITAMUX_<PROVIDER>_CLIENT_ID and _SECRET(_FILE) */
+            managed_by_environment: boolean;
+            client_id: string | null;
+            /**
+             * Format: date-time
+             * @description Last change in the panel; null when unset or set by the environment.
+             */
+            updated_at: string | null;
+        };
+        AppCredentialsInput: {
+            client_id: string;
+            /** @description Write-only; never returned. */
+            client_secret: string;
+        };
+        AppCredentialsVerification: {
+            /** @enum {string} */
+            result: "valid" | "invalid" | "unverifiable";
+            message: string;
+        };
+        /** @description How a sidecar provider is registered and, for a bundled one, how to turn it on. */
+        ProviderSidecar: {
+            /**
+             * @description environment (VITAMUX_SIDECARS) is read-only; panel ones can be removed.
+             * @enum {string}
+             */
+            source: "environment" | "panel";
+            /** @description Shipped with the release Compose files (garmin */
+            bundled: boolean;
+            /** @description For a bundled sidecar, the line to add and what to run, for this install (VITAMUX_INSTALL) or for each when unknown; empty otherwise. */
+            enable: components["schemas"]["SidecarEnable"][];
+        };
+        SidecarEnable: {
+            /** @enum {string} */
+            install: "compose" | "coolify";
+            /** @description Compose: the .env line, e.g. COMPOSE_PROFILES=garmin (comma-separate several profiles). Coolify: the environment variable, e.g. GARMIN_SIDECAR=1. */
+            line: string;
+            /** @description What to run afterwards. */
+            apply: string;
+        };
+        Sidecar: {
+            name: string;
+            url: string;
+            /** @enum {string} */
+            source: "environment" | "panel";
+            bundled: boolean;
+            /** @description The sidecar answered its last describe. */
+            available: boolean;
+            /**
+             * Format: date-time
+             * @description Panel sidecars only.
+             */
+            created_at: string | null;
+        };
+        CreatedSidecar: {
+            sidecar: components["schemas"]["Sidecar"];
+            /** @description The shared bearer secret (64 hex characters), shown only here: give it to the sidecar as its VITAMUX_SIDECAR_SECRET_FILE. */
+            secret: string;
         };
         /** @description The third-party package a sidecar connector wraps. */
         Upstream: {
@@ -5278,6 +5468,206 @@ export interface operations {
             503: components["responses"]["Problem"];
         };
     };
+    putProviderAppCredentials: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppCredentialsInput"];
+            };
+        };
+        responses: {
+            /** @description The provider with its new setup state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Provider"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    deleteProviderAppCredentials: {
+        parameters: {
+            query?: {
+                /** @description true removes them even while connections use them. */
+                confirm?: boolean;
+            };
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    verifyProviderAppCredentials: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The outcome. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppCredentialsVerification"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    probeProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The provider. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Provider"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    listSidecars: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every registered sidecar, by name. Environment ones are read-only. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        sidecars: components["schemas"]["Sidecar"][];
+                    };
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    createSidecar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Provider code the sidecar describes. */
+                    name: string;
+                    /** @description Base URL, e.g. http://my-sidecar:8080; it must resolve to a loopback, private or link-local address. */
+                    url: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Added. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreatedSidecar"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    deleteSidecar: {
+        parameters: {
+            query?: {
+                /** @description true removes it even while connections of its provider exist. */
+                confirm?: boolean;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
     listProviders: {
         parameters: {
             query?: never;
@@ -5331,6 +5721,7 @@ export interface operations {
             403: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
         };
     };

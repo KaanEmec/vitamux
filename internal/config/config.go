@@ -65,7 +65,16 @@ type Config struct {
 	OpenAICompatibleAllowPrivate bool // allow http and private or loopback hosts in the base URL
 	// Sidecars are the remote connectors of VITAMUX_SIDECARS (docs/architecture/connectors.md#remote-sidecar-mode).
 	Sidecars []Sidecar
+	// Install names the deployment (VITAMUX_INSTALL: compose, coolify, or empty), so the panel
+	// shows the matching instruction for turning on a bundled sidecar.
+	Install string
 }
+
+// Install targets whose sidecar toggle the panel knows (ADR-0021).
+const (
+	InstallCompose = "compose"
+	InstallCoolify = "coolify"
+)
 
 // Secret holds a sensitive value that never prints itself.
 type Secret struct{ value string }
@@ -116,6 +125,9 @@ func load(env Lookup, readFile ReadFile) (Config, error) {
 		MetricsAddr:   get("METRICS_ADDR", ""),
 		DataDir:       get("DATA_DIR", "./data"),
 		MasterKeyFile: get("MASTER_KEY_FILE", ""),
+	}
+	if c.Install = get("INSTALL", ""); c.Install != "" && c.Install != InstallCompose && c.Install != InstallCoolify {
+		errs = append(errs, fmt.Errorf("%sINSTALL must be empty, %q or %q", prefix, InstallCompose, InstallCoolify))
 	}
 	c.BackupDir = get("BACKUP_DIR", "")
 	if n, err := strconv.Atoi(get("BACKUP_KEEP", "3")); err != nil || n < 1 {

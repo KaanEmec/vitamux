@@ -1,7 +1,6 @@
 package api
 
 import (
-	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -113,28 +112,6 @@ func (o *owner) connectionBody(c dbq.ListOwnerConnectionsRow, scheds []dbq.Sched
 		}
 	}
 	return out
-}
-
-// ListProviders lists the registered connectors, in-process and sidecars.
-func (o *owner) ListProviders(context.Context, oapi.ListProvidersRequestObject) (oapi.ListProvidersResponseObject, error) {
-	rt, err := o.runtime()
-	if err != nil {
-		return nil, err
-	}
-	ds := rt.Providers()
-	out := oapi.ListProviders200JSONResponse{Providers: make([]oapi.Provider, len(ds))}
-	for i, d := range ds {
-		p := oapi.Provider{Code: d.Provider, Name: cmp.Or(d.Name, d.Provider), Official: d.Official, Remote: d.Remote, Available: d.Available()}
-		if d.AuthKind != "" {
-			k := oapi.ProviderAuthKind(d.AuthKind)
-			p.AuthKind = &k
-		}
-		if u := d.Upstream; u != nil {
-			p.Upstream = &oapi.Upstream{Package: u.Package, Version: u.Version, SourceURL: u.SourceURL}
-		}
-		out.Providers[i] = p
-	}
-	return out, nil
 }
 
 // schedulesOf returns the caller's schedules, of one connection when id is set.

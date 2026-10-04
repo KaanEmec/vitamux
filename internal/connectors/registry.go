@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -29,35 +30,67 @@ var (
 // ErrInvalidDescriptor wraps descriptor validation failures.
 var ErrInvalidDescriptor = errors.New("connectors: invalid descriptor")
 
-// Registry maps provider codes to connectors.
-type Registry struct{ m map[string]Connector }
+// Registry maps provider codes to connectors. Sidecars added in the panel join and leave it
+// while serving (Add, Remove).
+type Registry struct {
+	mu sync.RWMutex
+	m  map[string]Connector
+}
 
 // NewRegistry validates and registers cs; adding a connector is one argument here.
 func NewRegistry(cs ...Connector) (*Registry, error) {
 	r := &Registry{m: map[string]Connector{}}
 	for _, c := range cs {
-		d := c.Describe()
-		if err := Validate(c, d); err != nil {
+		if err := r.Add(c); err != nil {
 			return nil, err
 		}
-		if _, dup := r.m[d.Provider]; dup {
-			return nil, fmt.Errorf("%w: provider %q registered twice", ErrInvalidDescriptor, d.Provider)
-		}
-		r.m[d.Provider] = c
 	}
 	return r, nil
 }
 
+// Add validates and registers c; a provider code is registered once.
+func (r *Registry) Add(c Connector) error {
+	d := c.Describe()
+	if err := Validate(c, d); err != nil {
+		return err
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.m == nil {
+		r.m = map[string]Connector{}
+	}
+	if _, dup := r.m[d.Provider]; dup {
+		return fmt.Errorf("%w: provider %q registered twice", ErrInvalidDescriptor, d.Provider)
+	}
+	r.m[d.Provider] = c
+	return nil
+}
+
+// Remove unregisters the provider's connector.
+func (r *Registry) Remove(provider string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.m, provider)
+}
+
 // Get returns the connector for a provider code.
 func (r *Registry) Get(provider string) (Connector, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	c, ok := r.m[provider]
 	return c, ok
 }
 
 // Descriptors returns every registered connector's current descriptor, by provider code.
 func (r *Registry) Descriptors() []Descriptor {
-	out := make([]Descriptor, 0, len(r.m))
+	r.mu.RLock()
+	cs := make([]Connector, 0, len(r.m))
 	for _, c := range r.m {
+		cs = append(cs, c)
+	}
+	r.mu.RUnlock()
+	out := make([]Descriptor, 0, len(cs))
+	for _, c := range cs { // Describe may call a sidecar: outside the lock
 		out = append(out, c.Describe())
 	}
 	slices.SortFunc(out, func(a, b Descriptor) int { return strings.Compare(a.Provider, b.Provider) })

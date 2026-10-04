@@ -18,7 +18,7 @@ func TestOAuthCallbackWithoutRuntime(t *testing.T) {
 		t.Fatalf("HEAD: %d, cookie %q", res.StatusCode, res.Header.Get("Set-Cookie"))
 	}
 	res = serve(t, h, request(t, http.MethodGet, "/oauth/withings/callback?code=synthetic-code&state=x", nil))
-	if res.StatusCode != http.StatusSeeOther || res.Header.Get("Location") != "/connections?auth_error=unavailable" {
+	if res.StatusCode != http.StatusSeeOther || res.Header.Get("Location") != "/connections?auth_error=unavailable&provider=withings" {
 		t.Fatalf("GET: %d to %q", res.StatusCode, res.Header.Get("Location"))
 	}
 }

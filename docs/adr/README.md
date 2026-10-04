@@ -21,3 +21,4 @@ ADRs record decisions that code depends on. Keep each one short and link to the 
 | [0018](0018-garmin-upstream.md) | Garmin Connect through a sidecar wrapping `python-garminconnect` | Accepted |
 | [0019](0019-whoop-upstream.md) | WHOOP through a sidecar wrapping `@dofek/whoop` (private API, 6 s HR) | Accepted |
 | [0020](0020-chart-kit.md) | Hand-written SVG chart kit (lazy chunk ≤ 40 KiB gzip); uPlot removed | Accepted |
+| [0021](0021-source-setup.md) | Source setup in the panel: sealed provider apps and panel sidecars, environment wins, setup states | Proposed |

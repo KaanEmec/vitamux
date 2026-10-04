@@ -1,7 +1,7 @@
-# E20 Guided source setup in the web panel (v0.3.0)
+# E20 Guided source setup in the web panel (v0.2.1)
 
-Release: v0.3 (the Withings jobs may ship earlier) · Depends on: E11, E17; J20.4 and J20.5 need E18 and E19 · [Plan index](../README.md)
-Read first: [connectors#source-setup-in-the-web-panel](../../architecture/connectors.md#source-setup-in-the-web-panel), [frontend#navigation](../../architecture/frontend.md#navigation), [security#keys-and-secrets](../../architecture/security.md#keys-and-secrets)
+Release: v0.2.1 (owner decision, 2026-10-04) · Depends on: E11, E17; J20.4 and J20.5 need E18 and E19 · [Plan index](../README.md)
+Read first: [ADR-0021](../../adr/0021-source-setup.md), [connectors#source-setup-in-the-web-panel](../../architecture/connectors.md#source-setup-in-the-web-panel), [frontend#navigation](../../architecture/frontend.md#navigation), [security#keys-and-secrets](../../architecture/security.md#keys-and-secrets)
 
 **Objective:** Every source is set up from the Vitamux web panel in a few guided steps. This covers keys, secrets, OAuth app credentials, sign-in and MFA. No `.env` edit, secret file or restart is needed, except the one-time line that turns on an optional sidecar container.
 
@@ -28,3 +28,13 @@ Owner decision (2026-10-04): Withings, Garmin and WHOOP must have a very easy se
 | [J20.4](J20.4-sidecar-wiring.md) | Sidecars wired automatically and detected in the panel | J20.1, J17.2 | None |
 | [J20.5](J20.5-signin-wizard.md) | Sign-in and MFA wizard for Garmin and WHOOP | J20.4, J18.2, J19.2 | None |
 | [J20.6](J20.6-first-run-e2e.md) | First-run flow, end-to-end tests and install docs | J20.3, J20.5 | None |
+
+All jobs done 2026-10-04; E20 ships as v0.2.1.
+
+## Follow-ups
+- Owner acceptance of [ADR-0021](../../adr/0021-source-setup.md) (still Proposed).
+- A wrong MFA code ends the flow: the core consumes the auth state on every continue, so the owner signs in again. Keep the state for a refused code so a retry needs only the code (the Garmin sidecar already keeps its pending sign-in).
+- The unofficial-source acknowledgement still means "starts paused": `auth/begin` has no field to start the connection active once acknowledged.
+- MFA method choice and resend (WHOOP app or SMS): the sidecar protocol has no step for them.
+- Plain-language errors for a locked account or a captcha, and for an expired MFA session as distinct from a wrong code: sidecars report both as `reauth_required`.
+- The real-stack smoke test (T20.6.3) with replay sidecars, a fresh-user run (T20.6.4), and a live Coolify check of the sidecar toggle (T20.4.2).

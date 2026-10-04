@@ -100,7 +100,14 @@ Provider connections, syncs, backfills and streams (docs/architecture/connectors
 | `DELETE` | `/api/v1/connections/{id}` | `write:config`, CSRF | Delete a connection, keeping or deleting its data |
 | `POST` | `/api/v1/connections/{id}/auth/begin` | `session`, CSRF | Reauthorize a connection (OAuth redirect or credential prompt) |
 | `POST` | `/api/v1/providers/{provider}/auth/begin` | `session`, CSRF | Connect an account of a provider (OAuth redirect or credential prompt) |
-| `GET` | `/api/v1/providers` | `read:config` | List the providers a connector serves (in-process and sidecars) |
+| `PUT` | `/api/v1/providers/{provider}/app-credentials` | `session`, CSRF | Set the owner's own app credentials of a provider (write-only) |
+| `DELETE` | `/api/v1/providers/{provider}/app-credentials` | `session`, CSRF | Remove the stored app credentials of a provider |
+| `POST` | `/api/v1/providers/{provider}/app-credentials/verify` | `session`, CSRF | Check the current app credentials with the provider, without a user grant |
+| `POST` | `/api/v1/providers/{provider}/probe` | `write:config`, CSRF | Check a sidecar provider again now ("Check again") |
+| `GET` | `/api/v1/sidecars` | `read:config` | List the sidecar connectors, from the environment and added in the panel |
+| `POST` | `/api/v1/sidecars` | `session`, CSRF | Add a sidecar connector; its shared secret is returned once |
+| `DELETE` | `/api/v1/sidecars/{name}` | `session`, CSRF | Remove a sidecar added in the panel |
+| `GET` | `/api/v1/providers` | `read:config` | List the providers a connector serves (in-process and sidecars), with their setup state |
 | `POST` | `/api/v1/providers/{provider}/auth/continue` | `session`, CSRF | Answer an authorization prompt (credentials, an MFA code) |
 | `POST` | `/api/v1/connections/{id}/sync` | `write:config`, CSRF | Queue a manual sync (coalesced with a pending one) |
 | `GET` | `/api/v1/connections/{id}/backfills` | `read:config` | List a connection's backfills, newest first |

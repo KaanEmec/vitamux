@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -135,6 +136,7 @@ func (rt *router) authContinue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.SetCookie(w, rt.oauthBindingCookie(r, continueCookiePath, "", -1))
+	var rl *connectors.RateLimitedError
 	switch {
 	case err == nil:
 		writeJSON(rt.log, w, http.StatusOK, map[string]string{"connection_id": ingest.FormatConnectionID(id)})
@@ -147,6 +149,12 @@ func (rt *router) authContinue(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, r, CodeValidationFailed, "the provider declined the authorization; begin again")
 	case errors.Is(err, connectors.ErrAccountMismatch):
 		writeProblem(w, r, CodeConflict, "signed in to another provider account than the connection's")
+	case errors.As(err, &rl):
+		retryAfter(w, max(rl.RetryAfter, time.Second))
+		writeProblem(w, r, CodeRateLimited, "the provider is limiting sign-in attempts; wait, then begin again")
+	case errors.Is(err, connectors.ErrReauthRequired):
+		// A wrong password or code, or an expired sign-in at the provider.
+		writeProblem(w, r, CodeValidationFailed, "the provider did not accept the sign-in details or the code; begin again")
 	default:
 		// Provider or sidecar failures; the error never includes the owner's values.
 		rt.log.WarnContext(r.Context(), "auth continue", "provider", provider, "request_id", requestIDFrom(r.Context()), "err", err)
@@ -155,7 +163,7 @@ func (rt *router) authContinue(w http.ResponseWriter, r *http.Request) {
 }
 
 // oauthCallback completes the flow and sends the browser back to the UI with the outcome:
-// /connections?connected=<provider> or /connections?auth_error=<reason>. HEAD answers 204
+// /connections?connected=<provider> or /connections?auth_error=<reason>&provider=<provider>. HEAD answers 204
 // and touches nothing, so a probe never uses up a state. A provider without a connector is 404.
 func (rt *router) oauthCallback(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodHead {
@@ -196,6 +204,7 @@ func (rt *router) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		v.Set("connected", provider)
 	} else {
 		v.Set("auth_error", reason)
+		v.Set("provider", provider)
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	http.Redirect(w, r, "/connections?"+v.Encode(), http.StatusSeeOther)

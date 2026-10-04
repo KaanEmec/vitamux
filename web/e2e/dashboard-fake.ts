@@ -74,10 +74,11 @@ const catalogue = [
 	{ code: 'sleep_deep', section: 'Sleep', unit: 's', aggregation: 'sleep_derived' }
 ].map((m) => ({ kinds: [], windows: ['local_day'], strategies: ['first_available'], plausible_range: [0, 1000], provider_scoped: false, selection_only: false, ...m }));
 
+const setup = { setup_state: 'ready', callback_url: null, problems: [], app_credentials: null, sidecar: null, connections: 0 };
 const providers = [
-	{ code: 'whoop', name: 'WHOOP', official: false, auth_kind: 'interactive_mfa', remote: true, available: true },
-	{ code: 'apple_health', name: 'Apple Health', official: true, auth_kind: null, remote: false, available: true },
-	{ code: 'withings', name: 'Withings', official: true, auth_kind: 'oauth2', remote: false, available: true }
+	{ ...setup, code: 'whoop', name: 'WHOOP', official: false, auth_kind: 'interactive_mfa', remote: true, available: true },
+	{ ...setup, code: 'apple_health', name: 'Apple Health', official: true, auth_kind: 'device_pairing', remote: false, available: true },
+	{ ...setup, code: 'withings', name: 'Withings', official: true, auth_kind: 'oauth2', remote: false, available: true }
 ];
 
 const hour = 3_600_000;

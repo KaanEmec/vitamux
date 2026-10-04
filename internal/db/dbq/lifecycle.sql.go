@@ -595,6 +595,19 @@ func (q *Queries) PurgeOwnerJobs(ctx context.Context, ids []uuid.UUID) (int64, e
 	return result.RowsAffected(), nil
 }
 
+const purgeProviderApps = `-- name: PurgeProviderApps :execrows
+DELETE FROM provider_app_credentials WHERE updated_by = $1::uuid
+`
+
+// Provider app credentials and panel sidecars the user entered (instance-wide rows, ADR-0021).
+func (q *Queries) PurgeProviderApps(ctx context.Context, userID uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, purgeProviderApps, userID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const purgeRaw = `-- name: PurgeRaw :execrows
 DELETE FROM raw_payloads WHERE user_id = $1
 `
@@ -637,6 +650,18 @@ DELETE FROM settings WHERE user_id = $1
 
 func (q *Queries) PurgeSettings(ctx context.Context, userID uuid.UUID) (int64, error) {
 	result, err := q.db.Exec(ctx, purgeSettings, userID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const purgeSidecars = `-- name: PurgeSidecars :execrows
+DELETE FROM sidecars WHERE created_by = $1::uuid
+`
+
+func (q *Queries) PurgeSidecars(ctx context.Context, userID uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, purgeSidecars, userID)
 	if err != nil {
 		return 0, err
 	}

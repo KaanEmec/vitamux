@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Redaction audit (J13.6): a real `vitamux serve` on a throwaway database, configured with
-# sentinel secrets (owner password, Withings client secret, AI provider keys, master key), is
-# driven by tools/redactaudit through sign-in, TOTP, API keys, push ingestion with sentinel
-# health values, a failing Withings token exchange and a failing AI extraction (dead proxy and
+# sentinel secrets (owner password, Withings client secret entered through the API, a generated
+# panel sidecar secret, AI provider keys, master key), is driven by tools/redactaudit through
+# sign-in, TOTP, API keys, source setup, push ingestion with sentinel health values, a failing
+# Withings verify and token exchange and a failing AI extraction (dead proxy and
 # a closed local port, so nothing leaves the host), a fake extraction and an export. Then every
 # log line, the /metrics output, audit_events, jobs and job_runs are searched for every
 # sentinel, and the whole database and the export archive for every secret: zero hits required.
@@ -27,13 +28,12 @@ for name in withings gemini openai; do sentinel "$name" >"$work/secrets/$name"; 
 stack_owner audit-owner "$password"
 
 export VITAMUX_LOG_LEVEL=debug VITAMUX_METRICS_ADDR=$metrics \
-	VITAMUX_WITHINGS_CLIENT_ID=audit-client VITAMUX_WITHINGS_CLIENT_SECRET_FILE=$work/secrets/withings \
 	VITAMUX_GEMINI_MODEL=audit-model VITAMUX_GEMINI_API_KEY_FILE=$work/secrets/gemini \
 	VITAMUX_OPENAI_COMPATIBLE_BASE_URL=http://127.0.0.1:9/v1 VITAMUX_OPENAI_COMPATIBLE_MODEL=audit-model \
 	VITAMUX_OPENAI_COMPATIBLE_API_KEY_FILE=$work/secrets/openai VITAMUX_OPENAI_COMPATIBLE_ALLOW_PRIVATE=true
 HTTPS_PROXY=http://127.0.0.1:9 HTTP_PROXY=http://127.0.0.1:9 stack_serve # provider calls die here
 
-REDACTION_AUDIT_PASSWORD=$password "$work/redactaudit" -url "http://$addr" -user audit-owner \
+REDACTION_AUDIT_PASSWORD=$password REDACTION_AUDIT_WITHINGS_SECRET=$(cat "$work/secrets/withings") "$work/redactaudit" -url "http://$addr" -user audit-owner \
 	-lab "$work/lab" -out "$work/scan" -ai-model audit-model || { echo "server log:"; cat "$work/server.log"; exit 1; }
 curl -fsS "http://$metrics/metrics" >"$work/scan/metrics.txt"
 stack_stop
