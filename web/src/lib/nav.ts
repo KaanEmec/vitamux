@@ -1,6 +1,7 @@
 // Navigation (docs/architecture/frontend.md#navigation): the six sections in sidebar order,
 // the Settings pages, and where a metric opens. Each section is a route under src/routes/(app)/;
 // sub-pages live below the section's path. `also` lists other paths that belong to a section.
+import { exploreHref } from './explore/links.ts';
 import { icons } from './ui/icons.ts';
 
 export const sections = [
@@ -23,8 +24,8 @@ export const settingsPages = [
 	{ href: '/settings/system', label: 'System' }
 ] as const;
 
-/** Where a metric opens (the command palette, cards). The daily view until Explore has metric pages. */
-export const metricHref = (code: string) => `/data?metric=${encodeURIComponent(code)}`;
+/** Where a metric or rule family opens (the command palette, cards): its Explore page. */
+export const metricHref = (code: string) => exploreHref({ kind: 'metric', code });
 
 /** True when `pathname` is the section or one of its sub-pages. */
 export function inSection(pathname: string, section: { href: string; also?: readonly string[] }): boolean {

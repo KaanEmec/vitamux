@@ -4,7 +4,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { test as connTest, expect, ids, sidecarSecret } from './connections-fake';
-import { test as dataTest, fallbackDay } from './data-fake';
+import { test as dataTest, fallbackDay } from './explore-fake';
 import { test as devicesTest } from './devices-fake';
 import { test as labTest, syntheticPdf } from './lab-fake';
 import { test as rulesTest } from './rules-fake';
@@ -58,14 +58,9 @@ connTest('Connect wizard: provider list, prompt step, sidecar connection', async
 	await scan(page, '/connections/[id] (sidecar)');
 });
 
-dataTest('Data: daily view, drilldown, sleep, workouts', async ({ page }) => {
-	const day = `/data/day/resting_heart_rate/${fallbackDay}`;
-	for (const path of [
-		'/data?metric=resting_heart_rate&start=2026-09-12&end=2026-09-16',
-		day,
-		`/data/sleep?date=${fallbackDay}`,
-		'/data/workouts?start=2026-09-12&end=2026-09-16'
-	]) {
+dataTest('Explore: inventory, metric detail, day view', async ({ page }) => {
+	const day = `/explore/resting_heart_rate/day/${fallbackDay}`;
+	for (const path of ['/explore', '/explore/resting_heart_rate?range=1M&end=2026-09-16', '/explore/steps?range=1W&end=2026-09-16', day]) {
 		await page.goto(path);
 		await scan(page, path);
 	}

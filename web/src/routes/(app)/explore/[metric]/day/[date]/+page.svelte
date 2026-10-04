@@ -1,5 +1,5 @@
 <!--
-	All-sources drilldown for one metric and local day: the resolved result and why, an overlay
+	All-sources drilldown for one metric and local day (the day view of the metric page): the resolved result and why, an overlay
 	of every source's series, which sources the rule used, excluded or ignored, the rule's
 	inputs with their records (provenance chain, exclusion) and the day's overrides.
 -->
@@ -180,11 +180,15 @@
 
 <svelte:head><title>{metricLabel(metric)} {date} · Vitamux</title></svelte:head>
 
-<p><a href="/data?metric={encodeURIComponent(metric)}&end={date}">← Daily values</a></p>
-<h2>{metricLabel(metric)}, {date}</h2>
+<nav class="crumbs" aria-label="Breadcrumb">
+	<a href="/explore">Explore</a>
+	<span aria-hidden="true">/</span><a href="/explore/{encodeURIComponent(metric)}?end={date}">{metricLabel(metric)}</a>
+	<span aria-hidden="true">/</span><span aria-current="page">{date}</span>
+</nav>
+<h1>{metricLabel(metric)}, {date}</h1>
 
 <section class="card" aria-labelledby="result-h" aria-live="polite">
-	<h3 id="result-h">Resolved value</h3>
+	<h2 id="result-h">Resolved value</h2>
 	<ProblemAlert problem={resultProblem} />
 	{#if result}
 		<p class="headline">
@@ -210,7 +214,7 @@
 </section>
 
 <section class="card" aria-labelledby="chart-h">
-	<h3 id="chart-h">Every source over the day</h3>
+	<h2 id="chart-h">Every source over the day</h2>
 	<ProblemAlert problem={chartProblem} />
 	{#if loadingChart}
 		<Skeleton variant="chart" label="Loading series" />
@@ -232,7 +236,7 @@
 </section>
 
 <section class="card" aria-labelledby="sources-h">
-	<h3 id="sources-h">Sources</h3>
+	<h2 id="sources-h">Sources</h2>
 	<p class="muted">Every source seen for this window, including excluded ones and those outside the rule.</p>
 	<ProblemAlert problem={sourcesProblem} />
 	{#if sources.length}
@@ -272,7 +276,7 @@
 
 {#if result?.inputs?.length}
 	<section class="card" aria-labelledby="inputs-h">
-		<h3 id="inputs-h">Rule inputs</h3>
+		<h2 id="inputs-h">Rule inputs</h2>
 		<table>
 			<thead>
 				<tr><th scope="col">Group</th><th scope="col">Status</th><th scope="col">Value</th><th scope="col">Basis</th><th scope="col">Coverage</th><th scope="col">Records</th></tr>
@@ -310,7 +314,7 @@
 {/if}
 
 <section class="card" aria-labelledby="ov-h">
-	<h3 id="ov-h">Overrides for this day</h3>
+	<h2 id="ov-h">Overrides for this day</h2>
 	<ProblemAlert problem={overridesProblem} />
 	<ProblemAlert problem={actionProblem} />
 	{#if todaysOverrides.length}
@@ -352,6 +356,14 @@
 {/if}
 
 <style>
+	.crumbs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-2);
+		margin-bottom: var(--space-3);
+		font-size: var(--text-sm);
+		color: var(--color-text-muted);
+	}
 	section {
 		margin-bottom: var(--space-5);
 	}

@@ -35,7 +35,6 @@ test('every section has a route', async ({ page }) => {
 		['/', 'Today'],
 		['/explore', 'Explore'],
 		['/connections', 'Connections'],
-		['/data', 'Data'],
 		['/rules', 'Rules'],
 		['/lab', 'Lab results'],
 		['/settings', 'Settings']
