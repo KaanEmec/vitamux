@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "garmin.daily_summary",
-  "version": 3,
+  "version": 4,
   "output": {
     "devices": [
       {
@@ -26,6 +26,23 @@
           "record_type": "daily_summary",
           "external_id": "2026-06-15",
           "component": "steps"
+        }
+      },
+      {
+        "metric": "distance_walk_run",
+        "kind": "daily_value",
+        "start": "2026-06-14T22:00:00Z",
+        "end": "2026-06-15T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 310,
+        "unit": "m",
+        "device": "garmin:wearable",
+        "key": {
+          "record_type": "daily_summary",
+          "external_id": "2026-06-15",
+          "component": "distance_walk_run"
         }
       },
       {
@@ -63,6 +80,23 @@
         }
       },
       {
+        "metric": "total_energy",
+        "kind": "daily_value",
+        "start": "2026-06-14T22:00:00Z",
+        "end": "2026-06-15T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 1685,
+        "unit": "kcal",
+        "device": "garmin:wearable",
+        "key": {
+          "record_type": "daily_summary",
+          "external_id": "2026-06-15",
+          "component": "total_energy"
+        }
+      },
+      {
         "metric": "floors_climbed",
         "kind": "daily_value",
         "start": "2026-06-14T22:00:00Z",
@@ -77,6 +111,91 @@
           "record_type": "daily_summary",
           "external_id": "2026-06-15",
           "component": "floors_climbed"
+        }
+      },
+      {
+        "metric": "intensity_moderate_time",
+        "kind": "daily_value",
+        "start": "2026-06-14T22:00:00Z",
+        "end": "2026-06-15T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 720,
+        "unit": "s",
+        "device": "garmin:wearable",
+        "key": {
+          "record_type": "daily_summary",
+          "external_id": "2026-06-15",
+          "component": "intensity_moderate_time"
+        }
+      },
+      {
+        "metric": "intensity_vigorous_time",
+        "kind": "daily_value",
+        "start": "2026-06-14T22:00:00Z",
+        "end": "2026-06-15T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 180,
+        "unit": "s",
+        "device": "garmin:wearable",
+        "key": {
+          "record_type": "daily_summary",
+          "external_id": "2026-06-15",
+          "component": "intensity_vigorous_time"
+        }
+      },
+      {
+        "metric": "sedentary_time",
+        "kind": "daily_value",
+        "start": "2026-06-14T22:00:00Z",
+        "end": "2026-06-15T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 61200,
+        "unit": "s",
+        "device": "garmin:wearable",
+        "key": {
+          "record_type": "daily_summary",
+          "external_id": "2026-06-15",
+          "component": "sedentary_time"
+        }
+      },
+      {
+        "metric": "garmin_body_battery_charged",
+        "kind": "daily_value",
+        "start": "2026-06-14T22:00:00Z",
+        "end": "2026-06-15T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 62,
+        "unit": "index",
+        "device": "garmin:wearable",
+        "key": {
+          "record_type": "daily_summary",
+          "external_id": "2026-06-15",
+          "component": "garmin_body_battery_charged"
+        }
+      },
+      {
+        "metric": "garmin_body_battery_drained",
+        "kind": "daily_value",
+        "start": "2026-06-14T22:00:00Z",
+        "end": "2026-06-15T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 58,
+        "unit": "index",
+        "device": "garmin:wearable",
+        "key": {
+          "record_type": "daily_summary",
+          "external_id": "2026-06-15",
+          "component": "garmin_body_battery_drained"
         }
       }
     ]

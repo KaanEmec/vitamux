@@ -56,6 +56,8 @@ A built-in applies while the owner has no rule for the metric. The first edit co
 | `builtin:muscle_mass_left_leg:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
 | `builtin:muscle_mass_right_leg:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
 | `builtin:body_water_ratio:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
+| `builtin:garmin_metabolic_age:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
+| `builtin:garmin_physique_rating:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
 | `builtin:sleep:2` | local_night | event_priority · max_staleness 36h · match_overlap 0.5 · min_episode_coverage 0.7 | `oura` › `oura_apple` › `apple_watch` › `fitbit` › `fitbit_apple` › `under_mattress` › `samsung` › `whoop` › `whoop_apple` › `garmin` › `garmin_apple` › `polar` › `polar_apple` › `xiaomi` › `amazfit` | One night comes from one source, ranked by independent four-stage agreement with PSG; a device on the charger fails the coverage gate. |
 
 ## Groups
@@ -146,15 +148,35 @@ A group id means the same selectors in every built-in. Fields of one selector ar
 - No built-in for `floors_climbed`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `ftp_cycling`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
 - No built-in for `fvc`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `garmin_achievable_fitness_age`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `garmin_activity_moving_time`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `garmin_activity_training_load`: a provider-scoped value with a single source, so there is nothing to order.
 - No built-in for `garmin_acute_load`: a provider-scoped score with a single source, so there is nothing to order.
 - No built-in for `garmin_body_battery`: a provider-scoped score with a single source, so there is nothing to order.
 - No built-in for `garmin_body_battery_charged`: a provider-scoped score with a single source, so there is nothing to order.
 - No built-in for `garmin_body_battery_drained`: a provider-scoped score with a single source, so there is nothing to order.
 - No built-in for `garmin_chronic_load`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `garmin_chronic_load_high`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `garmin_chronic_load_low`: a provider-scoped value with a single source, so there is nothing to order.
 - No built-in for `garmin_fitness_age`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `garmin_floors_descended`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `garmin_hr_zone_1_time`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `garmin_hr_zone_2_time`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `garmin_hr_zone_3_time`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `garmin_hr_zone_4_time`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `garmin_hr_zone_5_time`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `garmin_hrv_baseline_floor`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `garmin_hrv_baseline_high`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `garmin_hrv_baseline_low`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `garmin_recovery_time`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `garmin_sleep_movement`: a provider-scoped value with a single source, so there is nothing to order.
 - No built-in for `garmin_sleep_score`: a provider-scoped score with a single source, so there is nothing to order.
 - No built-in for `garmin_stress`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `garmin_sweat_loss`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `garmin_training_effect_aerobic`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `garmin_training_effect_anaerobic`: a provider-scoped value with a single source, so there is nothing to order.
 - No built-in for `garmin_training_readiness`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `garmin_vo2max_cycling`: a provider-scoped value with a single source, so there is nothing to order.
 - No built-in for `headphone_audio_exposure`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
 - No built-in for `heart_rate_recovery_1min`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
 - No built-in for `inhaler_uses`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.

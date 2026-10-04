@@ -13,7 +13,11 @@
     "fitnessAge": null,
     "maxMetCategory": 0
    },
-   "cycling": null,
+   "cycling": {
+    "calendarDate": "2026-06-15",
+    "vo2MaxPreciseValue": 44.8,
+    "vo2MaxValue": 45.0
+   },
    "heatAltitudeAcclimation": null
   }
  ]

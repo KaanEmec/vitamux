@@ -1,7 +1,7 @@
 {
   "synthetic": true,
-  "normalizer": "garmin.training",
-  "version": 5,
+  "normalizer": "garmin.fitness_age",
+  "version": 1,
   "output": {
     "devices": [
       {
@@ -12,35 +12,35 @@
     ],
     "measurements": [
       {
-        "metric": "vo2max",
+        "metric": "garmin_fitness_age",
         "kind": "sample",
         "start": "2026-06-15T12:00:00Z",
         "zone": {
           "offset_min": 0
         },
-        "value": 47.3,
-        "unit": "mL/kg/min",
+        "value": 34.5,
+        "unit": "years",
         "device": "garmin:wearable",
         "key": {
-          "record_type": "maxmet",
+          "record_type": "fitness_age",
           "external_id": "2026-06-15",
-          "component": "generic"
+          "component": "garmin_fitness_age"
         }
       },
       {
-        "metric": "garmin_vo2max_cycling",
+        "metric": "garmin_achievable_fitness_age",
         "kind": "sample",
         "start": "2026-06-15T12:00:00Z",
         "zone": {
           "offset_min": 0
         },
-        "value": 44.8,
-        "unit": "mL/kg/min",
+        "value": 31,
+        "unit": "years",
         "device": "garmin:wearable",
         "key": {
-          "record_type": "maxmet",
+          "record_type": "fitness_age",
           "external_id": "2026-06-15",
-          "component": "cycling"
+          "component": "garmin_achievable_fitness_age"
         }
       }
     ]

@@ -5,7 +5,7 @@
  },
  "response": {
   "dailySleepDTO": {
-   "id": 1781471400000,
+   "id": 1781471400001,
    "userProfilePK": 1,
    "calendarDate": "2026-06-15",
    "sleepTimeSeconds": 25200,
@@ -34,13 +34,24 @@
    "awakeCount": 2,
    "avgSleepStress": 18.0
   },
-  "sleepMovement": [],
+  "sleepMovement": [
+   {
+    "startGMT": "2026-06-14T21:10:00.0",
+    "endGMT": "2026-06-14T21:11:00.0",
+    "activityLevel": 1.5
+   },
+   {
+    "startGMT": "2026-06-14T21:11:00.0",
+    "endGMT": "2026-06-14T21:12:00.0",
+    "activityLevel": 0.0
+   }
+  ],
   "remSleepData": true,
   "sleepLevels": [
    {
     "startGMT": "2026-06-14T21:10:00.0",
     "endGMT": "2026-06-14T21:40:00.0",
-    "activityLevel": 1.0
+    "activityLevel": -1.0
    },
    {
     "startGMT": "2026-06-14T21:40:00.0",
@@ -73,6 +84,70 @@
   "hrvStatus": "BALANCED",
   "bodyBatteryChange": 45,
   "avgSkinTempDeviationC": -0.4,
-  "skinTempDataExists": true
+  "skinTempDataExists": true,
+  "wellnessEpochSPO2DataDTOList": [
+   {
+    "userProfilePK": 1,
+    "epochTimestamp": "2026-06-14T21:10:00.0",
+    "spo2Reading": 96,
+    "readingConfidence": 90,
+    "epochDuration": 60,
+    "deviceId": 1000000001,
+    "calendarDate": "2026-06-15"
+   },
+   {
+    "userProfilePK": 1,
+    "epochTimestamp": "2026-06-14T21:11:00.0",
+    "spo2Reading": 94,
+    "readingConfidence": 85,
+    "epochDuration": 60,
+    "deviceId": 1000000001,
+    "calendarDate": "2026-06-15"
+   },
+   {
+    "userProfilePK": 1,
+    "epochTimestamp": "2026-06-14T21:12:00.0",
+    "spo2Reading": null,
+    "readingConfidence": 0,
+    "epochDuration": 60,
+    "deviceId": 1000000001,
+    "calendarDate": "2026-06-15"
+   }
+  ],
+  "wellnessSpO2SleepSummaryDTO": {
+   "averageSPO2": 95.0,
+   "lowestSPO2": 91,
+   "deviceId": 1000000001
+  },
+  "sleepHeartRate": [
+   {
+    "value": 51,
+    "startGMT": 1781471460000
+   }
+  ],
+  "sleepStress": [
+   {
+    "value": 14,
+    "startGMT": 1781471460000
+   }
+  ],
+  "sleepBodyBattery": [
+   {
+    "value": 40,
+    "startGMT": 1781471460000
+   }
+  ],
+  "hrvData": [
+   {
+    "value": 47.0,
+    "startGMT": 1781471760000
+   }
+  ],
+  "wellnessEpochRespirationDataDTOList": [
+   {
+    "startTimeGMT": 1781471460000,
+    "respirationValue": 14.0
+   }
+  ]
  }
 }

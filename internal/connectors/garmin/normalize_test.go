@@ -55,20 +55,32 @@ func TestScoresAreProviderScoped(t *testing.T) {
 
 // TestTrainingByEndpoint: the stored request endpoint, not the shape, tells the two raw items of
 // garmin.training apart. The item below has both shapes' keys: as maxmet it is a VO2max, as
-// readiness it lacks a timestamp, and an unknown endpoint is drift.
+// readiness it lacks a timestamp, as a training status it has no load, and an unknown endpoint
+// is drift.
 func TestTrainingByEndpoint(t *testing.T) {
 	body := []byte(`{"synthetic": true, "unit": {"date": "2026-06-15"}, "response": [{"generic": {"calendarDate": "2026-06-15", "vo2MaxPreciseValue": 47.3}, "score": 1}]}`)
-	for endpoint, vo2max := range map[string]bool{
-		"/metrics-service/metrics/maxmet/daily/2026-06-15/2026-06-15":   true,
-		"/metrics-service/metrics/trainingreadiness/2026-06-15":         false,
-		"/metrics-service/metrics/trainingstatus/aggregated/2026-06-15": false,
+	for endpoint, want := range map[string]string{
+		"/metrics-service/metrics/maxmet/daily/2026-06-15/2026-06-15":   "vo2max",
+		"/metrics-service/metrics/trainingreadiness/2026-06-15":         "drift",
+		"/metrics-service/metrics/trainingstatus/aggregated/2026-06-15": "",
+		"/metrics-service/metrics/unknown/2026-06-15":                   "drift",
 	} {
 		raw := normalize.RawPayload{Stream: StreamTraining, ContentType: "application/json", Body: body,
 			RequestMeta: []byte(`{"endpoint": "` + endpoint + `"}`)}
 		out, err := Normalizer{StreamTraining}.Normalize(t.Context(), raw, normalize.Env{})
-		got := err == nil && len(out.Measurements) == 1 && out.Measurements[0].Metric == "vo2max"
-		if got != vo2max || (!vo2max && err == nil) {
-			t.Errorf("%s: %+v %v", endpoint, out, err)
+		switch want {
+		case "vo2max":
+			if err != nil || len(out.Measurements) != 1 || out.Measurements[0].Metric != "vo2max" {
+				t.Errorf("%s: %+v %v", endpoint, out, err)
+			}
+		case "drift":
+			if err == nil || !strings.Contains(err.Error(), "schema drift") {
+				t.Errorf("%s: %+v %v", endpoint, out, err)
+			}
+		default:
+			if err != nil || len(out.Measurements) != 0 {
+				t.Errorf("%s: %+v %v", endpoint, out, err)
+			}
 		}
 	}
 }

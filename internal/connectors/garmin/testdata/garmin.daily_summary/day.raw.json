@@ -21,6 +21,15 @@
   "wellnessStartTimeLocal": "2026-06-15T00:00:00.0",
   "wellnessEndTimeGmt": "2026-06-15T22:00:00.0",
   "wellnessEndTimeLocal": "2026-06-16T00:00:00.0",
-  "durationInMilliseconds": 86400000
+  "durationInMilliseconds": 86400000,
+  "moderateIntensityMinutes": 12,
+  "vigorousIntensityMinutes": 3,
+  "sedentarySeconds": 61200,
+  "bodyBatteryChargedValue": 62,
+  "bodyBatteryDrainedValue": 58,
+  "averageSpo2": 95.0,
+  "lowestSpo2": 90,
+  "latestSpo2": 96,
+  "maxHeartRate": 131
  }
 }

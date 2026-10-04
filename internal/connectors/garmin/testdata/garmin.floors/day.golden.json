@@ -1,0 +1,64 @@
+{
+  "synthetic": true,
+  "normalizer": "garmin.floors",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "garmin:wearable",
+        "type": "watch",
+        "manufacturer": "Garmin"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "floors_climbed",
+        "kind": "interval",
+        "start": "2026-06-15T05:00:00Z",
+        "end": "2026-06-15T05:15:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 2,
+        "unit": "count",
+        "device": "garmin:wearable"
+      },
+      {
+        "metric": "garmin_floors_descended",
+        "kind": "interval",
+        "start": "2026-06-15T05:00:00Z",
+        "end": "2026-06-15T05:15:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 1,
+        "unit": "count",
+        "device": "garmin:wearable"
+      },
+      {
+        "metric": "floors_climbed",
+        "kind": "interval",
+        "start": "2026-06-15T05:15:00Z",
+        "end": "2026-06-15T05:30:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 0,
+        "unit": "count",
+        "device": "garmin:wearable"
+      },
+      {
+        "metric": "garmin_floors_descended",
+        "kind": "interval",
+        "start": "2026-06-15T05:15:00Z",
+        "end": "2026-06-15T05:30:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 3,
+        "unit": "count",
+        "device": "garmin:wearable"
+      }
+    ]
+  }
+}

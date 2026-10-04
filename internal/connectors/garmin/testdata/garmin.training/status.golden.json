@@ -1,0 +1,88 @@
+{
+  "synthetic": true,
+  "normalizer": "garmin.training",
+  "version": 5,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "1000000001",
+        "manufacturer": "Garmin"
+      },
+      {
+        "fingerprint": "garmin:wearable",
+        "type": "watch",
+        "manufacturer": "Garmin"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "garmin_acute_load",
+        "kind": "daily_value",
+        "start": "2026-06-15T00:00:00Z",
+        "end": "2026-06-16T00:00:00Z",
+        "zone": {
+          "offset_min": 0
+        },
+        "value": 345,
+        "unit": "index",
+        "device": "1000000001",
+        "key": {
+          "record_type": "training_status",
+          "external_id": "2026-06-15:1000000001",
+          "component": "garmin_acute_load"
+        }
+      },
+      {
+        "metric": "garmin_chronic_load",
+        "kind": "daily_value",
+        "start": "2026-06-15T00:00:00Z",
+        "end": "2026-06-16T00:00:00Z",
+        "zone": {
+          "offset_min": 0
+        },
+        "value": 540,
+        "unit": "index",
+        "device": "1000000001",
+        "key": {
+          "record_type": "training_status",
+          "external_id": "2026-06-15:1000000001",
+          "component": "garmin_chronic_load"
+        }
+      },
+      {
+        "metric": "garmin_chronic_load_low",
+        "kind": "daily_value",
+        "start": "2026-06-15T00:00:00Z",
+        "end": "2026-06-16T00:00:00Z",
+        "zone": {
+          "offset_min": 0
+        },
+        "value": 430,
+        "unit": "index",
+        "device": "1000000001",
+        "key": {
+          "record_type": "training_status",
+          "external_id": "2026-06-15:1000000001",
+          "component": "garmin_chronic_load_low"
+        }
+      },
+      {
+        "metric": "garmin_chronic_load_high",
+        "kind": "daily_value",
+        "start": "2026-06-15T00:00:00Z",
+        "end": "2026-06-16T00:00:00Z",
+        "zone": {
+          "offset_min": 0
+        },
+        "value": 810,
+        "unit": "index",
+        "device": "1000000001",
+        "key": {
+          "record_type": "training_status",
+          "external_id": "2026-06-15:1000000001",
+          "component": "garmin_chronic_load_high"
+        }
+      }
+    ]
+  }
+}

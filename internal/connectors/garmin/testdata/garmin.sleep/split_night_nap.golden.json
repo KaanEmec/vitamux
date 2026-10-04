@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "garmin.sleep",
-  "version": 2,
+  "version": 3,
   "output": {
     "devices": [
       {
@@ -51,6 +51,11 @@
             "stage": "awake",
             "start": "2026-06-15T00:30:00Z",
             "end": "2026-06-15T01:40:00Z"
+          },
+          {
+            "stage": "unknown",
+            "start": "2026-06-15T01:40:00Z",
+            "end": "2026-06-15T01:50:00Z"
           },
           {
             "stage": "rem",

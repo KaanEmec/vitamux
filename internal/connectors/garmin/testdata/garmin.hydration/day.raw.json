@@ -1,0 +1,16 @@
+{
+ "synthetic": true,
+ "unit": {
+  "date": "2026-06-15"
+ },
+ "response": {
+  "userId": 1,
+  "calendarDate": "2026-06-15",
+  "valueInML": 1500.0,
+  "goalInML": 2800.0,
+  "dailyAverageinML": 1900.0,
+  "lastEntryTimestampLocal": "2026-06-15T19:30:00.0",
+  "sweatLossInML": 120.0,
+  "activityIntakeInML": 0.0
+ }
+}

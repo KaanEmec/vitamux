@@ -11,33 +11,45 @@ import (
 )
 
 // sleepLevels maps a sleepLevels activityLevel to sleep_stages.stage. Devices without REM report
-// 2 and 3 as awake (remSleepData false); -1 is unmeasurable and is no stage.
-var sleepLevels = map[float64]string{0: "deep", 1: "light", 2: "rem", 3: "awake"}
+// 2 and 3 as awake (remSleepData false); -1 is unmeasurable.
+var sleepLevels = map[float64]string{-1: "unknown", 0: "deep", 1: "light", 2: "rem", 3: "awake"}
 
-// sleep maps the night (dailySleepDTO with its sleepLevels), the naps of the day and the
-// provider's sleep score. Vitals inside the response are left to their own streams.
+// sleep maps the night (dailySleepDTO with its sleepLevels), the naps of the day, the provider's
+// sleep score and nightly values, the movement levels and the per-minute SpO2 readings. The heart-rate, stress, Body
+// Battery, HRV and respiration arrays duplicate the all-day streams and stay raw.
 func sleep(b *builder, resp []byte) error {
 	var r struct {
 		DTO *struct {
-			ID           *int64 `json:"id"`
-			CalendarDate string `json:"calendarDate"`
-			StartGMT     *int64 `json:"sleepStartTimestampGMT"`
-			EndGMT       *int64 `json:"sleepEndTimestampGMT"`
-			StartLocal   *int64 `json:"sleepStartTimestampLocal"`
-			EndLocal     *int64 `json:"sleepEndTimestampLocal"`
-			Asleep       *int32 `json:"sleepTimeSeconds"`
-			Deep         *int32 `json:"deepSleepSeconds"`
-			Light        *int32 `json:"lightSleepSeconds"`
-			REM          *int32 `json:"remSleepSeconds"`
-			Awake        *int32 `json:"awakeSleepSeconds"`
+			ID           *int64   `json:"id"`
+			CalendarDate string   `json:"calendarDate"`
+			StartGMT     *int64   `json:"sleepStartTimestampGMT"`
+			EndGMT       *int64   `json:"sleepEndTimestampGMT"`
+			StartLocal   *int64   `json:"sleepStartTimestampLocal"`
+			EndLocal     *int64   `json:"sleepEndTimestampLocal"`
+			Asleep       *int32   `json:"sleepTimeSeconds"`
+			Deep         *int32   `json:"deepSleepSeconds"`
+			Light        *int32   `json:"lightSleepSeconds"`
+			REM          *int32   `json:"remSleepSeconds"`
+			Awake        *int32   `json:"awakeSleepSeconds"`
+			AwakeCount   *float64 `json:"awakeCount"`
 			Scores       *struct {
 				Overall *struct {
 					Value *float64 `json:"value"`
 				} `json:"overall"`
 			} `json:"sleepScores"`
 		} `json:"dailySleepDTO"`
-		REMData *bool `json:"remSleepData"`
-		Levels  []struct {
+		Movement []struct {
+			StartGMT gtime    `json:"startGMT"`
+			Level    *float64 `json:"activityLevel"`
+		} `json:"sleepMovement"`
+		REMData *bool    `json:"remSleepData"`
+		Resting *float64 `json:"restingHeartRate"`
+		SkinC   *float64 `json:"avgSkinTempDeviationC"`
+		SpO2    []struct {
+			At      gtime    `json:"epochTimestamp"`
+			Reading *float64 `json:"spo2Reading"`
+		} `json:"wellnessEpochSPO2DataDTOList"`
+		Levels []struct {
 			StartGMT gtime    `json:"startGMT"`
 			EndGMT   gtime    `json:"endGMT"`
 			Level    *float64 `json:"activityLevel"`
@@ -72,7 +84,7 @@ func sleep(b *builder, resp []byte) error {
 			}
 			stage, ok := sleepLevels[*l.Level]
 			switch {
-			case *l.Level == -1 || !l.EndGMT.After(l.StartGMT.Time):
+			case !l.EndGMT.After(l.StartGMT.Time):
 				continue
 			case !ok:
 				b.warn("unknown_sleep_level", strconv.FormatFloat(*l.Level, 'f', -1, 64))
@@ -87,9 +99,36 @@ func sleep(b *builder, resp []byte) error {
 		} else {
 			b.warn("empty_sleep_window", d.CalendarDate)
 		}
-		if d.Scores != nil && d.Scores.Overall != nil && d.Scores.Overall.Value != nil {
-			if err := b.nightly("garmin_sleep_score", "sleep", d.CalendarDate, z, *d.Scores.Overall.Value, "index"); err != nil {
+		var score *float64
+		if d.Scores != nil && d.Scores.Overall != nil {
+			score = d.Scores.Overall.Value
+		}
+		for _, n := range []struct {
+			metric, unit string
+			v            *float64
+		}{{"garmin_sleep_score", "index", score}, {"sleep_awakenings", "count", d.AwakeCount},
+			{"sleeping_heart_rate", "bpm", r.Resting}, {"sleep_temperature_deviation", "°C", r.SkinC}} {
+			if n.v == nil {
+				continue
+			}
+			if err := b.nightly(n.metric, "sleep", d.CalendarDate, z, *n.v, n.unit); err != nil {
 				return err
+			}
+		}
+		for _, x := range r.Movement { // a movement level a minute
+			if x.StartGMT.IsZero() {
+				return drift(b.stream, "sleepMovement.startGMT")
+			}
+			if x.Level != nil {
+				b.sample("garmin_sleep_movement", x.StartGMT.Time, z, *x.Level, "index", "")
+			}
+		}
+		for _, x := range r.SpO2 { // one reading a minute, on the wearable like the other sleep vitals
+			if x.At.IsZero() {
+				return drift(b.stream, "wellnessEpochSPO2DataDTOList.epochTimestamp")
+			}
+			if x.Reading != nil && *x.Reading > 0 {
+				b.sample("spo2", x.At.Time, z, *x.Reading, "%", "")
 			}
 		}
 	}
@@ -111,20 +150,23 @@ func sleep(b *builder, resp []byte) error {
 }
 
 // bodyComposition maps each weigh-in of dateWeightList to a body_composition group. Garmin
-// reports masses in grams; bodyWater is a percentage, which no catalogue code holds yet.
+// reports masses in grams and bodyWater as a percentage.
 func bodyComposition(b *builder, resp []byte) error {
 	var r struct {
 		List *[]struct {
-			SamplePK    *int64   `json:"samplePk"`
-			GMT         *int64   `json:"timestampGMT"`
-			Local       *int64   `json:"date"`
-			SourceType  string   `json:"sourceType"`
-			Weight      *float64 `json:"weight"`
-			BMI         *float64 `json:"bmi"`
-			BodyFat     *float64 `json:"bodyFat"`
-			BoneMass    *float64 `json:"boneMass"`
-			MuscleMass  *float64 `json:"muscleMass"`
-			VisceralFat *float64 `json:"visceralFat"`
+			SamplePK     *int64   `json:"samplePk"`
+			GMT          *int64   `json:"timestampGMT"`
+			Local        *int64   `json:"date"`
+			SourceType   string   `json:"sourceType"`
+			Weight       *float64 `json:"weight"`
+			BMI          *float64 `json:"bmi"`
+			BodyFat      *float64 `json:"bodyFat"`
+			BodyWater    *float64 `json:"bodyWater"`
+			MetabolicAge *float64 `json:"metabolicAge"`
+			Physique     *float64 `json:"physiqueRating"`
+			BoneMass     *float64 `json:"boneMass"`
+			MuscleMass   *float64 `json:"muscleMass"`
+			VisceralFat  *float64 `json:"visceralFat"`
 		} `json:"dateWeightList"`
 	}
 	if err := b.decode(resp, &r); err != nil {
@@ -148,7 +190,9 @@ func bodyComposition(b *builder, resp []byte) error {
 			metric, unit string
 			v            *float64
 		}{{"weight", "g", w.Weight}, {"bmi", "kg/m²", w.BMI}, {"body_fat_ratio", "%", w.BodyFat},
-			{"bone_mass", "g", w.BoneMass}, {"muscle_mass", "g", w.MuscleMass}, {"visceral_fat_index", "index", w.VisceralFat}} {
+			{"body_water_ratio", "%", w.BodyWater}, {"bone_mass", "g", w.BoneMass}, {"muscle_mass", "g", w.MuscleMass},
+			{"visceral_fat_index", "index", w.VisceralFat}, {"garmin_metabolic_age", "years", w.MetabolicAge},
+			{"garmin_physique_rating", "index", w.Physique}} {
 			if c.v != nil {
 				comps = append(comps, normalize.Measurement{Metric: c.metric, Kind: catalog.Sample, Start: at, Zone: z,
 					Value: *c.v, Unit: c.unit, Flags: flags})
@@ -250,13 +294,23 @@ func activity(b *builder, resp []byte) error {
 		Type       *struct {
 			Key string `json:"typeKey"`
 		} `json:"activityType"`
-		Duration *float64 `json:"duration"`
-		Elapsed  *float64 `json:"elapsedDuration"`
-		Distance *float64 `json:"distance"`
-		Calories *float64 `json:"calories"`
-		AvgHR    *float64 `json:"averageHR"`
-		MaxHR    *float64 `json:"maxHR"`
-		DeviceID *int64   `json:"deviceId"`
+		Duration  *float64 `json:"duration"`
+		Elapsed   *float64 `json:"elapsedDuration"`
+		Distance  *float64 `json:"distance"`
+		Calories  *float64 `json:"calories"`
+		AvgHR     *float64 `json:"averageHR"`
+		MaxHR     *float64 `json:"maxHR"`
+		DeviceID  *int64   `json:"deviceId"`
+		Elevation *float64 `json:"elevationGain"`
+		Moving    *float64 `json:"movingDuration"`
+		Load      *float64 `json:"activityTrainingLoad"`
+		Aerobic   *float64 `json:"aerobicTrainingEffect"`
+		Anaerobic *float64 `json:"anaerobicTrainingEffect"`
+		Zone1     *float64 `json:"hrTimeInZone_1"`
+		Zone2     *float64 `json:"hrTimeInZone_2"`
+		Zone3     *float64 `json:"hrTimeInZone_3"`
+		Zone4     *float64 `json:"hrTimeInZone_4"`
+		Zone5     *float64 `json:"hrTimeInZone_5"`
 	}
 	if err := b.decode(resp, &a); err != nil {
 		return err
@@ -285,6 +339,32 @@ func activity(b *builder, resp []byte) error {
 		AvgHRBpm: positive(a.AvgHR), MaxHRBpm: positive(a.MaxHR), Device: b.device(a.DeviceID),
 		Key: normalize.Key{RecordType: "activity", ExternalID: strconv.FormatInt(*a.ID, 10)}}
 	b.out.Workouts = append(b.out.Workouts, w)
+	// The summary's other values, as measurements keyed by the activity: totals over the
+	// activity's span, and the training effects at its end.
+	id, dev := strconv.FormatInt(*a.ID, 10), b.device(a.DeviceID)
+	for _, m := range []struct {
+		metric, unit string
+		kind         catalog.Kind
+		v            *float64
+	}{{"elevation_gain", "m", catalog.Interval, a.Elevation}, {"garmin_activity_moving_time", "s", catalog.Interval, a.Moving},
+		{"garmin_activity_training_load", "index", catalog.Interval, a.Load},
+		{"garmin_hr_zone_1_time", "s", catalog.Interval, a.Zone1}, {"garmin_hr_zone_2_time", "s", catalog.Interval, a.Zone2},
+		{"garmin_hr_zone_3_time", "s", catalog.Interval, a.Zone3}, {"garmin_hr_zone_4_time", "s", catalog.Interval, a.Zone4},
+		{"garmin_hr_zone_5_time", "s", catalog.Interval, a.Zone5},
+		{"garmin_training_effect_aerobic", "index", catalog.Sample, a.Aerobic},
+		{"garmin_training_effect_anaerobic", "index", catalog.Sample, a.Anaerobic}} {
+		if m.v == nil {
+			continue
+		}
+		x := normalize.Measurement{Metric: m.metric, Kind: m.kind, Start: w.Start, Zone: w.Zone, Value: *m.v, Unit: m.unit, Device: dev,
+			Key: normalize.Key{RecordType: "activity", ExternalID: id, Component: m.metric}}
+		if m.kind == catalog.Sample {
+			x.Start = end
+		} else {
+			x.End = &end
+		}
+		b.out.Measurements = append(b.out.Measurements, x)
+	}
 	return nil
 }
 

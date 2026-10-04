@@ -1,0 +1,45 @@
+{
+ "synthetic": true,
+ "unit": {
+  "date": "2026-06-15"
+ },
+ "response": {
+  "userId": 1,
+  "mostRecentVO2Max": null,
+  "mostRecentTrainingLoadBalance": null,
+  "mostRecentTrainingStatus": {
+   "latestTrainingStatusData": {
+    "1000000001": {
+     "calendarDate": "2026-06-15",
+     "deviceId": 1000000001,
+     "timestamp": 1781500000000,
+     "trainingStatus": 7,
+     "trainingStatusFeedbackPhrase": "PRODUCTIVE_1",
+     "trainingPaused": false,
+     "primaryTrainingDevice": true,
+     "fitnessTrend": 2,
+     "acuteTrainingLoadDTO": {
+      "dailyTrainingLoadAcute": 345,
+      "dailyTrainingLoadChronic": 540,
+      "minTrainingLoadChronic": 430.0,
+      "maxTrainingLoadChronic": 810.0,
+      "dailyAcuteChronicWorkloadRatio": 0.6,
+      "acwrStatus": "OPTIMAL"
+     }
+    },
+    "1000000002": {
+     "calendarDate": "2026-06-15",
+     "deviceId": 1000000002,
+     "timestamp": 1781500000000,
+     "trainingStatus": 4,
+     "trainingStatusFeedbackPhrase": "MAINTAINING_1",
+     "trainingPaused": false,
+     "primaryTrainingDevice": false,
+     "fitnessTrend": 1,
+     "acuteTrainingLoadDTO": null
+    }
+   }
+  },
+  "heatAltitudeAcclimationDTO": null
+ }
+}

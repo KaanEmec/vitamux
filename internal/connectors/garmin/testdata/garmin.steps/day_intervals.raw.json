@@ -24,7 +24,7 @@
    "startGMT": "2026-06-15T05:00:00.0",
    "endGMT": "2026-06-15T05:15:00.0",
    "steps": 400,
-   "pushes": 0,
+   "pushes": 40,
    "primaryActivityLevel": "active",
    "activityLevelConstant": false
   }

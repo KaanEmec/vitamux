@@ -1,0 +1,12 @@
+{
+ "synthetic": true,
+ "unit": {
+  "date": "2026-06-14"
+ },
+ "response": {
+  "userId": 1,
+  "calendarDate": "2026-06-14",
+  "valueInML": null,
+  "goalInML": 2800.0
+ }
+}

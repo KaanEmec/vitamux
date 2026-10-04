@@ -78,6 +78,50 @@
           "external_id": "2026-06-15",
           "component": "sleep_temperature_deviation"
         }
+      },
+      {
+        "metric": "garmin_sleep_movement",
+        "kind": "sample",
+        "start": "2026-06-14T21:10:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 1.5,
+        "unit": "index",
+        "device": "garmin:wearable"
+      },
+      {
+        "metric": "garmin_sleep_movement",
+        "kind": "sample",
+        "start": "2026-06-14T21:11:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 0,
+        "unit": "index",
+        "device": "garmin:wearable"
+      },
+      {
+        "metric": "spo2",
+        "kind": "sample",
+        "start": "2026-06-14T21:10:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 96,
+        "unit": "%",
+        "device": "garmin:wearable"
+      },
+      {
+        "metric": "spo2",
+        "kind": "sample",
+        "start": "2026-06-14T21:11:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 94,
+        "unit": "%",
+        "device": "garmin:wearable"
       }
     ],
     "sleep": [
@@ -89,7 +133,7 @@
         },
         "stages": [
           {
-            "stage": "light",
+            "stage": "unknown",
             "start": "2026-06-14T21:10:00Z",
             "end": "2026-06-14T21:40:00Z"
           },
@@ -129,7 +173,7 @@
         "device": "garmin:wearable",
         "key": {
           "record_type": "sleep",
-          "external_id": "1781471400000"
+          "external_id": "1781471400001"
         }
       }
     ]

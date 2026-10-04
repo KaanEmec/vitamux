@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "garmin.body_composition",
-  "version": 1,
+  "version": 2,
   "output": {
     "groups": [
       {
@@ -49,6 +49,16 @@
             "unit": "%"
           },
           {
+            "metric": "body_water_ratio",
+            "kind": "sample",
+            "start": "2026-06-15T05:00:00Z",
+            "zone": {
+              "offset_min": 120
+            },
+            "value": 55,
+            "unit": "%"
+          },
+          {
             "metric": "bone_mass",
             "kind": "sample",
             "start": "2026-06-15T05:00:00Z",
@@ -76,6 +86,26 @@
               "offset_min": 120
             },
             "value": 6,
+            "unit": "index"
+          },
+          {
+            "metric": "garmin_metabolic_age",
+            "kind": "sample",
+            "start": "2026-06-15T05:00:00Z",
+            "zone": {
+              "offset_min": 120
+            },
+            "value": 38,
+            "unit": "years"
+          },
+          {
+            "metric": "garmin_physique_rating",
+            "kind": "sample",
+            "start": "2026-06-15T05:00:00Z",
+            "zone": {
+              "offset_min": 120
+            },
+            "value": 5,
             "unit": "index"
           }
         ]

@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "garmin.training",
-  "version": 4,
+  "version": 5,
   "output": {
     "devices": [
       {
@@ -22,6 +22,17 @@
         "device": "1000000001"
       },
       {
+        "metric": "garmin_recovery_time",
+        "kind": "sample",
+        "start": "2026-06-15T04:45:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 0,
+        "unit": "min",
+        "device": "1000000001"
+      },
+      {
         "metric": "garmin_training_readiness",
         "kind": "sample",
         "start": "2026-06-15T12:00:00Z",
@@ -30,6 +41,17 @@
         },
         "value": 65,
         "unit": "index",
+        "device": "1000000001"
+      },
+      {
+        "metric": "garmin_recovery_time",
+        "kind": "sample",
+        "start": "2026-06-15T12:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 600,
+        "unit": "min",
         "device": "1000000001"
       }
     ]

@@ -1,0 +1,13 @@
+{
+  "synthetic": true,
+  "fields": {
+    "response": "raw: empty day (no data, no output)",
+    "response.achievableFitnessAge": "garmin_achievable_fitness_age",
+    "response.chronologicalAge": "raw: derivable from the owner’s birth date",
+    "response.components.bmi.value": "raw: derivable from stored rows",
+    "response.components.rhr.value": "raw: derivable from stored rows",
+    "response.fitnessAge": "garmin_fitness_age",
+    "response.previousFitnessAge": "raw: stored from an earlier day (garmin_fitness_age)",
+    "unit.date": "raw: identifier (request day, sample date)"
+  }
+}

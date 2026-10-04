@@ -2,8 +2,9 @@
   "synthetic": true,
   "fields": {
     "response.averageSpO2": "raw: derivable from stored rows",
+    "response.avgSleepSpO2": "spo2_nightly",
     "response.calendarDate": "raw: identifier",
-    "response.continuousReadingDTOList": "raw: not stored (single values carry the readings)",
+    "response.continuousReadingDTOList": "raw: shape unverified (null in every recorded payload); mapped once a real list is seen",
     "response.endTimestampGMT": "raw: timestamp that sets the zone offset with the local end",
     "response.endTimestampLocal": "raw: local time that sets the zone offset",
     "response.latestSpO2": "raw: derivable from stored rows",

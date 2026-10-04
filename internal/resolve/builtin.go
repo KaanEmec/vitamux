@@ -70,6 +70,15 @@ var NoBuiltin = func() map[string]string {
 		"sleep_snoring_episodes"} {
 		m[code] = "added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source"
 	}
+	// The Garmin values of J25.5 are provider-scoped: one source each, nothing to order.
+	for _, code := range []string{"garmin_hr_zone_1_time", "garmin_hr_zone_2_time", "garmin_hr_zone_3_time", "garmin_hr_zone_4_time",
+		"garmin_hr_zone_5_time", "garmin_training_effect_aerobic", "garmin_training_effect_anaerobic", "garmin_activity_training_load",
+		"garmin_activity_moving_time", "garmin_floors_descended", "garmin_chronic_load_low", "garmin_chronic_load_high",
+		"garmin_recovery_time", "garmin_vo2max_cycling", "garmin_hrv_baseline_low", "garmin_hrv_baseline_high",
+		"garmin_hrv_baseline_floor", "garmin_achievable_fitness_age",
+		"garmin_sweat_loss", "garmin_sleep_movement"} {
+		m[code] = "a provider-scoped value with a single source, so there is nothing to order"
+	}
 	return m
 }()
 

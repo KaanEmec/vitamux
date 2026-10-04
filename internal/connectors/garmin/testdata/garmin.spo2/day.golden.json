@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "garmin.spo2",
-  "version": 2,
+  "version": 3,
   "output": {
     "devices": [
       {
@@ -32,6 +32,23 @@
         "value": 94,
         "unit": "%",
         "device": "garmin:wearable"
+      },
+      {
+        "metric": "spo2_nightly",
+        "kind": "daily_value",
+        "start": "2026-06-14T22:00:00Z",
+        "end": "2026-06-15T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 94,
+        "unit": "%",
+        "device": "garmin:wearable",
+        "key": {
+          "record_type": "spo2",
+          "external_id": "2026-06-15",
+          "component": "spo2_nightly"
+        }
       }
     ]
   }

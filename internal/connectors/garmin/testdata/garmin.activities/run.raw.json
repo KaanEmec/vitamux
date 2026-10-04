@@ -31,6 +31,13 @@
   "manufacturer": "GARMIN",
   "lapCount": 6,
   "manualActivity": false,
-  "hrTimeInZone_3": 1200.0
+  "hrTimeInZone_3": 1200.0,
+  "aerobicTrainingEffect": 3.2,
+  "anaerobicTrainingEffect": 1.1,
+  "activityTrainingLoad": 142.5,
+  "hrTimeInZone_1": 120.0,
+  "hrTimeInZone_2": 600.0,
+  "hrTimeInZone_4": 380.0,
+  "hrTimeInZone_5": 0.0
  }
 }

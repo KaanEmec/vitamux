@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"slices"
 	"strconv"
@@ -31,7 +32,10 @@ const (
 	StreamHRV               = "garmin.hrv"                 // get_hrv_data
 	StreamRespiration       = "garmin.respiration"         // get_respiration_data
 	StreamSpO2              = "garmin.spo2"                // get_spo2_data
-	StreamTraining          = "garmin.training"            // get_max_metrics, get_training_readiness
+	StreamTraining          = "garmin.training"            // get_max_metrics, get_training_readiness, get_training_status
+	StreamFloors            = "garmin.floors"              // get_floors
+	StreamHydration         = "garmin.hydration"           // get_hydration_data
+	StreamFitnessAge        = "garmin.fitness_age"         // get_fitnessage_data
 	StreamBodyComposition   = "garmin.body_composition"    // get_body_composition
 	StreamBloodPressure     = "garmin.blood_pressure"      // get_blood_pressure
 	StreamActivities        = "garmin.activities"          // get_activities_by_date (JSON) and FIT downloads (binary)
@@ -43,18 +47,21 @@ var streams = map[string]struct {
 	version int
 	decode  func(b *builder, resp []byte) error
 }{
-	StreamDailySummary:      {3, dailySummary},
+	StreamDailySummary:      {4, dailySummary},
 	StreamHeartRate:         {2, heartRate},
-	StreamSteps:             {2, steps},
+	StreamSteps:             {3, steps},
 	StreamStressBodyBattery: {2, stressBodyBattery},
-	StreamSleep:             {2, sleep},
-	StreamHRV:               {2, hrv},
+	StreamSleep:             {3, sleep},
+	StreamHRV:               {3, hrv},
 	StreamRespiration:       {2, respiration},
-	StreamSpO2:              {2, spo2},
-	StreamTraining:          {4, training},
-	StreamBodyComposition:   {1, bodyComposition},
+	StreamSpO2:              {3, spo2},
+	StreamTraining:          {5, training},
+	StreamFloors:            {1, floors},
+	StreamHydration:         {1, hydration},
+	StreamFitnessAge:        {1, fitnessAge},
+	StreamBodyComposition:   {2, bodyComposition},
 	StreamBloodPressure:     {1, bloodPressure},
-	StreamActivities:        {1, activity},
+	StreamActivities:        {2, activity},
 }
 
 // Normalizer normalizes one garmin.* stream; its ID is the stream name.
@@ -104,6 +111,11 @@ func (n Normalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ nor
 	}
 	_ = json.Unmarshal(raw.RequestMeta, &req) // optional: only garmin.training reads it
 	b.endpoint = req.Endpoint
+	var unit struct {
+		Date string `json:"date"`
+	}
+	_ = json.Unmarshal(env["unit"], &unit) // optional: only garmin.fitness_age reads it
+	b.date = unit.Date
 	if err := s.decode(b, resp); err != nil {
 		return normalize.Output{}, err
 	}
@@ -129,6 +141,7 @@ func drift(stream, field string) error {
 type builder struct {
 	stream   string
 	endpoint string // request_meta endpoint, when stored
+	date     string // the unit's calendar date, when it has one
 	out      normalize.Output
 }
 
@@ -285,8 +298,9 @@ func (d dayBounds) zone() normalize.Zone {
 }
 
 // dailySummary maps the daily totals that have a catalogue code. Resting HR comes from
-// garmin.heart_rate, stress and Body Battery from their series. A day without wellness data
-// (includesWellnessData false, wellnessStartTimeGmt and the totals null) is no output.
+// garmin.heart_rate, stress and Body Battery levels from their series; the stress, heart-rate and
+// SpO2 summaries are derivable and stay raw. A day without wellness data (includesWellnessData
+// false, wellnessStartTimeGmt and the totals null) is no output.
 func dailySummary(b *builder, resp []byte) error {
 	var r struct {
 		CalendarDate string   `json:"calendarDate"`
@@ -295,9 +309,16 @@ func dailySummary(b *builder, resp []byte) error {
 		StartLocal   gtime    `json:"wellnessStartTimeLocal"`
 		EndGMT       gtime    `json:"wellnessEndTimeGmt"`
 		TotalSteps   *float64 `json:"totalSteps"`
+		Distance     *float64 `json:"totalDistanceMeters"`
 		ActiveKcal   *float64 `json:"activeKilocalories"`
 		BMRKcal      *float64 `json:"bmrKilocalories"`
+		TotalKcal    *float64 `json:"totalKilocalories"`
 		Floors       *float64 `json:"floorsAscended"`
+		ModerateMin  *float64 `json:"moderateIntensityMinutes"`
+		VigorousMin  *float64 `json:"vigorousIntensityMinutes"`
+		Sedentary    *float64 `json:"sedentarySeconds"`
+		BBCharged    *float64 `json:"bodyBatteryChargedValue"`
+		BBDrained    *float64 `json:"bodyBatteryDrainedValue"`
 	}
 	if err := b.decode(resp, &r); err != nil {
 		return err
@@ -313,11 +334,21 @@ func dailySummary(b *builder, resp []byte) error {
 		return drift(b.stream, "wellnessEndTimeGmt")
 	}
 	z := zoneAt(r.StartGMT.Time, r.StartLocal.Time)
+	minutes := func(v *float64) *float64 { // intensity minutes are stored in seconds
+		if v == nil {
+			return nil
+		}
+		return new(*v * 60)
+	}
 	for _, m := range []struct {
 		metric, unit string
 		v            *float64
-	}{{"steps", "count", r.TotalSteps}, {"active_energy", "kcal", r.ActiveKcal}, {"basal_energy", "kcal", r.BMRKcal},
-		{"floors_climbed", "count", r.Floors}} {
+	}{{"steps", "count", r.TotalSteps}, {"distance_walk_run", "m", r.Distance},
+		{"active_energy", "kcal", r.ActiveKcal}, {"basal_energy", "kcal", r.BMRKcal}, {"total_energy", "kcal", r.TotalKcal},
+		{"floors_climbed", "count", r.Floors},
+		{"intensity_moderate_time", "s", minutes(r.ModerateMin)}, {"intensity_vigorous_time", "s", minutes(r.VigorousMin)},
+		{"sedentary_time", "s", r.Sedentary},
+		{"garmin_body_battery_charged", "index", r.BBCharged}, {"garmin_body_battery_drained", "index", r.BBDrained}} {
 		if m.v != nil {
 			b.daily(m.metric, "daily_summary", r.CalendarDate, r.StartGMT.Time, r.EndGMT.Time, z, *m.v, m.unit)
 		}
@@ -360,13 +391,14 @@ func heartRate(b *builder, resp []byte) error {
 	return nil
 }
 
-// steps maps the 15-minute chart as intervals. They have no local time, so their local dates come
+// steps maps the 15-minute chart as intervals, and its wheelchair pushes. They have no local time, so their local dates come
 // from the owner's timezone periods; the day's total is garmin.daily_summary's daily value.
 func steps(b *builder, resp []byte) error {
 	var r []struct {
 		StartGMT gtime    `json:"startGMT"`
 		EndGMT   gtime    `json:"endGMT"`
 		Steps    *float64 `json:"steps"`
+		Pushes   *float64 `json:"pushes"`
 	}
 	if err := b.decode(resp, &r); err != nil {
 		return err
@@ -381,6 +413,10 @@ func steps(b *builder, resp []byte) error {
 		end := x.EndGMT.Time
 		b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: "steps", Kind: catalog.Interval,
 			Start: x.StartGMT.Time, End: &end, Value: *x.Steps, Unit: "count", Device: b.wearable()})
+		if x.Pushes != nil && *x.Pushes > 0 { // wheelchair pushes: 0 for everyone else
+			b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: "wheelchair_pushes", Kind: catalog.Interval,
+				Start: x.StartGMT.Time, End: &end, Value: *x.Pushes, Unit: "count", Device: b.wearable()})
+		}
 	}
 	return nil
 }
@@ -440,6 +476,11 @@ func hrv(b *builder, resp []byte) error {
 		Summary *struct {
 			CalendarDate string   `json:"calendarDate"`
 			LastNightAvg *float64 `json:"lastNightAvg"`
+			Baseline     *struct {
+				Low   *float64 `json:"balancedLow"`
+				High  *float64 `json:"balancedUpper"`
+				Floor *float64 `json:"lowUpper"`
+			} `json:"baseline"`
 		} `json:"hrvSummary"`
 		Readings []struct {
 			Value *float64 `json:"hrvValue"`
@@ -463,12 +504,33 @@ func hrv(b *builder, resp []byte) error {
 			b.sample("hrv_rmssd", x.GMT.Time, zoneAt(x.GMT.Time, x.Local.Time), *x.Value, "ms", "")
 		}
 	}
-	if r.Summary.LastNightAvg != nil {
+	nights := []struct {
+		metric string
+		v      *float64
+	}{{"hrv_rmssd_nightly", r.Summary.LastNightAvg}}
+	if bl := r.Summary.Baseline; bl != nil {
+		nights = append(nights, struct {
+			metric string
+			v      *float64
+		}{"garmin_hrv_baseline_low", bl.Low}, struct {
+			metric string
+			v      *float64
+		}{"garmin_hrv_baseline_high", bl.High}, struct {
+			metric string
+			v      *float64
+		}{"garmin_hrv_baseline_floor", bl.Floor})
+	}
+	for _, n := range nights {
+		if n.v == nil {
+			continue
+		}
 		if r.StartGMT.IsZero() || r.StartLocal.IsZero() {
 			return drift(b.stream, "startTimestampGMT or startTimestampLocal")
 		}
-		return b.nightly("hrv_rmssd_nightly", "hrv", r.Summary.CalendarDate,
-			zoneAt(r.StartGMT.Time, r.StartLocal.Time), *r.Summary.LastNightAvg, "ms")
+		if err := b.nightly(n.metric, "hrv", r.Summary.CalendarDate,
+			zoneAt(r.StartGMT.Time, r.StartLocal.Time), *n.v, "ms"); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -514,12 +576,15 @@ func respiration(b *builder, resp []byte) error {
 	return nil
 }
 
-// spo2 maps the single (spot and continuous) readings as [timestamp, value, ...] rows. Hourly
-// averages are aggregates, not samples, and stay in the raw payload.
+// spo2 maps the single (spot and continuous) readings as [timestamp, value, ...] rows and the
+// night's average to spo2_nightly (the one source of that value; the sleep payload's own summary
+// stays raw). Per-minute readings come with garmin.sleep; hourly averages are aggregates, not
+// samples, and stay in the raw payload.
 func spo2(b *builder, resp []byte) error {
 	var r struct {
 		dayBounds
-		Single series `json:"spO2SingleValues"`
+		Single   series   `json:"spO2SingleValues"`
+		AvgSleep *float64 `json:"avgSleepSpO2"`
 	}
 	if err := b.decode(resp, &r); err != nil {
 		return err
@@ -530,12 +595,19 @@ func spo2(b *builder, resp []byte) error {
 			b.sample("spo2", at, z, v, "%", "")
 		}
 	})
-	return nil
+	if r.AvgSleep == nil {
+		return nil
+	}
+	if r.CalendarDate == "" || r.StartGMT.IsZero() || r.StartLocal.IsZero() {
+		return drift(b.stream, "calendarDate, startTimestampGMT or startTimestampLocal")
+	}
+	return b.nightly("spo2_nightly", "spo2", r.CalendarDate, zoneAt(r.StartGMT.Time, r.StartLocal.Time), *r.AvgSleep, "%")
 }
 
-// training holds both raw items of a day, told apart by their request endpoint: maxmet/daily
-// (VO2max; an array or an object) and trainingreadiness (an array of snapshots). Without a stored
-// endpoint, the items' shape decides: "generic" is maxmet, "score" is readiness.
+// training holds the raw items of a day, told apart by their request endpoint: maxmet/daily
+// (VO2max; an array or an object), trainingreadiness (an array of snapshots) and
+// trainingstatus/aggregated (an object). Without a stored endpoint, the items' shape decides:
+// "generic" is maxmet, "score" is readiness, "mostRecentTrainingStatus" is the status.
 func training(b *builder, resp []byte) error {
 	var items []json.RawMessage
 	if bytes.HasPrefix(bytes.TrimSpace(resp), []byte("{")) {
@@ -550,14 +622,17 @@ func training(b *builder, resp []byte) error {
 		}
 		_, maxmet := keys["generic"]
 		_, ready := keys["score"]
+		_, status := keys["mostRecentTrainingStatus"]
 		var err error
 		switch {
 		case strings.Contains(b.endpoint, "/maxmet/"), b.endpoint == "" && maxmet:
 			err = maxMetrics(b, raw)
 		case strings.Contains(b.endpoint, "/trainingreadiness/"), b.endpoint == "" && ready:
 			err = readiness(b, raw)
+		case strings.Contains(b.endpoint, "/trainingstatus/"), b.endpoint == "" && status:
+			err = trainingStatus(b, raw)
 		default:
-			err = drift(b.stream, "request endpoint, [].generic or [].score")
+			err = drift(b.stream, "request endpoint, [].generic, [].score or mostRecentTrainingStatus")
 		}
 		if err != nil {
 			return err
@@ -569,33 +644,40 @@ func training(b *builder, resp []byte) error {
 // maxMetrics maps the generic (running) VO2max. Garmin gives the owner's calendar date only, and
 // no single instant falls on one date for every offset from -12 to +14 h, so the sample sits at
 // 12:00 of that date with a zero offset: its local date is the calendar date for every owner.
-// The response names no device, so the sample is the wearable's. The cycling VO2max is another
-// method and is not mapped.
+// The response names no device, so the sample is the wearable's. The generic (running) VO2max is
+// vo2max; the cycling one is another method and keeps its own code.
 func maxMetrics(b *builder, raw []byte) error {
+	type vo2 struct {
+		CalendarDate string   `json:"calendarDate"`
+		Precise      *float64 `json:"vo2MaxPreciseValue"`
+		Value        *float64 `json:"vo2MaxValue"`
+	}
 	var r struct {
-		Generic *struct {
-			CalendarDate string   `json:"calendarDate"`
-			Precise      *float64 `json:"vo2MaxPreciseValue"`
-			Value        *float64 `json:"vo2MaxValue"`
-		} `json:"generic"`
+		Generic *vo2 `json:"generic"`
+		Cycling *vo2 `json:"cycling"`
 	}
-	if err := b.decode(raw, &r); err != nil || r.Generic == nil {
-		return err // no generic VO2max (yet): nothing to map
+	if err := b.decode(raw, &r); err != nil {
+		return err
 	}
-	v := r.Generic.Precise
-	if v == nil {
-		v = r.Generic.Value
+	for _, m := range []struct {
+		metric, component string
+		x                 *vo2
+	}{{"vo2max", "generic", r.Generic}, {"garmin_vo2max_cycling", "cycling", r.Cycling}} {
+		if m.x == nil { // no such VO2max (yet): nothing to map
+			continue
+		}
+		v := cmp.Or(m.x.Precise, m.x.Value)
+		if v == nil {
+			continue
+		}
+		d, err := time.Parse(time.DateOnly, m.x.CalendarDate)
+		if err != nil {
+			return drift(b.stream, "[]."+m.component+".calendarDate")
+		}
+		b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: m.metric, Kind: catalog.Sample,
+			Start: d.Add(12 * time.Hour), Zone: normalize.Zone{OffsetMin: new(int16)}, Value: *v, Unit: "mL/kg/min", Device: b.wearable(),
+			Key: normalize.Key{RecordType: "maxmet", ExternalID: m.x.CalendarDate, Component: m.component}})
 	}
-	if v == nil {
-		return nil
-	}
-	d, err := time.Parse(time.DateOnly, r.Generic.CalendarDate)
-	if err != nil {
-		return drift(b.stream, "[].generic.calendarDate")
-	}
-	b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: "vo2max", Kind: catalog.Sample,
-		Start: d.Add(12 * time.Hour), Zone: normalize.Zone{OffsetMin: new(int16)}, Value: *v, Unit: "mL/kg/min", Device: b.wearable(),
-		Key: normalize.Key{RecordType: "maxmet", ExternalID: r.Generic.CalendarDate, Component: "generic"}})
 	return nil
 }
 
@@ -607,6 +689,7 @@ func readiness(b *builder, raw []byte) error {
 		Local     gtime    `json:"timestampLocal"`
 		DeviceID  *int64   `json:"deviceId"`
 		Score     *float64 `json:"score"`
+		Recovery  *float64 `json:"recoveryTime"`
 	}
 	if err := b.decode(raw, &r); err != nil {
 		return err
@@ -617,6 +700,169 @@ func readiness(b *builder, raw []byte) error {
 	case r.Score == nil:
 		return nil
 	}
-	b.sample("garmin_training_readiness", r.Timestamp.Time, zoneAt(r.Timestamp.Time, r.Local.Time), *r.Score, "index", b.device(r.DeviceID))
+	z, dev := zoneAt(r.Timestamp.Time, r.Local.Time), b.device(r.DeviceID)
+	b.sample("garmin_training_readiness", r.Timestamp.Time, z, *r.Score, "index", dev)
+	if r.Recovery != nil {
+		b.sample("garmin_recovery_time", r.Timestamp.Time, z, *r.Recovery, "min", dev)
+	}
+	return nil
+}
+
+// trainingStatus maps the acute and chronic training load of each device in the aggregated
+// status, and the chronic load's optimal range, as provider daily values of Garmin's calendar
+// date. The status itself (a code and a phrase) is a label and stays raw.
+func trainingStatus(b *builder, raw []byte) error {
+	var r struct {
+		Recent *struct {
+			Latest map[string]struct {
+				CalendarDate string `json:"calendarDate"`
+				DeviceID     *int64 `json:"deviceId"`
+				Load         *struct {
+					Acute   *float64 `json:"dailyTrainingLoadAcute"`
+					Chronic *float64 `json:"dailyTrainingLoadChronic"`
+					Low     *float64 `json:"minTrainingLoadChronic"`
+					High    *float64 `json:"maxTrainingLoadChronic"`
+				} `json:"acuteTrainingLoadDTO"`
+			} `json:"latestTrainingStatusData"`
+		} `json:"mostRecentTrainingStatus"`
+	}
+	if err := b.decode(raw, &r); err != nil || r.Recent == nil {
+		return err // no status (yet): nothing to map
+	}
+	for _, key := range slices.Sorted(maps.Keys(r.Recent.Latest)) {
+		d := r.Recent.Latest[key]
+		if d.Load == nil {
+			continue
+		}
+		start, end, z, ok := calendarDay(d.CalendarDate)
+		if !ok {
+			return drift(b.stream, "mostRecentTrainingStatus.latestTrainingStatusData.calendarDate")
+		}
+		for _, m := range []struct {
+			metric string
+			v      *float64
+		}{{"garmin_acute_load", d.Load.Acute}, {"garmin_chronic_load", d.Load.Chronic},
+			{"garmin_chronic_load_low", d.Load.Low}, {"garmin_chronic_load_high", d.Load.High}} {
+			if m.v != nil {
+				b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: m.metric, Kind: catalog.DailyValue,
+					Start: start, End: &end, Zone: z, Value: *m.v, Unit: "index", Device: cmp.Or(b.device(d.DeviceID), b.wearable()),
+					Key: normalize.Key{RecordType: "training_status", ExternalID: d.CalendarDate + ":" + key, Component: m.metric}})
+			}
+		}
+	}
+	return nil
+}
+
+// calendarDay is Garmin's calendar date as a day at offset 0: the response names no instant or
+// offset, so the wall-clock day stands for the owner's own day, whatever their zone.
+func calendarDay(date string) (start, end time.Time, z normalize.Zone, ok bool) {
+	d, err := time.Parse(time.DateOnly, date)
+	return d, d.AddDate(0, 0, 1), normalize.Zone{OffsetMin: new(int16)}, err == nil
+}
+
+// floors maps the 15-minute floors chart as intervals of floors ascended and descended. Rows are [start GMT, end GMT, ascended, descended], with the
+// columns named by a descriptor list.
+func floors(b *builder, resp []byte) error {
+	var r struct {
+		dayBounds
+		Descriptors []descriptor `json:"floorsValueDescriptorDTOList"`
+		Values      [][]any      `json:"floorsValuesArray"`
+	}
+	if err := b.decode(resp, &r); err != nil {
+		return err
+	}
+	if len(r.Values) == 0 {
+		return nil
+	}
+	c, err := b.columns("floorsValueDescriptorDTOList", r.Descriptors, "startTimeGMT", "endTimeGMT", "floorsAscended")
+	if err != nil {
+		return err
+	}
+	down, err := b.columns("floorsValueDescriptorDTOList", r.Descriptors, "floorsDescended")
+	z := r.zone()
+	for _, row := range r.Values {
+		if len(row) <= max(c[0], c[1], c[2]) {
+			return drift(b.stream, "floorsValuesArray")
+		}
+		start, end := rowTime(row[c[0]]), rowTime(row[c[1]])
+		v, ok := row[c[2]].(float64)
+		switch {
+		case start.IsZero() || !end.After(start):
+			return drift(b.stream, "floorsValuesArray.startTimeGMT")
+		case !ok:
+			continue // no reading
+		}
+		b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: "floors_climbed", Kind: catalog.Interval,
+			Start: start, End: &end, Zone: z, Value: v, Unit: "count", Device: b.wearable()})
+		if d, ok := row[down[0]].(float64); err == nil && len(row) > down[0] && ok {
+			b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: "garmin_floors_descended", Kind: catalog.Interval,
+				Start: start, End: &end, Zone: z, Value: d, Unit: "count", Device: b.wearable()})
+		}
+	}
+	return nil
+}
+
+// rowTime is a Garmin timestamp string inside a values row, or the zero time.
+func rowTime(v any) time.Time {
+	s, _ := v.(string)
+	var t gtime
+	if json.Unmarshal([]byte(strconv.Quote(s)), &t) != nil {
+		return time.Time{}
+	}
+	return t.Time
+}
+
+// hydration maps the day's logged intake (valueInML) and estimated sweat loss as one interval each
+// over the calendar day, the way Garmin reports them: totals without times.
+func hydration(b *builder, resp []byte) error {
+	var r struct {
+		CalendarDate string   `json:"calendarDate"`
+		Value        *float64 `json:"valueInML"`
+		Sweat        *float64 `json:"sweatLossInML"`
+	}
+	if err := b.decode(resp, &r); err != nil {
+		return err
+	}
+	start, end, z, ok := calendarDay(r.CalendarDate)
+	if !ok && (r.Value != nil || r.Sweat != nil) {
+		return drift(b.stream, "calendarDate")
+	}
+	for _, m := range []struct {
+		metric string
+		v      *float64
+	}{{"diet_water", r.Value}, {"garmin_sweat_loss", r.Sweat}} {
+		if m.v != nil {
+			b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: m.metric, Kind: catalog.Interval,
+				Start: start, End: &end, Zone: z, Value: *m.v, Unit: "mL", Device: b.wearable(),
+				Key: normalize.Key{RecordType: "hydration", ExternalID: r.CalendarDate, Component: m.metric}})
+		}
+	}
+	return nil
+}
+
+// fitnessAge maps Garmin's fitness age for the requested date, a sample at noon of that date
+// at offset 0 (as VO2max, see maxMetrics). A day without a fitness age has none.
+func fitnessAge(b *builder, resp []byte) error {
+	var r struct {
+		FitnessAge *float64 `json:"fitnessAge"`
+		Achievable *float64 `json:"achievableFitnessAge"`
+	}
+	if err := b.decode(resp, &r); err != nil {
+		return err
+	}
+	start, _, z, ok := calendarDay(b.date)
+	if !ok && (r.FitnessAge != nil || r.Achievable != nil) {
+		return drift(b.stream, "unit.date")
+	}
+	for _, m := range []struct {
+		metric string
+		v      *float64
+	}{{"garmin_fitness_age", r.FitnessAge}, {"garmin_achievable_fitness_age", r.Achievable}} {
+		if m.v != nil {
+			b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: m.metric, Kind: catalog.Sample,
+				Start: start.Add(12 * time.Hour), Zone: z, Value: *m.v, Unit: "years", Device: b.wearable(),
+				Key: normalize.Key{RecordType: "fitness_age", ExternalID: b.date, Component: m.metric}})
+		}
+	}
 	return nil
 }
