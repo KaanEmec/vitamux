@@ -16,7 +16,7 @@ test('pair, classify a relay origin, build Apple Watch first without relayed dat
 	await page.getByLabel('Username').fill(username!);
 	await page.getByLabel('Password').fill(password!);
 	await page.getByRole('button', { name: 'Sign in' }).click();
-	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Today');
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Dashboard');
 
 	// Pair: the code from the UI is redeemed by a fake device on the ingest endpoint.
 	await page.goto('/settings/devices');

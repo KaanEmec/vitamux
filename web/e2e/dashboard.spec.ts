@@ -38,8 +38,8 @@ test('the default layout: hero, cards, sources, delta, alerts and health', async
 	await expect(card(page, 'Blood pressure').locator('.value')).toHaveText(/^\d+\/\d+\s*mmHg$/);
 
 	// A card opens its metric; the day's drilldown stays reachable.
-	await expect(rhr.getByRole('link', { name: 'Resting heart rate', exact: true })).toHaveAttribute('href', '/data?metric=resting_heart_rate');
-	await expect(rhr.getByRole('link', { name: /All sources/ })).toHaveAttribute('href', /^\/data\/day\/resting_heart_rate\/\d{4}-\d{2}-\d{2}$/);
+	await expect(rhr.getByRole('link', { name: 'Resting heart rate', exact: true })).toHaveAttribute('href', '/explore/resting_heart_rate');
+	await expect(rhr.getByRole('link', { name: /All sources/ })).toHaveAttribute('href', /^\/explore\/resting_heart_rate\/day\/\d{4}-\d{2}-\d{2}$/);
 
 	const alerts = page.getByRole('region', { name: 'Alerts' });
 	await expect(alerts.getByText('Withings needs reauthorization.')).toBeVisible();
@@ -142,7 +142,7 @@ test('a past day: the date selector, final steps and back to today', async ({ pa
 	await expect(page.getByLabel('Date')).toHaveValue(past);
 	await expect(card(page, 'Steps').getByText('Direct')).toBeVisible();
 	await expect(card(page, 'Steps').getByText('so far')).toHaveCount(0);
-	await expect(card(page, 'Steps').getByRole('link', { name: /All sources/ })).toHaveAttribute('href', `/data/day/steps/${past}`);
+	await expect(card(page, 'Steps').getByRole('link', { name: /All sources/ })).toHaveAttribute('href', `/explore/steps/day/${past}`);
 	expect(dash.summaryDates.every((d) => d === past)).toBe(true);
 
 	await page.getByRole('button', { name: 'Previous day' }).click();

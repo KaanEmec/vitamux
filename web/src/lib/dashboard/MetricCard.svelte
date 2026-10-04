@@ -82,7 +82,7 @@
 			{#if view.chips.length > shown.length}<span class="muted">+{view.chips.length - shown.length}</span>{/if}
 			{#if view.delta}<span class="delta">{view.delta}</span>{/if}
 			{#if !edit && view.hasData && view.status !== 'no_data' && date}
-				<a class="all" href="/data/day/{code}/{date}">All sources<span class="visually-hidden"> for {label}</span></a>
+				<a class="all" href="/explore/{code}/day/{date}">All sources<span class="visually-hidden"> for {label}</span></a>
 			{/if}
 		</footer>
 	{/if}

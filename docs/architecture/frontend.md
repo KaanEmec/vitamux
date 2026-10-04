@@ -21,27 +21,24 @@ Alternatives rejected: htmx (the rule builder, charts, and PDF review need real 
 
 ## Navigation
 
-[E21](../plan/E21-visualisation/README.md) (v0.2.0) redesigns every section on the design system below; Dashboard and Explore replace Today and Data as they land, and every metric chart gets a rule lens.
+Every section uses the design system below ([E21](../plan/E21-visualisation/README.md), v0.2.0).
 
 - **Shell** (`(app)/+layout.svelte`, `lib/nav.ts`, `lib/shell/`): a collapsible icon sidebar with Dashboard (`/`), Explore (`/explore`, which also owns `/data`), Connections, Rules, Lab results and Settings, and the signed-in owner. The top bar has the ⌘K / Ctrl+K command palette (sections, Settings pages, connections, metrics from `GET /metrics` and their rules), a sync-status pill (latest successful sync, or how many connections need attention), the theme toggle and sign-out. Below 48rem a bottom bar shows Dashboard, Explore and Sources, and "More" opens the full menu.
 - **Theme**: system, light or dark, a per-browser preference (`lib/prefs.svelte.ts`, `localStorage`, `<html data-theme>`), as is the collapsed sidebar.
-- A metric opens at `metricHref()` in `lib/nav.ts` (the daily view until Explore has metric pages). Planned: the global date context and pinned shortcuts in the sidebar (E21).
+- A metric opens at `metricHref()` in `lib/nav.ts`; `lib/explore/links.ts` maps inventory items to their view. Old `/data/*` URLs redirect to Explore.
 
-Sections today:
+Sections:
 
-1. **Today**: key resolved metrics with source chips; connection health; alerts (reauth, drift, stale backup).
-2. **Connections**: list, then detail tabs (`?tab=`) Overview, Streams, Backfills, History, Settings. A single auth wizard handles the OAuth redirect (credentials → MFA once `AuthStep` carries a prompt); the callback's `?connected=`/`?auth_error=` show on the list. Manual sync, backfills with retry and cancel, pause, delete with keep/delete data. Unofficial badge from `Connection.official`. Planned ([E20](../plan/E20-guided-setup/README.md)): **Connect a source** shows each provider's setup state, with the Withings app wizard, the sidecar-not-running card, and one sign-in and MFA dialog for Garmin and WHOOP.
-3. **Data**:
-   - daily view with status icons (direct, fallback, calculated, overridden) and explanation popovers;
-   - **All sources** drilldown: chart overlay, included/excluded table, provenance links, override actions;
-   - sleep hypnogram comparison; workout clusters.
-4. **Rules**: metric catalogue with a 90-day per-source coverage heatmap; guided builder; version history, diff, activate.
-5. **Lab results**: upload, consent dialog naming provider and model, review (`lab/documents/[id]`: PDF page with the row outlined beside the row editor), confirmed results by analyte with history, delete keeping or deleting results ([lab-documents.md](lab-documents.md)).
-6. **Settings**: profile and timezone periods, devices (Apple pairing QR with countdown, device list with requested types, possibly-denied hints, resync and revoke; origin classification as native, relayed or direct; E15), API keys, AI providers, retention, backups and export, security (password, TOTP, sessions), system status.
+1. **Dashboard** (`/`, `lib/dashboard/`): a stored layout (`GET/PUT /settings/dashboard`) of metric cards from `GET /resolved/summary`: value, neutral delta against the 30-day mean, sparkline, source chips, status. Edit mode reorders (drag or buttons), sizes S/M/L, hides and adds cards; `?date=` shows a past day. Alerts (reauth, drift, stale backup) and connection health stay on top.
+2. **Explore** (`/explore`, `lib/explore/`): everything stored (`GET /inventory`) by section with provider, device and origin filters, and pinning to the Dashboard. A metric page (`/explore/[metric]`) draws the view `chartFor()` picks: range picker and brush, status markers, 30-day band, the per-source overlay (`GET /sources/series`), coverage strip, stats and values table; long ranges use `GET /resolved/trend`. A point opens its explanation, provenance and override actions; `day/[date]` is the all-sources drilldown. The **rule lens** (`lib/rules/RuleLens.svelte`) edits the rule beside the chart and overlays the draft from `POST /resolution/preview` before saving. Specialised views: `sleep`, `blood-pressure`, `body-composition`, `workouts`, `events`, and `/lab/analytes/[code]` (printed range only).
+3. **Connections**: provider cards with health, last sync, a 14-day run strip and the next action; then detail tabs (`?tab=`) Overview (sync timeline), Streams, Backfills, History, Settings. One auth wizard handles OAuth redirects and sign-in or MFA prompts. Planned ([E20](../plan/E20-guided-setup/README.md)): guided setup built on this kit.
+4. **Rules**: catalogue cards with the rule as a sentence (`lib/rules/sentence.ts`), source order and coverage heatmap; the metric page with a version timeline, side-by-side diff and the rule lens; the builder.
+5. **Lab results**: upload with the consent dialog naming provider and model; review as a split view (PDF page with the row outlined beside the row list and editor; Enter accepts, J/K move, E edits); results by analyte linking to their trend ([lab-documents.md](lab-documents.md)).
+6. **Settings**: grouped navigation (You, Sources, Access, Data, System), one card pattern (`lib/settings/Card.svelte`) for profile and time zones, devices (pairing QR, origins), API keys, AI providers, retention, backups and export, security and system status.
 
 ## Rule builder
 
-The builder (`src/routes/(app)/rules/new`) follows [resolution.md](resolution.md) in five steps and starts from the rule in effect, a saved version, or an empty rule:
+The builder (`src/routes/(app)/rules/new`) is a stepper with a live preview sidebar; it follows [resolution.md](resolution.md) in five steps and starts from the rule in effect, a saved version, or an empty rule:
 
 1. **Metric**: from the catalogue (`GET /rules`, plus `GET /metrics` codes without a rule).
 2. **Sources**: ordered groups of selectors (ORed lists of ANDed conditions) with values seen in the data and the active rules as suggestions and one-click chips for origins, device types and relayed or direct (`GET /origins`, `GET /source-devices`); up/down buttons to reorder; exclusions; a relay-exclusion suggestion.

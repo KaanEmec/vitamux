@@ -95,7 +95,7 @@ test('metric detail: range, rollups, sources overlay, coverage and the rule lens
 	await expect(page.getByRole('table', { name: /Resting heart rate/ }).getByRole('columnheader')).toHaveCount(4); // date + resolved + 2 sources
 
 	await page.getByRole('button', { name: 'How it’s calculated' }).click();
-	await expect(page.getByRole('complementary', { name: 'Rule lens' })).toBeVisible();
+	await expect(page.getByRole('complementary', { name: 'How this is calculated' })).toBeVisible();
 
 	// All: weekly rollups; a week opens its days.
 	await page.getByRole('group', { name: 'Range' }).getByRole('button', { name: 'All' }).click();
