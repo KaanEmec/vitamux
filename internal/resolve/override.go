@@ -102,10 +102,16 @@ func (r *Rule) ResolveWindowOverridden(w Window, s Series, opt Options, ovs []Ov
 
 	var drop []int64
 	var excludes []Override
-	for _, o := range mine {
-		if o.Action == ExcludeInput {
+	var force, set *Override
+	for i, o := range mine {
+		switch o.Action {
+		case ExcludeInput:
 			excludes = append(excludes, o)
 			drop = append(drop, o.InputID)
+		case ForceSource:
+			force = &mine[i] // at most one is active (unique index); the last wins regardless
+		case SetValue:
+			set = &mine[i]
 		}
 	}
 	if len(drop) > 0 {
@@ -124,16 +130,6 @@ func (r *Rule) ResolveWindowOverridden(w Window, s Series, opt Options, ovs []Ov
 		}
 	}
 
-	var force, set *Override
-	for i, o := range mine {
-		switch o.Action {
-		case ForceSource:
-			force = &mine[i] // at most one is active (unique index); the last wins regardless
-		case SetValue:
-			set = &mine[i]
-		case ExcludeInput: // handled above
-		}
-	}
 	switch {
 	case set != nil:
 		out.Status, out.Value = ResultOverridden, set.Value
