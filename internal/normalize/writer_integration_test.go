@@ -384,3 +384,53 @@ func TestRegisterVersions(t *testing.T) {
 		t.Error("no git sha")
 	}
 }
+
+// TestWriterConcurrentNewDevice: a second transaction naming a device and origin that a first,
+// still open transaction just inserted waits on that insert and must then find the rows (a
+// fallback SELECT on the statement's old snapshot used to return none).
+func TestWriterConcurrentNewDevice(t *testing.T) {
+	e := writerEnv(t)
+	ctx := context.Background()
+	out := fixture(61)
+	src := func() Source {
+		return Source{ConnectionID: e.conn, RawPayloadID: e.raw(e.conn), NormalizerVersionID: 1}
+	}
+	first, second := src(), src()
+	inserted, release := make(chan struct{}), make(chan struct{})
+	firstErr, secondErr := make(chan error, 1), make(chan error, 1)
+	go func() {
+		firstErr <- e.d.Tx(ctx, func(q *dbq.Queries) error {
+			_, err := Write(ctx, q, first, out)
+			close(inserted)
+			<-release
+			return err
+		})
+	}()
+	<-inserted
+	go func() {
+		secondErr <- e.d.Tx(ctx, func(q *dbq.Queries) error {
+			_, err := Write(ctx, q, second, Output{Devices: out.Devices, Origins: out.Origins})
+			return err
+		})
+	}()
+	for deadline := time.Now().Add(5 * time.Second); ; time.Sleep(10 * time.Millisecond) {
+		if e.int(`SELECT count(*) FROM pg_locks WHERE NOT granted AND locktype = 'transactionid'
+			AND pid IN (SELECT pid FROM pg_stat_activity WHERE datname = current_database())`) > 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			close(release)
+			t.Fatal("second writer never waited on the first")
+		}
+	}
+	close(release)
+	if err := <-firstErr; err != nil {
+		t.Fatal(err)
+	}
+	if err := <-secondErr; err != nil {
+		t.Fatal(err)
+	}
+	if n := e.int(`SELECT count(*) FROM devices`); n != 1 {
+		t.Errorf("%d devices", n)
+	}
+}

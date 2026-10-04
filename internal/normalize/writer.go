@@ -154,6 +154,20 @@ func newWriter(ctx context.Context, q *dbq.Queries, src Source) (*writer, error)
 	return w, nil
 }
 
+// upsert runs an insert-or-select query (an INSERT … ON CONFLICT CTE with a fallback SELECT)
+// and maps its error. Under READ COMMITTED, when the INSERT waited for a concurrent transaction
+// inserting the same key, the fallback SELECT still reads the statement's older snapshot and
+// finds no row; the conflicting row is committed by then, so running the statement once more
+// returns it. Two normalize jobs sharing a new device or origin hit this.
+func upsert[T any](fn func() (T, error)) (T, error) {
+	v, err := fn()
+	if err = db.MapErr(err); errors.Is(err, db.ErrNotFound) {
+		v, err = fn()
+		err = db.MapErr(err)
+	}
+	return v, err
+}
+
 // sources upserts the payload's devices and origins. A new origin matching known_relay_origins
 // is flagged as relaying another vendor; measurements from it get FlagRelayed.
 func (w *writer) sources(out Output) error {
@@ -162,11 +176,13 @@ func (w *writer) sources(out Output) error {
 		if err != nil {
 			return err
 		}
-		if w.devices[d.Fingerprint], err = w.q.UpsertDevice(w.ctx, dbq.UpsertDeviceParams{
-			ID: id, UserID: w.user, ProviderID: w.provider, Fingerprint: d.Fingerprint,
-			DeviceType: strp(d.Type), Manufacturer: strp(d.Manufacturer), Model: strp(d.Model),
-			HardwareVersion: strp(d.HardwareVersion), SoftwareVersion: strp(d.SoftwareVersion)}); err != nil {
-			return db.MapErr(err)
+		if w.devices[d.Fingerprint], err = upsert(func() (uuid.UUID, error) {
+			return w.q.UpsertDevice(w.ctx, dbq.UpsertDeviceParams{
+				ID: id, UserID: w.user, ProviderID: w.provider, Fingerprint: d.Fingerprint,
+				DeviceType: strp(d.Type), Manufacturer: strp(d.Manufacturer), Model: strp(d.Model),
+				HardwareVersion: strp(d.HardwareVersion), SoftwareVersion: strp(d.SoftwareVersion)})
+		}); err != nil {
+			return fmt.Errorf("normalize: upsert device: %w", err)
 		}
 	}
 	for _, o := range out.Origins {
@@ -174,10 +190,12 @@ func (w *writer) sources(out Output) error {
 		if err != nil {
 			return err
 		}
-		r, err := w.q.UpsertOrigin(w.ctx, dbq.UpsertOriginParams{
-			ID: id, UserID: w.user, ProviderID: w.provider, OriginKey: o.Key, Name: strp(o.Name), IsNative: o.Native})
+		r, err := upsert(func() (dbq.UpsertOriginRow, error) {
+			return w.q.UpsertOrigin(w.ctx, dbq.UpsertOriginParams{
+				ID: id, UserID: w.user, ProviderID: w.provider, OriginKey: o.Key, Name: strp(o.Name), IsNative: o.Native})
+		})
 		if err != nil {
-			return db.MapErr(err)
+			return fmt.Errorf("normalize: upsert origin: %w", err)
 		}
 		w.origins[o.Key] = originRef{r.ID, r.RelayedProviderID != nil && *r.RelayedProviderID != w.provider}
 	}

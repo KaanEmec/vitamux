@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"runtime/debug"
 
-	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/db/dbq"
 	"github.com/KaanEmec/vitamux/internal/version"
 )
@@ -17,10 +16,12 @@ func RegisterVersions(ctx context.Context, q *dbq.Queries, r *Registry) (map[str
 	sha := gitSHA()
 	ids := make(map[string]int32, len(r.list))
 	for _, n := range r.list {
-		id, err := q.RegisterNormalizerVersion(ctx, dbq.RegisterNormalizerVersionParams{
-			Name: n.ID(), Version: int32(n.Version()), GitSha: sha}) //nolint:gosec // versions are small
+		id, err := upsert(func() (int32, error) {
+			return q.RegisterNormalizerVersion(ctx, dbq.RegisterNormalizerVersionParams{
+				Name: n.ID(), Version: int32(n.Version()), GitSha: sha}) //nolint:gosec // versions are small
+		})
 		if err != nil {
-			return nil, fmt.Errorf("normalize: register %s: %w", n.ID(), db.MapErr(err))
+			return nil, fmt.Errorf("normalize: register normalizer version %s: %w", n.ID(), err)
 		}
 		ids[n.ID()] = id
 	}

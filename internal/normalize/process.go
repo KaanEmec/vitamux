@@ -89,7 +89,7 @@ func (p *Processor) attempt(ctx context.Context, id int64, vers map[string]int32
 		res, fail = Result{}, nil // the Tx may run fn again
 		row, err := q.LockRawForNormalize(ctx, id)
 		if err != nil {
-			return db.MapErr(err)
+			return fmt.Errorf("normalize: raw payload %d: %w", id, db.MapErr(err))
 		}
 		switch {
 		case ingest.Status(row.Status) == ingest.StatusQuarantined:

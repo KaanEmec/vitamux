@@ -143,7 +143,17 @@ func TestSyncThroughRuntime(t *testing.T) {
 				return
 			}
 			if time.Now().After(deadline) {
-				t.Fatal("jobs still due after 20s")
+				rows, _ := pool.Query(ctx, `SELECT j.kind, j.status, j.attempts, coalesce(r.error_class, ''), coalesce(r.error_message, '') FROM jobs j
+					LEFT JOIN LATERAL (SELECT error_class, error_message FROM job_runs WHERE job_id = j.id ORDER BY started_at DESC LIMIT 1) r ON true
+					WHERE j.status IN ('running', 'queued')`)
+				var stuck []string
+				for rows != nil && rows.Next() {
+					var kind, status, class, msg string
+					var attempts int
+					_ = rows.Scan(&kind, &status, &attempts, &class, &msg)
+					stuck = append(stuck, fmt.Sprintf("%s %s attempts=%d class=%q: %s", kind, status, attempts, class, msg))
+				}
+				t.Fatalf("jobs still due after 20s: %v", stuck)
 			}
 			time.Sleep(50 * time.Millisecond)
 		}
