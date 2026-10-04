@@ -173,7 +173,7 @@
 	<form class="callout" onsubmit={submit} aria-labelledby="period-form">
 		<h4 id="period-form">{editing ? 'Change period' : 'Add a period'}</h4>
 		<div class="row-form">
-			<TextField label="Timezone" name="tz" bind:value={tz} error={errors.tz} list="zone-names" autocomplete="off" required />
+			<TextField label="Timezone" name="tz" bind:value={tz} error={errors.tz} hint="An IANA name, like Europe/Berlin." list="zone-names" autocomplete="off" required />
 			<TextField
 				label="Starts at"
 				name="valid_from"
