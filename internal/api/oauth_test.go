@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// The provider callback is public: HEAD is a side-effect-free 204, and GET always lands back
+// The provider callback is public: HEAD is a side-effect-free 200, and GET always lands back
 // in the UI, here with the reason the flow could not run.
 func TestOAuthCallbackWithoutRuntime(t *testing.T) {
 	h, err := NewHandler(slog.New(slog.DiscardHandler), newUITestFS(), Options{})
@@ -14,7 +14,7 @@ func TestOAuthCallbackWithoutRuntime(t *testing.T) {
 		t.Fatal(err)
 	}
 	res := serve(t, h, request(t, http.MethodHead, "/oauth/withings/callback?code=synthetic-code&state=x", nil))
-	if res.StatusCode != http.StatusNoContent || res.Header.Get("Set-Cookie") != "" || res.Header.Get("Location") != "" {
+	if res.StatusCode != http.StatusOK || res.Header.Get("Set-Cookie") != "" || res.Header.Get("Location") != "" {
 		t.Fatalf("HEAD: %d, cookie %q", res.StatusCode, res.Header.Get("Set-Cookie"))
 	}
 	res = serve(t, h, request(t, http.MethodGet, "/oauth/withings/callback?code=synthetic-code&state=x", nil))

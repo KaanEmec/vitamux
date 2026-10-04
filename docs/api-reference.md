@@ -121,7 +121,7 @@ Provider connections, syncs, backfills and streams (docs/architecture/connectors
 | `GET` | `/api/v1/schedules` | `read:config` | List sync schedules |
 | `PATCH` | `/api/v1/schedules/{id}` | `write:config`, CSRF | Change a schedule's interval, lookback or enabled flag |
 | `GET` | `/oauth/{provider}/callback` | `public` | OAuth redirect target; completes the authorization and redirects to the UI |
-| `GET` | `/webhooks/withings/{hook_token}` | `public` | Withings callback validation; HEAD and GET answer 204 without side effects |
+| `GET` | `/webhooks/withings/{hook_token}` | `public` | Withings callback validation; HEAD and GET answer 200 without side effects |
 | `POST` | `/webhooks/withings/{hook_token}` | `public` | Withings notification; enqueues one deduplicated window sync |
 
 ## devices

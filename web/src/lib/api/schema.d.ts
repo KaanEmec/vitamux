@@ -1855,7 +1855,7 @@ export interface paths {
         };
         /**
          * OAuth redirect target; completes the authorization and redirects to the UI
-         * @description Authorized by the signed, single-use `state` and the browser-binding cookie, not by the session. Always answers 303 to /connections?connected=<provider> or /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable&provider=<provider>. HEAD answers 204 without side effects. A provider without a connector is 404.
+         * @description Authorized by the signed, single-use `state` and the browser-binding cookie, not by the session. Always answers 303 to /connections?connected=<provider> or /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable&provider=<provider>. HEAD answers 200 without side effects. A provider without a connector is 404.
          */
         get: operations["oauthCallback"];
         put?: never;
@@ -1876,7 +1876,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Withings callback validation; HEAD and GET answer 204 without side effects */
+        /** Withings callback validation; HEAD and GET answer 200 without side effects */
         get: operations["withingsNotifyProbe"];
         put?: never;
         /**
@@ -7326,7 +7326,7 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description HEAD probe. */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7355,7 +7355,7 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Probe answered. */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7386,7 +7386,7 @@ export interface operations {
         };
         responses: {
             /** @description Accepted (or ignored). */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

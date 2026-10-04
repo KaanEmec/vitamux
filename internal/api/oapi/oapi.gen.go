@@ -5105,7 +5105,7 @@ type ServerInterface interface {
 	// OauthCallback OAuth redirect target; completes the authorization and redirects to the UI
 	// (GET /oauth/{provider}/callback)
 	OauthCallback(w http.ResponseWriter, r *http.Request, provider string, params OauthCallbackParams)
-	// WithingsNotifyProbe Withings callback validation; HEAD and GET answer 204 without side effects
+	// WithingsNotifyProbe Withings callback validation; HEAD and GET answer 200 without side effects
 	// (GET /webhooks/withings/{hook_token})
 	WithingsNotifyProbe(w http.ResponseWriter, r *http.Request, hookToken string)
 	// WithingsNotify Withings notification; enqueues one deduplicated window sync
@@ -17486,11 +17486,11 @@ type OauthCallbackResponseObject interface {
 	VisitOauthCallbackResponse(w http.ResponseWriter) error
 }
 
-type OauthCallback204Response struct {
+type OauthCallback200Response struct {
 }
 
-func (response OauthCallback204Response) VisitOauthCallbackResponse(w http.ResponseWriter) error {
-	w.WriteHeader(204)
+func (response OauthCallback200Response) VisitOauthCallbackResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
 	return nil
 }
 
@@ -17526,11 +17526,11 @@ type WithingsNotifyProbeResponseObject interface {
 	VisitWithingsNotifyProbeResponse(w http.ResponseWriter) error
 }
 
-type WithingsNotifyProbe204Response struct {
+type WithingsNotifyProbe200Response struct {
 }
 
-func (response WithingsNotifyProbe204Response) VisitWithingsNotifyProbeResponse(w http.ResponseWriter) error {
-	w.WriteHeader(204)
+func (response WithingsNotifyProbe200Response) VisitWithingsNotifyProbeResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
 	return nil
 }
 
@@ -17559,11 +17559,11 @@ type WithingsNotifyResponseObject interface {
 	VisitWithingsNotifyResponse(w http.ResponseWriter) error
 }
 
-type WithingsNotify204Response struct {
+type WithingsNotify200Response struct {
 }
 
-func (response WithingsNotify204Response) VisitWithingsNotifyResponse(w http.ResponseWriter) error {
-	w.WriteHeader(204)
+func (response WithingsNotify200Response) VisitWithingsNotifyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
 	return nil
 }
 
@@ -17926,7 +17926,7 @@ type StrictServerInterface interface {
 	// OauthCallback OAuth redirect target; completes the authorization and redirects to the UI
 	// (GET /oauth/{provider}/callback)
 	OauthCallback(ctx context.Context, request OauthCallbackRequestObject) (OauthCallbackResponseObject, error)
-	// WithingsNotifyProbe Withings callback validation; HEAD and GET answer 204 without side effects
+	// WithingsNotifyProbe Withings callback validation; HEAD and GET answer 200 without side effects
 	// (GET /webhooks/withings/{hook_token})
 	WithingsNotifyProbe(ctx context.Context, request WithingsNotifyProbeRequestObject) (WithingsNotifyProbeResponseObject, error)
 	// WithingsNotify Withings notification; enqueues one deduplicated window sync
