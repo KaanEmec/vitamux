@@ -1,6 +1,7 @@
 // Reading a resolved night (GET /resolved/sleep) with the sessions behind it (GET /sleep).
 import type { Schemas } from '../api/client.ts';
-import { addDays } from '../data/format.ts';
+import { stageOrder } from '../charts/sleep.ts';
+import { addDays, clock } from '../data/format.ts';
 import { dayMs } from './format.ts';
 
 export type Night = Schemas['ResolvedNight'];
@@ -13,16 +14,38 @@ export function nightSeconds(n: Night): Record<string, number> {
 	return n.result.status !== 'no_data' && v && typeof v === 'object' ? (v as Record<string, number>) : {};
 }
 
+/** The four stages a night is broken down into, in display order. */
+export const nightStages = ['deep', 'rem', 'light', 'awake'] as const;
+
+/** Seconds in each of the four stages of the night's result (0 when absent). */
+export const stageSeconds = (n: Night) => nightStages.map((stage) => ({ stage, seconds: nightSeconds(n)[`sleep_${stage}`] ?? 0 }));
+
 /** Hours of one sleep code in the night's result, or null when it has none. */
 export function nightHours(n: Night, code: string): number | null {
 	const s = nightSeconds(n)[code];
 	return s == null ? null : s / 3600;
 }
 
+/** The sessions behind a member (one source's episode). */
+export const memberSessions = (m: Member | undefined, byId: Map<string, Session>): Session[] =>
+	(m?.session_refs ?? []).flatMap((id) => byId.get(id) ?? []);
+
 /** The sessions of the selected source's main episode. */
-export function selectedSessions(n: Night, byId: Map<string, Session>): Session[] {
-	return (n.members.find((m) => m.selected)?.session_refs ?? []).flatMap((id) => byId.get(id) ?? []);
+export const selectedSessions = (n: Night, byId: Map<string, Session>) => memberSessions(n.members.find((m) => m.selected), byId);
+
+/** The sessions with stages, and the stage rows and time axis that line them up on hypnograms. */
+export function stageAxis(sessions: Session[]) {
+	const staged = sessions.filter((s) => s.stages?.length);
+	return {
+		staged,
+		from: Math.min(...staged.map((s) => Date.parse(s.start_at))),
+		to: Math.max(...staged.map((s) => Date.parse(s.end_at))),
+		rows: stageOrder.filter((st) => staged.some((s) => s.stages?.some((x) => x.stage === st)))
+	};
 }
+
+/** "23:12 to 07:01": the clock span of sessions in time order, at the first one's offset. */
+export const sessionsSpan = (ss: Session[]) => `${clock(ss[0].start_at, ss[0].tz_offset_min)} to ${clock(ss.at(-1)?.end_at ?? ss[0].end_at, ss[0].tz_offset_min)}`;
 
 /** Clock hours of the main episode: bed time, and wake time unwrapped so it may pass 24. */
 export interface Span {

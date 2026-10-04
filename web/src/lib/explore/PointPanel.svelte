@@ -9,10 +9,10 @@
 	import ProvenanceDialog from '../components/ProvenanceDialog.svelte';
 	import ResultStatus from '../components/ResultStatus.svelte';
 	import { formatValue } from '../data/format.ts';
-	import { formatInstant } from '../charts/scale.ts';
 	import Icon from '../ui/Icon.svelte';
 	import { icons } from '../ui/icons.ts';
-	import { dayMs } from './series.ts';
+	import { dayLabel } from '../views/format.ts';
+	import { warningCodes } from './series.ts';
 
 	let {
 		metric,
@@ -28,12 +28,12 @@
 	const headingId = $props.id();
 	const kind = $derived((value?.window?.kind ?? 'local_day') as Schemas['OverrideWindow']['kind']);
 	const groups = $derived((value?.inputs ?? []).flatMap((i) => (i.group ? [i.group] : [])));
-	const warnings = $derived((value?.warnings ?? []).map((w) => (w.group ? `${w.code} (${w.group})` : w.code)));
+	const warnings = $derived(warningCodes(value));
 </script>
 
 <section class="card point" aria-labelledby={headingId}>
 	<div class="head">
-		<h2 id={headingId}>{formatInstant(dayMs(date), 'UTC', false)}</h2>
+		<h2 id={headingId}>{dayLabel(date)}</h2>
 		<button class="btn ghost sm" type="button" aria-label="Close the selected window" onclick={onclose}><Icon d={icons.close} size={16} /></button>
 	</div>
 	{#if value}

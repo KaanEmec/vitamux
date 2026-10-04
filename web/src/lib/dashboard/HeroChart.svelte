@@ -12,14 +12,14 @@
 	import ProblemAlert from '../components/ProblemAlert.svelte';
 	import { chartFor } from '../charts/grammar.ts';
 	import { addDays, datesDescending } from '../data/format.ts';
-	import { dayMs, num } from '../explore/series.ts';
+	import { num } from '../explore/series.ts';
 	import { metricHref } from '../nav.ts';
 	import Chip from '../ui/Chip.svelte';
 	import { metricLook } from '../ui/metric.ts';
 	import Segmented from '../ui/Segmented.svelte';
 	import Skeleton from '../ui/Skeleton.svelte';
 	import { displayStatus, type DataStatus } from '../ui/status.ts';
-	import { providerName } from '../views/format.ts';
+	import { dayMs, mean as meanOf, providerName } from '../views/format.ts';
 	import { cardLabel, type Catalogue } from './layout.ts';
 	import { cardView, lead, periods, periodView, periodWord, show, unitText, type Period, type Summary } from './summary.ts';
 
@@ -123,11 +123,7 @@
 	}
 
 	const data = $derived(loaded?.code === code ? loaded : null);
-	const mean = $derived.by(() => {
-		if (stats?.mean != null) return stats.mean;
-		const v = data?.ys.filter((y): y is number => y != null) ?? [];
-		return v.length ? v.reduce((a, b) => a + b, 0) / v.length : undefined;
-	});
+	const mean = $derived(stats?.mean ?? meanOf(data?.ys.filter((y) => y != null) ?? []) ?? undefined);
 	const baseline = $derived(mean == null ? undefined : { value: mean, label: `${periodWord(period)} mean` });
 	const hasValues = $derived(!!data?.ys.some((y) => y != null));
 	const sources = $derived.by(() => {

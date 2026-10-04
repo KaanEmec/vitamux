@@ -15,18 +15,17 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { api, type Problem, type Schemas } from '#lib/api/client.ts';
-	import ExplainPopover from '#lib/components/ExplainPopover.svelte';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
-	import ResultStatus from '#lib/components/ResultStatus.svelte';
 	import { providerLabel } from '#lib/connections/connections.ts';
 	import { chartFor } from '#lib/charts/grammar.ts';
 	import RangePicker, { rangeStart, type RangeKey } from '#lib/charts/RangePicker.svelte';
-	import { formatInstant, formatNumber } from '#lib/charts/scale.ts';
 	import type { Series } from '#lib/charts/types.ts';
-	import { addDays, datesDescending, formatValue, isDate, metricLabel, today } from '#lib/data/format.ts';
+	import { addDays, datesDescending, isDate, metricLabel, today } from '#lib/data/format.ts';
+	import MetricStats from '#lib/explore/MetricStats.svelte';
 	import PointPanel from '#lib/explore/PointPanel.svelte';
 	import { Pins } from '#lib/explore/pins.svelte.ts';
-	import { dayGroup, dayMs, dayProviders, num, sourceSeries } from '#lib/explore/series.ts';
+	import { dayGroup, dayProviders, num, sourceSeries } from '#lib/explore/series.ts';
+	import ValuesTable from '#lib/explore/ValuesTable.svelte';
 	import Button from '#lib/ui/Button.svelte';
 	import EmptyState from '#lib/ui/EmptyState.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
@@ -36,6 +35,7 @@
 	import Skeleton from '#lib/ui/Skeleton.svelte';
 	import { sourceClass } from '#lib/ui/source.ts';
 	import { displayStatus } from '#lib/ui/status.ts';
+	import { dayLabel, dayMs, mean as meanOf } from '#lib/views/format.ts';
 
 	type Resolved = Schemas['ResolvedValue'];
 	type Days = Record<string, Resolved | undefined>;
@@ -43,7 +43,6 @@
 
 	const ranges: RangeKey[] = ['1W', '1M', '3M', '1Y', 'All'];
 	const rangeDays: Partial<Record<RangeKey, 7 | 30 | 90 | 365>> = { '1W': 7, '1M': 30, '3M': 90, '1Y': 365 };
-	const pageRows = 31;
 
 	const metric = $derived(page.params.metric ?? '');
 	const range = $derived.by((): RangeKey => {
@@ -76,7 +75,6 @@
 	let lensOpen = $state(false);
 	let draft = $state<Draft | null>(null);
 	let selected = $state<string | null>(null);
-	let rows = $state(pageRows);
 	/** The chart's zoom, shared with the navigator under it; reset with the range. */
 	let zoomed = $state<[number, number] | null>(null);
 	const pins = new Pins();
@@ -111,7 +109,6 @@
 		loading = true;
 		if (r === 'All') daily = null;
 		else trend = null;
-		rows = pageRows;
 		zoomed = null;
 		void loadSeries(m, r, e).then((out) => {
 			if (mine !== seriesGen) return;
@@ -179,9 +176,6 @@
 	const look = $derived(metricLook(metric, meta?.section));
 	const view = $derived(meta ? chartFor(meta) : 'line-baseline');
 	const unit = $derived(meta?.unit ?? summary?.unit ?? trend?.unit ?? '');
-	const fmt = (v: number | null | undefined) => (v == null ? '–' : `${formatNumber(v)}${unit ? ` ${unit}` : ''}`);
-	const signed = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : '±'}${formatNumber(Math.abs(v))}`;
-	const day = (d: string) => formatInstant(dayMs(d), 'UTC', false);
 
 	const resolved = $derived.by((): Series | null => {
 		if (trend) {
@@ -202,41 +196,16 @@
 		};
 	});
 
-	const values = $derived((resolved?.ys ?? []).filter((v): v is number => v != null));
-	const lowest = $derived(trend ? Math.min(...trend.buckets.flatMap((b) => (b.min == null ? [] : [b.min]))) : Math.min(...values));
-	const highest = $derived(trend ? Math.max(...trend.buckets.flatMap((b) => (b.max == null ? [] : [b.max]))) : Math.max(...values));
-	const withData = $derived(
-		trend ? [trend.buckets.reduce((n, b) => n + b.n, 0), trend.buckets.reduce((n, b) => n + b.days, 0)] : [values.length, dates.length]
-	);
+	const values = $derived((resolved?.ys ?? []).filter((v) => v != null));
 	const cmp = $derived(summary?.comparisons?.find((c) => c.days === span));
 	const mean = $derived.by(() => {
 		if (trend) {
 			const n = trend.buckets.reduce((a, b) => a + (b.mean == null ? 0 : b.n), 0);
 			return n ? trend.buckets.reduce((a, b) => a + (b.mean ?? 0) * b.n, 0) / n : null;
 		}
-		return cmp?.current.mean ?? (values.length ? values.reduce((a, b) => a + b, 0) / values.length : null);
+		return cmp?.current.mean ?? meanOf(values);
 	});
-	const thirty = $derived(summary?.stats[1]?.mean);
-	const latest = $derived(summary?.sparkline.findLast((p) => num(p.value, metric) != null));
-	const latestValue = $derived(latest ? num(latest.value, metric) : null);
 	const meanLabel = $derived(span ? `${span}-day mean` : 'Mean');
-
-	const stats = $derived([
-		{
-			label: 'Latest',
-			value: latestValue == null ? '–' : formatNumber(latestValue),
-			unit,
-			sub: latest ? `${day(latest.local_date)}${thirty != null && latestValue != null ? ` · ${signed(latestValue - thirty)} vs 30-day mean` : ''}` : 'Nothing in the last 30 days'
-		},
-		{
-			label: meanLabel,
-			value: mean == null ? '–' : formatNumber(mean),
-			unit,
-			sub: !span ? 'All stored values' : mean != null && cmp?.previous.mean != null ? `${signed(mean - cmp.previous.mean)} vs previous ${span} days` : 'No previous period'
-		},
-		{ label: 'Range', value: Number.isFinite(lowest) ? `${formatNumber(lowest)}–${formatNumber(highest)}` : '–', unit: '', sub: `min – max${unit ? `, ${unit}` : ''}` },
-		{ label: 'Coverage', value: withData[0].toLocaleString(), unit: `/ ${withData[1].toLocaleString()}`, sub: 'days with a value' }
-	]);
 
 	/** A 7-day range around the line (rollups: each one's min–max); gaps stay gaps. */
 	const band = $derived.by(() => {
@@ -290,9 +259,7 @@
 	});
 
 	const rule = $derived(summary?.rule ?? Object.values(daily ?? {}).find((v) => v?.rule)?.rule);
-	const ruleName = (r: Schemas['RuleRef'] | undefined) => (!r ? '–' : r.ref.startsWith('builtin:') ? 'Built-in' : `v${r.version}`);
-	const sourceText = (r: Resolved | undefined) => dayProviders(r).map(providerLabel).join(', ') || '–';
-	const spanText = $derived(from ? `${day(from)} – ${day(end)}` : '');
+	const spanText = $derived(from ? `${dayLabel(from)} – ${dayLabel(end)}` : '');
 
 	function setRange(key: RangeKey) {
 		const q = new URLSearchParams({ ...Object.fromEntries(page.url.searchParams), range: key });
@@ -334,8 +301,6 @@
 					{ label: 'Raw records', run: (i: number) => void goto(`/explore/${encodeURIComponent(metric)}/day/${dates[i]}`) }
 				]
 	);
-
-	const warningCodes = (r: Resolved) => (r.warnings ?? []).map((w) => (w.group ? `${w.code} (${w.group})` : w.code));
 </script>
 
 <svelte:head><title>{label} · Vitamux</title></svelte:head>
@@ -394,15 +359,7 @@
 	<div class={['layout', lensOpen && 'with-lens']} style:--metric={look.color}>
 		<div class="main">
 			<section class="card chart" aria-label="{label} chart">
-				<ul class="stats" aria-label="Statistics">
-					{#each stats as s (s.label)}
-						<li>
-							<span class="lbl">{s.label}</span>
-							<span class="stat"><strong>{s.value}</strong>{#if s.unit}<span class="unit">{s.unit}</span>{/if}</span>
-							<span class="muted small">{s.sub}</span>
-						</li>
-					{/each}
-				</ul>
+				<MetricStats {metric} {summary} {trend} {values} days={dates.length} {span} {unit} {mean} previousMean={cmp?.previous.mean} />
 
 				<div class="toggles" role="group" aria-label="Series">
 					<span class="muted small">Show</span>
@@ -490,60 +447,7 @@
 					</section>
 				{/if}
 
-				<section class="card values" aria-labelledby="values-h">
-					<div class="card-head">
-						<h2 id="values-h">Values</h2>
-						<span class="muted small">Newest first</span>
-					</div>
-					<div class="scroll">
-						{#if trend}
-							<table>
-								<thead>
-									<tr><th scope="col">{trend.grain === 'week' ? 'Week of' : 'Month of'}</th><th scope="col" class="num">Mean</th><th scope="col" class="num">Min</th><th scope="col" class="num">Max</th><th scope="col" class="num">Days with data</th></tr>
-								</thead>
-								<tbody>
-									{#each trend.buckets.toReversed().slice(0, rows) as b (b.start_date)}
-										<tr>
-											<th scope="row">{day(b.start_date)}</th>
-											<td class="num">{fmt(b.mean)}</td>
-											<td class="num">{fmt(b.min)}</td>
-											<td class="num">{fmt(b.max)}</td>
-											<td class="num">{b.n} / {b.days}</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						{:else}
-							<table>
-								<thead>
-									<tr><th scope="col">Date</th><th scope="col" class="num">Value</th><th scope="col">Status</th><th scope="col" class="wide">Source</th><th scope="col" class="wide">Rule</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
-								</thead>
-								<tbody>
-									{#each dates.toReversed().slice(0, rows) as d (d)}
-										{@const r = daily?.[d]}
-										<tr class:current={selected === d}>
-											<th scope="row">{day(d)}</th>
-											<td class="num">
-												{#if r && r.status !== 'no_data'}{formatValue(r.value, r.unit)}{:else}–{/if}
-											</td>
-											<td><ResultStatus status={r?.status ?? 'no_data'} partial={r?.partial} /></td>
-											<td class="wide">{sourceText(r)}</td>
-											<td class="wide muted">{ruleName(r?.rule)}</td>
-											<td class="row-actions">
-												{#if r}<ExplainPopover text={r.explanation} warnings={warningCodes(r)} label="Explain" />{/if}
-												<button class="btn link" type="button" onclick={() => (selected = d)}>Details<span class="visually-hidden"> of {d}</span></button>
-												<a href="/explore/{encodeURIComponent(metric)}/day/{d}">All sources</a>
-											</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						{/if}
-					</div>
-					{#if (trend?.buckets.length ?? dates.length) > rows}
-						<button class="btn ghost sm more" type="button" onclick={() => (rows = Infinity)}>Show all {trend?.buckets.length ?? dates.length}</button>
-					{/if}
-				</section>
+				<ValuesTable {metric} {unit} {trend} {dates} {daily} {selected} onselect={(d) => (selected = d)} />
 			</div>
 		</div>
 
@@ -655,43 +559,6 @@
 		gap: var(--space-4);
 		min-width: 0;
 	}
-	.stats {
-		display: grid;
-		grid-template-columns: repeat(4, minmax(0, 1fr));
-		gap: var(--space-3);
-		margin: 0;
-		padding: 0;
-		list-style: none;
-	}
-	.stats li {
-		display: grid;
-		align-content: start;
-		gap: var(--space-1);
-		min-width: 0;
-	}
-	.lbl {
-		font-size: var(--text-2xs);
-		font-weight: 500;
-		letter-spacing: var(--tracking-label);
-		text-transform: uppercase;
-		color: var(--color-text-muted);
-	}
-	.stat {
-		display: flex;
-		align-items: baseline;
-		gap: var(--space-1);
-		font-variant-numeric: tabular-nums;
-	}
-	.stat strong {
-		font-size: var(--text-2xl);
-		font-weight: 600;
-		line-height: 1.1;
-		letter-spacing: var(--tracking-tight);
-	}
-	.unit {
-		font-size: var(--text-sm);
-		color: var(--color-text-muted);
-	}
 	.small {
 		font-size: var(--text-xs);
 	}
@@ -750,11 +617,6 @@
 		gap: var(--space-3);
 		min-width: 0;
 	}
-	.values {
-		flex: 2 1 34rem;
-		min-width: 0;
-		padding: 0;
-	}
 	.card-head {
 		display: flex;
 		flex-wrap: wrap;
@@ -762,71 +624,13 @@
 		justify-content: space-between;
 		gap: var(--space-2);
 	}
-	.values .card-head {
-		padding: var(--space-4) var(--space-4) var(--space-2);
-	}
 	.card-head h2 {
 		margin: 0;
 		font-size: var(--text-md);
 	}
-	.scroll {
-		overflow-x: auto;
-	}
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: var(--text-sm);
-		font-variant-numeric: tabular-nums;
-	}
-	th,
-	td {
-		padding: var(--space-2) var(--space-4);
-		text-align: left;
-		white-space: nowrap;
-		border-top: 1px solid var(--color-border);
-	}
-	thead th {
-		font-size: var(--text-xs);
-		font-weight: 500;
-		color: var(--color-text-muted);
-	}
-	tbody th {
-		font-weight: 500;
-	}
-	.num {
-		text-align: right;
-	}
-	tr.current {
-		background: var(--color-selected);
-	}
-	.row-actions {
-		display: flex;
-		gap: var(--space-3);
-		align-items: center;
-	}
-	.more {
-		margin: var(--space-2) var(--space-4) var(--space-3);
-	}
 	@media (max-width: 40rem) {
-		.stats {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-			row-gap: var(--space-4);
-		}
 		.span {
 			text-align: left;
-		}
-		.wide {
-			display: none;
-		}
-		th,
-		td {
-			padding: var(--space-2);
-			white-space: normal;
-		}
-		.row-actions {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: var(--space-1);
 		}
 	}
 </style>

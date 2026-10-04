@@ -11,6 +11,7 @@
 -->
 <script lang="ts">
 	import { tick, untrack } from 'svelte';
+	import { MediaQuery } from 'svelte/reactivity';
 	import { api, fieldErrors, type Problem, type Schemas } from '../api/client.ts';
 	import Modal from '../components/Modal.svelte';
 	import ProblemAlert from '../components/ProblemAlert.svelte';
@@ -89,15 +90,8 @@
 	let root = $state<HTMLElement>();
 	let ackInput = $state<HTMLInputElement>();
 
-	let narrow = $state(false);
+	const narrow = new MediaQuery('max-width: 48rem');
 	let open = $state(false);
-	$effect(() => {
-		const mq = matchMedia('(max-width: 48rem)');
-		narrow = mq.matches;
-		const on = () => (narrow = mq.matches);
-		mq.addEventListener('change', on);
-		return () => mq.removeEventListener('change', on);
-	});
 
 	const spec = (v: Version) => v.spec as unknown as Rule;
 	const draft = $derived(form ? toSpec(form) : null);
@@ -274,7 +268,7 @@
 		const p = g.match.find((s) => typeof s.provider === 'string' && s.provider)?.provider;
 		return sourceClass(typeof p === 'string' ? p : g.id);
 	};
-	const sheet = $derived(narrow && !inline);
+	const sheet = $derived(narrow.current && !inline);
 	const activeVersion = $derived(versions?.find((v) => v.active));
 	const previewDays = $derived(preview && preview !== 'loading' && 'preview' in preview ? preview.preview.days : []);
 	const hint = $derived(
@@ -455,7 +449,7 @@
 					<p class="muted small">Resolving the draft…</p>
 				{:else if 'unavailable' in preview}
 					<p class="note"><StatusIcon status="info" /> Preview unavailable: this server cannot resolve drafts yet. You can still save the rule.</p>
-				{:else if summary && 'preview' in preview}
+				{:else if summary}
 					{#await import('../charts/Sparkline.svelte') then { default: Sparkline }}
 						<Sparkline
 							ys={previewDays.map((d) => numeric(d.active.value))}
@@ -464,7 +458,7 @@
 						/>
 					{/await}
 					<p class="summary">
-						<strong>{summary.changed.length} of {preview.preview.days.length} days change</strong>
+						<strong>{summary.changed.length} of {previewDays.length} days change</strong>
 						{#if summary.shift !== null}· mean {signed(summary.shift, summary.unit)}{/if}
 						· {summary.newGaps ? `${summary.newGaps} new ${summary.newGaps === 1 ? 'gap' : 'gaps'}` : 'no new gaps'}
 					</p>
@@ -607,9 +601,6 @@
 		grid-template-columns: minmax(0, 1fr);
 		gap: var(--space-2);
 		min-width: 0;
-		margin: 0;
-		padding: 0;
-		border: 0;
 	}
 	.part-head {
 		display: flex;

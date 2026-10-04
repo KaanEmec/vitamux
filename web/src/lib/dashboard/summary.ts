@@ -3,7 +3,7 @@
 import { api, type Problem, type Schemas } from '../api/client.ts';
 import { metricLabel } from '../data/format.ts';
 import { providerLabel } from '../connections/connections.ts';
-import { stageLabels } from '../charts/sleep.ts';
+import { hm } from '../views/format.ts';
 
 export type Summary = Schemas['MetricSummary'];
 
@@ -23,7 +23,7 @@ export interface CardView {
 	hasData: boolean;
 	chips: { provider?: string; label: string }[];
 	/** Sleep: minutes per stage in display order, absent when the source has no stage data. */
-	stages?: { stage: string; label: string; seconds: number }[];
+	stages?: { stage: string; seconds: number }[];
 }
 
 const perRequest = 20; // the endpoint's cap
@@ -55,12 +55,6 @@ const whole = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 const fmt = (n: number) => (Math.abs(n) >= 1000 ? whole : number).format(n);
 const num = (v: unknown): number | null => (typeof v === 'number' ? v : null);
 const part = (v: unknown, code: string): number | null => num(v && typeof v === 'object' ? (v as Record<string, unknown>)[code] : undefined);
-
-/** "7h 19m" for seconds. */
-export function hoursMinutes(seconds: number): string {
-	const m = Math.round(seconds / 60);
-	return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`;
-}
 
 const stages = [
 	['deep', 'sleep_deep'],
@@ -111,14 +105,14 @@ export function cardView(code: string, s: Summary, additive: boolean): CardView 
 	if (code === 'sleep') {
 		const total = part(v.value, 'sleep_total');
 		if (total != null) {
-			out.value = hoursMinutes(total);
+			out.value = hm(total);
 			out.unit = 'asleep';
 			const inBed = part(v.value, 'sleep_in_bed');
-			if (inBed != null) out.sub = `in bed ${hoursMinutes(inBed)}`;
-			const parts = stages.map(([stage, c]) => ({ stage, label: stageLabels[stage], seconds: part(v.value, c) ?? 0 }));
+			if (inBed != null) out.sub = `in bed ${hm(inBed)}`;
+			const parts = stages.map(([stage, c]) => ({ stage, seconds: part(v.value, c) ?? 0 }));
 			if (parts.some((p) => p.seconds > 0 && p.stage !== 'asleep_unspecified')) out.stages = parts.filter((p) => p.seconds > 0);
 		}
-		if (mean != null) out.delta = `30-day mean ${hoursMinutes(mean)}`;
+		if (mean != null) out.delta = `30-day mean ${hm(mean)}`;
 	} else if (code === 'blood_pressure') {
 		const [sys, dia, pulse] = [part(v.value, 'bp_systolic'), part(v.value, 'bp_diastolic'), part(v.value, 'bp_pulse')];
 		if (sys != null && dia != null) {
@@ -154,7 +148,7 @@ export type Period = keyof typeof periods;
 export const periodWord = (p: Period) => (p === '1Y' ? '1-year' : `${periods[p]}-day`);
 
 /** A value as the hero shows it: seconds as "7h 19m", else the number. */
-export const show = (v: number, unit?: string) => (unit === 's' ? hoursMinutes(v) : fmt(v));
+export const show = (v: number, unit?: string) => (unit === 's' ? hm(v) : fmt(v));
 
 /** The unit shown beside a number (counts and seconds need none). */
 export const unitText = (unit?: string) => (unit === 'count' || unit === 's' ? '' : (unit ?? ''));
@@ -177,7 +171,7 @@ export function periodView(code: string, s: Summary, p: Period): PeriodView {
 	const out: PeriodView = { mean: cur?.mean, min: cur?.min, max: cur?.max, delta: '' };
 	if (cur?.mean != null && prev != null) {
 		const d = cur.mean - prev;
-		const text = s.unit === 's' || code === 'sleep' ? `${d < 0 ? '−' : '+'}${hoursMinutes(Math.abs(d))}` : sign(d);
+		const text = s.unit === 's' || code === 'sleep' ? `${d < 0 ? '−' : '+'}${hm(Math.abs(d))}` : sign(d);
 		out.delta = `${text} vs previous ${p === '1Y' ? 'year' : `${days} days`}`;
 	}
 	return out;

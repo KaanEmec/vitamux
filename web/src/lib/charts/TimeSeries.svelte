@@ -28,7 +28,6 @@
 		zoom = true,
 		view = $bindable(null),
 		withTime = true,
-		gaps = true,
 		actions,
 		onselect
 	}: {
@@ -49,8 +48,6 @@
 		view?: Domain | null;
 		/** Tooltip and table show the clock time (false for daily windows). */
 		withTime?: boolean;
-		/** Shade the first series' gaps as "No data". */
-		gaps?: boolean;
 		actions?: TipAction[];
 		onselect?: (i: number) => void;
 	} = $props();
@@ -75,7 +72,7 @@
 	const holes = $derived.by(() => {
 		const s = series[0];
 		const out: [number, number][] = [];
-		if (!gaps || !s) return out;
+		if (!s) return out;
 		for (let i = 0; i < s.xs.length; i++) {
 			if (s.ys[i] != null) continue;
 			let j = i;

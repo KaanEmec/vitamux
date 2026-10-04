@@ -11,33 +11,26 @@
 	let {
 		xs,
 		ys,
-		x,
 		view = $bindable(null),
 		label,
-		timezone,
-		withTime = false,
-		height = 52
+		timezone
 	}: {
 		xs: number[];
 		ys: (number | null)[];
-		/** The whole x domain (default: the data's). */
-		x?: Domain;
 		view?: Domain | null;
 		label: string;
 		timezone?: string;
-		withTime?: boolean;
-		height?: number;
 	} = $props();
 
 	type Brush = { x: unknown[]; active: boolean | undefined };
 	let context = $state<{ brushState?: Brush }>();
 	let width = $state(0);
 
-	const full = $derived(x ?? extent(xs));
+	const full = $derived(extent(xs));
 	const rows = $derived(decimate(xs, ys, full, 400));
 	const y = $derived(extent(ys, 0.1));
 	const defined = (d: Row) => d.y != null;
-	const fmt = (t: number) => formatInstant(t, timezone, withTime);
+	const fmt = (t: number) => formatInstant(t, timezone, false);
 	const span = $derived(full[1] - full[0]);
 
 	// The chart above zoomed or reset: move the window to match.
@@ -117,7 +110,7 @@
 		<div class="plot" aria-hidden="true">
 			<ChartCore
 				{width}
-				{height}
+				height={52}
 				xDomain={full}
 				yDomain={y}
 				bind:context={context as never}
