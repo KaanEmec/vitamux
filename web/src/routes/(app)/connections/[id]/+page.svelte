@@ -1,5 +1,5 @@
 <!--
-	One connection: header with health, then tabs (?tab=overview|streams|backfills|history|settings)
+	One connection: header with health and actions, then tabs (?tab=overview|streams|backfills|history|settings)
 	as links, so each tab has its own URL. Each tab loads its own data.
 -->
 <script lang="ts">
@@ -7,14 +7,16 @@
 	import { api, type Problem } from '#lib/api/client.ts';
 	import HealthBadge from '#lib/components/HealthBadge.svelte';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
-	import UnofficialBadge from '#lib/components/UnofficialBadge.svelte';
 	import Tabs from '#lib/ui/Tabs.svelte';
 	import BackfillsTab from '#lib/connections/BackfillsTab.svelte';
+	import ConnectionActions from '#lib/connections/ConnectionActions.svelte';
 	import HistoryTab from '#lib/connections/HistoryTab.svelte';
+	import KindBadge from '#lib/connections/KindBadge.svelte';
+	import Monogram from '#lib/connections/Monogram.svelte';
 	import OverviewTab from '#lib/connections/OverviewTab.svelte';
 	import SettingsTab from '#lib/connections/SettingsTab.svelte';
 	import StreamsTab from '#lib/connections/StreamsTab.svelte';
-	import { providerLabel, type Connection } from '#lib/connections/connections.ts';
+	import { lastSync, modes, providerLabel, type Connection } from '#lib/connections/connections.ts';
 	import { loadProviders } from '#lib/connections/providers.svelte.ts';
 
 	const tabs = [
@@ -55,13 +57,20 @@
 <svelte:head><title>{name} · Vitamux</title></svelte:head>
 
 <p class="crumb"><a href="/connections">Connections</a> /</p>
-<div class="head">
-	<h1>{name}</h1>
-	{#if connection}
-		{#if connection.official === false}<UnofficialBadge />{/if}
-		<HealthBadge health={connection.health} />
-	{/if}
-</div>
+
+<header>
+	{#if connection}<Monogram provider={connection.provider} large />{/if}
+	<div class="title">
+		<div class="name">
+			<h1>{name}</h1>
+			{#if connection}<KindBadge official={connection.official} />{/if}
+		</div>
+		{#if connection}
+			<p class="muted sub"><HealthBadge health={connection.health} /><span>{modes[connection.mode] ?? connection.mode}</span><span>{lastSync(connection)}</span></p>
+		{/if}
+	</div>
+	{#if connection}<div class="actions"><ConnectionActions {connection} onchange={set} /></div>{/if}
+</header>
 
 <ProblemAlert {problem} />
 
@@ -70,7 +79,7 @@
 
 	<section aria-label={tabs.find((t) => t.id === tab)?.label}>
 		{#if tab === 'overview'}
-			<OverviewTab {connection} onchange={set} />
+			<OverviewTab {connection} />
 		{:else if tab === 'streams'}
 			<StreamsTab {connection} />
 		{:else if tab === 'backfills'}
@@ -87,17 +96,37 @@
 
 <style>
 	.crumb {
-		margin: 0;
+		margin: 0 0 var(--space-3);
 		font-size: var(--text-sm);
 	}
-	.head {
+	header {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-4);
+		align-items: center;
+		margin-bottom: var(--space-5);
+	}
+	.title {
+		flex: 1 1 16rem;
+	}
+	.name {
 		display: flex;
 		flex-wrap: wrap;
 		gap: var(--space-3);
-		align-items: baseline;
-		margin-bottom: var(--space-3);
+		align-items: center;
 	}
-	.head h1 {
+	h1 {
 		margin: 0;
+	}
+	.sub {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-1) var(--space-3);
+		align-items: center;
+		margin: var(--space-1) 0 0;
+		font-size: var(--text-sm);
+	}
+	.actions {
+		flex: 0 1 auto;
 	}
 </style>

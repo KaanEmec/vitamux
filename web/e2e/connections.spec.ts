@@ -42,9 +42,9 @@ test('connect the OAuth provider, sync, start and cancel a backfill', async ({ p
 
 	await expect(page).toHaveURL('/connections?connected=withings');
 	await expect(page.getByRole('status').filter({ hasText: 'Withings is connected' })).toBeVisible();
-	const row = page.getByRole('row', { name: /Withings/ });
-	await expect(row.getByText('Healthy')).toBeVisible();
-	await row.getByRole('link', { name: 'Withings' }).click();
+	const card = page.getByRole('article', { name: 'Withings' });
+	await expect(card.getByText('Healthy')).toBeVisible();
+	await card.getByRole('link', { name: 'Withings' }).click();
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Withings');
 
 	await page.getByRole('button', { name: 'Sync now' }).click();
@@ -71,6 +71,57 @@ test('connect the OAuth provider, sync, start and cancel a backfill', async ({ p
 	await expect(backfill.getByRole('button', { name: /^Cancel/ })).toHaveCount(0);
 });
 
+test('cards show health, the 14-day run strip and the fix-it action', async ({ page }) => {
+	await page.goto('/connections');
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Connections');
+	await expect(page.getByText('3 sources · 1 healthy · 2 need attention')).toBeVisible();
+
+	const ultra = page.getByRole('article', { name: 'Ultrahuman' });
+	await expect(ultra.getByText('Unofficial API', { exact: true })).toBeVisible();
+	await expect(ultra.getByText('Degraded')).toBeVisible();
+	const strip = ultra.getByRole('img', { name: /^Sync runs, last 14 days/ });
+	await expect(strip).toHaveAccessibleName('Sync runs, last 14 days: 13 days with successful runs, 1 day with a failed run, 0 days without runs');
+	await expect(strip.locator('.cell')).toHaveCount(14);
+	await expect(strip.locator('.cell.fail')).toHaveCount(1);
+	await expect(strip.locator('.cell.ok')).toHaveCount(13);
+	await expect(ultra.getByText('14 runs')).toBeVisible();
+	await ultra.getByRole('link', { name: 'See streams' }).click();
+	await expect(page).toHaveURL(`/connections/${ids.ultrahuman}?tab=streams`);
+
+	await page.goto('/connections');
+	const withings = page.getByRole('article', { name: 'Withings' });
+	await expect(withings.getByRole('img', { name: 'Sync runs, last 14 days: 0 days with successful runs, 0 days with a failed run, 14 days without runs' })).toBeVisible();
+	await expect(withings.getByRole('button', { name: 'Reauthorize' })).toBeVisible();
+	await expect(withings.getByRole('button', { name: 'Sync now' })).toHaveCount(0);
+	await expect(page.getByRole('article', { name: 'Apple Health' }).getByRole('button')).toHaveCount(0);
+
+	const recent = page.getByRole('region', { name: 'Recent sync runs' });
+	await expect(recent.getByRole('row')).toHaveCount(9); // header and the 8 latest of Ultrahuman's 14
+	await expect(recent.getByRole('row', { name: /Ultrahuman/ }).first()).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Backfill in progress' })).toBeVisible();
+});
+
+test('sync from a card refreshes its run strip', async ({ page, conns }) => {
+	conns.connections = conns.connections.filter((c) => c.provider === 'ultrahuman');
+	await page.goto('/connections');
+	const card = page.getByRole('article', { name: 'Ultrahuman' });
+	await expect(card.getByText('14 runs')).toBeVisible();
+	await card.getByRole('button', { name: 'Sync now' }).click();
+	await expect(card.getByRole('status')).toContainText('Sync queued: ultrahuman.metrics (queued)');
+	await expect(card.getByText('15 runs')).toBeVisible();
+});
+
+test('detail: header actions and the sync timeline', async ({ page }) => {
+	await page.goto(`/connections/${ids.ultrahuman}`);
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ultrahuman');
+	await expect(page.getByRole('button', { name: 'Sync now' })).toBeEnabled();
+	await expect(page.getByRole('button', { name: 'Reauthorize' })).toBeVisible();
+	const timeline = page.getByRole('region', { name: 'Sync timeline' });
+	await expect(timeline.getByRole('img', { name: /1 day with a failed run/ })).toBeVisible();
+	await expect(timeline.getByRole('list', { name: 'Latest runs' }).getByRole('listitem')).toHaveCount(5);
+	await expect(timeline.getByRole('link', { name: 'All runs' })).toHaveAttribute('href', '?tab=history');
+});
+
 test('retry failed backfill units', async ({ page }) => {
 	await page.goto(`/connections/${ids.ultrahuman}?tab=backfills`);
 	const backfill = page.getByRole('row', { name: /ultrahuman\.metrics/ }).first();
@@ -89,7 +140,7 @@ test('complete reauthorization of a connection', async ({ page }) => {
 	await page.getByRole('button', { name: 'Reauthorize' }).click();
 
 	await expect(page).toHaveURL('/connections?connected=withings');
-	await expect(page.getByRole('row', { name: /Withings/ }).getByText('Healthy')).toBeVisible();
+	await expect(page.getByRole('article', { name: 'Withings' }).getByText('Healthy')).toBeVisible();
 	await page.goto('/');
 	await expect(page.getByRole('region', { name: 'Alerts' }).getByText('Ultrahuman is degraded', { exact: false })).toBeVisible();
 	await expect(page.getByText('Withings needs reauthorization.')).toHaveCount(0);
@@ -112,6 +163,6 @@ test('pause, resume, and delete a connection with its data', async ({ page, conn
 
 	await expect(page).toHaveURL('/connections?removed=ultrahuman');
 	await expect(page.getByRole('status').filter({ hasText: 'The Ultrahuman connection was removed.' })).toBeVisible();
-	await expect(page.getByRole('row', { name: /Ultrahuman/ })).toHaveCount(0);
+	await expect(page.getByRole('article', { name: 'Ultrahuman' })).toHaveCount(0);
 	expect(conns.deletes).toEqual(['data=delete']);
 });

@@ -12,6 +12,7 @@
 	import { api, type Problem, type Schemas } from '../api/client.ts';
 	import ProblemAlert from '../components/ProblemAlert.svelte';
 	import TextField from '../components/TextField.svelte';
+	import Button from '../ui/Button.svelte';
 	import { goToProvider } from './connections.ts';
 
 	type Step = Schemas['AuthPromptStep'];
@@ -75,15 +76,22 @@
 
 {#if problem}
 	<ProblemAlert {problem} />
-	<button class="btn primary" type="button" onclick={onrestart}>Start again</button>
+	<Button variant="primary" onclick={onrestart}>Start again</Button>
 {:else}
 	{#key step.state}
 		<form bind:this={form} onsubmit={submit}>
-			<p>{step.prompt.message}</p>
+			<p class="message">{step.prompt.message}</p>
 			{#each step.prompt.fields as f (f.name)}
 				<TextField label={f.label} name={f.name} bind:value={values[f.name]} required {...attrs(f)} />
 			{/each}
-			<button class="btn primary" type="submit" disabled={busy}>Continue</button>
+			<Button variant="primary" type="submit" loading={busy}>Continue</Button>
 		</form>
 	{/key}
 {/if}
+
+<style>
+	.message {
+		margin: 0 0 var(--space-4);
+		font-weight: 500;
+	}
+</style>

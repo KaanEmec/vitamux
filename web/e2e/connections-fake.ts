@@ -90,7 +90,7 @@ export class ConnectionsApi {
 			units: units(Date.parse('2026-05-01T00:00:00Z'), Date.parse('2026-07-30T00:00:00Z'), (i) => (i === 1 ? 'failed' : 'done'))
 		}
 	];
-	runs: Record<string, Json[]> = {};
+	runs: Record<string, Json[]> = { [ids.ultrahuman]: seedRuns() };
 	/** Status of GET /resolved/daily; 503 simulates the endpoint not being ready. */
 	resolvedStatus = 200;
 	/** Query strings of DELETE /connections/{id}. */
@@ -274,6 +274,21 @@ export class ConnectionsApi {
 		const days = [start, end].map((d) => ({ local_date: d, metrics: Object.fromEntries(metrics.map((m) => [m, value(m, d)])) }));
 		return json(r, 200, { timezone: 'Europe/Amsterdam', days });
 	}
+}
+
+/** Hourly-ish syncs on each of the last 14 local days (noon), one of which failed (the day before yesterday). */
+function seedRuns(): Json[] {
+	return Array.from({ length: 14 }, (_, k) => {
+		const at = new Date();
+		at.setDate(at.getDate() - k);
+		at.setHours(12, 0, 0, 0);
+		const failed = k === 2;
+		return {
+			id: String(1000 - k), job_id: `55555555-5555-4555-8555-5555555550${String(k).padStart(2, '0')}`, kind: 'sync', attempt: 1,
+			started_at: at.toISOString(), finished_at: new Date(at.getTime() + 2000).toISOString(), outcome: failed ? 'failed' : 'succeeded',
+			error_class: failed ? 'schema_drift' : null, error_message: failed ? 'response shape changed' : null, stats: {}
+		};
+	});
 }
 
 function summary(b: Backfill) {

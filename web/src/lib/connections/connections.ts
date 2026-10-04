@@ -38,6 +38,12 @@ export function unitDays(code: string): number | undefined {
 	return providers[code]?.unitDays;
 }
 
+/** How a connection gets its data. */
+export const modes: Record<string, string> = { in_process: 'Server sync', push: 'Push uploads', remote: 'Sidecar' };
+
+/** "synced 5 minutes ago", "last upload …" for a push source, "not synced yet". */
+export const lastSync = (c: Connection) => (c.last_success_at ? `${c.mode === 'push' ? 'last upload' : 'synced'} ${ago(c.last_success_at)}` : 'not synced yet');
+
 /** Health states that need the owner's attention (shown as alerts on Today). */
 export const alerting: Health[] = ['degraded', 'failing', 'needs_reauth', 'stale'];
 
