@@ -360,7 +360,7 @@
 							}}
 						>
 							<option value="">+ Exclude a source…</option>
-							{#each exclusionChips as c (c.label)}<option value={c.label}>{c.label}</option>{/each}
+							{#each exclusionChips as c, i (i)}<option value={c.label}>{c.label}</option>{/each}
 						</select>
 					{/if}
 				</div>
@@ -722,7 +722,7 @@
 	}
 	.row {
 		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
 		gap: var(--space-2) var(--space-3);
 	}
 	.row .field {
