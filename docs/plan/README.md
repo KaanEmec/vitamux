@@ -47,7 +47,7 @@ Conventions:
 | [E23](E23-chart-redesign/README.md) | Charts and metric visualisation redesign (LayerChart) | v0.3.0 | E21 |
 | [E24](E24-resolution-visibility/README.md) | Resolution defaults, opt-in gates and visible data | v0.3.1 | E09, E21, E23 |
 | [E25](E25-catalogue-mappings/README.md) | Catalogue completeness and mapping corrections | v0.3.1 | E07, E08, E15, E18, E19 |
-| [E26](E26-intraday-views/README.md) | Intraday views on the server and the panel | v0.3.2 | E23, E25 |
+| [E26](E26-intraday-views/README.md) | Intraday views on the server and the panel | v0.3.1 | E23, E25 |
 | [E27](E27-oura/README.md) | Oura official connector | v0.3.3 | E20, E25 |
 | [E28](E28-polar/README.md) | Polar official connector | v0.3.4 | E20, E25 |
 | [E29](E29-google-health/README.md) | Fitbit and Pixel through the Google Health API (blocked) | when unblocked | E20, E25 |

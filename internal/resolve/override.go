@@ -157,8 +157,9 @@ func (r *Rule) ResolveWindowOverridden(w Window, s Series, opt Options, ovs []Ov
 // without them: each window falls back on its own and passes its selection to the next.
 func (r *Rule) ResolveWindowsOverridden(ws []Window, s Series, opt Options, ovs []Override) ([]Resolved, error) {
 	out := make([]Resolved, 0, len(ws))
+	nar := r.newNarrower(s, len(ws))
 	for _, w := range ws {
-		res, err := r.ResolveWindowOverridden(w, s, opt, ovs)
+		res, err := r.ResolveWindowOverridden(w, nar.series(w, s), opt, ovs)
 		if err != nil {
 			return nil, err
 		}
@@ -268,4 +269,49 @@ func validateOverride(n NewOverride) error {
 		return bad("unknown action %q", n.Action)
 	}
 	return nil
+}
+
+// narrower hands a window only the rows that can belong to it, so a day of bucket windows over
+// 14,400 rows costs the rows once instead of once per window (J26.4). It applies to bucket and
+// hour windows of a rule without require_wear (the wear index reads whole series) when the rows
+// of each code are in start order; Window.Includes still decides, so results do not change.
+type narrower struct {
+	codes []string
+	back  map[string]time.Duration // longest interval per code: how far before a window one starts
+}
+
+func (r *Rule) newNarrower(s Series, windows int) *narrower {
+	sp, err := r.spec()
+	if err != nil || windows < 2 || r.Quality != nil && r.Quality.RequireWear != "" {
+		return nil
+	}
+	n := &narrower{back: map[string]time.Duration{}}
+	for _, code := range sp.codes {
+		xs := s[code]
+		if !slices.IsSortedFunc(xs, func(a, b Input) int { return a.Start.Compare(b.Start) }) {
+			return nil
+		}
+		for _, x := range xs {
+			n.back[code] = max(n.back[code], x.End.Sub(x.Start))
+		}
+		n.codes = append(n.codes, code)
+	}
+	return n
+}
+
+// series returns s with each code's rows cut to those that can overlap w (a view of the same
+// rows, nothing is copied but the map).
+func (n *narrower) series(w Window, s Series) Series {
+	if n == nil || w.Kind != catalog.WindowBucket && w.Kind != catalog.WindowHour {
+		return s
+	}
+	out := maps.Clone(s)
+	for _, code := range n.codes {
+		xs := s[code]
+		from := w.Start.Add(-n.back[code])
+		lo, _ := slices.BinarySearchFunc(xs, from, func(x Input, t time.Time) int { return x.Start.Compare(t) })
+		hi, _ := slices.BinarySearchFunc(xs, w.End, func(x Input, t time.Time) int { return x.Start.Compare(t) })
+		out[code] = xs[lo:max(lo, hi)]
+	}
+	return out
 }

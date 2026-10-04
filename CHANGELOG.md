@@ -2,6 +2,70 @@
 
 Newest first. Before a final release, `scripts/release-notes.sh --changelog vX.Y.Z` adds its section from the Conventional Commits since the previous final tag; edit it and add upgrade notes under "Breaking changes" before tagging. The release workflow refuses a final tag without its section and uses it as the release notes. Release candidates are described on their GitHub releases only.
 
+## v0.3.1 (unreleased)
+
+Resolution defaults and visible data ([E24](docs/plan/E24-resolution-visibility/README.md)), catalogue completeness and mapping corrections ([E25](docs/plan/E25-catalogue-mappings/README.md)), and intraday Day views ([E26](docs/plan/E26-intraday-views/README.md)).
+
+### Fixed behaviour
+
+- **No phantom zeros.** A device that never reports a metric (a WHOOP band has no active energy or intraday steps) no longer stands in for it with a 0 on worn days.
+- **Default rules.** Every metric without a built-in or owner rule resolves through a default rule: your source order (Settings › Source priority), then a generic device ladder; scores take their own provider. Nothing shows `no_data` only because no rule exists, and the all-sources overlay shows even when the resolved series is empty. The first edit copies it into your version 1.
+- **Opt-in gates.** The built-in wear and coverage gates are off; turn them on per rule (the Rules page shows an opt-in strip). A daily total is no longer rejected by an 80 % coverage gate on a partly worn day.
+- **Heart rate.** WHOOP ranks directly above Garmin in the built-in heart-rate ladder (owner decision; yours stays as you set it).
+- **Withings devices.** Live `getmeas` names the model `modelid`; devices now get their type, so the blood-pressure and scale groups match. Records a phone app relayed (model ids 1051-1060, activity brand 18) are flagged as relayed and never counted twice.
+- **WHOOP sleep stages.** Deep, awake, disturbances and latency come from the real stage events.
+- **Garmin SpO2.** The per-minute sleep readings become `spo2` samples and the nightly average `spo2_nightly`.
+- **Stream reconciliation.** A connection follows the streams its connector declares now: retired streams are dropped and new ones scheduled when a sidecar describes itself, and an owner-disabled stream no longer keeps the connection degraded. Sidecars cut days at your local midnight.
+
+### New codes
+
+New catalogue codes cover everything the providers send: sleep awakenings and temperature deviation, intensity and sedentary times, sport-specific distances, speeds, powers and cadences, urine and ECG values, WHOOP sleep need and heart-rate zones, Garmin activity summary values, and the Apple Health types that had none. Every code, with its unit and mapping, is in [docs/metrics.md](docs/metrics.md); values that stay raw have a recorded reason in each provider's field ledger.
+
+### New streams
+
+- **Withings** activity, intraday activity and sleep. They need the new `user.activity` scope: **reconnect Withings** (Connections › Withings › Reconnect) to grant it.
+- **Garmin** floors, hydration and fitness age; training status adds acute and chronic load; an opt-in, paced **intraday reload** asks Garmin to restore days it moved to cold storage (a daily budget below Garmin's limit, stops when denied).
+- **WHOOP** body measurements.
+
+### Web UI
+
+- **Day view** on every metric that has an intraday ladder (heart rate to 30-second buckets and raw readings, steps as 30-minute bars): date stepper, zoom through the ladder, min-max band, per-source series, night and workout overlays.
+- Source series fall back to the all-sources view when a rule resolves nothing, and a total energy card was added to the dashboard.
+
+### API
+
+- `GET /resolved/series`: `window` accepts `30s` and `1m` (up to a day per request; a day of 6-second heart rate resolves in under 100 ms, see [resource-budget](docs/resource-budget.md#intraday-series)).
+- `GET /sources/series`: `grain` accepts `30s`, `1m`, `5m`, `15m`, `30m` and `raw`; raw pages hold at most 2,000 points.
+- `GET /metrics/{code}`: `intraday` (default and finest grain). `GET/PUT /settings`: `sources.priority`.
+
+### Breaking changes
+
+No data is removed. Migrations 00032-00041 run on start. Upgrade steps:
+
+1. Pull the new core and sidecar images (`vitamux`, `vitamux-sidecar-garmin`, `vitamux-sidecar-whoop`; the sidecars share the core's tag, or `:stable`). Garmin and WHOOP need the new images for their new streams.
+2. Reconnect Withings for the new scope, then run its new streams' backfills.
+3. Renormalize stored data, one line per normalizer whose version changed (Apple Health 2 to 3, Withings measures 1 to 3, WHOOP and Garmin below):
+
+   ```sh
+   vitamux reprocess --normalizer healthkit.samples
+   vitamux reprocess --stream withings.measures
+   vitamux reprocess --stream whoop.heart_rate
+   vitamux reprocess --stream whoop.cycles
+   vitamux reprocess --stream whoop.sleep
+   vitamux reprocess --stream whoop.workouts
+   vitamux reprocess --stream whoop.strain_deep_dive
+   vitamux reprocess --stream garmin.daily_summary
+   vitamux reprocess --stream garmin.steps
+   vitamux reprocess --stream garmin.sleep
+   vitamux reprocess --stream garmin.hrv
+   vitamux reprocess --stream garmin.spo2
+   vitamux reprocess --stream garmin.training
+   vitamux reprocess --stream garmin.body_composition
+   vitamux reprocess --stream garmin.activities
+   ```
+
+4. Built-in rule versions changed: steps, distance and active energy `:4` (no gates), heart rate `:3` (WHOOP above Garmin), resting heart rate nocturnal `:3` and sleep `:3` (no coverage gates); total energy is new (`:1`, follows active energy). Rules you edited keep their copy and are untouched; open Rules to compare or reset to the new default.
+
 ## v0.3.0 (2026-10-04)
 
 Charts and metric visualisation redesign ([E23](docs/plan/E23-chart-redesign/README.md)).

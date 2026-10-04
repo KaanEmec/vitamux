@@ -42,10 +42,16 @@ type resolvedEnv struct {
 
 func newResolvedEnv(t *testing.T, start string, days int) *resolvedEnv {
 	t.Helper()
+	return newResolvedEnvStep(t, start, days, 60)
+}
+
+// newResolvedEnvStep is newResolvedEnv with hrStep seconds between high-frequency heart-rate samples.
+func newResolvedEnvStep(t *testing.T, start string, days, hrStep int) *resolvedEnv {
+	t.Helper()
 	ctx := t.Context()
 	dir := t.TempDir()
 	_, file, _, _ := runtime.Caller(0)
-	cmd := exec.CommandContext(ctx, "go", "run", "./tools/fixturegen", "-out", dir, "-start", start, "-days", strconv.Itoa(days), "-hr-step", "60")
+	cmd := exec.CommandContext(ctx, "go", "run", "./tools/fixturegen", "-out", dir, "-start", start, "-days", strconv.Itoa(days), "-hr-step", strconv.Itoa(hrStep))
 	cmd.Dir = filepath.Join(filepath.Dir(file), "..", "..")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("fixturegen: %v\n%s", err, out)

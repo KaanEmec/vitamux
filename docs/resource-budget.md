@@ -45,6 +45,20 @@ Routine and bulk work are inside the budget for `vitamux`. The two operations J1
 - "After the fix" rows come from one run of the same harness (`VITAMUX_BUDGET_SKIP_IMPORT=1`) on the same machine and VM; the other rows were not re-measured, nor was the 512 MiB container check. The dashboard helper runs with `GOMEMLIMIT=400MiB`, so its 382 MiB is partly garbage the collector is allowed to keep. The rebuild's CPU is now in `postgres` (one core for 9 s), not in `vitamux`.
 - Run-to-run spread in the cold dashboard wall times (6.1 s to 13.7 s in parallel) came from the Docker VM's page cache, not from the code: the VM has 3.8 GiB for a 2 GiB database plus the 1 GiB limit.
 
+## Intraday series
+
+Measured by J26.4 ([E26](plan/E26-intraday-views/README.md)): one local day of heart rate on the synthetic dataset with `fixturegen -hr-step 6`, so the WHOOP-like source has 14,400 rows, plus the dataset's other heart-rate sources. Budget: 1-minute resolved buckets in under 300 ms; raw at most 2,000 points per request. Median of seven calls through the router with an admin key (JSON included), one run, same machine as above, PostgreSQL 18 in the dev container.
+
+| Request (`heart_rate`, one day) | Before | After | Budget |
+| --- | --- | --- | --- |
+| `GET /resolved/series` `window=1m` (1,440 buckets) | 999 ms | 80 ms | < 300 ms: within |
+| `GET /resolved/series` `window=30s` (2,880 buckets) | 1,989 ms | 144 ms | none |
+| `GET /sources/series` `grain=30s` | 95 ms | 46 ms | none |
+| `GET /sources/series` `grain=1m` | 90 ms | 38 ms | none |
+| `GET /sources/series` `grain=raw&limit=2000` | 17 ms | 10 ms | 2,000 points: within (the page is capped over all sources) |
+
+The resolved series was over budget: `Rule.windowRows` scanned every row of the day for each bucket (rows times windows, 14,400 rows by 1,440 buckets). `ResolveWindowsOverridden` now hands each bucket or hour window only the rows that can overlap it (binary search over rows in start order, `narrower` in `internal/resolve/override.go`), so the work is linear in the rows; results are identical (`TestPropertyNarrowedWindowsEqualWhole`) and rules with `require_wear` keep the old path. No index or migration was needed: the source series queries read the day by the existing `measurements` indexes. After the fix the time is mostly the row load and JSON. Reproduce: `go test -tags integration -run TestIntradaySeriesBudget -v ./internal/api/` (needs `VITAMUX_DATABASE_URL`; it fails above 300 ms).
+
 ## Disk
 
 | Item | Measured |
