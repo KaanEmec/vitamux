@@ -294,23 +294,13 @@ func activity(b *builder, resp []byte) error {
 		Type       *struct {
 			Key string `json:"typeKey"`
 		} `json:"activityType"`
-		Duration  *float64 `json:"duration"`
-		Elapsed   *float64 `json:"elapsedDuration"`
-		Distance  *float64 `json:"distance"`
-		Calories  *float64 `json:"calories"`
-		AvgHR     *float64 `json:"averageHR"`
-		MaxHR     *float64 `json:"maxHR"`
-		DeviceID  *int64   `json:"deviceId"`
-		Elevation *float64 `json:"elevationGain"`
-		Moving    *float64 `json:"movingDuration"`
-		Load      *float64 `json:"activityTrainingLoad"`
-		Aerobic   *float64 `json:"aerobicTrainingEffect"`
-		Anaerobic *float64 `json:"anaerobicTrainingEffect"`
-		Zone1     *float64 `json:"hrTimeInZone_1"`
-		Zone2     *float64 `json:"hrTimeInZone_2"`
-		Zone3     *float64 `json:"hrTimeInZone_3"`
-		Zone4     *float64 `json:"hrTimeInZone_4"`
-		Zone5     *float64 `json:"hrTimeInZone_5"`
+		Duration *float64 `json:"duration"`
+		Elapsed  *float64 `json:"elapsedDuration"`
+		Distance *float64 `json:"distance"`
+		Calories *float64 `json:"calories"`
+		AvgHR    *float64 `json:"averageHR"`
+		MaxHR    *float64 `json:"maxHR"`
+		DeviceID *int64   `json:"deviceId"`
 	}
 	if err := b.decode(resp, &a); err != nil {
 		return err
@@ -339,26 +329,23 @@ func activity(b *builder, resp []byte) error {
 		AvgHRBpm: positive(a.AvgHR), MaxHRBpm: positive(a.MaxHR), Device: b.device(a.DeviceID),
 		Key: normalize.Key{RecordType: "activity", ExternalID: strconv.FormatInt(*a.ID, 10)}}
 	b.out.Workouts = append(b.out.Workouts, w)
-	// The summary's other values, as measurements keyed by the activity: totals over the
-	// activity's span, and the training effects at its end.
+	// The summary's other values, as measurements keyed by the activity: totals and averages over
+	// the activity's span, and the values Garmin reports at its end (training effects, VO2max).
+	var vals map[string]json.RawMessage
+	if err := b.decode(resp, &vals); err != nil {
+		return err
+	}
 	id, dev := strconv.FormatInt(*a.ID, 10), b.device(a.DeviceID)
-	for _, m := range []struct {
-		metric, unit string
-		kind         catalog.Kind
-		v            *float64
-	}{{"elevation_gain", "m", catalog.Interval, a.Elevation}, {"garmin_activity_moving_time", "s", catalog.Interval, a.Moving},
-		{"garmin_activity_training_load", "index", catalog.Interval, a.Load},
-		{"garmin_hr_zone_1_time", "s", catalog.Interval, a.Zone1}, {"garmin_hr_zone_2_time", "s", catalog.Interval, a.Zone2},
-		{"garmin_hr_zone_3_time", "s", catalog.Interval, a.Zone3}, {"garmin_hr_zone_4_time", "s", catalog.Interval, a.Zone4},
-		{"garmin_hr_zone_5_time", "s", catalog.Interval, a.Zone5},
-		{"garmin_training_effect_aerobic", "index", catalog.Sample, a.Aerobic},
-		{"garmin_training_effect_anaerobic", "index", catalog.Sample, a.Anaerobic}} {
-		if m.v == nil {
+	for _, e := range activityValues {
+		var v *float64
+		if err := json.Unmarshal(vals[e.key], &v); vals[e.key] != nil && err != nil {
+			return drift(b.stream, e.key)
+		} else if v == nil {
 			continue
 		}
-		x := normalize.Measurement{Metric: m.metric, Kind: m.kind, Start: w.Start, Zone: w.Zone, Value: *m.v, Unit: m.unit, Device: dev,
-			Key: normalize.Key{RecordType: "activity", ExternalID: id, Component: m.metric}}
-		if m.kind == catalog.Sample {
+		x := normalize.Measurement{Metric: cmp.Or(sportMetric[e.code][w.Sport], e.code), Kind: e.kind, Start: w.Start, Zone: w.Zone,
+			Value: *v, Unit: e.unit, Device: dev, Key: normalize.Key{RecordType: "activity", ExternalID: id, Component: e.code}}
+		if e.kind == catalog.Sample {
 			x.Start = end
 		} else {
 			x.End = &end
@@ -366,6 +353,64 @@ func activity(b *builder, resp []byte) error {
 		b.out.Measurements = append(b.out.Measurements, x)
 	}
 	return nil
+}
+
+// activityValue maps one numeric field of an activity summary to a metric. Distances are in
+// metres, durations in seconds, speeds in m/s; unit is the source unit (stride length and
+// vertical oscillation come in cm, ground contact in ms, intensity in minutes). The Component of
+// a measurement is code, so the metric a sport-specific code resolves to can change without
+// moving the key.
+type activityValue struct {
+	key, code, unit string
+	kind            catalog.Kind
+}
+
+var activityValues = func() []activityValue {
+	i, s := catalog.Interval, catalog.Sample
+	rows := []activityValue{
+		{"elevationGain", "elevation_gain", "m", i}, {"movingDuration", "garmin_activity_moving_time", "s", i},
+		{"activityTrainingLoad", "garmin_activity_training_load", "index", i},
+		{"aerobicTrainingEffect", "garmin_training_effect_aerobic", "index", s},
+		{"anaerobicTrainingEffect", "garmin_training_effect_anaerobic", "index", s},
+		{"averageSpeed", "garmin_activity_avg_speed", "m/s", i}, {"maxSpeed", "garmin_activity_max_speed", "m/s", i},
+		{"avgPower", "garmin_activity_avg_power", "W", i}, {"maxPower", "garmin_activity_max_power", "W", i},
+		{"normPower", "garmin_activity_norm_power", "W", i},
+		{"averageRunningCadenceInStepsPerMinute", "garmin_activity_running_cadence", "steps/min", i},
+		{"maxRunningCadenceInStepsPerMinute", "garmin_activity_running_cadence_max", "steps/min", i},
+		{"averageBikingCadenceInRevPerMinute", "cadence_cycling", "rpm", i},
+		{"maxBikingCadenceInRevPerMinute", "garmin_activity_cycling_cadence_max", "rpm", i},
+		{"minTemperature", "garmin_activity_temperature_min", "°C", i}, {"maxTemperature", "garmin_activity_temperature_max", "°C", i},
+		{"elevationLoss", "garmin_activity_elevation_loss", "m", i}, {"minElevation", "garmin_activity_elevation_min", "m", i},
+		{"maxElevation", "garmin_activity_elevation_max", "m", i}, {"maxVerticalSpeed", "garmin_activity_vertical_speed_max", "m/s", i},
+		{"avgStrideLength", "running_stride_length", "cm", i}, {"avgVerticalOscillation", "running_vertical_oscillation", "cm", i},
+		{"avgGroundContactTime", "running_ground_contact_time", "ms", i}, {"avgVerticalRatio", "garmin_activity_vertical_ratio", "%", i},
+		{"avgSwolf", "garmin_activity_swolf", "index", i}, {"strokes", "swim_strokes", "count", i},
+		{"avgRespirationRate", "respiratory_rate", "breaths/min", i},
+		{"minRespirationRate", "garmin_activity_respiration_min", "breaths/min", i},
+		{"maxRespirationRate", "garmin_activity_respiration_max", "breaths/min", i},
+		{"differenceBodyBattery", "garmin_activity_body_battery_change", "index", i},
+		{"bmrCalories", "basal_energy", "kcal", i}, {"waterEstimated", "garmin_sweat_loss", "mL", i},
+		{"moderateIntensityMinutes", "intensity_moderate_time", "min", i},
+		{"vigorousIntensityMinutes", "intensity_vigorous_time", "min", i},
+		{"vO2MaxValue", "vo2max", "mL/kg/min", s},
+	}
+	for z := 1; z <= 5; z++ {
+		n := strconv.Itoa(z)
+		rows = append(rows, activityValue{"hrTimeInZone_" + n, "garmin_hr_zone_" + n + "_time", "s", i},
+			activityValue{"powerTimeInZone_" + n, "garmin_activity_power_zone_" + n + "_time", "s", i})
+	}
+	for _, d := range []string{"1000", "1609", "5000", "10000"} {
+		rows = append(rows, activityValue{"fastestSplit_" + d, "garmin_activity_fastest_split_" + d, "s", i})
+	}
+	return rows
+}()
+
+// sportMetric replaces a Garmin-only code by the shared one for the activity's sport, so an
+// average speed or power of a run lands where other sources put it.
+var sportMetric = map[string]map[string]string{
+	"garmin_activity_avg_speed": {"running": "speed_running", "cycling": "speed_cycling", "walking": "speed_walking",
+		"hiking": "speed_walking", "rowing": "speed_rowing"},
+	"garmin_activity_avg_power": {"running": "power_running", "cycling": "power_cycling"},
 }
 
 // positive drops Garmin's 0 for "not measured" (a strength session's distance, an HR-less activity).

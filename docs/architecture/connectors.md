@@ -50,7 +50,7 @@ Code: [`internal/connectors`](../../internal/connectors). `NewRegistry(connector
 | Error (class) | Runtime reaction |
 | --- | --- |
 | `ErrReauthRequired` (`reauth_required`) | Connection `needs_reauth` (its schedules stop), job `dead`, no retries. A refused access token is first refreshed once and the page retried. |
-| `RateLimitedError{RetryAfter}` (`rate_limited`) | Set `provider_rate_state.blocked_until`; reschedule at its end without consuming an attempt; not counted as a failure |
+| `RateLimitedError{RetryAfter}` (`rate_limited`) | Set `provider_rate_state.blocked_until`; reschedule at its end without consuming an attempt; not counted as a failure. A rate limit on an on-demand stream only reschedules that stream's job and leaves the provider unblocked |
 | `ErrTransient` (`transient`), any untyped error | Exponential backoff with full jitter (cap 30 min); connection status kept, failure counted |
 | `SchemaDriftError{Endpoint, Fingerprint}` (`schema_drift`) | Store the page's raw as `quarantined`, cursor unchanged; stream and connection `degraded: schema_drift`; job `dead`; the next slot tries again; **never substitute other data** |
 | `ErrPermanent` (`permanent`) | Job `dead`, connection `error` (its schedules stop until the owner resumes it) |

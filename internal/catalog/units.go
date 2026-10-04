@@ -39,6 +39,9 @@ var units = []Unit{
 	// E25 (J25.1): units of the Apple Health activity, audio and insulin types and of the Withings skin conductance.
 	mapped(base("W")), mapped(base("rpm")), mapped(base("kcal/kg/h")), mapped(base("dBA")), mapped(base("dB")),
 	mapped(base("L/min")), mapped(base("IU")), mapped(base("µS")),
+
+	// J25.5: running cadence.
+	{Code: "steps/min", Base: "steps/min", Factor: 1, Since: SeedGarminAct},
 }
 
 func hk(u Unit) Unit { u.Since = SeedHealthKit; return u }

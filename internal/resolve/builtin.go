@@ -86,6 +86,19 @@ var NoBuiltin = func() map[string]string {
 		"garmin_sweat_loss", "garmin_sleep_movement"} {
 		m[code] = "a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone"
 	}
+	// The Garmin activity summary values: provider-scoped, one source each.
+	for _, code := range []string{"garmin_activity_avg_speed", "garmin_activity_max_speed", "garmin_activity_avg_power",
+		"garmin_activity_max_power", "garmin_activity_norm_power", "garmin_activity_running_cadence",
+		"garmin_activity_running_cadence_max", "garmin_activity_cycling_cadence_max", "garmin_activity_temperature_min",
+		"garmin_activity_temperature_max", "garmin_activity_elevation_loss", "garmin_activity_elevation_min",
+		"garmin_activity_elevation_max", "garmin_activity_vertical_speed_max", "garmin_activity_vertical_ratio",
+		"garmin_activity_swolf", "garmin_activity_body_battery_change", "garmin_activity_power_zone_1_time",
+		"garmin_activity_power_zone_2_time", "garmin_activity_power_zone_3_time", "garmin_activity_power_zone_4_time",
+		"garmin_activity_power_zone_5_time", "garmin_activity_fastest_split_1000", "garmin_activity_fastest_split_1609",
+		"garmin_activity_fastest_split_5000", "garmin_activity_fastest_split_10000", "garmin_activity_respiration_min",
+		"garmin_activity_respiration_max"} {
+		m[code] = "a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone"
+	}
 	return m
 }()
 

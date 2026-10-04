@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "garmin.activities",
-  "version": 2,
+  "version": 3,
   "output": {
     "devices": [
       {
@@ -59,6 +59,479 @@
           "record_type": "activity",
           "external_id": "90000000001",
           "component": "garmin_activity_training_load"
+        }
+      },
+      {
+        "metric": "garmin_training_effect_aerobic",
+        "kind": "sample",
+        "start": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 3.2,
+        "unit": "index",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_training_effect_aerobic"
+        }
+      },
+      {
+        "metric": "garmin_training_effect_anaerobic",
+        "kind": "sample",
+        "start": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 1.1,
+        "unit": "index",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_training_effect_anaerobic"
+        }
+      },
+      {
+        "metric": "speed_running",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 2.5,
+        "unit": "m/s",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_activity_avg_speed"
+        }
+      },
+      {
+        "metric": "garmin_activity_max_speed",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 4.1,
+        "unit": "m/s",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_activity_max_speed"
+        }
+      },
+      {
+        "metric": "power_running",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 255,
+        "unit": "W",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_activity_avg_power"
+        }
+      },
+      {
+        "metric": "garmin_activity_max_power",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 410,
+        "unit": "W",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_activity_max_power"
+        }
+      },
+      {
+        "metric": "garmin_activity_norm_power",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 262,
+        "unit": "W",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_activity_norm_power"
+        }
+      },
+      {
+        "metric": "garmin_activity_running_cadence",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 172.5,
+        "unit": "steps/min",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_activity_running_cadence"
+        }
+      },
+      {
+        "metric": "garmin_activity_running_cadence_max",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 188,
+        "unit": "steps/min",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_activity_running_cadence_max"
+        }
+      },
+      {
+        "metric": "garmin_activity_temperature_min",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 14,
+        "unit": "°C",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_activity_temperature_min"
+        }
+      },
+      {
+        "metric": "garmin_activity_temperature_max",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 21.5,
+        "unit": "°C",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_activity_temperature_max"
+        }
+      },
+      {
+        "metric": "garmin_activity_elevation_loss",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 80,
+        "unit": "m",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_activity_elevation_loss"
+        }
+      },
+      {
+        "metric": "garmin_activity_elevation_min",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 35,
+        "unit": "m",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_activity_elevation_min"
+        }
+      },
+      {
+        "metric": "garmin_activity_elevation_max",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 120.5,
+        "unit": "m",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_activity_elevation_max"
+        }
+      },
+      {
+        "metric": "garmin_activity_vertical_speed_max",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 0.9,
+        "unit": "m/s",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_activity_vertical_speed_max"
+        }
+      },
+      {
+        "metric": "running_stride_length",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 105,
+        "unit": "cm",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "running_stride_length"
+        }
+      },
+      {
+        "metric": "running_vertical_oscillation",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 8.2,
+        "unit": "cm",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "running_vertical_oscillation"
+        }
+      },
+      {
+        "metric": "running_ground_contact_time",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 245,
+        "unit": "ms",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "running_ground_contact_time"
+        }
+      },
+      {
+        "metric": "garmin_activity_vertical_ratio",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 7.9,
+        "unit": "%",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_activity_vertical_ratio"
+        }
+      },
+      {
+        "metric": "respiratory_rate",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 28.5,
+        "unit": "breaths/min",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "respiratory_rate"
+        }
+      },
+      {
+        "metric": "garmin_activity_respiration_min",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 18,
+        "unit": "breaths/min",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_activity_respiration_min"
+        }
+      },
+      {
+        "metric": "garmin_activity_respiration_max",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 38,
+        "unit": "breaths/min",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_activity_respiration_max"
+        }
+      },
+      {
+        "metric": "garmin_activity_body_battery_change",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": -12,
+        "unit": "index",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_activity_body_battery_change"
+        }
+      },
+      {
+        "metric": "basal_energy",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 60,
+        "unit": "kcal",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "basal_energy"
+        }
+      },
+      {
+        "metric": "garmin_sweat_loss",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 450,
+        "unit": "mL",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_sweat_loss"
+        }
+      },
+      {
+        "metric": "intensity_moderate_time",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 20,
+        "unit": "min",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "intensity_moderate_time"
+        }
+      },
+      {
+        "metric": "intensity_vigorous_time",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 10,
+        "unit": "min",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "intensity_vigorous_time"
+        }
+      },
+      {
+        "metric": "vo2max",
+        "kind": "sample",
+        "start": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 52,
+        "unit": "mL/kg/min",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "vo2max"
         }
       },
       {
@@ -147,35 +620,71 @@
         }
       },
       {
-        "metric": "garmin_training_effect_aerobic",
-        "kind": "sample",
-        "start": "2026-06-15T06:11:00.25Z",
+        "metric": "garmin_activity_fastest_split_1000",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
         "zone": {
           "offset_min": 120
         },
-        "value": 3.2,
-        "unit": "index",
+        "value": 285.5,
+        "unit": "s",
         "device": "1000000001",
         "key": {
           "record_type": "activity",
           "external_id": "90000000001",
-          "component": "garmin_training_effect_aerobic"
+          "component": "garmin_activity_fastest_split_1000"
         }
       },
       {
-        "metric": "garmin_training_effect_anaerobic",
-        "kind": "sample",
-        "start": "2026-06-15T06:11:00.25Z",
+        "metric": "garmin_activity_fastest_split_1609",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
         "zone": {
           "offset_min": 120
         },
-        "value": 1.1,
-        "unit": "index",
+        "value": 470,
+        "unit": "s",
         "device": "1000000001",
         "key": {
           "record_type": "activity",
           "external_id": "90000000001",
-          "component": "garmin_training_effect_anaerobic"
+          "component": "garmin_activity_fastest_split_1609"
+        }
+      },
+      {
+        "metric": "garmin_activity_fastest_split_5000",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 1450,
+        "unit": "s",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_activity_fastest_split_5000"
+        }
+      },
+      {
+        "metric": "garmin_activity_fastest_split_10000",
+        "kind": "interval",
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 3100,
+        "unit": "s",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001",
+          "component": "garmin_activity_fastest_split_10000"
         }
       }
     ],

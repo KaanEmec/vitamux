@@ -1,0 +1,135 @@
+{
+  "synthetic": true,
+  "normalizer": "garmin.activities",
+  "version": 3,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "1000000001",
+        "manufacturer": "Garmin"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "garmin_activity_moving_time",
+        "kind": "interval",
+        "start": "2026-06-16T16:00:00Z",
+        "end": "2026-06-16T17:00:50Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 3580,
+        "unit": "s",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000003",
+          "component": "garmin_activity_moving_time"
+        }
+      },
+      {
+        "metric": "garmin_activity_avg_speed",
+        "kind": "interval",
+        "start": "2026-06-16T16:00:00Z",
+        "end": "2026-06-16T17:00:50Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 0.9,
+        "unit": "m/s",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000003",
+          "component": "garmin_activity_avg_speed"
+        }
+      },
+      {
+        "metric": "garmin_activity_max_speed",
+        "kind": "interval",
+        "start": "2026-06-16T16:00:00Z",
+        "end": "2026-06-16T17:00:50Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 1.4,
+        "unit": "m/s",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000003",
+          "component": "garmin_activity_max_speed"
+        }
+      },
+      {
+        "metric": "garmin_activity_swolf",
+        "kind": "interval",
+        "start": "2026-06-16T16:00:00Z",
+        "end": "2026-06-16T17:00:50Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 38,
+        "unit": "index",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000003",
+          "component": "garmin_activity_swolf"
+        }
+      },
+      {
+        "metric": "swim_strokes",
+        "kind": "interval",
+        "start": "2026-06-16T16:00:00Z",
+        "end": "2026-06-16T17:00:50Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 1250,
+        "unit": "count",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000003",
+          "component": "swim_strokes"
+        }
+      },
+      {
+        "metric": "respiratory_rate",
+        "kind": "interval",
+        "start": "2026-06-16T16:00:00Z",
+        "end": "2026-06-16T17:00:50Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 22,
+        "unit": "breaths/min",
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000003",
+          "component": "respiratory_rate"
+        }
+      }
+    ],
+    "workouts": [
+      {
+        "start": "2026-06-16T16:00:00Z",
+        "end": "2026-06-16T17:00:50Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "sport": "swimming",
+        "provider_sport": "lap_swimming",
+        "distance_m": 1500,
+        "energy_kcal": 600,
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000003"
+        }
+      }
+    ]
+  }
+}

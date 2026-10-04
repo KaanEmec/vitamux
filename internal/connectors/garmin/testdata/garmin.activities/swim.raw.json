@@ -1,0 +1,31 @@
+{
+ "synthetic": true,
+ "unit": {
+  "activity_id": 90000000003
+ },
+ "response": {
+  "activityId": 90000000003,
+  "activityName": "Synthetic swim",
+  "startTimeLocal": "2026-06-16 18:00:00",
+  "startTimeGMT": "2026-06-16 16:00:00",
+  "activityType": {
+   "typeId": 18,
+   "typeKey": "lap_swimming",
+   "parentTypeId": 18,
+   "isHidden": false
+  },
+  "duration": 3600.0,
+  "elapsedDuration": 3650.0,
+  "movingDuration": 3580.0,
+  "calories": 600.0,
+  "deviceId": 1000000001,
+  "manufacturer": "GARMIN",
+  "manualActivity": false,
+  "distance": 1500.0,
+  "averageSpeed": 0.9,
+  "maxSpeed": 1.4,
+  "strokes": 1250,
+  "avgSwolf": 38.0,
+  "avgRespirationRate": 22.0
+ }
+}

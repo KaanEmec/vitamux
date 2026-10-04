@@ -33,19 +33,24 @@ const stream = "withings.measures"
 
 // fake is a scripted connector for the "withings" provider (seeded, so provider_rate_state works).
 type fake struct {
-	auth    AuthKind
-	fetch   func(ctx context.Context, c Conn, cred Credentials, u WorkUnit, out *RawSink) (FetchResult, error)
-	refresh func(ctx context.Context, c Conn, cred Credentials) (Credentials, error)
-	mu      sync.Mutex
-	plans   []PlanRequest
-	fetches atomic.Int32
+	auth     AuthKind
+	onDemand bool // the stream has no schedule: a backfill only
+	fetch    func(ctx context.Context, c Conn, cred Credentials, u WorkUnit, out *RawSink) (FetchResult, error)
+	refresh  func(ctx context.Context, c Conn, cred Credentials) (Credentials, error)
+	mu       sync.Mutex
+	plans    []PlanRequest
+	fetches  atomic.Int32
 }
 
 func (f *fake) Describe() Descriptor {
+	spec := StreamSpec{Name: stream, Interval: time.Hour, Lookback: 7 * 24 * time.Hour,
+		MaxBackfill: 2 * 365 * 24 * time.Hour, UnitSize: 24 * time.Hour}
+	if f.onDemand {
+		spec.Interval, spec.Lookback = 0, 0
+	}
 	return Descriptor{
 		Provider: "withings", Version: "test", AuthKind: cmpOr(f.auth, AuthNone),
-		Streams: []StreamSpec{{Name: stream, Interval: time.Hour, Lookback: 7 * 24 * time.Hour,
-			MaxBackfill: 2 * 365 * 24 * time.Hour, UnitSize: 24 * time.Hour}},
+		Streams:      []StreamSpec{spec},
 		RateLimits:   []RateLimitSpec{{Requests: 1000, Per: time.Second}},
 		Capabilities: Capabilities{Backfill: true},
 	}
@@ -332,6 +337,25 @@ func TestErrorTransitions(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// A rate limit on an on-demand stream (the Garmin reload being denied) delays that stream's job
+// only: the provider is not blocked, so its other streams keep syncing.
+func TestOnDemandRateLimitDoesNotBlockProvider(t *testing.T) {
+	f := &fake{onDemand: true, fetch: func(context.Context, Conn, Credentials, WorkUnit, *RawSink) (FetchResult, error) {
+		return FetchResult{}, &RateLimitedError{RetryAfter: 2 * time.Minute}
+	}}
+	e := setup(t, f)
+	before := time.Now()
+	j := e.drive(t, e.rt, e.enqueue(t, jobs.SyncPayload{}), 1)
+	if j.Status != "queued" || j.Attempts != 0 || j.RunAt.Before(before.Add(2*time.Minute)) {
+		t.Errorf("job = %s attempts %d run at %s; want queued, 0 attempts, ≥ %s", j.Status, j.Attempts, j.RunAt, before.Add(2*time.Minute))
+	}
+	var blocks int
+	e.scan(`SELECT count(*) FROM provider_rate_state`, nil, &blocks)
+	if blocks != 0 {
+		t.Errorf("%d provider blocks, want none", blocks)
 	}
 }
 
