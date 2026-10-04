@@ -204,7 +204,7 @@ var ErrInvalidOutput = errors.New("normalize: invalid output")
 
 var (
 	groupKinds   = []string{"bp_reading", "body_composition"}
-	stageKinds   = []string{"awake", "light", "deep", "rem", "asleep_unspecified", "in_bed"}
+	stageKinds   = []string{"awake", "light", "deep", "rem", "asleep_unspecified", "in_bed", "unknown", "restless", "out_of_bed"}
 	segmentKinds = []string{"lap", "set", "interval"}
 )
 

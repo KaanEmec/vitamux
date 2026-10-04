@@ -1,0 +1,9 @@
+{
+  "synthetic": true,
+  "fields": {
+    "bpm": "heart_rate",
+    "device": "raw: device fingerprint",
+    "id": "raw: identifier (external id)",
+    "time": "raw: timestamp that sets the row time"
+  }
+}

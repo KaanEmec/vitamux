@@ -4191,7 +4191,7 @@ components:
       additionalProperties: false
       required: [stage, start_at, end_at]
       properties:
-        stage: {type: string, enum: [awake, light, deep, rem, asleep_unspecified, in_bed]}
+        stage: {type: string, enum: [awake, light, deep, rem, asleep_unspecified, in_bed, unknown, restless, out_of_bed]}
         start_at: {type: string, format: date-time}
         end_at: {type: string, format: date-time}
     SleepPage:

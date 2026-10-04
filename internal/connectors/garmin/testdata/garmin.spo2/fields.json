@@ -1,0 +1,18 @@
+{
+  "synthetic": true,
+  "fields": {
+    "response.averageSpO2": "raw: derivable from stored rows",
+    "response.calendarDate": "raw: identifier",
+    "response.continuousReadingDTOList": "raw: not stored (single values carry the readings)",
+    "response.endTimestampGMT": "raw: timestamp that sets the zone offset with the local end",
+    "response.endTimestampLocal": "raw: local time that sets the zone offset",
+    "response.latestSpO2": "raw: derivable from stored rows",
+    "response.lowestSpO2": "raw: derivable from stored rows",
+    "response.spO2HourlyAverages[][]": "raw: hourly aggregates, derivable from stored rows",
+    "response.spO2SingleValues[][]": "spo2",
+    "response.startTimestampGMT": "raw: timestamp that sets the zone offset with the local start",
+    "response.startTimestampLocal": "raw: local time that sets the zone offset",
+    "response.userProfilePK": "raw: identifier",
+    "unit.date": "raw: identifier (request day)"
+  }
+}

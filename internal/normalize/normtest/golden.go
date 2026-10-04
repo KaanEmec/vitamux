@@ -3,7 +3,8 @@
 // A normalizer package keeps synthetic raw cases in testdata/<normalizer id>/<case>.raw.<ext> and
 // the expected output beside them in <case>.golden.json, which also records the normalizer
 // version. Name the test TestGolden… so `make golden` runs it. UPDATE_GOLDEN=1 rewrites goldens,
-// but only after a Version() bump: changing output at the same version always fails.
+// but only after a Version() bump: changing output at the same version always fails. The raw
+// cases also need a field ledger, testdata/<normalizer id>/fields.json (ledger.go).
 package normtest
 
 import (
@@ -38,6 +39,7 @@ func Golden(t *testing.T, n normalize.Normalizer, raw normalize.RawPayload, env 
 	if err != nil || len(cases) == 0 {
 		t.Fatalf("no golden cases in testdata/%s (want <case>.raw.<ext>)", n.ID())
 	}
+	checkLedger(t, filepath.Join("testdata", n.ID()), cases)
 	update := os.Getenv("UPDATE_GOLDEN") == "1"
 	for _, path := range cases {
 		name, _, _ := strings.Cut(filepath.Base(path), ".raw.")

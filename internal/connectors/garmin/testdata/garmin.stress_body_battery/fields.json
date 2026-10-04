@@ -1,0 +1,20 @@
+{
+  "synthetic": true,
+  "fields": {
+    "response.avgStressLevel": "raw: derivable from stored rows",
+    "response.bodyBatteryValueDescriptorsDTOList[].bodyBatteryValueDescriptorIndex": "raw: column descriptor of the values array",
+    "response.bodyBatteryValueDescriptorsDTOList[].bodyBatteryValueDescriptorKey": "raw: column descriptor of the values array",
+    "response.bodyBatteryValuesArray[][]": "garmin_body_battery",
+    "response.calendarDate": "raw: identifier",
+    "response.endTimestampGMT": "raw: timestamp that sets the zone offset with the local end",
+    "response.endTimestampLocal": "raw: local time that sets the zone offset",
+    "response.maxStressLevel": "raw: derivable from stored rows",
+    "response.startTimestampGMT": "raw: timestamp that sets the zone offset with the local start",
+    "response.startTimestampLocal": "raw: local time that sets the zone offset",
+    "response.stressValueDescriptorsDTOList[].index": "raw: column descriptor of the values array",
+    "response.stressValueDescriptorsDTOList[].key": "raw: column descriptor of the values array",
+    "response.stressValuesArray[][]": "garmin_stress",
+    "response.userProfilePK": "raw: identifier",
+    "unit.date": "raw: identifier (request day)"
+  }
+}

@@ -126,6 +126,10 @@ func TestGoldenHeartRate(t *testing.T) {
 
 The first run fails because the goldens are missing: `UPDATE_GOLDEN=1 go test ./internal/connectors/<name>/` writes `<case>.golden.json`; review them and commit both. Later output changes fail until you bump `Version()`. Cover the normal case, an unknown or skipped record (warning) and an unreadable one (pinned error). The golden records the error text, so return a fixed message: `encoding/json` syntax errors can echo payload bytes, which also makes them a leak in production logs. A case that is not JSON at all is `<case>.raw.txt` with a `synthetic: true` line in its first five lines (the guard accepts that marker in text files). Build bigger datasets with [`tools/fixturegen`](../tools/fixturegen) when the provider is part of the synthetic persona.
 
+### Field ledgers
+
+Every stream also keeps `testdata/<normalizer id>/fields.json`, `{"synthetic": true, "fields": {...}}`, mapping each raw JSON path of its cases (`.` for keys, `[]` for array elements, e.g. `response.records[].cycle.day_strain`) to a catalogue code (several comma separated) or to `raw: <reason>`. The harness fails on a path the ledger does not name, so a new provider field is catalogued or explained before it ships. Only identifiers, baselines, UI text and values derivable from stored rows stay raw ([policy](architecture/metric-catalog.md#rules)); a field whose code exists but is not mapped yet says so (`raw: not mapped yet: J25.4`).
+
 ## 8. Tests for the connector
 
 - **Unit** (offline): the descriptor validates (`connectors.NewRegistry`), `Plan` for each mode, and any decoder on its own (valid page, each drift case).

@@ -48,8 +48,27 @@ var NoBuiltin = func() map[string]string {
 	}
 	// Garmin and WHOOP scores (J18.4, J19.4) are provider-scoped: one source each, nothing to order.
 	for _, code := range []string{"garmin_stress", "garmin_body_battery", "garmin_training_readiness", "garmin_sleep_score",
-		"whoop_recovery", "whoop_strain", "whoop_sleep_performance"} {
+		"whoop_recovery", "whoop_strain", "whoop_sleep_performance", "whoop_sleep_need", "whoop_sleep_debt",
+		"whoop_sleep_consistency", "whoop_sleep_disturbances", "whoop_max_heart_rate", "garmin_body_battery_charged",
+		"garmin_body_battery_drained", "garmin_fitness_age", "garmin_acute_load", "garmin_chronic_load", "withings_sleep_score",
+		"withings_breathing_quality", "withings_nerve_health_score", "withings_nerve_response_score", "withings_metabolic_age",
+		"withings_esc"} {
 		m[code] = "a provider-scoped score with a single source, so there is nothing to order"
+	}
+	// The catalogue seed of J25.1 (E25) adds the codes the mapping corrections and the Apple Health type registry need.
+	for _, code := range []string{"elevation_gain", "intensity_light_time", "intensity_moderate_time", "intensity_vigorous_time",
+		"sedentary_time", "distance_rowing", "distance_paddle", "distance_skating", "distance_xc_ski", "distance_downhill_snow",
+		"move_time", "daylight_time", "wheelchair_pushes", "swim_strokes", "speed_walking", "speed_running", "speed_cycling",
+		"speed_rowing", "speed_paddle", "cadence_cycling", "power_running", "power_cycling", "ftp_cycling", "running_stride_length",
+		"running_vertical_oscillation", "running_ground_contact_time", "physical_effort", "sleeping_heart_rate",
+		"heart_rate_recovery_1min", "afib_burden", "perfusion_index", "ecg_qrs", "ecg_pr", "ecg_qt", "ecg_qtc", "spo2_nightly",
+		"respiratory_rate_nightly", "apnea_hypopnea_index", "fev1", "fvc", "peak_expiratory_flow", "inhaler_uses",
+		"skin_temperature_nightly", "sleep_temperature_deviation", "insulin_basal", "insulin_bolus", "blood_alcohol",
+		"alcoholic_drinks", "stair_ascent_speed", "stair_descent_speed", "six_minute_walk_distance", "falls",
+		"environment_audio_exposure", "headphone_audio_exposure", "environment_sound_reduction", "uv_exposure",
+		"water_temperature", "underwater_depth", "electrodermal_activity", "sleep_awakenings", "sleep_snoring_time",
+		"sleep_snoring_episodes"} {
+		m[code] = "added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source"
 	}
 	return m
 }()
@@ -228,6 +247,9 @@ func builtins() []Builtin {
 			Rule{Metric: "active_energy", Window: day, Strategy: firstAvailable,
 				Quality: &Quality{MinCoverage: new(0.8), RequireWear: "heart_rate"},
 				Groups:  biLadder(biWorn("watch"), biWorn("band"), biWorn("ring"), iphone(), biDevice("phone"))}),
+		biV1("Follows the active energy source; only reported totals are stored, never active plus basal.",
+			Rule{Metric: "total_energy", Window: day, Strategy: firstAvailable, Follow: "active_energy",
+				Groups: biLadder(biWorn("watch"), biWorn("band"), biWorn("ring"), iphone(), biDevice("phone"))}),
 		biV(2, "Chest straps are ECG-class, then wrist devices by independent validation; inside workouts the recording device follows the straps.",
 			Rule{Metric: "heart_rate", Window: RuleWindow{Kind: catalog.WindowBucket, Size: "5m"}, Strategy: firstAvailable,
 				Quality: hrQuality(), Groups: hrGroups(),

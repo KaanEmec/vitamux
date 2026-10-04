@@ -1,0 +1,10 @@
+{
+  "synthetic": true,
+  "fields": {
+    "response[].during": "raw: sleep stage interval (stored in sleep_stages)",
+    "response[].type": "raw: sleep stage type (stored in sleep_stages)",
+    "unit.id": "raw: identifier (keys the sleep session)",
+    "unit.is_nap": "raw: stored in sleep_sessions",
+    "unit.timezone_offset": "raw: stored in sleep_sessions"
+  }
+}

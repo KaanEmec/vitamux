@@ -1,0 +1,32 @@
+{
+  "synthetic": true,
+  "fields": {
+    "response.cycling": "raw: cycling VO2max is another method, not mapped",
+    "response.generic.calendarDate": "raw: identifier (vo2max key and date)",
+    "response.generic.fitnessAge": "raw: not mapped yet: J25.5 (garmin_fitness_age)",
+    "response.generic.maxMetCategory": "raw: category label",
+    "response.generic.vo2MaxPreciseValue": "vo2max",
+    "response.generic.vo2MaxValue": "vo2max",
+    "response.userId": "raw: identifier",
+    "response[].calendarDate": "raw: identifier",
+    "response[].cycling": "raw: cycling VO2max is another method, not mapped",
+    "response[].deviceId": "raw: identifier (device)",
+    "response[].feedbackShort": "raw: baseline/UI text",
+    "response[].generic.calendarDate": "raw: identifier (vo2max key and date)",
+    "response[].generic.fitnessAge": "raw: not mapped yet: J25.5 (garmin_fitness_age)",
+    "response[].generic.maxMetCategory": "raw: category label",
+    "response[].generic.vo2MaxPreciseValue": "vo2max",
+    "response[].generic.vo2MaxValue": "vo2max",
+    "response[].heatAltitudeAcclimation": "raw: baseline/UI text",
+    "response[].inputContext": "raw: label of the readiness input",
+    "response[].level": "raw: baseline/UI text",
+    "response[].recoveryTime": "raw: no catalogue code for recovery time",
+    "response[].score": "garmin_training_readiness",
+    "response[].sleepScore": "raw: readiness input, stored from garmin.sleep (garmin_sleep_score)",
+    "response[].timestamp": "raw: timestamp that sets the row time",
+    "response[].timestampLocal": "raw: local time that sets the zone offset",
+    "response[].userId": "raw: identifier",
+    "response[].userProfilePK": "raw: identifier",
+    "unit.date": "raw: identifier (request day)"
+  }
+}

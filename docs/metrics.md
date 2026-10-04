@@ -20,6 +20,36 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `stand_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day |  | AppleStandTime |  |
 | `stand_hours` | count | interval, daily_value | additive | 0 to 24 | bucket, hour, local_day |  | AppleStandHour (category) |  |
 | `whoop_strain` | index | daily_value | daily_summary | 0 to 21 | local_day, latest |  |  |  |
+| `distance_rowing` | m | interval | additive | 0 to 100000 | bucket, hour, local_day |  | DistanceRowing |  |
+| `distance_paddle` | m | interval | additive | 0 to 100000 | bucket, hour, local_day |  | DistancePaddleSports |  |
+| `distance_skating` | m | interval | additive | 0 to 200000 | bucket, hour, local_day |  | DistanceSkatingSports |  |
+| `distance_xc_ski` | m | interval | additive | 0 to 200000 | bucket, hour, local_day |  | DistanceCrossCountrySkiing |  |
+| `distance_downhill_snow` | m | interval | additive | 0 to 300000 | bucket, hour, local_day |  | DistanceDownhillSnowSports |  |
+| `elevation_gain` | m | interval, daily_value | additive | 0 to 20000 | bucket, hour, local_day |  |  |  |
+| `total_energy` | kcal | interval, daily_value | additive | 0 to 30000 | bucket, hour, local_day |  |  |  |
+| `intensity_light_time` | s | interval, daily_value | additive | 0 to 86400 | bucket, hour, local_day |  |  |  |
+| `intensity_moderate_time` | s | interval, daily_value | additive | 0 to 86400 | bucket, hour, local_day |  |  |  |
+| `intensity_vigorous_time` | s | interval, daily_value | additive | 0 to 86400 | bucket, hour, local_day |  |  |  |
+| `sedentary_time` | s | interval, daily_value | additive | 0 to 86400 | bucket, hour, local_day |  |  |  |
+| `move_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day |  | AppleMoveTime |  |
+| `daylight_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day |  | TimeInDaylight |  |
+| `wheelchair_pushes` | count | interval | additive | 0 to 50000 | bucket, hour, local_day |  | PushCount |  |
+| `swim_strokes` | count | interval | additive | 0 to 100000 | bucket, hour, local_day |  | SwimmingStrokeCount |  |
+| `speed_walking` | m/s | sample | intensive | 0 to 10 | bucket, hour, local_day, local_night, sleep_episode, latest |  | WalkingSpeed |  |
+| `speed_running` | m/s | sample | intensive | 0 to 20 | bucket, hour, local_day, local_night, sleep_episode, latest |  | RunningSpeed |  |
+| `speed_cycling` | m/s | sample | intensive | 0 to 40 | bucket, hour, local_day, local_night, sleep_episode, latest |  | CyclingSpeed |  |
+| `speed_rowing` | m/s | sample | intensive | 0 to 15 | bucket, hour, local_day, local_night, sleep_episode, latest |  | RowingSpeed |  |
+| `speed_paddle` | m/s | sample | intensive | 0 to 15 | bucket, hour, local_day, local_night, sleep_episode, latest |  | PaddleSportsSpeed |  |
+| `cadence_cycling` | rpm | sample | intensive | 0 to 300 | bucket, hour, local_day, local_night, sleep_episode, latest |  | CyclingCadence |  |
+| `power_running` | W | sample | intensive | 0 to 2000 | bucket, hour, local_day, local_night, sleep_episode, latest |  | RunningPower |  |
+| `power_cycling` | W | sample | intensive | 0 to 3000 | bucket, hour, local_day, local_night, sleep_episode, latest |  | CyclingPower |  |
+| `ftp_cycling` | W | sample | latest | 0 to 1000 | local_day, latest |  | CyclingFunctionalThresholdPower |  |
+| `running_stride_length` | m | sample | intensive | 0.2 to 3 | bucket, hour, local_day, local_night, sleep_episode, latest |  | RunningStrideLength |  |
+| `running_vertical_oscillation` | m | sample | intensive | 0.01 to 0.5 | bucket, hour, local_day, local_night, sleep_episode, latest |  | RunningVerticalOscillation |  |
+| `running_ground_contact_time` | s | sample | intensive | 0.05 to 1 | bucket, hour, local_day, local_night, sleep_episode, latest |  | RunningGroundContactTime |  |
+| `physical_effort` | kcal/kg/h | sample | intensive | 0 to 100 | bucket, hour, local_day, local_night, sleep_episode, latest |  | PhysicalEffort |  |
+| `garmin_acute_load` | index | daily_value | daily_summary | 0 to 10000 | local_day, latest |  |  |  |
+| `garmin_chronic_load` | index | daily_value | daily_summary | 0 to 10000 | local_day, latest |  |  |  |
 
 ## Heart and circulation
 
@@ -38,6 +68,17 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `garmin_body_battery` | index | sample | intensive | 0 to 100 | bucket, hour, local_day, local_night, sleep_episode, latest |  |  |  |
 | `garmin_training_readiness` | index | sample | daily_summary | 0 to 100 | local_day, latest |  |  |  |
 | `whoop_recovery` | % | daily_value | daily_summary | 0 to 100 | local_day, latest |  |  |  |
+| `sleeping_heart_rate` | bpm | daily_value | daily_summary | 20 to 150 | local_day, latest |  |  |  |
+| `heart_rate_recovery_1min` | bpm | sample | latest | 0 to 150 | local_day, latest |  | HeartRateRecoveryOneMinute |  |
+| `afib_burden` | % | daily_value | daily_summary | 0 to 100 | local_day, latest |  | AtrialFibrillationBurden |  |
+| `perfusion_index` | % | sample | intensive | 0 to 20 | bucket, hour, local_day, local_night, sleep_episode, latest |  | PeripheralPerfusionIndex |  |
+| `ecg_qrs` | s | sample | latest | 0.02 to 0.3 | local_day, latest |  |  | 135 |
+| `ecg_pr` | s | sample | latest | 0.05 to 0.6 | local_day, latest |  |  | 136 |
+| `ecg_qt` | s | sample | latest | 0.2 to 0.8 | local_day, latest |  |  | 137 |
+| `ecg_qtc` | s | sample | latest | 0.2 to 0.8 | local_day, latest |  |  | 138 |
+| `whoop_max_heart_rate` | bpm | sample | latest | 100 to 250 | local_day, latest |  |  |  |
+| `garmin_body_battery_charged` | index | daily_value | daily_summary | 0 to 200 | local_day, latest |  |  |  |
+| `garmin_body_battery_drained` | index | daily_value | daily_summary | 0 to 200 | local_day, latest |  |  |  |
 
 ## Blood pressure
 
@@ -54,6 +95,14 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `spo2` | % | sample | intensive | 50 to 100 | bucket, hour, local_day, local_night, sleep_episode, latest |  | OxygenSaturation | 54 |
 | `respiratory_rate` | breaths/min | sample | intensive | 4 to 60 | bucket, hour, local_day, local_night, sleep_episode, latest |  | RespiratoryRate |  |
 | `breathing_disturbances` | events/h | daily_value | daily_summary | 0 to 150 | local_day, latest |  | AppleSleepingBreathingDisturbances |  |
+| `spo2_nightly` | % | daily_value | daily_summary | 50 to 100 | local_day, latest |  |  |  |
+| `respiratory_rate_nightly` | breaths/min | daily_value | daily_summary | 4 to 60 | local_day, latest |  |  |  |
+| `apnea_hypopnea_index` | events/h | daily_value | daily_summary | 0 to 150 | local_day, latest |  |  |  |
+| `fev1` | L | sample | latest | 0 to 10 | local_day, latest |  | ForcedExpiratoryVolume1 |  |
+| `fvc` | L | sample | latest | 0 to 10 | local_day, latest |  | ForcedVitalCapacity |  |
+| `peak_expiratory_flow` | L/min | sample | latest | 0 to 1000 | local_day, latest |  | PeakExpiratoryFlowRate |  |
+| `inhaler_uses` | count | interval | additive | 0 to 200 | bucket, hour, local_day |  | InhalerUsage |  |
+| `withings_breathing_quality` | index | daily_value | daily_summary | 0 to 100 | local_day, latest |  |  |  |
 
 ## Temperature
 
@@ -63,6 +112,8 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `skin_temperature` | °C | sample | intensive | 20 to 45 | bucket, hour, local_day, local_night, sleep_episode, latest |  |  | 73 |
 | `wrist_temperature_sleeping` | °C | daily_value | daily_summary | 25 to 45 | local_day, latest |  | AppleSleepingWristTemperature |  |
 | `basal_body_temperature` | °C | sample | latest | 30 to 45 | local_day, latest |  | BasalBodyTemperature |  |
+| `skin_temperature_nightly` | °C | daily_value | daily_summary | 20 to 45 | local_day, latest |  |  |  |
+| `sleep_temperature_deviation` | °C | daily_value | daily_summary | -10 to 10 | local_day, latest |  |  |  |
 
 ## Body composition
 
@@ -83,12 +134,37 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `bmi` | kg/m² | sample | latest | 8 to 100 | local_day, latest, reading | body_composition | BodyMassIndex |  |
 | `lean_body_mass` | kg | sample | latest | 1 to 300 | local_day, latest, reading | body_composition | LeanBodyMass |  |
 | `waist_circumference` | m | sample | latest | 0.3 to 3 | local_day, latest |  | WaistCircumference |  |
+| `fat_free_mass_trunk` | kg | sample | latest | 0.01 to 150 | local_day, latest, reading | body_composition |  | 173 |
+| `fat_free_mass_left_arm` | kg | sample | latest | 0.01 to 150 | local_day, latest, reading | body_composition |  | 173 |
+| `fat_free_mass_right_arm` | kg | sample | latest | 0.01 to 150 | local_day, latest, reading | body_composition |  | 173 |
+| `fat_free_mass_left_leg` | kg | sample | latest | 0.01 to 150 | local_day, latest, reading | body_composition |  | 173 |
+| `fat_free_mass_right_leg` | kg | sample | latest | 0.01 to 150 | local_day, latest, reading | body_composition |  | 173 |
+| `fat_mass_trunk` | kg | sample | latest | 0.01 to 100 | local_day, latest, reading | body_composition |  | 174 |
+| `fat_mass_left_arm` | kg | sample | latest | 0.01 to 100 | local_day, latest, reading | body_composition |  | 174 |
+| `fat_mass_right_arm` | kg | sample | latest | 0.01 to 100 | local_day, latest, reading | body_composition |  | 174 |
+| `fat_mass_left_leg` | kg | sample | latest | 0.01 to 100 | local_day, latest, reading | body_composition |  | 174 |
+| `fat_mass_right_leg` | kg | sample | latest | 0.01 to 100 | local_day, latest, reading | body_composition |  | 174 |
+| `muscle_mass_trunk` | kg | sample | latest | 0.01 to 100 | local_day, latest, reading | body_composition |  | 175 |
+| `muscle_mass_left_arm` | kg | sample | latest | 0.01 to 100 | local_day, latest, reading | body_composition |  | 175 |
+| `muscle_mass_right_arm` | kg | sample | latest | 0.01 to 100 | local_day, latest, reading | body_composition |  | 175 |
+| `muscle_mass_left_leg` | kg | sample | latest | 0.01 to 100 | local_day, latest, reading | body_composition |  | 175 |
+| `muscle_mass_right_leg` | kg | sample | latest | 0.01 to 100 | local_day, latest, reading | body_composition |  | 175 |
+| `body_water_ratio` | % | sample | latest | 10 to 90 | local_day, latest, reading | body_composition |  |  |
+| `withings_nerve_health_score` | index | sample | latest | 0 to 100 | local_day, latest |  |  | 167 |
+| `withings_nerve_response_score` | index | sample | latest | 0 to 100 | local_day, latest |  |  | 196 |
+| `withings_esc` | µS | sample | latest | 0 to 200 | local_day, latest |  |  | 229 |
+| `withings_metabolic_age` | years | sample | latest | 10 to 120 | local_day, latest |  |  | 227 |
+| `garmin_fitness_age` | years | sample | latest | 10 to 120 | local_day, latest |  |  |  |
 
 ## Glucose and metabolism
 
 | Code | Unit | Kinds | Aggregation | Plausible | Windows | Group | Apple HK | Withings |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `blood_glucose` | mmol/L | sample | intensive | 0.5 to 50 | bucket, hour, local_day, local_night, sleep_episode, latest |  | BloodGlucose |  |
+| `insulin_basal` | IU | interval | additive | 0 to 500 | bucket, hour, local_day |  | InsulinDelivery |  |
+| `insulin_bolus` | IU | interval | additive | 0 to 500 | bucket, hour, local_day |  | InsulinDelivery |  |
+| `blood_alcohol` | % | sample | latest | 0 to 100 | local_day, latest |  | BloodAlcoholContent |  |
+| `alcoholic_drinks` | count | interval | additive | 0 to 200 | bucket, hour, local_day |  | NumberOfAlcoholicBeverages |  |
 
 ## Nutrition and intake
 
@@ -115,6 +191,22 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `walking_asymmetry` | % | sample | intensive | 0 to 100 | bucket, hour, local_day, local_night, sleep_episode, latest |  | WalkingAsymmetryPercentage |  |
 | `walking_double_support` | % | sample | intensive | 0 to 100 | bucket, hour, local_day, local_night, sleep_episode, latest |  | WalkingDoubleSupportPercentage |  |
 | `walking_step_length` | m | sample | intensive | 0.1 to 3 | bucket, hour, local_day, local_night, sleep_episode, latest |  | WalkingStepLength |  |
+| `stair_ascent_speed` | m/s | sample | intensive | 0 to 5 | bucket, hour, local_day, local_night, sleep_episode, latest |  | StairAscentSpeed |  |
+| `stair_descent_speed` | m/s | sample | intensive | 0 to 5 | bucket, hour, local_day, local_night, sleep_episode, latest |  | StairDescentSpeed |  |
+| `six_minute_walk_distance` | m | sample | latest | 0 to 1500 | local_day, latest |  | SixMinuteWalkTestDistance |  |
+| `falls` | count | interval | additive | 0 to 100 | bucket, hour, local_day |  | NumberOfTimesFallen |  |
+
+## Environment and hearing
+
+| Code | Unit | Kinds | Aggregation | Plausible | Windows | Group | Apple HK | Withings |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `environment_audio_exposure` | dBA | sample | intensive | 0 to 200 | bucket, hour, local_day, local_night, sleep_episode, latest |  | EnvironmentalAudioExposure |  |
+| `headphone_audio_exposure` | dBA | sample | intensive | 0 to 200 | bucket, hour, local_day, local_night, sleep_episode, latest |  | HeadphoneAudioExposure |  |
+| `environment_sound_reduction` | dB | sample | intensive | 0 to 100 | bucket, hour, local_day, local_night, sleep_episode, latest |  | EnvironmentalSoundReduction |  |
+| `uv_exposure` | index | sample | intensive | 0 to 20 | bucket, hour, local_day, local_night, sleep_episode, latest |  | UVExposure |  |
+| `water_temperature` | °C | sample | latest | -2 to 50 | local_day, latest |  | WaterTemperature |  |
+| `underwater_depth` | m | sample | latest | 0 to 200 | local_day, latest |  | UnderwaterDepth |  |
+| `electrodermal_activity` | µS | sample | intensive | 0 to 200 | bucket, hour, local_day, local_night, sleep_episode, latest |  | ElectrodermalActivity |  |
 
 ## Sleep
 
@@ -132,6 +224,14 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `sleep_efficiency` | % | - | sleep_derived | 0 to 100 | local_night, sleep_episode |  |  |  |
 | `garmin_sleep_score` | index | daily_value | daily_summary | 0 to 100 | local_day, latest |  |  |  |
 | `whoop_sleep_performance` | % | sample | daily_summary | 0 to 100 | local_day, latest |  |  |  |
+| `sleep_awakenings` | count | daily_value | daily_summary | 0 to 200 | local_day, latest |  |  |  |
+| `sleep_snoring_time` | s | daily_value | daily_summary | 0 to 86400 | local_day, latest |  |  |  |
+| `sleep_snoring_episodes` | count | daily_value | daily_summary | 0 to 500 | local_day, latest |  |  |  |
+| `whoop_sleep_need` | s | daily_value | daily_summary | 0 to 86400 | local_day, latest |  |  |  |
+| `whoop_sleep_debt` | s | daily_value | daily_summary | 0 to 86400 | local_day, latest |  |  |  |
+| `whoop_sleep_consistency` | % | daily_value | daily_summary | 0 to 100 | local_day, latest |  |  |  |
+| `whoop_sleep_disturbances` | count | daily_value | daily_summary | 0 to 500 | local_day, latest |  |  |  |
+| `withings_sleep_score` | index | daily_value | daily_summary | 0 to 100 | local_day, latest |  |  |  |
 
 ## Derived
 
@@ -157,7 +257,7 @@ Typed events in `health_events`, never resolved like metrics ([metric-catalog](a
 
 ## Windows and strategies by aggregation
 
-Bucket size is 5 minutes for `intensive` and `additive`. Provider-scoped scores and selection-only metrics (`resting_heart_rate`, `hrv_rmssd_nightly`) lose `mean`, `min` and `max`. Metrics in a group add the `reading` window.
+Bucket size is 5 minutes for `intensive` and `additive`. Provider-scoped scores and selection-only metrics (`resting_heart_rate`, `hrv_rmssd_nightly`, `intensity_light_time`, `intensity_moderate_time`, `intensity_vigorous_time`, `sedentary_time`, `spo2_nightly`, `respiratory_rate_nightly`, `skin_temperature_nightly`, `sleep_temperature_deviation`) lose `mean`, `min` and `max`. Metrics in a group add the `reading` window.
 
 | Aggregation | Windows | Strategies |
 | --- | --- | --- |
@@ -215,3 +315,11 @@ A value converts to the base unit as `value * factor + offset`.
 | mg | kg | 0.000001 | 0 |
 | L | L | 1 | 0 |
 | mL | L | 0.001 | 0 |
+| W | W | 1 | 0 |
+| rpm | rpm | 1 | 0 |
+| kcal/kg/h | kcal/kg/h | 1 | 0 |
+| dBA | dBA | 1 | 0 |
+| dB | dB | 1 | 0 |
+| L/min | L/min | 1 | 0 |
+| IU | IU | 1 | 0 |
+| µS | µS | 1 | 0 |

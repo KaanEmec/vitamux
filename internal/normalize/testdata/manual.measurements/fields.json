@@ -1,0 +1,10 @@
+{
+  "synthetic": true,
+  "fields": {
+    "end": "raw: interval end that sets the row time",
+    "metric": "raw: selects the catalogue code",
+    "start": "raw: timestamp that sets the row time",
+    "unit": "raw: source unit, converted to the canonical unit",
+    "value": "raw: stored under the catalogue code the metric field names"
+  }
+}

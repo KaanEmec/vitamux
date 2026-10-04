@@ -11,6 +11,7 @@ A built-in applies while the owner has no rule for the metric. The first edit co
 | `builtin:steps:3` | local_day | first_available · min_coverage 0.6 · require_wear heart_rate · compose first_available by hour (E9) | `watch` › `watch_relayed` › `ring` › `ring_relayed` › `band` › `band_relayed` › `iphone` › `phone` | Watch, ring, band, iPhone, other phones, each direct before relayed; hours resolve separately so a watch left on the charger falls back to the phone for those hours only. |
 | `builtin:distance_walk_run:3` | local_day | first_available · min_coverage 0.6 · require_wear heart_rate · compose first_available by hour (E9) · contexts.workout @workout_source (E1) | `watch` › `watch_relayed` › `iphone` › `phone` › `ring` › `ring_relayed` | Follows the step source; inside a workout, the device that recorded it. |
 | `builtin:active_energy:3` | local_day | first_available · min_coverage 0.8 · require_wear heart_rate | `watch` › `watch_relayed` › `band` › `band_relayed` › `ring` › `ring_relayed` › `iphone` › `phone` | Every device is far off; one worn source per day keeps days comparable. |
+| `builtin:total_energy:1` | local_day | first_available · follow `active_energy` (E5) | `watch` › `watch_relayed` › `band` › `band_relayed` › `ring` › `ring_relayed` › `iphone` › `phone` | Follows the active energy source; only reported totals are stored, never active plus basal. |
 | `builtin:heart_rate:2` | bucket 5m | first_available · plausible_range 25–230 · exclude_flags manual_entry · contexts.workout chest_strap, arm_band, @workout_source (E1) | `chest_strap` › `arm_band` › `apple_watch` › `garmin` › `garmin_apple` › `fitbit` › `fitbit_apple` › `samsung` › `whoop` › `whoop_apple` › `polar` › `polar_apple` › `xiaomi` › `amazfit` › `oura` › `oura_apple` | Chest straps are ECG-class, then wrist devices by independent validation; inside workouts the recording device follows the straps. |
 | `builtin:resting_heart_rate:2` | local_day | first_available · max_staleness 36h | `oura` › `oura_apple` › `whoop` › `whoop_apple` › `polar` › `polar_apple` › `apple` › `garmin` › `garmin_apple` › `fitbit` › `fitbit_apple` › `samsung` | Selection only (definitions differ); ranked by nightly error against a chest strap. |
 | `builtin:hrv_sdnn:1` | local_day | single_source | `apple` | Spot SDNN is its own method and comes from Apple only; never mixed with RMSSD. |
@@ -39,6 +40,22 @@ A built-in applies while the owner has no rule for the metric. The first edit co
 | `builtin:basal_metabolic_rate:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
 | `builtin:bmi:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
 | `builtin:lean_body_mass:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
+| `builtin:fat_free_mass_trunk:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
+| `builtin:fat_free_mass_left_arm:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
+| `builtin:fat_free_mass_right_arm:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
+| `builtin:fat_free_mass_left_leg:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
+| `builtin:fat_free_mass_right_leg:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
+| `builtin:fat_mass_trunk:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
+| `builtin:fat_mass_left_arm:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
+| `builtin:fat_mass_right_arm:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
+| `builtin:fat_mass_left_leg:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
+| `builtin:fat_mass_right_leg:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
+| `builtin:muscle_mass_trunk:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
+| `builtin:muscle_mass_left_arm:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
+| `builtin:muscle_mass_right_arm:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
+| `builtin:muscle_mass_left_leg:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
+| `builtin:muscle_mass_right_leg:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
+| `builtin:body_water_ratio:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
 | `builtin:sleep:2` | local_night | event_priority · max_staleness 36h · match_overlap 0.5 · min_episode_coverage 0.7 | `oura` › `oura_apple` › `apple_watch` › `fitbit` › `fitbit_apple` › `under_mattress` › `samsung` › `whoop` › `whoop_apple` › `garmin` › `garmin_apple` › `polar` › `polar_apple` › `xiaomi` › `amazfit` | One night comes from one source, ranked by independent four-stage agreement with PSG; a device on the charger fails the coverage gate. |
 
 ## Groups
@@ -85,10 +102,16 @@ A group id means the same selectors in every built-in. Fields of one selector ar
 ## Coverage
 
 - `metric: sleep` covers every `sleep_derived` code; `metric: blood_pressure` covers the `bp_reading` components.
+- No built-in for `afib_burden`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `alcoholic_drinks`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `apnea_hypopnea_index`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
 - No built-in for `basal_body_temperature`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `basal_energy`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `blood_alcohol`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
 - No built-in for `blood_glucose`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `breathing_disturbances`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `cadence_cycling`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `daylight_time`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
 - No built-in for `diet_caffeine`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `diet_carbohydrate`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `diet_cholesterol`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
@@ -102,25 +125,97 @@ A group id means the same selectors in every built-in. Fields of one selector ar
 - No built-in for `diet_sugar`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `diet_water`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `distance_cycling`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `distance_downhill_snow`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `distance_paddle`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `distance_rowing`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `distance_skating`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
 - No built-in for `distance_swimming`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `distance_wheelchair`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `distance_xc_ski`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `ecg_pr`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `ecg_qrs`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `ecg_qt`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `ecg_qtc`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `electrodermal_activity`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `elevation_gain`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `environment_audio_exposure`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `environment_sound_reduction`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
 - No built-in for `exercise_time`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `falls`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `fev1`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
 - No built-in for `floors_climbed`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `ftp_cycling`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `fvc`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `garmin_acute_load`: a provider-scoped score with a single source, so there is nothing to order.
 - No built-in for `garmin_body_battery`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `garmin_body_battery_charged`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `garmin_body_battery_drained`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `garmin_chronic_load`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `garmin_fitness_age`: a provider-scoped score with a single source, so there is nothing to order.
 - No built-in for `garmin_sleep_score`: a provider-scoped score with a single source, so there is nothing to order.
 - No built-in for `garmin_stress`: a provider-scoped score with a single source, so there is nothing to order.
 - No built-in for `garmin_training_readiness`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `headphone_audio_exposure`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `heart_rate_recovery_1min`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `inhaler_uses`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `insulin_basal`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `insulin_bolus`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `intensity_light_time`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `intensity_moderate_time`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `intensity_vigorous_time`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `move_time`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `peak_expiratory_flow`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `perfusion_index`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `physical_effort`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `power_cycling`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `power_running`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `respiratory_rate_nightly`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `running_ground_contact_time`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `running_stride_length`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `running_vertical_oscillation`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `sedentary_time`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `six_minute_walk_distance`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
 - No built-in for `skin_temperature`: the value depends on where the device is worn, so there is no neutral order; the owner picks one source.
+- No built-in for `skin_temperature_nightly`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `sleep_awakenings`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `sleep_snoring_episodes`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `sleep_snoring_time`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `sleep_temperature_deviation`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `sleeping_heart_rate`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `speed_cycling`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `speed_paddle`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `speed_rowing`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `speed_running`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `speed_walking`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `spo2_nightly`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `stair_ascent_speed`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `stair_descent_speed`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
 - No built-in for `stand_hours`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `stand_time`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `swim_strokes`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `underwater_depth`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `uv_exposure`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
 - No built-in for `waist_circumference`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `walking_asymmetry`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `walking_double_support`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `walking_heart_rate`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `walking_steadiness`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `walking_step_length`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `water_temperature`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `wheelchair_pushes`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `whoop_max_heart_rate`: a provider-scoped score with a single source, so there is nothing to order.
 - No built-in for `whoop_recovery`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `whoop_sleep_consistency`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `whoop_sleep_debt`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `whoop_sleep_disturbances`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `whoop_sleep_need`: a provider-scoped score with a single source, so there is nothing to order.
 - No built-in for `whoop_sleep_performance`: a provider-scoped score with a single source, so there is nothing to order.
 - No built-in for `whoop_strain`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `withings_breathing_quality`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `withings_esc`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `withings_metabolic_age`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `withings_nerve_health_score`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `withings_nerve_response_score`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `withings_sleep_score`: a provider-scoped score with a single source, so there is nothing to order.
 - No built-in for `wrist_temperature_sleeping`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - Codes not in [metrics.md](metrics.md) get their built-in together with the code.

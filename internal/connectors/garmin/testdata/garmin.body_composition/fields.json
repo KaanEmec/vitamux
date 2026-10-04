@@ -1,0 +1,27 @@
+{
+  "synthetic": true,
+  "fields": {
+    "response.dateWeightList[].bmi": "bmi",
+    "response.dateWeightList[].bodyFat": "body_fat_ratio",
+    "response.dateWeightList[].bodyWater": "raw: not mapped yet: J25.5 (body_water_ratio)",
+    "response.dateWeightList[].boneMass": "bone_mass",
+    "response.dateWeightList[].calendarDate": "raw: derivable from stored rows",
+    "response.dateWeightList[].date": "raw: local time that sets the zone offset",
+    "response.dateWeightList[].metabolicAge": "raw: no catalogue code for Garmin metabolic age",
+    "response.dateWeightList[].muscleMass": "muscle_mass",
+    "response.dateWeightList[].physiqueRating": "raw: no catalogue code for physique rating",
+    "response.dateWeightList[].samplePk": "raw: identifier (group key)",
+    "response.dateWeightList[].sourceType": "raw: stored in group context and manual flag",
+    "response.dateWeightList[].timestampGMT": "raw: timestamp that sets the row time",
+    "response.dateWeightList[].visceralFat": "visceral_fat_index",
+    "response.dateWeightList[].weight": "weight",
+    "response.dateWeightList[].weightDelta": "raw: derivable from stored rows",
+    "response.endDate": "raw: request window",
+    "response.startDate": "raw: request window",
+    "response.totalAverage.from": "raw: request window",
+    "response.totalAverage.until": "raw: request window",
+    "response.totalAverage.weight": "raw: derivable from stored rows",
+    "unit.end": "raw: request window",
+    "unit.start": "raw: request window"
+  }
+}

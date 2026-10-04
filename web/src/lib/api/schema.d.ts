@@ -2982,7 +2982,7 @@ export interface components {
         };
         SleepStage: {
             /** @enum {string} */
-            stage: "awake" | "light" | "deep" | "rem" | "asleep_unspecified" | "in_bed";
+            stage: "awake" | "light" | "deep" | "rem" | "asleep_unspecified" | "in_bed" | "unknown" | "restless" | "out_of_bed";
             /** Format: date-time */
             start_at: string;
             /** Format: date-time */
