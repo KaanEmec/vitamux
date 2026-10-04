@@ -280,6 +280,7 @@ func (im *importer) providers(f File) error {
 var providerRefs = map[string][]string{
 	"connections": {"provider_id"}, "devices": {"provider_id"}, "data_origins": {"provider_id", "relayed_provider_id"},
 	"measurement_groups": {"provider_id"}, "measurements": {"provider_id"}, "sleep_sessions": {"provider_id"}, "workouts": {"provider_id"},
+	"health_events": {"provider_id"},
 }
 
 func (im *importer) provRef(r row, k string) error {
