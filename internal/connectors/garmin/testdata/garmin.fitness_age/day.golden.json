@@ -1,0 +1,48 @@
+{
+  "synthetic": true,
+  "normalizer": "garmin.fitness_age",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "garmin:wearable",
+        "type": "watch",
+        "manufacturer": "Garmin"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "garmin_fitness_age",
+        "kind": "sample",
+        "start": "2026-06-15T12:00:00Z",
+        "zone": {
+          "offset_min": 0
+        },
+        "value": 34.5,
+        "unit": "years",
+        "device": "garmin:wearable",
+        "key": {
+          "record_type": "fitness_age",
+          "external_id": "2026-06-15",
+          "component": "garmin_fitness_age"
+        }
+      },
+      {
+        "metric": "garmin_achievable_fitness_age",
+        "kind": "sample",
+        "start": "2026-06-15T12:00:00Z",
+        "zone": {
+          "offset_min": 0
+        },
+        "value": 31,
+        "unit": "years",
+        "device": "garmin:wearable",
+        "key": {
+          "record_type": "fitness_age",
+          "external_id": "2026-06-15",
+          "component": "garmin_achievable_fitness_age"
+        }
+      }
+    ]
+  }
+}

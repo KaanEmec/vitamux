@@ -19,6 +19,7 @@ const (
 	SeedSidecars  = 28 // the Garmin and WHOOP codes of J18.4 and J19.4
 	SeedMappings  = 32 // the codes of the E25 mapping corrections (J25.1)
 	SeedWhoop     = 34 // the WHOOP workout, sleep-need and elevation codes (J25.4)
+	SeedGarmin    = 36 // the Garmin provider-scoped codes of J25.5
 )
 
 var seedFiles = map[int]struct{ path, job string }{
@@ -28,6 +29,7 @@ var seedFiles = map[int]struct{ path, job string }{
 	SeedSidecars:  {"internal/db/migrations/00028_catalogue_garmin_whoop.sql", "J18.4, J19.4"},
 	SeedMappings:  {"internal/db/migrations/00032_catalogue_mappings.sql", "J25.1"},
 	SeedWhoop:     {"internal/db/migrations/00034_catalogue_whoop.sql", "J25.4"},
+	SeedGarmin:    {"internal/db/migrations/00036_catalogue_garmin.sql", "J25.5"},
 }
 
 func since(marker int) int {

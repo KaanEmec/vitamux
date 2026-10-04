@@ -4641,6 +4641,7 @@ components:
         stream: {type: string}
         start: {type: string, format: date-time}
         end: {type: string, format: date-time, description: Exclusive; now when omitted.}
+        daily_limit: {type: integer, minimum: 1, description: 'A paced backfill: at most this many units start a UTC day, the rest wait for the next day (a slow mode for provider-limited work such as the Garmin reload).'}
     Backfill:
       type: object
       additionalProperties: false
@@ -4654,6 +4655,7 @@ components:
         status: {type: string, enum: [running, done, failed, cancelled]}
         created_at: {type: string, format: date-time}
         finished_at: {type: [string, 'null'], format: date-time}
+        daily_limit: {type: [integer, 'null'], description: Units a UTC day for a paced backfill; null when unpaced.}
         unit_counts:
           type: object
           additionalProperties: false

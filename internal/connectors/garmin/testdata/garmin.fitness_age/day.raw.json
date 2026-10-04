@@ -1,0 +1,20 @@
+{
+ "synthetic": true,
+ "unit": {
+  "date": "2026-06-15"
+ },
+ "response": {
+  "chronologicalAge": 40,
+  "fitnessAge": 34.5,
+  "achievableFitnessAge": 31.0,
+  "previousFitnessAge": 35.0,
+  "components": {
+   "rhr": {
+    "value": 52
+   },
+   "bmi": {
+    "value": 22.4
+   }
+  }
+ }
+}

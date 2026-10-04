@@ -20,7 +20,7 @@
     "muscleMass": 32000,
     "physiqueRating": 5.0,
     "visceralFat": 6.0,
-    "metabolicAge": null,
+    "metabolicAge": 38,
     "sourceType": "INDEX_SCALE",
     "timestampGMT": 1781499600000,
     "weightDelta": null

@@ -40,6 +40,8 @@ MFA_TTL = 600  # seconds a pending MFA login is kept in memory
 MAX_PENDING = 16
 MAX_UNITS = 31  # units (days or 30-day blocks) per fetch call; the rest goes in next_cursor
 BLOCK = 30  # days per range-stream unit
+RELOAD_WAIT = float(os.environ.get("VITAMUX_GARMIN_RELOAD_WAIT_S", "20"))  # between checks for a reloaded day
+RELOAD_POLLS = 6  # checks before the day's streams are fetched anyway
 PAGE = 20  # activities per search page, as the Garmin Connect web app
 
 PROFILE = "/userprofile-service/socialProfile"  # the library's own profile call
@@ -79,12 +81,20 @@ STREAMS = {
     "garmin.hrv": _DAY,
     "garmin.respiration": _DAY,
     "garmin.spo2": _DAY,
+    "garmin.floors": _DAY,
+    "garmin.hydration": _DAY,
+    "garmin.fitness_age": _DAY,
     "garmin.training": (6, 168, 24, 43800),
     "garmin.body_composition": (6, 168, 720, 43800),
     "garmin.blood_pressure": (6, 168, 720, 43800),
     "garmin.activities": (2, 72, 720, 43800),
+    "garmin.intraday_reload": (0, 0, 24, 43800),  # on demand: no schedule, window runs only
 }
 RANGE_STREAMS = {"garmin.body_composition", "garmin.blood_pressure"}
+RELOAD = "garmin.intraday_reload"
+# What Garmin moves to cold storage after a few months (a reload restores it for about a week).
+INTRADAY = ("garmin.heart_rate", "garmin.steps", "garmin.stress_body_battery", "garmin.sleep", "garmin.respiration",
+            "garmin.spo2", "garmin.hrv", "garmin.floors")
 
 
 def describe():
@@ -329,9 +339,16 @@ def _calls(name, g, a, b=None):
             return [("", f"{g.garmin_connect_daily_respiration_url}/{a}", {}, (dict,))]
         case "garmin.spo2":
             return [("", f"{g.garmin_connect_daily_spo2_url}/{a}", {}, (dict,))]
+        case "garmin.floors":
+            return [("", f"{g.garmin_connect_floors_chart_daily_url}/{a}", {}, (dict,))]
+        case "garmin.hydration":
+            return [("", f"{g.garmin_connect_daily_hydration_url}/{a}", {}, (dict,))]
+        case "garmin.fitness_age":
+            return [("", f"{g.garmin_connect_fitnessage}/{a}", {}, (dict,))]
         case "garmin.training":
             return [(":vo2max", f"{g.garmin_connect_metrics_url}/{a}/{a}", {}, (dict, list)),
-                    (":readiness", f"{g.garmin_connect_training_readiness_url}/{a}", {}, (list,))]
+                    (":readiness", f"{g.garmin_connect_training_readiness_url}/{a}", {}, (list,)),
+                    (":status", f"{g.garmin_connect_training_status_url}/{a}", {}, (dict,))]
         case "garmin.body_composition":
             return [("", f"{g.garmin_connect_weight_url}/weight/dateRange",
                      {"startDate": a, "endDate": b}, (dict,))]
@@ -348,6 +365,34 @@ def _unit_items(g, name, start):
     key = f"{name}:{a}" if b is None else f"{name}:{a}_{b}"
     for suffix, path, params, types in _calls(name, g, a, b):
         yield _item(key + suffix, path, params, {"unit": unit, "response": _get(g, path, params, types)})
+
+
+def _reload_items(g, start):
+    """Ask Garmin to restore one day's intraday detail from cold storage, wait for it, then fetch
+    the day's intraday streams (as raw lines of those streams). DENIED (about 30 requests a day)
+    is rate_limited until the next UTC midnight."""
+    day = start.isoformat()
+    try:
+        status = (g.request_reload(day) or {}).get("status")
+    except Exception as e:
+        raise classify(e) from None
+    time.sleep(DELAY)
+    if status == "DENIED":
+        now = NOW()
+        midnight = datetime.combine(now.date() + timedelta(1), datetime.min.time(), UTC)
+        raise Failure("rate_limited", "Garmin refused another reload today", retry_after_s=int((midnight - now).total_seconds()) + 60)
+    if status != "SUBMITTED":
+        raise Failure("schema_drift", "unexpected reload status", endpoint=f"{g.garmin_request_reload_url}/{{date}}",
+                      fingerprint=fingerprint(status))
+    _, hr_path, hr_params, hr_types = _calls("garmin.heart_rate", g, day)[0]
+    for _ in range(RELOAD_POLLS):  # the day is back once its heart-rate series is no longer empty
+        time.sleep(RELOAD_WAIT)
+        hr = _get(g, hr_path, hr_params, hr_types)
+        if isinstance(hr, dict) and hr.get("heartRateValues"):
+            break
+    for name in INTRADAY:
+        for item in _unit_items(g, name, start):
+            yield {**item, "stream": name}
 
 
 def _activity_items(g, activity, search):
@@ -377,7 +422,8 @@ def _unit_steps(g, name, first, last):
     else:
         units = [first + timedelta(i) for i in range((last - first).days + 1)]
     nxt = lambda i: {"day": units[i + 1].isoformat()} if i + 1 < len(units) else None
-    return [(nxt(i), lambda u=u: _unit_items(g, name, u)) for i, u in enumerate(units[:MAX_UNITS])]
+    produce = (lambda u: _reload_items(g, u)) if name == RELOAD else (lambda u: _unit_items(g, name, u))
+    return [(nxt(i), lambda u=u: produce(u)) for i, u in enumerate(units[:MAX_UNITS])]
 
 
 def _activity_steps(g, first, last, cursor):
@@ -428,6 +474,9 @@ def fetch(req):
     name = req.get("stream")
     if name not in STREAMS:
         raise Failure("permanent", "unknown stream")
+    if name == RELOAD and not req.get("from"):  # only an explicit window asks Garmin to reload
+        yield Result(None, True, None, None)
+        return
     try:
         tz = ZoneInfo((req.get("config") or {}).get("timezone") or "UTC")
         first, last, cursor, since = _window(req, tz)

@@ -30,7 +30,9 @@
      "qualifierKey": "GOOD"
     }
    },
-   "sleepVersion": 2
+   "sleepVersion": 2,
+   "awakeCount": 2,
+   "avgSleepStress": 18.0
   },
   "sleepMovement": [],
   "remSleepData": true,
@@ -69,6 +71,8 @@
   "restingHeartRate": 52,
   "avgOvernightHrv": 48.0,
   "hrvStatus": "BALANCED",
-  "bodyBatteryChange": 45
+  "bodyBatteryChange": 45,
+  "avgSkinTempDeviationC": -0.4,
+  "skinTempDataExists": true
  }
 }

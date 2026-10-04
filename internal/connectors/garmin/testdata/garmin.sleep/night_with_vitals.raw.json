@@ -1,0 +1,153 @@
+{
+ "synthetic": true,
+ "unit": {
+  "date": "2026-06-15"
+ },
+ "response": {
+  "dailySleepDTO": {
+   "id": 1781471400001,
+   "userProfilePK": 1,
+   "calendarDate": "2026-06-15",
+   "sleepTimeSeconds": 25200,
+   "napTimeSeconds": 0,
+   "sleepWindowConfirmed": true,
+   "sleepStartTimestampGMT": 1781471400000,
+   "sleepEndTimestampGMT": 1781498400000,
+   "sleepStartTimestampLocal": 1781478600000,
+   "sleepEndTimestampLocal": 1781505600000,
+   "deepSleepSeconds": 5400,
+   "lightSleepSeconds": 14400,
+   "remSleepSeconds": 5400,
+   "awakeSleepSeconds": 1800,
+   "deviceRemCapable": true,
+   "sleepScores": {
+    "overall": {
+     "value": 82,
+     "qualifierKey": "GOOD"
+    },
+    "remPercentage": {
+     "value": 21,
+     "qualifierKey": "GOOD"
+    }
+   },
+   "sleepVersion": 2,
+   "awakeCount": 2,
+   "avgSleepStress": 18.0
+  },
+  "sleepMovement": [
+   {
+    "startGMT": "2026-06-14T21:10:00.0",
+    "endGMT": "2026-06-14T21:11:00.0",
+    "activityLevel": 1.5
+   },
+   {
+    "startGMT": "2026-06-14T21:11:00.0",
+    "endGMT": "2026-06-14T21:12:00.0",
+    "activityLevel": 0.0
+   }
+  ],
+  "remSleepData": true,
+  "sleepLevels": [
+   {
+    "startGMT": "2026-06-14T21:10:00.0",
+    "endGMT": "2026-06-14T21:40:00.0",
+    "activityLevel": -1.0
+   },
+   {
+    "startGMT": "2026-06-14T21:40:00.0",
+    "endGMT": "2026-06-14T23:10:00.0",
+    "activityLevel": 0.0
+   },
+   {
+    "startGMT": "2026-06-14T23:10:00.0",
+    "endGMT": "2026-06-15T01:40:00.0",
+    "activityLevel": 1.0
+   },
+   {
+    "startGMT": "2026-06-15T01:40:00.0",
+    "endGMT": "2026-06-15T03:10:00.0",
+    "activityLevel": 2.0
+   },
+   {
+    "startGMT": "2026-06-15T03:10:00.0",
+    "endGMT": "2026-06-15T04:10:00.0",
+    "activityLevel": 1.0
+   },
+   {
+    "startGMT": "2026-06-15T04:10:00.0",
+    "endGMT": "2026-06-15T04:40:00.0",
+    "activityLevel": 3.0
+   }
+  ],
+  "restingHeartRate": 52,
+  "avgOvernightHrv": 48.0,
+  "hrvStatus": "BALANCED",
+  "bodyBatteryChange": 45,
+  "avgSkinTempDeviationC": -0.4,
+  "skinTempDataExists": true,
+  "wellnessEpochSPO2DataDTOList": [
+   {
+    "userProfilePK": 1,
+    "epochTimestamp": "2026-06-14T21:10:00.0",
+    "spo2Reading": 96,
+    "readingConfidence": 90,
+    "epochDuration": 60,
+    "deviceId": 1000000001,
+    "calendarDate": "2026-06-15"
+   },
+   {
+    "userProfilePK": 1,
+    "epochTimestamp": "2026-06-14T21:11:00.0",
+    "spo2Reading": 94,
+    "readingConfidence": 85,
+    "epochDuration": 60,
+    "deviceId": 1000000001,
+    "calendarDate": "2026-06-15"
+   },
+   {
+    "userProfilePK": 1,
+    "epochTimestamp": "2026-06-14T21:12:00.0",
+    "spo2Reading": null,
+    "readingConfidence": 0,
+    "epochDuration": 60,
+    "deviceId": 1000000001,
+    "calendarDate": "2026-06-15"
+   }
+  ],
+  "wellnessSpO2SleepSummaryDTO": {
+   "averageSPO2": 95.0,
+   "lowestSPO2": 91,
+   "deviceId": 1000000001
+  },
+  "sleepHeartRate": [
+   {
+    "value": 51,
+    "startGMT": 1781471460000
+   }
+  ],
+  "sleepStress": [
+   {
+    "value": 14,
+    "startGMT": 1781471460000
+   }
+  ],
+  "sleepBodyBattery": [
+   {
+    "value": 40,
+    "startGMT": 1781471460000
+   }
+  ],
+  "hrvData": [
+   {
+    "value": 47.0,
+    "startGMT": 1781471760000
+   }
+  ],
+  "wellnessEpochRespirationDataDTOList": [
+   {
+    "startTimeGMT": 1781471460000,
+    "respirationValue": 14.0
+   }
+  ]
+ }
+}

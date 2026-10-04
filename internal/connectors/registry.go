@@ -131,8 +131,8 @@ func Validate(c Connector, d Descriptor) error {
 			return bad("stream %q declared twice", s.Name)
 		case s.Interval != 0 && s.Interval < minInterval:
 			return bad("stream %s: interval must be 0 or at least %s", s.Name, minInterval)
-		case d.Capabilities.Incremental && s.Interval == 0:
-			return bad("stream %s: incremental streams need an interval", s.Name)
+		case d.Capabilities.Incremental && s.Interval == 0 && s.Lookback > 0:
+			return bad("stream %s: incremental streams need an interval (only an on-demand stream, without lookback, has none)", s.Name)
 		case s.Lookback < 0:
 			return bad("stream %s: lookback must not be negative", s.Name)
 		case s.CorrectionEvery != 0 && s.CorrectionEvery < minInterval:

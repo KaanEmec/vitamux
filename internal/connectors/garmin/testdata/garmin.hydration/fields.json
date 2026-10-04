@@ -1,0 +1,14 @@
+{
+  "synthetic": true,
+  "fields": {
+    "response.activityIntakeInML": "raw: part of valueInML (summing both would count twice)",
+    "response.calendarDate": "raw: identifier (interval key and date)",
+    "response.dailyAverageinML": "raw: derivable from stored rows",
+    "response.goalInML": "raw: baseline/UI text (the owner’s goal)",
+    "response.lastEntryTimestampLocal": "raw: unused local time of the last entry",
+    "response.sweatLossInML": "garmin_sweat_loss",
+    "response.userId": "raw: identifier",
+    "response.valueInML": "diet_water",
+    "unit.date": "raw: identifier (request day)"
+  }
+}

@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "garmin.hrv",
-  "version": 2,
+  "version": 3,
   "output": {
     "devices": [
       {
@@ -48,6 +48,57 @@
           "record_type": "hrv",
           "external_id": "2026-06-15",
           "component": "hrv_rmssd_nightly"
+        }
+      },
+      {
+        "metric": "garmin_hrv_baseline_low",
+        "kind": "daily_value",
+        "start": "2026-06-14T22:00:00Z",
+        "end": "2026-06-15T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 41,
+        "unit": "ms",
+        "device": "garmin:wearable",
+        "key": {
+          "record_type": "hrv",
+          "external_id": "2026-06-15",
+          "component": "garmin_hrv_baseline_low"
+        }
+      },
+      {
+        "metric": "garmin_hrv_baseline_high",
+        "kind": "daily_value",
+        "start": "2026-06-14T22:00:00Z",
+        "end": "2026-06-15T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 55,
+        "unit": "ms",
+        "device": "garmin:wearable",
+        "key": {
+          "record_type": "hrv",
+          "external_id": "2026-06-15",
+          "component": "garmin_hrv_baseline_high"
+        }
+      },
+      {
+        "metric": "garmin_hrv_baseline_floor",
+        "kind": "daily_value",
+        "start": "2026-06-14T22:00:00Z",
+        "end": "2026-06-15T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 38,
+        "unit": "ms",
+        "device": "garmin:wearable",
+        "key": {
+          "record_type": "hrv",
+          "external_id": "2026-06-15",
+          "component": "garmin_hrv_baseline_floor"
         }
       }
     ]

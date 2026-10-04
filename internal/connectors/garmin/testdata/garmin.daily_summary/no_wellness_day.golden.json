@@ -1,6 +1,6 @@
 {
   "synthetic": true,
   "normalizer": "garmin.daily_summary",
-  "version": 3,
+  "version": 4,
   "output": {}
 }

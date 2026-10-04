@@ -1,17 +1,24 @@
 -- Backfills (J06.6); see docs/architecture/connectors.md#runtime-responsibilities.
 
 -- name: InsertBackfill :exec
-INSERT INTO backfills (id, connection_id, stream, range_start, range_end)
-VALUES (@id, @connection_id, @stream, @range_start, @range_end);
+INSERT INTO backfills (id, connection_id, stream, range_start, range_end, daily_limit)
+VALUES (@id, @connection_id, @stream, @range_start, @range_end, sqlc.narg(daily_limit));
 
 -- name: InsertBackfillUnits :exec
 INSERT INTO backfill_units (backfill_id, range_start, range_end)
 SELECT @backfill_id::uuid, unnest(@starts::timestamptz[]), unnest(@ends::timestamptz[]);
 
 -- name: GetBackfillUnit :one
-SELECT u.range_start, u.range_end, u.status, b.connection_id, b.stream, b.status AS backfill_status
+SELECT u.range_start, u.range_end, u.status, b.connection_id, b.stream, b.status AS backfill_status, b.daily_limit
 FROM backfill_units u JOIN backfills b ON b.id = u.backfill_id
 WHERE u.backfill_id = @backfill_id AND u.range_start = @range_start;
+
+-- name: CountUnitsStartedSince :one
+-- Units of a connection's stream that started (or finished) since the given time, other than one
+-- unit: what a paced backfill spent of today's limit.
+SELECT count(*) FROM backfill_units u JOIN backfills b ON b.id = u.backfill_id
+WHERE b.connection_id = @connection_id AND b.stream = @stream AND u.status IN ('running', 'done')
+  AND u.updated_at >= @since AND NOT (u.backfill_id = @backfill_id AND u.range_start = @range_start);
 
 -- name: StartBackfillUnit :exec
 UPDATE backfill_units SET status = 'running', attempts = attempts + 1, updated_at = now()

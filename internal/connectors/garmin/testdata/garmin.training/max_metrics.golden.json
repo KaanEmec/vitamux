@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "garmin.training",
-  "version": 4,
+  "version": 5,
   "output": {
     "devices": [
       {
@@ -25,6 +25,22 @@
           "record_type": "maxmet",
           "external_id": "2026-06-15",
           "component": "generic"
+        }
+      },
+      {
+        "metric": "garmin_vo2max_cycling",
+        "kind": "sample",
+        "start": "2026-06-15T12:00:00Z",
+        "zone": {
+          "offset_min": 0
+        },
+        "value": 44.8,
+        "unit": "mL/kg/min",
+        "device": "garmin:wearable",
+        "key": {
+          "record_type": "maxmet",
+          "external_id": "2026-06-15",
+          "component": "cycling"
         }
       }
     ]

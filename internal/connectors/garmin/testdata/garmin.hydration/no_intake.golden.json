@@ -1,0 +1,6 @@
+{
+  "synthetic": true,
+  "normalizer": "garmin.hydration",
+  "version": 1,
+  "output": {}
+}

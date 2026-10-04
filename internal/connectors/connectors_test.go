@@ -111,6 +111,11 @@ func TestRegistryValidation(t *testing.T) {
 	if _, err := NewRegistry(stub{good()}); err != nil {
 		t.Fatalf("valid descriptor: %v", err)
 	}
+	onDemand := good() // a backfill-only stream (the Garmin reload) has no interval and no lookback
+	onDemand.Streams = append(onDemand.Streams, StreamSpec{Name: "withings.reload", MaxBackfill: 365 * 24 * time.Hour, UnitSize: 24 * time.Hour})
+	if _, err := NewRegistry(stub{onDemand}); err != nil {
+		t.Fatalf("on-demand stream: %v", err)
+	}
 	oauth := good()
 	oauth.AuthKind = AuthOAuth2
 	if _, err := NewRegistry(stubAuth{stub{oauth}}); err != nil {

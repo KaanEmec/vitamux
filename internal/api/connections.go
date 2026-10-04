@@ -493,7 +493,7 @@ func (o *owner) ResetStreamCursor(ctx context.Context, req oapi.ResetStreamCurso
 
 func backfillBody(b connectors.Backfill) oapi.Backfill {
 	out := oapi.Backfill{ID: b.ID, ConnectionID: ingest.FormatConnectionID(b.ConnectionID), Stream: b.Stream, Start: b.From, End: b.To,
-		Status: oapi.BackfillStatus(b.Status), CreatedAt: b.CreatedAt, FinishedAt: b.FinishedAt}
+		Status: oapi.BackfillStatus(b.Status), CreatedAt: b.CreatedAt, FinishedAt: b.FinishedAt, DailyLimit: b.DailyLimit}
 	out.UnitCounts.Pending, out.UnitCounts.Running, out.UnitCounts.Done, out.UnitCounts.Failed = b.Pending, b.Running, b.Done, b.Failed
 	return out
 }
@@ -558,7 +558,8 @@ func (o *owner) CreateBackfill(ctx context.Context, req oapi.CreateBackfillReque
 	if err != nil {
 		return nil, err
 	}
-	spec := connectors.BackfillSpec{ConnectionID: c.ID, Stream: req.Body.Stream, From: req.Body.Start, To: ptrVal(req.Body.End)}
+	spec := connectors.BackfillSpec{ConnectionID: c.ID, Stream: req.Body.Stream, From: req.Body.Start, To: ptrVal(req.Body.End),
+		DailyLimit: ptrVal(req.Body.DailyLimit)}
 	id, err := rt.CreateBackfill(ctx, spec)
 	if errors.Is(err, connectors.ErrInvalidBackfill) {
 		return nil, problemErr(CodeValidationFailed, strings.TrimPrefix(err.Error(), connectors.ErrInvalidBackfill.Error()+": "))

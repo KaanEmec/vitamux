@@ -74,9 +74,18 @@ var NoBuiltin = func() map[string]string {
 	for _, code := range []string{"whoop_workout_strain", "whoop_hr_zone_0_time", "whoop_hr_zone_1_time", "whoop_hr_zone_2_time",
 		"whoop_hr_zone_3_time", "whoop_hr_zone_4_time", "whoop_hr_zone_5_time", "whoop_sleep_debt_post", "whoop_sleep_need_habitual",
 		"whoop_sleep_need_from_strain", "whoop_sleep_nap_credit", "whoop_sleep_cycles"} {
-		m[code] = "a provider-scoped value with a single source, so there is nothing to order"
+		m[code] = "a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone"
 	}
-	m["elevation_change"] = "added with the WHOOP mappings (J25.4); no researched ladder yet, so the owner picks a source"
+	m["elevation_change"] = "added with the WHOOP mappings (J25.4); no researched ladder: uses the default rule"
+	// The Garmin values of J25.5 are provider-scoped: one source each, nothing to order.
+	for _, code := range []string{"garmin_hr_zone_1_time", "garmin_hr_zone_2_time", "garmin_hr_zone_3_time", "garmin_hr_zone_4_time",
+		"garmin_hr_zone_5_time", "garmin_training_effect_aerobic", "garmin_training_effect_anaerobic", "garmin_activity_training_load",
+		"garmin_activity_moving_time", "garmin_floors_descended", "garmin_chronic_load_low", "garmin_chronic_load_high",
+		"garmin_recovery_time", "garmin_vo2max_cycling", "garmin_hrv_baseline_low", "garmin_hrv_baseline_high",
+		"garmin_hrv_baseline_floor", "garmin_achievable_fitness_age",
+		"garmin_sweat_loss", "garmin_sleep_movement"} {
+		m[code] = "a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone"
+	}
 	return m
 }()
 

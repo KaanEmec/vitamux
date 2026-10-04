@@ -13,6 +13,7 @@ Wraps [`garminconnect`](UPSTREAM.md) (unofficial) and speaks `vitamux-connector/
 | `VITAMUX_SIDECAR_SECRET_FILE` | required | File with the bearer secret every request but `/healthz` must send |
 | `SIDECAR_ADDR` | `0.0.0.0:8080` | Listen address |
 | `VITAMUX_GARMIN_CALL_DELAY_S` | `1` | Pause after each Garmin call |
+| `VITAMUX_GARMIN_RELOAD_WAIT_S` | `20` | Pause between checks that a reloaded day is back (cold-storage reload, up to six checks) |
 | `REPLAY` | unset | `1`: answer from `testdata/replay.json` (run from this directory, or mount it at `/app/testdata`) and never call Garmin |
 
 ```sh

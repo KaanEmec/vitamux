@@ -1872,15 +1872,18 @@ type AuthStep struct {
 
 // Backfill defines model for Backfill.
 type Backfill struct {
-	ConnectionID ConnectionID       `json:"connection_id"`
-	CreatedAt    time.Time          `json:"created_at"`
-	End          time.Time          `json:"end"`
-	FinishedAt   *time.Time         `json:"finished_at"`
-	ID           openapi_types.UUID `json:"id"`
-	Start        time.Time          `json:"start"`
-	Status       BackfillStatus     `json:"status"`
-	Stream       string             `json:"stream"`
-	UnitCounts   struct {
+	ConnectionID ConnectionID `json:"connection_id"`
+	CreatedAt    time.Time    `json:"created_at"`
+
+	// DailyLimit Units a UTC day for a paced backfill; null when unpaced.
+	DailyLimit *int               `json:"daily_limit,omitempty"`
+	End        time.Time          `json:"end"`
+	FinishedAt *time.Time         `json:"finished_at"`
+	ID         openapi_types.UUID `json:"id"`
+	Start      time.Time          `json:"start"`
+	Status     BackfillStatus     `json:"status"`
+	Stream     string             `json:"stream"`
+	UnitCounts struct {
 		Done    int `json:"done"`
 		Failed  int `json:"failed"`
 		Pending int `json:"pending"`
@@ -1896,6 +1899,9 @@ type BackfillStatus string
 
 // BackfillInput defines model for BackfillInput.
 type BackfillInput struct {
+	// DailyLimit A paced backfill: at most this many units start a UTC day, the rest wait for the next day (a slow mode for provider-limited work such as the Garmin reload).
+	DailyLimit *int `json:"daily_limit,omitempty"`
+
 	// End Exclusive; now when omitted.
 	End    *time.Time `json:"end,omitempty"`
 	Start  time.Time  `json:"start"`

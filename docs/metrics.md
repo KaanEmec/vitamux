@@ -58,6 +58,19 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `whoop_hr_zone_4_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day |  |  |  |
 | `whoop_hr_zone_5_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day |  |  |  |
 | `elevation_change` | m | interval, daily_value | additive | -20000 to 20000 | bucket, hour, local_day |  |  |  |
+| `garmin_hr_zone_1_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day |  |  |  |
+| `garmin_hr_zone_2_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day |  |  |  |
+| `garmin_hr_zone_3_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day |  |  |  |
+| `garmin_hr_zone_4_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day |  |  |  |
+| `garmin_hr_zone_5_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day |  |  |  |
+| `garmin_training_effect_aerobic` | index | sample | latest | 0 to 5 | local_day, latest |  |  |  |
+| `garmin_training_effect_anaerobic` | index | sample | latest | 0 to 5 | local_day, latest |  |  |  |
+| `garmin_activity_training_load` | index | interval | additive | 0 to 5000 | bucket, hour, local_day |  |  |  |
+| `garmin_activity_moving_time` | s | interval | additive | 0 to 604800 | bucket, hour, local_day |  |  |  |
+| `garmin_floors_descended` | count | interval | additive | 0 to 3000 | bucket, hour, local_day |  |  |  |
+| `garmin_chronic_load_low` | index | daily_value | daily_summary | 0 to 10000 | local_day, latest |  |  |  |
+| `garmin_chronic_load_high` | index | daily_value | daily_summary | 0 to 10000 | local_day, latest |  |  |  |
+| `garmin_recovery_time` | min | sample | latest | 0 to 10000 | local_day, latest |  |  |  |
 
 ## Heart and circulation
 
@@ -87,6 +100,10 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `whoop_max_heart_rate` | bpm | sample | latest | 100 to 250 | local_day, latest |  |  |  |
 | `garmin_body_battery_charged` | index | daily_value | daily_summary | 0 to 200 | local_day, latest |  |  |  |
 | `garmin_body_battery_drained` | index | daily_value | daily_summary | 0 to 200 | local_day, latest |  |  |  |
+| `garmin_vo2max_cycling` | mL/kg/min | sample | latest | 10 to 100 | local_day, latest |  |  |  |
+| `garmin_hrv_baseline_low` | ms | daily_value | daily_summary | 1 to 500 | local_day, latest |  |  |  |
+| `garmin_hrv_baseline_high` | ms | daily_value | daily_summary | 1 to 500 | local_day, latest |  |  |  |
+| `garmin_hrv_baseline_floor` | ms | daily_value | daily_summary | 1 to 500 | local_day, latest |  |  |  |
 
 ## Blood pressure
 
@@ -163,6 +180,9 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `withings_esc` | µS | sample | latest | 0 to 200 | local_day, latest |  |  | 229 |
 | `withings_metabolic_age` | years | sample | latest | 10 to 120 | local_day, latest |  |  | 227 |
 | `garmin_fitness_age` | years | sample | latest | 10 to 120 | local_day, latest |  |  |  |
+| `garmin_metabolic_age` | years | sample | latest | 10 to 120 | local_day, latest, reading | body_composition |  |  |
+| `garmin_physique_rating` | index | sample | latest | 1 to 9 | local_day, latest, reading | body_composition |  |  |
+| `garmin_achievable_fitness_age` | years | sample | latest | 10 to 120 | local_day, latest |  |  |  |
 
 ## Glucose and metabolism
 
@@ -190,6 +210,7 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `diet_cholesterol` | mg | interval | additive | 0 to 20000 | bucket, hour, local_day |  | DietaryCholesterol |  |
 | `diet_water` | mL | interval | additive | 0 to 20000 | bucket, hour, local_day |  | DietaryWater |  |
 | `diet_caffeine` | mg | interval | additive | 0 to 5000 | bucket, hour, local_day |  | DietaryCaffeine |  |
+| `garmin_sweat_loss` | mL | interval | additive | 0 to 20000 | bucket, hour, local_day |  |  |  |
 
 ## Mobility
 
@@ -245,6 +266,7 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `whoop_sleep_need_from_strain` | s | daily_value | daily_summary | 0 to 86400 | local_day, latest |  |  |  |
 | `whoop_sleep_nap_credit` | s | daily_value | daily_summary | 0 to 86400 | local_day, latest |  |  |  |
 | `whoop_sleep_cycles` | count | daily_value | daily_summary | 0 to 20 | local_day, latest |  |  |  |
+| `garmin_sleep_movement` | index | sample | intensive | 0 to 100 | bucket, hour, local_day, local_night, sleep_episode, latest |  |  |  |
 
 ## Derived
 

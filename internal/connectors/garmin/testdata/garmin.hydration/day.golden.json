@@ -1,0 +1,50 @@
+{
+  "synthetic": true,
+  "normalizer": "garmin.hydration",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "garmin:wearable",
+        "type": "watch",
+        "manufacturer": "Garmin"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "diet_water",
+        "kind": "interval",
+        "start": "2026-06-15T00:00:00Z",
+        "end": "2026-06-16T00:00:00Z",
+        "zone": {
+          "offset_min": 0
+        },
+        "value": 1500,
+        "unit": "mL",
+        "device": "garmin:wearable",
+        "key": {
+          "record_type": "hydration",
+          "external_id": "2026-06-15",
+          "component": "diet_water"
+        }
+      },
+      {
+        "metric": "garmin_sweat_loss",
+        "kind": "interval",
+        "start": "2026-06-15T00:00:00Z",
+        "end": "2026-06-16T00:00:00Z",
+        "zone": {
+          "offset_min": 0
+        },
+        "value": 120,
+        "unit": "mL",
+        "device": "garmin:wearable",
+        "key": {
+          "record_type": "hydration",
+          "external_id": "2026-06-15",
+          "component": "garmin_sweat_loss"
+        }
+      }
+    ]
+  }
+}

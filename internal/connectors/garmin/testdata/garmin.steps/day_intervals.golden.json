@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "garmin.steps",
-  "version": 2,
+  "version": 3,
   "output": {
     "devices": [
       {
@@ -35,6 +35,15 @@
         "start": "2026-06-15T05:00:00Z",
         "end": "2026-06-15T05:15:00Z",
         "value": 400,
+        "unit": "count",
+        "device": "garmin:wearable"
+      },
+      {
+        "metric": "wheelchair_pushes",
+        "kind": "interval",
+        "start": "2026-06-15T05:00:00Z",
+        "end": "2026-06-15T05:15:00Z",
+        "value": 40,
         "unit": "count",
         "device": "garmin:wearable"
       }

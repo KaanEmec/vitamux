@@ -32,12 +32,18 @@ Unverified: the access-token lifetime (readable from the JWT `exp`), the refresh
 | `garmin.hrv` | `/hrv-service/hrv/{d}` | day | object | Nightly summary and readings |
 | `garmin.respiration` | `/wellness-service/wellness/daily/respiration/{d}` | day | object | Intraday respiration |
 | `garmin.spo2` | `/wellness-service/wellness/daily/spo2/{d}` | day | object | Intraday SpO2 |
-| `garmin.training` | `/metrics-service/metrics/maxmet/daily/{d}/{d}` (key `:vo2max`) and `/metrics-service/metrics/trainingreadiness/{d}` (key `:readiness`) | day | object or array; array | VO2max and training readiness. Training status (`/metrics-service/metrics/trainingstatus/aggregated/{d}`) is not fetched yet |
+| `garmin.training` | `/metrics-service/metrics/maxmet/daily/{d}/{d}` (key `:vo2max`), `/metrics-service/metrics/trainingreadiness/{d}` (key `:readiness`) and `/metrics-service/metrics/trainingstatus/aggregated/{d}` (key `:status`) | day | object or array; array; object | VO2max, training readiness, and the training status with acute and chronic load per device |
+| `garmin.floors` | `/wellness-service/wellness/floorsChartData/daily/{d}` | day | object | 15-minute rows `[start GMT, end GMT, ascended, descended]` |
+| `garmin.hydration` | `/usersummary-service/usersummary/hydration/daily/{d}` | day | object | The day's logged intake (`valueInML`) and estimated sweat loss |
+| `garmin.fitness_age` | `/fitnessage-service/fitnessage/{d}` | day | object | Fitness age and its achievable target |
+| `garmin.intraday_reload` | `POST /wellness-service/wellness/epoch/request/{d}`, then the intraday streams of that day | day | none | On demand only, see [cold storage](#cold-storage-and-reload) |
 | `garmin.body_composition` | `/weight-service/weight/dateRange` `startDate`, `endDate` | 30-day block | object | One entry per weigh-in |
 | `garmin.blood_pressure` | `/bloodpressure-service/bloodpressure/range/{start}/{end}` `includeAll=True` | 30-day block | object | One entry per measurement |
 | `garmin.activities` | `/activitylist-service/activities/search/activities` `startDate`, `endDate`, `start`, `limit=20`, `sortOrder=asc`; FIT: `/download-service/files/activity/{id}` | activity | array; zip | Summary per activity; the original FIT in a zip |
 
-Unverified: the exact sample intervals of the intraday arrays, that `maxmet/daily` returns an array (the library types it as an object, so both are accepted), that a day without data is 204, `{}` or `null` for every endpoint (a 404 would be `permanent`), and that `sortOrder=asc` is honoured by the activity search (the library passes it through).
+Sample intervals (verified 2026-10-04): heart rate 2 minutes, stress and Body Battery 3, respiration 2, steps and floors 15, HRV 5, sleep SpO2 1 minute (`wellnessEpochSPO2DataDTOList` in the sleep payload, with a reading confidence; `daily/spo2` carries summaries, hour-aligned averages and mostly null spot lists). Sleep also carries movement, heart-rate, stress, Body Battery, HRV and respiration arrays; the last five duplicate the all-day streams and stay raw.
+
+Unverified: that `maxmet/daily` returns an array (the library types it as an object, so both are accepted), that a day without data is 204, `{}` or `null` for every endpoint (a 404 would be `permanent`), and that `sortOrder=asc` is honoured by the activity search (the library passes it through).
 
 ## Time
 
@@ -45,6 +51,16 @@ Unverified: the exact sample intervals of the intraday arrays, that `maxmet/dail
 - Sleep: `sleepStartTimestampGMT` and `sleepEndTimestampGMT` are epoch milliseconds in GMT; the `...Local` fields are the same instants shifted by the local offset. Upstream warns that on some accounts (China, UTC+8) the local fields are offset twice, so normalizers should prefer GMT.
 - HR, stress and Body Battery carry `startTimestampGMT`, `startTimestampLocal` and the matching end fields; activities carry `startTimeGMT` and `startTimeLocal`; training readiness carries `timestampLocal`.
 - The timezone itself is not in these responses. **Unverified**: whether `/userprofile-service/userprofile/user-settings` reports it. Vitamux uses the owner's configured timezone periods, and the local minus GMT difference where a payload has both.
+
+## Mapping
+
+Every value Garmin sends reaches a catalogue code unless it is an identifier, a flag, UI text or exactly derivable from stored rows (min, max and average of a stored series, a window's weekly mean); each stream's `testdata/<stream>/fields.json` records the reason per field (J25.5). Garmin-only values have provider-scoped `garmin_*` codes ([metrics](../metrics.md)): heart-rate zone times, training effects and load per activity, HRV baseline, training-load range, recovery time, cycling VO2max, metabolic age, physique rating, sweat loss, sleep movement, achievable fitness age. Per-minute sleep SpO2 are `spo2` samples; the night's average is `spo2_nightly`, taken from `daily/spo2` only (`avgSleepSpO2`), never also from the sleep summary. Training status labels (status phrase, readiness `inputContext`) are text and stay raw. Fields no recorded payload has populated (`continuousReadingDTOList`, the load balance) stay raw until a real shape is seen.
+
+## Cold storage and reload
+
+Garmin keeps intraday detail online for a few months; older days answer with empty series while daily summaries stay. `POST /wellness-service/wellness/epoch/request/{date}` asks Garmin to restore one day for about a week and answers `SUBMITTED`, or `DENIED` after roughly 30 requests a day (community findings, not documented by Garmin).
+
+Vitamux offers this as an opt-in slow backfill: pick the stream `garmin.intraday_reload` in the Backfills tab of the Garmin connection. It has no schedule and runs only as a backfill, one day per unit, paced to 20 units a UTC day by the core (a paced backfill, [connectors](../architecture/connectors.md#runtime-responsibilities)). A unit requests the reload, polls the heart-rate endpoint (every 20 s, up to six times; `VITAMUX_GARMIN_RELOAD_WAIT_S`) until the day is back, then fetches the day's intraday streams as ordinary raw lines of those streams, which normalize as usual. `DENIED` ends the call as `rate_limited` until the next UTC midnight: the provider is blocked until then (so Garmin syncs of that connection wait too), the unit's job is rescheduled, and nothing retries sooner. Unverified: how quickly a reloaded day is readable, and the daily limit itself.
 
 ## Recalculation and lookbacks
 

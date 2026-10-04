@@ -1,0 +1,44 @@
+{
+ "synthetic": true,
+ "unit": {
+  "date": "2026-06-15"
+ },
+ "response": {
+  "startTimestampGMT": "2026-06-14T22:00:00.0",
+  "endTimestampGMT": "2026-06-15T22:00:00.0",
+  "startTimestampLocal": "2026-06-15T00:00:00.0",
+  "endTimestampLocal": "2026-06-16T00:00:00.0",
+  "floorsValueDescriptorDTOList": [
+   {
+    "key": "startTimeGMT",
+    "index": 0
+   },
+   {
+    "key": "endTimeGMT",
+    "index": 1
+   },
+   {
+    "key": "floorsAscended",
+    "index": 2
+   },
+   {
+    "key": "floorsDescended",
+    "index": 3
+   }
+  ],
+  "floorsValuesArray": [
+   [
+    "2026-06-15T05:00:00.0",
+    "2026-06-15T05:15:00.0",
+    2,
+    1
+   ],
+   [
+    "2026-06-15T05:15:00.0",
+    "2026-06-15T05:30:00.0",
+    0,
+    3
+   ]
+  ]
+ }
+}

@@ -1,0 +1,14 @@
+{
+  "synthetic": true,
+  "fields": {
+    "response": "raw: empty day (no data, no output)",
+    "response.endTimestampGMT": "raw: day bound that sets the zone offset",
+    "response.endTimestampLocal": "raw: local time that sets the zone offset",
+    "response.floorsValueDescriptorDTOList[].index": "raw: column position",
+    "response.floorsValueDescriptorDTOList[].key": "raw: column name",
+    "response.floorsValuesArray[][]": "floors_climbed, garmin_floors_descended",
+    "response.startTimestampGMT": "raw: day bound that sets the zone offset",
+    "response.startTimestampLocal": "raw: local time that sets the zone offset",
+    "unit.date": "raw: identifier (request day)"
+  }
+}
