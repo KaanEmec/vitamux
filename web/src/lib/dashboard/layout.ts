@@ -22,7 +22,8 @@ export const defaultCards: Card[] = (
 		['blood_pressure', 'S'],
 		['spo2', 'S'],
 		['respiratory_rate', 'S'],
-		['active_energy', 'S']
+		['active_energy', 'S'],
+		['total_energy', 'S']
 	] as [string, Size][]
 ).map(([metric, size]) => ({ metric, size, hidden: false }));
 
@@ -36,7 +37,8 @@ const labels: Record<string, string> = {
 	hrv_rmssd_nightly: 'HRV · nightly RMSSD',
 	hrv_sdnn: 'HRV · SDNN',
 	vo2max: 'VO₂ max',
-	spo2: 'SpO₂'
+	spo2: 'SpO₂',
+	total_energy: 'Total energy'
 };
 
 /** A card's title: the curated name, else the code made readable. */
@@ -46,6 +48,13 @@ export const cardLabel = (code: string) => labels[code] ?? metricLabel(code);
 export function cardOf(m: Catalogue): string {
 	if (m.aggregation === 'sleep_derived') return 'sleep';
 	return m.group === 'bp_reading' ? 'blood_pressure' : m.code;
+}
+
+/** The card an inventory item belongs on, or '' for events, workouts, lab analytes and other groups. */
+export function cardOfItem(it: Schemas['InventoryItem']): string {
+	if (it.kind === 'sleep') return 'sleep';
+	if (it.kind === 'group') return it.code === 'bp_reading' ? 'blood_pressure' : '';
+	return it.kind === 'metric' && it.metric ? cardOf(it.metric) : '';
 }
 
 /** Puts the card where `target` is (drag and drop). */

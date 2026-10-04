@@ -4,10 +4,11 @@
 	the neutral deltas), then the chart: up to a year one resolved value per day (GET /resolved/daily)
 	with status markers, a 7-day range band, the period mean, each source's own values as toggles
 	(GET /sources/series), the previous period as a dashed overlay, the source behind each day and
-	a brush navigator; "All" plots weekly or monthly rollups (GET /resolved/trend). Below: the
+	a brush navigator (the source strip is a toggle, off by default); "All" plots weekly or monthly rollups (GET /resolved/trend). Below: the
 	distribution and the values table. Every day opens its explanation, inputs, provenance and
 	overrides (PointPanel) and the all-sources day view, also from the chart's pinned tooltip.
 	The rule lens (lib/rules/RuleLens.svelte) is the side panel; it overlays a draft rule as a ghost.
+	When nothing resolved but sources have values, their own series are drawn with a note why.
 	Query: ?range=1W|1M|3M|1Y|All&end=YYYY-MM-DD (shareable).
 -->
 <script lang="ts">
@@ -24,6 +25,7 @@
 	import MetricStats from '#lib/explore/MetricStats.svelte';
 	import PointPanel from '#lib/explore/PointPanel.svelte';
 	import { Pins } from '#lib/explore/pins.svelte.ts';
+	import { prefs, toggleSourceStrip } from '#lib/prefs.svelte.ts';
 	import { dayGroup, dayProviders, num, sourceSeries } from '#lib/explore/series.ts';
 	import ValuesTable from '#lib/explore/ValuesTable.svelte';
 	import Button from '#lib/ui/Button.svelte';
@@ -224,6 +226,11 @@
 
 	const providers = $derived([...new Set(sources?.sources.map((s) => s.provider) ?? [])]);
 	const overlay = $derived(sources && from ? sourceSeries(sources, from, end).filter((s) => s.source && shownSources.includes(s.source)) : []);
+	/** Nothing resolved but the sources have values: draw those, so the page never claims "No values". */
+	const fallbackSeries = $derived(
+		sources && from && !loading && !seriesProblem && !values.length ? sourceSeries(sources, from, end).filter((s) => s.ys.some((v) => v != null)) : []
+	);
+	const fallback = $derived(fallbackSeries.length > 0);
 	const before = $derived.by((): Series[] => {
 		if (!previous || !span || trend) return [];
 		const p = previous;
@@ -365,12 +372,15 @@
 					<span class="muted small">Show</span>
 					<span class="chip resolved"><span class="dot" aria-hidden="true"></span>Resolved</span>
 					{#each providers as p (p)}
-						{@const shown = shownSources.includes(p)}
-						<button type="button" class={['chip', sourceClass(p), !shown && 'dashed']} aria-pressed={shown} onclick={() => toggleSource(p)}>
+						{@const shown = fallback || shownSources.includes(p)}
+						<button type="button" class={['chip', sourceClass(p), !shown && 'dashed']} aria-pressed={shown} disabled={fallback} onclick={() => toggleSource(p)}>
 							<span class="dot" aria-hidden="true"></span>{providerLabel(p)}
 						</button>
 					{/each}
 					<button type="button" class={['chip', !showBaseline && 'dashed']} aria-pressed={showBaseline} onclick={() => (showBaseline = !showBaseline)}>Range and mean</button>
+					{#if !fallback}
+						<button type="button" class={['chip', !prefs.sourceStrip && 'dashed']} aria-pressed={prefs.sourceStrip} onclick={toggleSourceStrip}>Source per day</button>
+					{/if}
 					<span class="muted small span">{spanText}{resolved && !bars ? ' · drag on the chart to zoom' : ''}</span>
 				</div>
 
@@ -416,7 +426,7 @@
 							/>
 						{/await}
 					{/if}
-					{#if strip.length}
+					{#if prefs.sourceStrip && strip.length}
 						{#await import('#lib/charts/CoverageStrip.svelte') then { default: CoverageStrip }}
 							<CoverageStrip rows={strip} start={dates[0]} caption="{label}: the source behind each day's value" />
 						{/await}
@@ -426,6 +436,13 @@
 							<BrushNavigator xs={resolved.xs} ys={resolved.ys} bind:view={zoomed} label="{label} range" timezone="UTC" />
 						{/await}
 					{/if}
+				{:else if fallback}
+					<p class="muted small">Nothing resolved in this range, so each source’s own values are shown. Check the rule’s sources and quality gates under “How it’s calculated”.</p>
+					{#await import('#lib/charts/TimeSeries.svelte')}
+						<Skeleton variant="chart" label="Loading chart" />
+					{:then { default: TimeSeries }}
+						<TimeSeries series={fallbackSeries} label="{label}, each source per day" {unit} timezone="UTC" withTime={false} height={320} step={view === 'step' || view === 'dumbbell'} area={false} bind:view={zoomed} />
+					{/await}
 				{:else if !seriesProblem}
 					<EmptyState title="No values in this range" text="Choose a longer range, or check the sources on the Connections page." />
 				{/if}

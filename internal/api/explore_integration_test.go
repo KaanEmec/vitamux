@@ -444,6 +444,9 @@ func TestDashboardLayout(t *testing.T) {
 			t.Errorf("default card %s is not a catalogue code or family", c.Metric)
 		}
 	}
+	if !slices.ContainsFunc(l.Cards, func(c oapi.DashboardCard) bool { return c.Metric == "total_energy" }) {
+		t.Errorf("default cards lack total_energy: %+v", l.Cards)
+	}
 	if !slices.Equal(l.Hero, defaultHero) {
 		t.Fatalf("default hero: %v", l.Hero)
 	}

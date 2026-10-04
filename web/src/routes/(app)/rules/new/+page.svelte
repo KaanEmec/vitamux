@@ -456,11 +456,11 @@
 		<fieldset class="group">
 			<legend>Quality gates</legend>
 			<div class="row">
-				<TextField label="Minimum coverage" name="spec.quality.min_coverage" inputmode="decimal" bind:value={form.minCoverage} error={errors['spec.quality.min_coverage']} hint="0–1, e.g. 0.5" />
+				<TextField label="Minimum coverage" name="spec.quality.min_coverage" inputmode="decimal" bind:value={form.minCoverage} error={errors['spec.quality.min_coverage']} hint="Opt-in, 0–1, e.g. 0.5. Empty: no gate" />
 				<TextField label="Plausible low" name="spec.quality.plausible_range.0" inputmode="decimal" bind:value={form.rangeLow} error={errors['spec.quality.plausible_range.0'] || errors['spec.quality.plausible_range']} />
 				<TextField label="Plausible high" name="spec.quality.plausible_range.1" inputmode="decimal" bind:value={form.rangeHigh} error={errors['spec.quality.plausible_range.1']} />
 				<TextField label="Maximum staleness" name="spec.quality.max_staleness" bind:value={form.maxStaleness} error={errors['spec.quality.max_staleness']} hint="e.g. 36h or 30d" />
-				<TextField label="Count only while worn (wear metric)" name="spec.quality.require_wear" bind:value={form.requireWear} error={errors['spec.quality.require_wear']} hint="e.g. heart_rate" />
+				<TextField label="Count only while worn (wear metric)" name="spec.quality.require_wear" bind:value={form.requireWear} error={errors['spec.quality.require_wear']} hint="Opt-in, e.g. heart_rate. Empty: no gate" />
 			</div>
 			<fieldset class="choices">
 				<legend>Ignore inputs flagged as</legend>
@@ -473,7 +473,7 @@
 			<summary>Sleep alignment</summary>
 			<div class="row">
 				<TextField label="Episode match overlap" name="spec.quality.sleep.match_overlap" inputmode="decimal" bind:value={form.matchOverlap} hint="Default 0.5" />
-				<TextField label="Minimum episode coverage" name="spec.quality.sleep.min_episode_coverage" inputmode="decimal" bind:value={form.minEpisodeCoverage} hint="Default 0.7" />
+				<TextField label="Minimum episode coverage" name="spec.quality.sleep.min_episode_coverage" inputmode="decimal" bind:value={form.minEpisodeCoverage} hint="Opt-in, e.g. 0.7. Empty: no gate" />
 				<div class="field">
 					<label for="naps">Naps</label>
 					<select id="naps" bind:value={form.includeNaps}>

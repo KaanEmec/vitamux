@@ -23,7 +23,7 @@
 	import HeroTile from '#lib/dashboard/HeroTile.svelte';
 	import LastNight from '#lib/dashboard/LastNight.svelte';
 	import { dashIcons } from '#lib/dashboard/icons.ts';
-	import { cardLabel, defaultCards, defaultHero, heroMax, move, moveTo, patch, type Card, type Catalogue } from '#lib/dashboard/layout.ts';
+	import { cardLabel, cardOfItem, defaultCards, defaultHero, heroMax, move, moveTo, patch, type Card, type Catalogue } from '#lib/dashboard/layout.ts';
 	import MetricCard from '#lib/dashboard/MetricCard.svelte';
 	import Sources from '#lib/dashboard/Sources.svelte';
 	import { cardView, lead, loadSummaries, tileView, type Period, type Summary } from '#lib/dashboard/summary.ts';
@@ -66,6 +66,8 @@
 	let saving = $state(false);
 	let saveProblem = $state<Problem | null>(null);
 	let adding = $state(false);
+	// Cards for metrics that have data, from the inventory, loaded when editing starts.
+	let withData = $state<string[]>([]);
 	let announce = $state('');
 	let dragging = $state<string | null>(null);
 	let over = $state<string | null>(null);
@@ -80,6 +82,7 @@
 	const cards = $derived(editing ? draft : (layout ?? []));
 	const visible = $derived(cards.filter((c) => !c.hidden));
 	const hidden = $derived(draft.filter((c) => c.hidden));
+	const offered = $derived(withData.filter((m) => !draft.some((c) => c.metric === m)));
 	const views = $derived(Object.fromEntries(Object.entries(summaries).map(([m, s]) => [m, cardView(m, s, additive.has(m))])));
 	const heroCodes = $derived(editing ? heroDraft : hero);
 	// Like cards, a tile with no data waits (outside edit mode) until a source provides it.
@@ -180,6 +183,7 @@
 		saveProblem = null;
 		announce = '';
 		editing = true;
+		void api.GET('/api/v1/inventory').then(({ data }) => (withData = [...new Set((data?.items ?? []).map(cardOfItem).filter(Boolean))]));
 	}
 
 	async function save() {
@@ -403,6 +407,19 @@
 					<p class="muted">Cards you hide wait here.</p>
 				{/if}
 			</div>
+			{#if offered.length}
+				<div class="hidden-cards">
+					<h3>With data, not on your dashboard · {offered.length}</h3>
+					<ul>
+						{#each offered as m (m)}
+							<li>
+								{cardLabel(m)}
+								<button class="btn sm" type="button" aria-label="Add {cardLabel(m)}" onclick={() => pin(m)}>Add</button>
+							</li>
+						{/each}
+					</ul>
+				</div>
+			{/if}
 		{/if}
 	{/if}
 </section>

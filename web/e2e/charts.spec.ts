@@ -57,6 +57,7 @@ for (const scheme of schemes) {
 		await expect(hist.locator('.mean')).toHaveCount(1);
 		await walk(page, hist);
 
+		await page.getByRole('group', { name: 'Series' }).getByRole('button', { name: 'Source per day' }).click();
 		await expect(page.getByRole('img', { name: /^Source per day: Whoop 29, Garmin 1/ })).toBeVisible();
 	});
 
