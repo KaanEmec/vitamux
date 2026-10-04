@@ -1,6 +1,6 @@
 # E16 Reference installation and existing-data migration (final epic)
 
-Release: deployment · Depends on: G6 (v0.3.0) · [Plan index](../README.md)
+Release: deployment · Depends on: G7 (v0.4.0) · [Plan index](../README.md)
 Read first: [migration.md](../../architecture/migration.md) and the owner-local, git-ignored `docs/architecture/migration-reference.md`. **Do not read these for any other epic.**
 
 Status: **not planned in detail.** Job files are written when this epic starts. No product epic may follow E16.

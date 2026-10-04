@@ -20,6 +20,8 @@ Alternatives rejected: htmx (the rule builder, charts, and PDF review need real 
 
 ## Navigation
 
+Planned ([E21](../plan/E21-visualisation/README.md), v0.4.0): a redesign of every section on design system v2, Dashboard and Explore in place of Today and Data, and a rule lens on every metric chart.
+
 1. **Today**: key resolved metrics with source chips; connection health; alerts (reauth, drift, stale backup).
 2. **Connections**: list, then detail tabs (`?tab=`) Overview, Streams, Backfills, History, Settings. A single auth wizard handles the OAuth redirect (credentials → MFA once `AuthStep` carries a prompt); the callback's `?connected=`/`?auth_error=` show on the list. Manual sync, backfills with retry and cancel, pause, delete with keep/delete data. Unofficial badge from `Connection.official`. Planned ([E20](../plan/E20-guided-setup/README.md)): **Connect a source** shows each provider's setup state, with the Withings app wizard, the sidecar-not-running card, and one sign-in and MFA dialog for Garmin and WHOOP.
 3. **Data**:
