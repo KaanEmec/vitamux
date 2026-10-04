@@ -171,7 +171,7 @@ class ProtocolTest(Base):
         self.assertRegex(d["upstream"]["version"], r"^0\.3\.\d+$")
         self.assertEqual(d["upstream"]["source_url"], "https://github.com/cyberjunky/python-garminconnect")
         names = [s["name"] for s in d["streams"]]
-        self.assertEqual(len(names), 12)
+        self.assertEqual(len(names), 16)
         self.assertIn("garmin.activities", names)
         for s in d["streams"]:
             self.assertEqual(set(s), {"name", "interval_s", "lookback_s", "unit_size_s", "max_backfill_s"})
@@ -394,6 +394,9 @@ class FetchTest(Base):
             "garmin.hrv": "/hrv-service/hrv/2026-10-01",
             "garmin.respiration": "/wellness-service/wellness/daily/respiration/2026-10-01",
             "garmin.spo2": "/wellness-service/wellness/daily/spo2/2026-10-01",
+            "garmin.floors": "/wellness-service/wellness/floorsChartData/daily/2026-10-01",
+            "garmin.hydration": "/usersummary-service/usersummary/hydration/daily/2026-10-01",
+            "garmin.fitness_age": "/fitnessage-service/fitnessage/2026-10-01",
         }
         Fake.handler = lambda path, params: [] if "dailySummaryChart" in path else {}
         for stream, path in expect.items():
@@ -402,13 +405,15 @@ class FetchTest(Base):
                 self.assertEqual(lines[0]["request"]["endpoint"], path)
                 self.assertEqual(lines[0]["external_key"], f"{stream}:2026-10-01")
 
-    def test_training_has_two_items_per_day(self):
-        Fake.handler = lambda path, params: [{}] if "maxmet" in path else []
+    def test_training_has_three_items_per_day(self):
+        Fake.handler = lambda path, params: [{}] if "maxmet" in path else {} if "trainingstatus" in path else []
         _, _, lines = self.fetch(stream="garmin.training")
         self.assertEqual([l["external_key"] for l in lines[:-1]],
-                         ["garmin.training:2026-10-01:vo2max", "garmin.training:2026-10-01:readiness"])
+                         ["garmin.training:2026-10-01:vo2max", "garmin.training:2026-10-01:readiness",
+                          "garmin.training:2026-10-01:status"])
         self.assertEqual(lines[0]["request"]["endpoint"], "/metrics-service/metrics/maxmet/daily/2026-10-01/2026-10-01")
         self.assertEqual(lines[1]["request"]["endpoint"], "/metrics-service/metrics/trainingreadiness/2026-10-01")
+        self.assertEqual(lines[2]["request"]["endpoint"], "/metrics-service/metrics/trainingstatus/aggregated/2026-10-01")
 
     def test_range_streams_use_stable_30_day_blocks(self):
         Fake.handler = lambda path, params: {"dateWeightList": []}
@@ -521,6 +526,58 @@ class FetchTest(Base):
         self.assertEqual(a["fingerprint"], b["fingerprint"])
         self.assertNotEqual(a["fingerprint"], c["fingerprint"])
         self.assertNotIn('"x"', json.dumps(c))  # values never appear
+
+
+class ReloadTest(Base):
+    """garmin.intraday_reload: request a reload per day, wait for it, refetch the day's intraday streams."""
+
+    reloads = []
+
+    def setUp(self):
+        super().setUp()
+        ReloadTest.reloads = []
+        for p in (mock.patch.object(garmin, "RELOAD_WAIT", 0), mock.patch.object(Fake, "request_reload", self.request_reload, create=True)):
+            p.start()
+            self.addCleanup(p.stop)
+        Fake.handler = lambda path, params: {"heartRateValues": [[1, 60]]} if "dailyHeartRate" in path else {}
+
+    status = "SUBMITTED"
+
+    def request_reload(self, day):
+        ReloadTest.reloads.append(day)
+        return {"status": ReloadTest.status}
+
+    def test_reloaded_day_refetches_its_intraday_streams(self):
+        ReloadTest.status = "SUBMITTED"
+        st, raw, lines = self.fetch(stream=garmin.RELOAD, start="2026-10-01", end="2026-10-03")
+        self.assertEqual((st, ReloadTest.reloads), (200, ["2026-10-01", "2026-10-02"]))
+        items, result = lines[:-1], lines[-1]
+        self.assertEqual(len(items), 2 * len(garmin.INTRADAY))
+        self.assertEqual({i["stream"] for i in items}, set(garmin.INTRADAY))
+        self.assertTrue(all(i["external_key"] == f"{i['stream']}:{i['body']['unit']['date']}" for i in items))
+        self.assertEqual((result["done"], result.get("next_cursor")), (True, None))
+
+    def test_denied_is_rate_limited_until_the_next_day(self):
+        ReloadTest.status = "DENIED"
+        with mock.patch.object(garmin, "NOW", lambda: datetime(2026, 10, 1, 22, 0, tzinfo=timezone.utc)):
+            p, headers = self.problem("/v1/fetch", {"stream": garmin.RELOAD, "from": "2026-10-01", "to": "2026-10-02",
+                                                    "credentials": signed_in_credentials(), "config": {}}, "rate_limited", 429)
+        self.assertEqual(p["retry_after_s"], 2 * 3600 + 60)
+        self.assertEqual(headers["Retry-After"], str(2 * 3600 + 60))
+
+    def test_unknown_status_is_schema_drift(self):
+        ReloadTest.status = "WHATEVER"
+        st, _, p = self.fetch(stream=garmin.RELOAD)
+        self.assertEqual((st, p["code"]), (502, "schema_drift"))
+        self.assertNotIn("WHATEVER", json.dumps(p))
+
+    def test_only_a_window_reloads(self):
+        _, _, lines = self.post_fetch({"stream": garmin.RELOAD, "cursor": {"since": "2026-09-30"}})
+        self.assertEqual((lines, ReloadTest.reloads), ([{"type": "result", "done": True}], []))
+
+    def post_fetch(self, req):
+        status, headers, raw = self.call("POST", "/v1/fetch", {"credentials": signed_in_credentials(), "config": {}, **req})
+        return status, headers, [json.loads(x) for x in raw.splitlines()]
 
 
 class IncrementalTest(Base):

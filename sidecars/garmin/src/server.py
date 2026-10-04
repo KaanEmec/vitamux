@@ -31,6 +31,8 @@ def dumps(obj):
 def raw_line(item):
     """NDJSON raw line: the JSON body verbatim, or a binary item as base64 with its sha256."""
     line = {"type": "raw", "external_key": item["external_key"], "request": item["request"]}
+    if "stream" in item:  # a line of another stream than the one fetched (a reload refetches its days)
+        line["stream"] = item["stream"]
     if "data" in item:
         line.update(content_type=item["content_type"], sha256=hashlib.sha256(item["data"]).hexdigest(),
                     body_base64=base64.b64encode(item["data"]).decode())

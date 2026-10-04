@@ -35,6 +35,7 @@ type BackfillSpec struct {
 	Stream       string
 	From, To     time.Time     // To zero = now
 	UnitSize     time.Duration // 0 = the stream's StreamSpec.UnitSize
+	DailyLimit   int           // > 0 = a paced backfill: at most this many units start a UTC day
 }
 
 // Backfill is a stored backfill and how many of its units are in each state.
@@ -42,6 +43,7 @@ type Backfill struct {
 	ID, ConnectionID               uuid.UUID
 	Stream                         string
 	From, To                       time.Time
+	DailyLimit                     *int   // units a UTC day for a paced backfill
 	Status                         string // running | done | failed | cancelled
 	CreatedAt                      time.Time
 	FinishedAt                     *time.Time
@@ -65,7 +67,8 @@ type backfillPayload struct {
 
 // CreateBackfill splits spec's range into units and queues one job per unit. The jobs are
 // exclusive per connection and low priority, so incremental syncs run between them. A
-// backfill never moves the stream cursor.
+// backfill never moves the stream cursor. A paced backfill (DailyLimit) queues the same jobs, but
+// each waits for the next UTC day once the day's limit is spent.
 func (rt *Runtime) CreateBackfill(ctx context.Context, spec BackfillSpec) (uuid.UUID, error) {
 	row, err := rt.db.Q().GetSyncConnection(ctx, spec.ConnectionID)
 	if err = db.MapErr(err); err != nil {
@@ -92,6 +95,8 @@ func (rt *Runtime) CreateBackfill(ctx context.Context, spec BackfillSpec) (uuid.
 	switch {
 	case size < minUnitSize:
 		return uuid.Nil, fmt.Errorf("%w: unit size must be at least %s", ErrInvalidBackfill, minUnitSize)
+	case spec.DailyLimit < 0:
+		return uuid.Nil, fmt.Errorf("%w: daily limit must be positive", ErrInvalidBackfill)
 	case !to.After(from):
 		return uuid.Nil, fmt.Errorf("%w: range end must be after its start", ErrInvalidBackfill)
 	case from.Before(time.Now().Add(-s.MaxBackfill)):
@@ -108,9 +113,13 @@ func (rt *Runtime) CreateBackfill(ctx context.Context, spec BackfillSpec) (uuid.
 		starts, ends = append(starts, t), append(ends, end)
 	}
 	id := uuid.New()
+	var limit *int32
+	if spec.DailyLimit > 0 {
+		limit = new(int32(spec.DailyLimit))
+	}
 	err = rt.db.Tx(ctx, func(q *dbq.Queries) error {
 		if err := q.InsertBackfill(ctx, dbq.InsertBackfillParams{
-			ID: id, ConnectionID: row.ID, Stream: spec.Stream, RangeStart: from, RangeEnd: to,
+			ID: id, ConnectionID: row.ID, Stream: spec.Stream, RangeStart: from, RangeEnd: to, DailyLimit: limit,
 		}); err != nil {
 			return err
 		}
@@ -168,6 +177,9 @@ func (rt *Runtime) HandleBackfillUnit(ctx context.Context, j jobs.Job) error {
 	} else if !until.IsZero() {
 		return jobs.RescheduleAt(until, &RateLimitedError{RetryAfter: time.Until(until)})
 	}
+	if next, err := rt.pacedUntil(ctx, u, p); err != nil || !next.IsZero() {
+		return cmp.Or(err, jobs.RescheduleAt(next, nil))
+	}
 	if err := rt.db.Q().StartBackfillUnit(ctx, dbq.StartBackfillUnitParams{BackfillID: p.BackfillID, RangeStart: p.Start}); err != nil {
 		return err
 	}
@@ -196,6 +208,23 @@ func (rt *Runtime) HandleBackfillUnit(ctx context.Context, j jobs.Job) error {
 		}
 	}
 	return out
+}
+
+// pacedUntil returns the start of the next UTC day when the unit's backfill is paced and the
+// stream has already started its daily limit of units today, else the zero time. The count spans
+// the connection's backfills of the stream, so two of them share one limit.
+func (rt *Runtime) pacedUntil(ctx context.Context, u dbq.GetBackfillUnitRow, p backfillPayload) (time.Time, error) {
+	if u.DailyLimit == nil {
+		return time.Time{}, nil
+	}
+	today := time.Now().UTC().Truncate(24 * time.Hour)
+	n, err := rt.db.Q().CountUnitsStartedSince(ctx, dbq.CountUnitsStartedSinceParams{
+		ConnectionID: u.ConnectionID, Stream: u.Stream, Since: today, BackfillID: p.BackfillID, RangeStart: p.Start,
+	})
+	if err != nil || n < int64(*u.DailyLimit) {
+		return time.Time{}, err
+	}
+	return today.AddDate(0, 0, 1), nil
 }
 
 // unitFails reports whether err ends the unit's job for good.
@@ -281,6 +310,9 @@ func (rt *Runtime) ListBackfills(ctx context.Context, connectionID uuid.UUID) ([
 			ID: r.ID, ConnectionID: r.ConnectionID, Stream: r.Stream, From: r.RangeStart, To: r.RangeEnd,
 			Status: r.Status, CreatedAt: r.CreatedAt, FinishedAt: r.FinishedAt,
 			Pending: int(r.Pending), Running: int(r.Running), Done: int(r.Done), Failed: int(r.Failed),
+		}
+		if r.DailyLimit != nil {
+			out[i].DailyLimit = new(int(*r.DailyLimit))
 		}
 	}
 	return out, nil

@@ -78,6 +78,7 @@ type Backfill struct {
 	Status       string
 	CreatedAt    time.Time
 	FinishedAt   *time.Time
+	DailyLimit   *int32
 }
 
 type BackfillUnit struct {

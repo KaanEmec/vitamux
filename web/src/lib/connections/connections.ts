@@ -19,6 +19,14 @@ const providers: Record<string, ProviderInfo> = {
 	manual: { label: 'Manual entries' }
 };
 
+/** Streams that run slowly: the server starts at most `perDay` units a day, below the provider's own limit. */
+export const paced: Record<string, { perDay: number; note: string }> = {
+	'garmin.intraday_reload': {
+		perDay: 20,
+		note: 'Garmin moves heart rate, steps, stress, sleep and similar detail of older days to cold storage. This asks Garmin to restore one day at a time, then fetches it again. Garmin refuses about 30 requests a day, so each day is its own unit and at most 20 start a day. If Garmin refuses anyway, the rest waits for the next day. It is opt-in and slow: 300 days take about 15 days.'
+	}
+};
+
 export type Provider = Schemas['Provider'];
 
 /** Providers the connect wizard offers: those a browser can authorize (not file imports or device pairing). */

@@ -113,7 +113,7 @@
 					<td>
 						<div class="progress">
 							<ProgressBar value={b.unit_counts.done} max={total(b)} label="Units done for {label(b)}" />
-							<span>{b.unit_counts.done}/{total(b)} done{#if b.unit_counts.failed}, <strong>{b.unit_counts.failed} failed</strong>{/if}</span>
+							<span>{b.unit_counts.done}/{total(b)} done{#if b.unit_counts.failed}, <strong>{b.unit_counts.failed} failed</strong>{/if}{#if b.daily_limit}, at most {b.daily_limit} a day, the rest wait for the next day{/if}</span>
 						</div>
 					</td>
 					<td>{when(b.created_at)}</td>

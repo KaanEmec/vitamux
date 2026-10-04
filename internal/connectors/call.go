@@ -104,6 +104,9 @@ func (rt *Runtime) SyncNow(ctx context.Context, connectionID uuid.UUID) ([]uuid.
 	err = rt.db.Tx(ctx, func(q *dbq.Queries) error {
 		ids = ids[:0]
 		for _, s := range c.Describe().Streams {
+			if s.Interval == 0 { // an on-demand stream (a backfill only) has nothing to sync
+				continue
+			}
 			id, _, err := jobs.Enqueue(ctx, q, jobs.NewJob{
 				Kind: jobs.KindSync, ConnectionID: &row.ID, Exclusive: true, Priority: jobs.PriorityHigh,
 				DedupeKey: "manual:" + row.ID.String() + ":" + s.Name,

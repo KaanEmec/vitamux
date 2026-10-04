@@ -281,3 +281,65 @@ func TestCreateBackfillValidation(t *testing.T) {
 		t.Fatalf("%d backfills stored by invalid requests", n)
 	}
 }
+
+// J25.6: a paced backfill starts at most its daily limit of units a UTC day; the rest wait for
+// the next day (their jobs are rescheduled to its start) and then spend that day's limit.
+func TestPacedBackfillSpendsItsDailyLimit(t *testing.T) {
+	f, uf := newUnitFake()
+	e := setup(t, f)
+	from := time.Now().AddDate(0, 0, -6).UTC().Truncate(24 * time.Hour)
+	id, err := e.rt.CreateBackfill(t.Context(), BackfillSpec{ConnectionID: e.conn, Stream: stream, From: from, To: from.AddDate(0, 0, 5), DailyLimit: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for day := range 2 {
+		e.runBackfill(t, e.rt, 1500*time.Millisecond, func() bool { return false })
+		b := e.backfill(t, e.rt, id)
+		want := 2 * (day + 1)
+		if b.Done != want || b.Pending != 5-want || b.DailyLimit == nil || *b.DailyLimit != 2 || len(uf.fetches) != want {
+			t.Fatalf("day %d: %+v, %d units fetched; want %d done", day+1, b, len(uf.fetches), want)
+		}
+		var early int
+		e.scan(`SELECT count(*) FROM jobs WHERE kind = $1 AND status = 'queued' AND run_at < date_trunc('day', now() AT TIME ZONE 'UTC') + interval '1 day'`,
+			[]any{KindBackfillUnit}, &early)
+		if early != 0 {
+			t.Fatalf("day %d: %d waiting units are due before the next UTC day", day+1, early)
+		}
+		// Let the next day come: yesterday's starts no longer count, and the waiting jobs are due.
+		e.exec(`UPDATE backfill_units SET updated_at = updated_at - interval '1 day'`)
+		e.exec(`UPDATE jobs SET run_at = now() WHERE kind = $1 AND status = 'queued'`, KindBackfillUnit)
+	}
+	e.runBackfill(t, e.rt, 1500*time.Millisecond, func() bool { return false })
+	if b := e.backfill(t, e.rt, id); b.Status != "done" || b.Done != 5 {
+		t.Fatalf("last day: %+v", b)
+	}
+}
+
+// J25.6: when the provider denies a unit (rate limited until the next day), the run stops: no
+// tight loop, the provider is blocked and the unit's job waits for the block to end.
+func TestPacedBackfillStopsOnDenial(t *testing.T) {
+	f, uf := newUnitFake()
+	e := setup(t, f)
+	calls := 0
+	uf.fail = func(WorkUnit) error {
+		calls++
+		if calls > 1 {
+			return &RateLimitedError{RetryAfter: 20 * time.Hour}
+		}
+		return nil
+	}
+	from := time.Now().AddDate(0, 0, -6).UTC().Truncate(24 * time.Hour)
+	id, err := e.rt.CreateBackfill(t.Context(), BackfillSpec{ConnectionID: e.conn, Stream: stream, From: from, To: from.AddDate(0, 0, 5), DailyLimit: 3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.runBackfill(t, e.rt, 2*time.Second, func() bool { return false })
+	if b := e.backfill(t, e.rt, id); b.Done != 1 || b.Status != "running" || calls != 2 {
+		t.Fatalf("after the denial: %+v, %d provider calls; want 1 done and 2 calls", b, calls)
+	}
+	var due int
+	e.scan(`SELECT count(*) FROM jobs WHERE kind = $1 AND status = 'queued' AND run_at < now() + interval '19 hours'`, []any{KindBackfillUnit}, &due)
+	if due != 0 {
+		t.Fatalf("%d unit jobs would run before the denial ends", due)
+	}
+}

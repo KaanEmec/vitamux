@@ -42,6 +42,35 @@ func (q *Queries) CancelBackfillJobs(ctx context.Context, arg CancelBackfillJobs
 	return err
 }
 
+const countUnitsStartedSince = `-- name: CountUnitsStartedSince :one
+SELECT count(*) FROM backfill_units u JOIN backfills b ON b.id = u.backfill_id
+WHERE b.connection_id = $1 AND b.stream = $2 AND u.status IN ('running', 'done')
+  AND u.updated_at >= $3 AND NOT (u.backfill_id = $4 AND u.range_start = $5)
+`
+
+type CountUnitsStartedSinceParams struct {
+	ConnectionID uuid.UUID
+	Stream       string
+	Since        time.Time
+	BackfillID   uuid.UUID
+	RangeStart   time.Time
+}
+
+// Units of a connection's stream that started (or finished) since the given time, other than one
+// unit: what a paced backfill spent of today's limit.
+func (q *Queries) CountUnitsStartedSince(ctx context.Context, arg CountUnitsStartedSinceParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countUnitsStartedSince,
+		arg.ConnectionID,
+		arg.Stream,
+		arg.Since,
+		arg.BackfillID,
+		arg.RangeStart,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const endBackfillUnit = `-- name: EndBackfillUnit :execrows
 UPDATE backfill_units SET status = $1, last_error_class = $2, updated_at = now()
 WHERE backfill_id = $3 AND range_start = $4 AND status <> 'done'
@@ -83,7 +112,7 @@ func (q *Queries) FinishBackfill(ctx context.Context, id uuid.UUID) error {
 }
 
 const getBackfillUnit = `-- name: GetBackfillUnit :one
-SELECT u.range_start, u.range_end, u.status, b.connection_id, b.stream, b.status AS backfill_status
+SELECT u.range_start, u.range_end, u.status, b.connection_id, b.stream, b.status AS backfill_status, b.daily_limit
 FROM backfill_units u JOIN backfills b ON b.id = u.backfill_id
 WHERE u.backfill_id = $1 AND u.range_start = $2
 `
@@ -100,6 +129,7 @@ type GetBackfillUnitRow struct {
 	ConnectionID   uuid.UUID
 	Stream         string
 	BackfillStatus string
+	DailyLimit     *int32
 }
 
 func (q *Queries) GetBackfillUnit(ctx context.Context, arg GetBackfillUnitParams) (GetBackfillUnitRow, error) {
@@ -112,14 +142,15 @@ func (q *Queries) GetBackfillUnit(ctx context.Context, arg GetBackfillUnitParams
 		&i.ConnectionID,
 		&i.Stream,
 		&i.BackfillStatus,
+		&i.DailyLimit,
 	)
 	return i, err
 }
 
 const insertBackfill = `-- name: InsertBackfill :exec
 
-INSERT INTO backfills (id, connection_id, stream, range_start, range_end)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO backfills (id, connection_id, stream, range_start, range_end, daily_limit)
+VALUES ($1, $2, $3, $4, $5, $6)
 `
 
 type InsertBackfillParams struct {
@@ -128,6 +159,7 @@ type InsertBackfillParams struct {
 	Stream       string
 	RangeStart   time.Time
 	RangeEnd     time.Time
+	DailyLimit   *int32
 }
 
 // Backfills (J06.6); see docs/architecture/connectors.md#runtime-responsibilities.
@@ -138,6 +170,7 @@ func (q *Queries) InsertBackfill(ctx context.Context, arg InsertBackfillParams) 
 		arg.Stream,
 		arg.RangeStart,
 		arg.RangeEnd,
+		arg.DailyLimit,
 	)
 	return err
 }
@@ -198,7 +231,7 @@ func (q *Queries) ListBackfillUnits(ctx context.Context, arg ListBackfillUnitsPa
 }
 
 const listBackfills = `-- name: ListBackfills :many
-SELECT b.id, b.connection_id, b.stream, b.range_start, b.range_end, b.status, b.created_at, b.finished_at,
+SELECT b.id, b.connection_id, b.stream, b.range_start, b.range_end, b.status, b.created_at, b.finished_at, b.daily_limit,
        count(*) FILTER (WHERE u.status = 'pending') AS pending,
        count(*) FILTER (WHERE u.status = 'running') AS running,
        count(*) FILTER (WHERE u.status = 'done') AS done,
@@ -218,6 +251,7 @@ type ListBackfillsRow struct {
 	Status       string
 	CreatedAt    time.Time
 	FinishedAt   *time.Time
+	DailyLimit   *int32
 	Pending      int64
 	Running      int64
 	Done         int64
@@ -242,6 +276,7 @@ func (q *Queries) ListBackfills(ctx context.Context, connectionID uuid.UUID) ([]
 			&i.Status,
 			&i.CreatedAt,
 			&i.FinishedAt,
+			&i.DailyLimit,
 			&i.Pending,
 			&i.Running,
 			&i.Done,

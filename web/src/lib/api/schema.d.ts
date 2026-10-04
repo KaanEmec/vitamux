@@ -3397,6 +3397,8 @@ export interface components {
              * @description Exclusive; now when omitted.
              */
             end?: string;
+            /** @description A paced backfill: at most this many units start a UTC day, the rest wait for the next day (a slow mode for provider-limited work such as the Garmin reload). */
+            daily_limit?: number;
         };
         Backfill: {
             /** Format: uuid */
@@ -3413,6 +3415,8 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             finished_at: string | null;
+            /** @description Units a UTC day for a paced backfill; null when unpaced. */
+            daily_limit?: number | null;
             unit_counts: {
                 pending: number;
                 running: number;
