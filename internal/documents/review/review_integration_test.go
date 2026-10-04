@@ -279,6 +279,30 @@ func TestReviewAndConfirm(t *testing.T) {
 	}
 }
 
+// TestReportLaboratoryFallback: a report without a printed document laboratory takes the
+// laboratory of the first kept row, never that of a rejected row.
+func TestReportLaboratoryFallback(t *testing.T) {
+	e := newEnv(t)
+	_, run := e.extract("lab-01")
+	e.exec(`UPDATE extraction_runs SET doc_meta = doc_meta - 'laboratory' WHERE id = $1`, run)
+	e.exec(`UPDATE lab_extracted_rows SET laboratory = NULL WHERE run_id = $1`, run)
+	e.exec(`UPDATE lab_extracted_rows SET laboratory = 'Synthetic Lab A' WHERE run_id = $1 AND row_index = 0`, run)
+	e.exec(`UPDATE lab_extracted_rows SET laboratory = 'Synthetic Lab B' WHERE run_id = $1 AND row_index = 1`, run)
+	for i := range e.get(run).Rows {
+		patch := `{"review": "accept"}`
+		if i == 0 {
+			patch = `{"review": "reject"}`
+		}
+		e.edit(run, i, patch)
+	}
+	if _, err := e.svc.Confirm(e.ctx, e.user, audit.Owner, run); err != nil {
+		t.Fatal(err)
+	}
+	if n := e.count(`SELECT count(*) FROM lab_reports WHERE user_id = $1 AND laboratory = 'Synthetic Lab B'`, e.user); n != 1 {
+		t.Errorf("%d reports with the laboratory of the first kept row", n)
+	}
+}
+
 // TestAmbiguousDateAndUnknownAnalyte: an ambiguous printed date blocks confirmation until the
 // owner enters the date; an analyte set to unknown is confirmed with its printed values only.
 func TestAmbiguousDateAndUnknownAnalyte(t *testing.T) {
