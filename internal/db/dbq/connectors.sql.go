@@ -185,13 +185,18 @@ func (q *Queries) RecordSyncFailure(ctx context.Context, arg RecordSyncFailurePa
 
 const recordSyncSuccess = `-- name: RecordSyncSuccess :exec
 UPDATE connections
-SET status = CASE WHEN EXISTS (SELECT 1 FROM sync_cursors s WHERE s.connection_id = $1 AND s.status = 'degraded')
+SET status = CASE WHEN EXISTS (SELECT 1 FROM sync_cursors s WHERE s.connection_id = $1 AND s.status = 'degraded'
+                               AND (EXISTS (SELECT 1 FROM schedules x WHERE x.connection_id = s.connection_id
+                                            AND x.stream = s.stream AND x.enabled)
+                                    OR NOT EXISTS (SELECT 1 FROM schedules x WHERE x.connection_id = s.connection_id
+                                                   AND x.stream = s.stream)))
                   THEN 'degraded' ELSE 'active' END,
     last_success_at = now(), last_error_class = NULL, consecutive_failures = 0, updated_at = now()
 WHERE id = $1 AND status IN ('active', 'degraded')
 `
 
-// The connection stays degraded while any of its streams is.
+// The connection stays degraded while any of its streams is, except one whose schedules the
+// owner has all disabled.
 func (q *Queries) RecordSyncSuccess(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, recordSyncSuccess, id)
 	return err

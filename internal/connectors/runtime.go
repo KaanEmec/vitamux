@@ -19,6 +19,7 @@ import (
 	"github.com/KaanEmec/vitamux/internal/ingest"
 	"github.com/KaanEmec/vitamux/internal/jobs"
 	"github.com/KaanEmec/vitamux/internal/metrics"
+	"github.com/KaanEmec/vitamux/internal/normalize"
 )
 
 // Config wires a Runtime.
@@ -101,9 +102,9 @@ func (rt *Runtime) Handle(ctx context.Context, j jobs.Job) error {
 		return jobs.Permanent(fmt.Errorf("sync job: unsupported mode %q", p.Mode))
 	}
 	r, err := rt.prepare(ctx, *j.ConnectionID, p.Stream)
-	if errors.Is(err, errStreamGone) && p.ScheduleID != uuid.Nil {
+	if errors.Is(err, errStreamGone) {
 		// The connector dropped the stream (e.g. a sidecar update): retire it instead of
-		// failing the connection.
+		// failing the connection, whether a schedule or a manual sync named it.
 		rt.log.Info("stream retired: no longer declared", "connection_id", *j.ConnectionID, "stream", p.Stream)
 		return rt.db.Q().RetireStream(ctx, dbq.RetireStreamParams{ConnectionID: *j.ConnectionID, Stream: p.Stream})
 	}
@@ -151,8 +152,12 @@ func (rt *Runtime) prepare(ctx context.Context, connectionID uuid.UUID, stream s
 		return syncRun{}, jobs.Permanent(fmt.Errorf("%w: no connector registered for %s", ErrPermanent, row.Provider))
 	}
 	d := c.Describe()
+	tl, err := normalize.NewPeriods(rt.db).Timeline(ctx, row.UserID)
+	if err != nil {
+		return syncRun{}, err
+	}
 	r := syncRun{
-		conn: Conn{ID: row.ID, UserID: row.UserID, Provider: row.Provider, Config: row.Config, HTTP: rt.clients.get(d)},
+		conn: Conn{ID: row.ID, UserID: row.UserID, Provider: row.Provider, Config: withTimezone(row.Config, tl), HTTP: rt.clients.get(d)},
 		c:    c,
 	}
 	if !d.Available() {
@@ -165,6 +170,23 @@ func (rt *Runtime) prepare(ctx context.Context, connectionID uuid.UUID, stream s
 		r.auth = c.(Authenticator) // checked by NewRegistry
 	}
 	return r, nil
+}
+
+// withTimezone adds the owner's current zone to a connection's config as "timezone", for the
+// connector to cut local days. It is not stored; an empty timeline or a config that is not a
+// JSON object stays as it is.
+func withTimezone(config json.RawMessage, tl normalize.Timeline) json.RawMessage {
+	tz, ok := tl.At(time.Now())
+	m := map[string]any{}
+	if !ok || (len(config) > 0 && json.Unmarshal(config, &m) != nil) {
+		return config
+	}
+	m["timezone"] = tz
+	b, err := json.Marshal(m)
+	if err != nil {
+		return config
+	}
+	return b
 }
 
 // run plans the sync and fetches every unit page by page. A non-zero resume means a page

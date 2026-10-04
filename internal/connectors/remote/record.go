@@ -13,7 +13,8 @@ import (
 
 // Recorder is the Options.OnDescribe of serve: it registers the sidecar's provider (a known
 // code keeps its row) and records its upstream package on the provider's remote connections,
-// auditing each change as connection.upstream_changed.
+// auditing each change as connection.upstream_changed. It also reconciles the connections'
+// streams with the descriptor (connectors.ReconcileStreams).
 func Recorder(d *db.DB) func(context.Context, connectors.Descriptor) error {
 	return func(ctx context.Context, desc connectors.Descriptor) error {
 		var upstream []byte
@@ -40,7 +41,7 @@ func Recorder(d *db.DB) func(context.Context, connectors.Descriptor) error {
 					return err
 				}
 			}
-			return nil
+			return connectors.ReconcileStreams(ctx, q, desc)
 		})
 	}
 }

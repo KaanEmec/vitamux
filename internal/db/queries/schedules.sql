@@ -35,7 +35,8 @@ FOR UPDATE OF s SKIP LOCKED;
 
 -- name: RetireStream :exec
 -- A stream its connector no longer declares: stop its schedules, clear its degraded mark, and
--- leave the connection degraded only while another stream still is (CTEs see the old rows).
+-- leave the connection degraded only while another stream still is (CTEs see the old rows). A
+-- degraded stream whose schedules are all disabled does not count.
 WITH sched AS (
   UPDATE schedules SET enabled = false WHERE connection_id = @connection_id AND stream = @stream
 ), cur AS (
@@ -44,10 +45,23 @@ WITH sched AS (
 )
 UPDATE connections
 SET status = CASE WHEN EXISTS (SELECT 1 FROM sync_cursors s WHERE s.connection_id = @connection_id
-                                 AND s.stream <> @stream AND s.status = 'degraded')
+                                 AND s.stream <> @stream AND s.status = 'degraded'
+                                 AND (EXISTS (SELECT 1 FROM schedules x WHERE x.connection_id = s.connection_id
+                                              AND x.stream = s.stream AND x.enabled)
+                                      OR NOT EXISTS (SELECT 1 FROM schedules x WHERE x.connection_id = s.connection_id
+                                                     AND x.stream = s.stream)))
                   THEN 'degraded' ELSE 'active' END,
     updated_at = now()
 WHERE id = @connection_id AND status IN ('active', 'degraded');
+
+-- name: ListProviderConnections :many
+SELECT c.id FROM connections c JOIN providers p ON p.id = c.provider_id WHERE p.code = @provider;
+
+-- name: ListUsedStreams :many
+-- Streams a connection still has schedules or cursors for.
+SELECT sc.stream FROM schedules sc WHERE sc.connection_id = @connection_id
+UNION
+SELECT cu.stream FROM sync_cursors cu WHERE cu.connection_id = @connection_id;
 
 -- name: AdvanceSchedule :exec
 UPDATE schedules SET next_run_at = @next_run_at WHERE id = @id;

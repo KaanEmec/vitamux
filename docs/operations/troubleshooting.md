@@ -51,6 +51,8 @@ The provider answered with a shape the connector does not know. Vitamux stored t
 
 If it persists, the provider changed its API: upgrade Vitamux, or open an issue with the provider, stream and the run's error message, which names the endpoint and the shape fingerprint (the connection's run history, `GET /api/v1/connections/{id}/runs`). Never attach the payload. Quarantined raw rows stay stored for reprocessing once a fixed normalizer ships.
 
+A connection that stays `degraded` for a stream its connector no longer declares (for example after a sidecar update) clears by itself: the stream is retired when the sidecar is described again, or on the next sync that names it. A degraded stream whose schedules you disabled does not count either.
+
 ## Other connection health words
 
 | Health | Meaning | What to do |

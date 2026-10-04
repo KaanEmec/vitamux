@@ -113,6 +113,30 @@ func (q *Queries) InsertSchedule(ctx context.Context, arg InsertScheduleParams) 
 	return i, err
 }
 
+const listProviderConnections = `-- name: ListProviderConnections :many
+SELECT c.id FROM connections c JOIN providers p ON p.id = c.provider_id WHERE p.code = $1
+`
+
+func (q *Queries) ListProviderConnections(ctx context.Context, provider string) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listProviderConnections, provider)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSchedules = `-- name: ListSchedules :many
 SELECT id, connection_id, stream, run_interval, lookback, next_run_at, enabled, mode FROM schedules
 WHERE $1::uuid IS NULL OR connection_id = $1
@@ -141,6 +165,33 @@ func (q *Queries) ListSchedules(ctx context.Context, connectionID *uuid.UUID) ([
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUsedStreams = `-- name: ListUsedStreams :many
+SELECT sc.stream FROM schedules sc WHERE sc.connection_id = $1
+UNION
+SELECT cu.stream FROM sync_cursors cu WHERE cu.connection_id = $1
+`
+
+// Streams a connection still has schedules or cursors for.
+func (q *Queries) ListUsedStreams(ctx context.Context, connectionID uuid.UUID) ([]string, error) {
+	rows, err := q.db.Query(ctx, listUsedStreams, connectionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var stream string
+		if err := rows.Scan(&stream); err != nil {
+			return nil, err
+		}
+		items = append(items, stream)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -200,7 +251,11 @@ WITH sched AS (
 )
 UPDATE connections
 SET status = CASE WHEN EXISTS (SELECT 1 FROM sync_cursors s WHERE s.connection_id = $1
-                                 AND s.stream <> $2 AND s.status = 'degraded')
+                                 AND s.stream <> $2 AND s.status = 'degraded'
+                                 AND (EXISTS (SELECT 1 FROM schedules x WHERE x.connection_id = s.connection_id
+                                              AND x.stream = s.stream AND x.enabled)
+                                      OR NOT EXISTS (SELECT 1 FROM schedules x WHERE x.connection_id = s.connection_id
+                                                     AND x.stream = s.stream)))
                   THEN 'degraded' ELSE 'active' END,
     updated_at = now()
 WHERE id = $1 AND status IN ('active', 'degraded')
@@ -212,7 +267,8 @@ type RetireStreamParams struct {
 }
 
 // A stream its connector no longer declares: stop its schedules, clear its degraded mark, and
-// leave the connection degraded only while another stream still is (CTEs see the old rows).
+// leave the connection degraded only while another stream still is (CTEs see the old rows). A
+// degraded stream whose schedules are all disabled does not count.
 func (q *Queries) RetireStream(ctx context.Context, arg RetireStreamParams) error {
 	_, err := q.db.Exec(ctx, retireStream, arg.ConnectionID, arg.Stream)
 	return err

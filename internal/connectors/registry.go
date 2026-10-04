@@ -182,3 +182,31 @@ func EnsureSchedules(ctx context.Context, q *dbq.Queries, connectionID uuid.UUID
 	}
 	return nil
 }
+
+// ReconcileStreams aligns every connection of d's provider with the streams d declares now:
+// streams it no longer declares are retired (schedules disabled, degraded mark cleared), and
+// newly declared ones get their default schedules. Idempotent; run it whenever the descriptor
+// may have changed.
+func ReconcileStreams(ctx context.Context, q *dbq.Queries, d Descriptor) error {
+	ids, err := q.ListProviderConnections(ctx, d.Provider)
+	if err != nil {
+		return err
+	}
+	for _, id := range ids {
+		used, err := q.ListUsedStreams(ctx, id)
+		if err != nil {
+			return err
+		}
+		for _, stream := range used {
+			if _, ok := d.stream(stream); !ok {
+				if err := q.RetireStream(ctx, dbq.RetireStreamParams{ConnectionID: id, Stream: stream}); err != nil {
+					return err
+				}
+			}
+		}
+		if err := EnsureSchedules(ctx, q, id, d); err != nil {
+			return err
+		}
+	}
+	return nil
+}

@@ -34,8 +34,9 @@ type Options struct {
 	// it is unreachable logs at debug level, not as a warning.
 	Optional bool
 	Log      *slog.Logger
-	// OnDescribe runs after a successful describe whose name or upstream differs from the last
-	// one it accepted (always after the first): register the provider, record the upstream.
+	// OnDescribe runs after a successful describe whose name, upstream or streams differ from
+	// the last one it accepted (always after the first): register the provider, record the
+	// upstream, reconcile the streams.
 	// An error makes the next describe call it again.
 	OnDescribe func(ctx context.Context, d connectors.Descriptor) error
 }
@@ -133,7 +134,7 @@ func (c *Connector) refresh(ctx context.Context) error {
 		c.log.Log(ctx, level, "sidecar unavailable", "err", err)
 		return err
 	}
-	key, _ := json.Marshal([]any{d.Name, d.Upstream})
+	key, _ := json.Marshal([]any{d.Name, d.Upstream, d.Streams})
 	if c.onDescribe == nil || string(key) == reported {
 		return nil
 	}

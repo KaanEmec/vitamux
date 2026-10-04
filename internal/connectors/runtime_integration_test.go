@@ -629,3 +629,81 @@ func TestDroppedStreamIsRetired(t *testing.T) {
 		t.Fatalf("stream status %q, want ok", status)
 	}
 }
+
+func TestManualSyncOfDroppedStreamRetiresIt(t *testing.T) {
+	e := setup(t, &fake{})
+	e.exec(`INSERT INTO sync_cursors (connection_id, stream, status, status_reason) VALUES ($1, 'dropped', 'degraded', 'schema_drift')`, e.conn)
+	e.exec(`UPDATE connections SET status = 'degraded' WHERE id = $1`, e.conn)
+	j := e.drive(t, e.rt, e.enqueue(t, jobs.SyncPayload{Mode: ModeManual, Stream: "dropped"}), 1)
+	if s := e.connection(t); j.Status != "succeeded" || s.status != "active" || s.failures != 0 {
+		t.Fatalf("job %s, connection %+v, want a succeeded job and an active connection", j.Status, s)
+	}
+}
+
+func TestReconcileStreams(t *testing.T) {
+	f := &fake{}
+	e := setup(t, f)
+	old, err := jobs.EnsureSchedule(t.Context(), e.d.Q(), jobs.ScheduleSpec{ConnectionID: e.conn, Stream: "dropped", Mode: ModeCorrection, Interval: 24 * time.Hour, Lookback: time.Hour})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.exec(`INSERT INTO sync_cursors (connection_id, stream, status, status_reason) VALUES ($1, 'dropped', 'degraded', 'schema_drift')`, e.conn)
+	e.exec(`UPDATE connections SET status = 'degraded' WHERE id = $1`, e.conn)
+	for range 2 { // idempotent
+		if err := ReconcileStreams(t.Context(), e.d.Q(), f.Describe()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var enabled bool
+	e.scan(`SELECT enabled FROM schedules WHERE id = $1`, []any{old.ID}, &enabled)
+	if s := e.connection(t); enabled || s.status != "active" {
+		t.Fatalf("dropped schedule enabled %v, connection %+v, want disabled and active", enabled, s)
+	}
+	var n int
+	e.scan(`SELECT count(*) FROM schedules WHERE connection_id = $1 AND stream = $2 AND enabled`, []any{e.conn, stream}, &n)
+	if n != 2 {
+		t.Fatalf("%d enabled schedules for the declared stream, want 2", n)
+	}
+}
+
+func TestOwnerDisabledDegradedStreamDoesNotDegradeConnection(t *testing.T) {
+	f := &fake{}
+	e := setup(t, f)
+	if err := EnsureSchedules(t.Context(), e.d.Q(), e.conn, f.Describe()); err != nil {
+		t.Fatal(err)
+	}
+	e.exec(`INSERT INTO sync_cursors (connection_id, stream, status, status_reason) VALUES ($1, $2, 'degraded', 'schema_drift')`, e.conn, stream)
+	if err := e.d.Q().RecordSyncSuccess(t.Context(), e.conn); err != nil {
+		t.Fatal(err)
+	}
+	if s := e.connection(t); s.status != "degraded" {
+		t.Fatalf("connection %q with a scheduled degraded stream, want degraded", s.status)
+	}
+	e.exec(`UPDATE schedules SET enabled = false WHERE connection_id = $1`, e.conn)
+	if err := e.d.Q().RecordSyncSuccess(t.Context(), e.conn); err != nil {
+		t.Fatal(err)
+	}
+	if s := e.connection(t); s.status != "active" {
+		t.Fatalf("connection %q with the stream's schedules all disabled, want active", s.status)
+	}
+}
+
+func TestFetchSeesOwnerTimezone(t *testing.T) {
+	var seen json.RawMessage
+	f := &fake{fetch: func(_ context.Context, c Conn, _ Credentials, _ WorkUnit, _ *RawSink) (FetchResult, error) {
+		seen = c.Config
+		return FetchResult{Done: true}, nil
+	}}
+	e := setup(t, f)
+	e.exec(`UPDATE connections SET config = '{"k": 1}' WHERE id = $1`, e.conn)
+	e.exec(`INSERT INTO timezone_periods (id, user_id, tz, valid_from) VALUES ($1, $2, 'Europe/Istanbul', '2000-01-01')`, uuid.New(), e.user)
+	e.drive(t, e.rt, e.enqueue(t, jobs.SyncPayload{Mode: ModeManual, Stream: stream}), 1)
+	if string(seen) != `{"k":1,"timezone":"Europe/Istanbul"}` {
+		t.Fatalf("fetch config %s", seen)
+	}
+	var stored string
+	e.scan(`SELECT config::text FROM connections WHERE id = $1`, []any{e.conn}, &stored)
+	if strings.Contains(stored, "timezone") {
+		t.Fatalf("stored config %s must not carry the timezone", stored)
+	}
+}

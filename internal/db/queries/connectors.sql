@@ -38,9 +38,14 @@ ON CONFLICT (connection_id, stream) DO UPDATE
 SET status = excluded.status, status_reason = excluded.status_reason, updated_at = now();
 
 -- name: RecordSyncSuccess :exec
--- The connection stays degraded while any of its streams is.
+-- The connection stays degraded while any of its streams is, except one whose schedules the
+-- owner has all disabled.
 UPDATE connections
-SET status = CASE WHEN EXISTS (SELECT 1 FROM sync_cursors s WHERE s.connection_id = @id AND s.status = 'degraded')
+SET status = CASE WHEN EXISTS (SELECT 1 FROM sync_cursors s WHERE s.connection_id = @id AND s.status = 'degraded'
+                               AND (EXISTS (SELECT 1 FROM schedules x WHERE x.connection_id = s.connection_id
+                                            AND x.stream = s.stream AND x.enabled)
+                                    OR NOT EXISTS (SELECT 1 FROM schedules x WHERE x.connection_id = s.connection_id
+                                                   AND x.stream = s.stream)))
                   THEN 'degraded' ELSE 'active' END,
     last_success_at = now(), last_error_class = NULL, consecutive_failures = 0, updated_at = now()
 WHERE id = @id AND status IN ('active', 'degraded');
