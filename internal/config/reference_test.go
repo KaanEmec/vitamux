@@ -20,8 +20,13 @@ var literalDefault = regexp.MustCompile(`get\("([A-Z_]+)", (?:"([^"]*)"|string\(
 // Descriptions and the Since column are written by hand.
 func TestConfigurationReference(t *testing.T) {
 	looked := map[string]bool{}
-	_, _ = load(func(k string) (string, bool) { looked[k] = true; return "", false },
-		func(string) ([]byte, error) { return nil, os.ErrNotExist })
+	_, _ = load(func(k string) (string, bool) {
+		looked[strings.Replace(k, "_SIDECAR_NAME_", "_SIDECAR_<NAME>_", 1)] = true // per-sidecar variables
+		if k == prefix+"SIDECARS" {
+			return "name=http://sidecar-name:8080", true
+		}
+		return "", false
+	}, func(string) ([]byte, error) { return nil, os.ErrNotExist })
 	src, err := os.ReadFile("config.go")
 	if err != nil {
 		t.Fatal(err)
