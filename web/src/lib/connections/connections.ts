@@ -1,6 +1,7 @@
 // Display helpers for connections: provider names, the providers the connect wizard
 // offers, auth-error messages and times. Health is shown by components/HealthBadge.svelte.
 import type { Schemas } from '../api/client.ts';
+import { known } from './providers.svelte.ts';
 
 export type Connection = Schemas['Connection'];
 export type Health = Schemas['Health'];
@@ -11,6 +12,7 @@ interface ProviderInfo {
 	unitDays?: number;
 }
 
+// Labels for sources GET /providers does not list (push and manual sources), and backfill units.
 const providers: Record<string, ProviderInfo> = {
 	withings: { label: 'Withings', unitDays: 30 },
 	apple_health: { label: 'Apple Health' },
@@ -23,7 +25,10 @@ export type Provider = Schemas['Provider'];
 export const connectable = (providers: Provider[]) =>
 	providers.filter((p) => p.auth_kind === null || p.auth_kind === 'oauth2' || p.auth_kind === 'interactive_mfa');
 
+/** The provider's name from GET /providers, else a built-in label, else the code made readable. */
 export function providerLabel(code: string): string {
+	const listed = known.list?.find((p) => p.code === code);
+	if (listed) return listed.name;
 	if (providers[code]) return providers[code].label;
 	const s = code.replaceAll('_', ' ');
 	return s.charAt(0).toUpperCase() + s.slice(1);

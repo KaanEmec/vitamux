@@ -44,8 +44,8 @@ connTest('Connect wizard: provider list, prompt step, sidecar connection', async
 	const wizard = page.getByRole('dialog', { name: 'Connect a source' });
 	await expect(wizard.getByRole('radio', { name: /Offline sidecar/ })).toBeDisabled();
 	await scan(page, '/connections (connect dialog)');
-	await wizard.getByRole('radio', { name: /Example sidecar/ }).check();
-	await wizard.getByRole('button', { name: 'Continue to Example sidecar' }).click();
+	await wizard.getByRole('radio', { name: /Example Collector/ }).check();
+	await wizard.getByRole('button', { name: 'Continue to Example Collector' }).click();
 	await expect(wizard.getByLabel('Password')).toBeVisible();
 	await scan(page, '/connections (prompt step)');
 	await wizard.getByLabel('Username').fill(sidecarSecret.username);

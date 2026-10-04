@@ -9,9 +9,9 @@ test('providers: unofficial badge and paused note, unavailable sidecar disabled 
 	const wizard = page.getByRole('dialog', { name: 'Connect a source' });
 	await expect(wizard.getByRole('radio', { name: 'Withings' })).toBeChecked();
 
-	const sidecar = wizard.getByRole('radio', { name: /Example sidecar/ });
+	const sidecar = wizard.getByRole('radio', { name: /Example Collector/ });
 	await expect(sidecar).toBeEnabled();
-	await expect(sidecar).toHaveAccessibleName('Example sidecar Unofficial API');
+	await expect(sidecar).toHaveAccessibleName('Example Collector Unofficial API');
 	await expect(sidecar).toHaveAccessibleDescription(/unofficial API that can change without notice.*starts paused/);
 
 	const offline = wizard.getByRole('radio', { name: /Offline sidecar/ });
@@ -23,10 +23,10 @@ test('connect through a prompt and an MFA prompt, then open the paused connectio
 	await page.goto('/connections');
 	await page.getByRole('button', { name: 'Connect a source' }).click();
 	const wizard = page.getByRole('dialog', { name: 'Connect a source' });
-	await wizard.getByRole('radio', { name: /Example sidecar/ }).check();
-	await wizard.getByRole('button', { name: 'Continue to Example sidecar' }).click();
+	await wizard.getByRole('radio', { name: /Example Collector/ }).check();
+	await wizard.getByRole('button', { name: 'Continue to Example Collector' }).click();
 
-	await expect(wizard.getByText('Sign in to Example sidecar.')).toBeVisible();
+	await expect(wizard.getByText('Sign in to Example Collector.')).toBeVisible();
 	await expect(wizard.getByLabel('Username')).toHaveAttribute('type', 'text');
 	await expect(wizard.getByLabel('Password')).toHaveAttribute('type', 'password');
 	await wizard.getByLabel('Username').fill(sidecarSecret.username);
@@ -42,11 +42,16 @@ test('connect through a prompt and an MFA prompt, then open the paused connectio
 	await wizard.getByRole('button', { name: 'Continue' }).click();
 
 	await expect(page).toHaveURL(/\/connections\/conn_[0-9a-f]{32}$/);
-	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Example sidecar');
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Example Collector');
+	await expect(page).toHaveTitle('Example Collector · Vitamux');
 	await expect(page.getByText('Unofficial API', { exact: true })).toBeVisible();
 	await expect(page.getByText('Paused: resume it in Settings to sync.')).toBeVisible();
 	await expect(page.getByRole('link', { name: 'example-collector' })).toHaveAttribute('href', 'https://example.com/example-collector');
 	await expect(page.getByText('1.4.2')).toBeVisible();
+	await page.goto('/connections');
+	await expect(page.getByRole('link', { name: 'Example Collector' })).toBeVisible();
+	// A provider the list does not know falls back to its code.
+	await expect(page.getByRole('link', { name: 'Ultrahuman' })).toBeVisible();
 	expect(conns.continues.map((c) => Object.keys(c.values))).toEqual([['username', 'password'], ['code']]);
 });
 
@@ -62,8 +67,8 @@ test('a rejected step shows the problem and starts again from the provider list'
 	await page.goto('/connections');
 	await page.getByRole('button', { name: 'Connect a source' }).click();
 	const wizard = page.getByRole('dialog', { name: 'Connect a source' });
-	await wizard.getByRole('radio', { name: /Example sidecar/ }).check();
-	await wizard.getByRole('button', { name: 'Continue to Example sidecar' }).click();
+	await wizard.getByRole('radio', { name: /Example Collector/ }).check();
+	await wizard.getByRole('button', { name: 'Continue to Example Collector' }).click();
 	await wizard.getByLabel('Username').fill(sidecarSecret.username);
 	await wizard.getByLabel('Password').fill('synthetic-wrong');
 	await wizard.getByRole('button', { name: 'Continue' }).click();
@@ -83,7 +88,7 @@ test('reauthorize a sidecar connection through its prompts', async ({ page, conn
 	conns.connections.push(c);
 	await page.goto(`/connections/${c.id}`);
 	await page.getByRole('button', { name: 'Reauthorize' }).click();
-	const dialog = page.getByRole('dialog', { name: 'Reauthorize Example sidecar' });
+	const dialog = page.getByRole('dialog', { name: 'Reauthorize Example Collector' });
 	await dialog.getByLabel('Username').fill(sidecarSecret.username);
 	await dialog.getByLabel('Password').fill(sidecarSecret.password);
 	await dialog.getByRole('button', { name: 'Continue' }).click();

@@ -49,7 +49,7 @@ export const sidecarSecret = { username: 'synthetic-user', password: 'synthetic-
 const upstream = { package: 'example-collector', version: '1.4.2', source_url: 'https://example.com/example-collector' };
 const providers = [
 	{ code: 'withings', name: 'Withings', official: true, auth_kind: 'oauth2', remote: false, available: true },
-	{ code: 'example_sidecar', name: 'Example sidecar', official: false, auth_kind: 'interactive_mfa', remote: true, available: true, upstream },
+	{ code: 'example_sidecar', name: 'Example Collector', official: false, auth_kind: 'interactive_mfa', remote: true, available: true, upstream },
 	{ code: 'offline_sidecar', name: 'Offline sidecar', official: false, auth_kind: null, remote: true, available: false }
 ];
 const streamsOf: Record<string, string[]> = { example_sidecar: ['example_sidecar.heart_rate'], ultrahuman: ['ultrahuman.metrics'], withings: ['withings.measures'], apple_health: ['healthkit.samples.v1'] };
@@ -215,7 +215,7 @@ export class ConnectionsApi {
 			step === 'login'
 				? [{ name: 'username', label: 'Username', kind: 'text' }, { name: 'password', label: 'Password', kind: 'password' }]
 				: [{ name: 'code', label: 'Verification code', kind: 'code' }];
-		return { state, prompt: { message: step === 'login' ? 'Sign in to Example sidecar.' : 'Enter the code it sent you.', fields } };
+		return { state, prompt: { message: step === 'login' ? 'Sign in to Example Collector.' : 'Enter the code it sent you.', fields } };
 	}
 
 	private continueAuth(r: Route, provider: string) {

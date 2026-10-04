@@ -12,6 +12,7 @@
 	import StatusIcon, { type Status } from '#lib/components/StatusIcon.svelte';
 	import UnofficialBadge from '#lib/components/UnofficialBadge.svelte';
 	import { addDays, formatValue, metricLabel, today } from '#lib/data/format.ts';
+	import { loadProviders } from '#lib/connections/providers.svelte.ts';
 	import { ago, alerting, providerLabel, type Connection } from '#lib/connections/connections.ts';
 
 	type Resolved = Schemas['ResolvedValue'];
@@ -45,6 +46,7 @@
 	let lastBackup = $state<string | null>(null);
 
 	onMount(() => {
+		void loadProviders();
 		void loadResolved();
 		void api.GET('/api/v1/connections').then(({ data, error }) => {
 			connectionsProblem = error ?? null;

@@ -11,23 +11,24 @@
 	import ProblemAlert from '../components/ProblemAlert.svelte';
 	import UnofficialBadge from '../components/UnofficialBadge.svelte';
 	import AuthPrompt from './AuthPrompt.svelte';
-	import { connectable, goToProvider, type Provider } from './connections.ts';
+	import { connectable, goToProvider } from './connections.ts';
+	import { known, loadProviders } from './providers.svelte.ts';
 
 	let { onclose }: { onclose: () => void } = $props();
 
-	let providers = $state<Provider[] | null>(null);
+	let loaded = $state(false);
 	let provider = $state('');
 	let prompt = $state<Schemas['AuthPromptStep'] | null>(null);
 	let problem = $state<Problem | null>(null);
 	let busy = $state(false);
 
+	const providers = $derived(loaded ? connectable(known.list ?? []) : null);
 	const chosen = $derived(providers?.find((p) => p.code === provider));
 
 	onMount(async () => {
-		const { data, error } = await api.GET('/api/v1/providers');
-		problem = error ?? null;
-		providers = connectable(data?.providers ?? []);
-		provider = providers.find((p) => p.available)?.code ?? '';
+		problem = await loadProviders(true); // availability of sidecars changes
+		loaded = true;
+		provider = providers?.find((p) => p.available)?.code ?? '';
 	});
 
 	async function begin(e: SubmitEvent) {

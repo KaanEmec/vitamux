@@ -14,6 +14,7 @@
 	import SettingsTab from '#lib/connections/SettingsTab.svelte';
 	import StreamsTab from '#lib/connections/StreamsTab.svelte';
 	import { providerLabel, type Connection } from '#lib/connections/connections.ts';
+	import { loadProviders } from '#lib/connections/providers.svelte.ts';
 
 	const tabs = [
 		{ id: 'overview', label: 'Overview' },
@@ -37,6 +38,8 @@
 		problem = error ?? null;
 		if (data) connection = data;
 	}
+
+	void loadProviders();
 
 	$effect(() => {
 		const cid = id;

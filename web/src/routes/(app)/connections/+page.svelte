@@ -12,6 +12,7 @@
 	import StatusIcon from '#lib/components/StatusIcon.svelte';
 	import UnofficialBadge from '#lib/components/UnofficialBadge.svelte';
 	import ConnectWizard from '#lib/connections/ConnectWizard.svelte';
+	import { loadProviders } from '#lib/connections/providers.svelte.ts';
 	import { ago, authErrors, providerLabel, type Connection } from '#lib/connections/connections.ts';
 
 	const modes: Record<string, string> = { in_process: 'Server sync', push: 'Push uploads', remote: 'Sidecar' };
@@ -25,6 +26,7 @@
 	const removed = $derived(page.url.searchParams.get('removed'));
 
 	onMount(async () => {
+		void loadProviders();
 		const { data, error } = await api.GET('/api/v1/connections');
 		problem = error ?? null;
 		connections = data?.connections ?? [];
