@@ -2,6 +2,18 @@
 
 Newest first. Before a final release, `scripts/release-notes.sh --changelog vX.Y.Z` adds its section from the Conventional Commits since the previous final tag; edit it and add upgrade notes under "Breaking changes" before tagging. The release workflow refuses a final tag without its section and uses it as the release notes. Release candidates are described on their GitHub releases only.
 
+## v0.2.8 (2026-10-04)
+
+### Rules
+
+- New **Brand** selector (`device_manufacturer`, case-insensitive) next to device type and model. A brand matches its devices on every path, e.g. a Garmin watch synced directly and through Apple Health; add "Not relayed" to narrow it.
+- The rule builder and the rule lens offer **Choose a source or device**: Apple Health (all data), Apple Watch, iPhone, each connected source (all data), each brand (any device), each brand and model, and devices you named. Merged devices are left out. Built-in groups show friendly names such as "Apple Watch" and "Garmin via Apple Health".
+- Built-in defaults use the named groups: `apple_watch` is Apple's own Watch data by manufacturer and model, a new `iphone` group comes before the generic phone in the steps, distance and energy ladders, WHOOP, Polar and Fitbit gain their Apple Health relay groups, and Garmin and Withings relays also match by manufacturer. Brand ranks are unchanged ([defaults](docs/resolution-defaults.md)). New built-in versions: steps, distance and active energy `:3`; heart rate, resting heart rate, HRV, SpO2, respiratory rate, sleep, VO2max, pulse wave velocity and vascular age `:2`. Rules you already edited keep their copy.
+
+### Breaking changes
+
+None. Migration 00031 lets a device's manufacturer change clear cached results.
+
 ## v0.2.7 (2026-10-04)
 
 ### Web UI
