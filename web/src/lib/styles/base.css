@@ -1,7 +1,7 @@
 /* Element defaults and the shared control classes (design system v3,
    docs/architecture/frontend.md#design-system). Native controls are styled here, so a page that
    uses a plain <input>, <select>, <textarea>, checkbox or radio gets the look without classes:
-   - buttons: .btn (secondary) + .primary | .ghost | .danger | .link, sizes .sm | .lg, .icon-btn;
+   - buttons: .btn (secondary) + .primary | .ghost | .destructive | .link, sizes .sm | .lg, .icon-btn;
    - fields: .field (label, input, .hint, .error), .input-group with .affix (prefix, suffix);
    - choices: label.check (a checkbox or radio and its text), .option-card (a selectable card),
      input[role='switch'] (lib/ui/Switch.svelte);
@@ -105,8 +105,8 @@ kbd {
 	border-radius: var(--radius-lg);
 }
 
-/* ---- Buttons. lib/ui/Button.svelte renders the same classes. One .primary per view; .danger
-   for destructive actions (.danger.primary is the filled confirm); .icon-btn is square and needs
+/* ---- Buttons. lib/ui/Button.svelte renders the same classes. One .primary per view; .destructive
+   for destructive actions (.destructive.primary is the filled confirm); .icon-btn is square and needs
    an aria-label; aria-busy="true" shows a spinner. */
 .btn {
 	--btn-h: 2.5rem;
@@ -170,23 +170,23 @@ kbd {
 .btn.ghost:active:not(:disabled) {
 	background: var(--color-selected);
 }
-.btn.danger {
+.btn.destructive {
 	color: var(--color-error);
 	background: color-mix(in srgb, var(--color-error) 6%, var(--color-surface));
 	border-color: color-mix(in srgb, var(--color-error) 40%, transparent);
 	box-shadow: none;
 }
-.btn.danger:hover:not(:disabled),
-.btn.danger:active:not(:disabled) {
+.btn.destructive:hover:not(:disabled),
+.btn.destructive:active:not(:disabled) {
 	background: var(--color-error-bg);
 	border-color: color-mix(in srgb, var(--color-error) 65%, transparent);
 }
-.btn.danger.primary {
+.btn.destructive.primary {
 	color: var(--color-surface);
 	background: var(--color-error);
 	border-color: var(--color-error);
 }
-.btn.danger.primary:hover:not(:disabled) {
+.btn.destructive.primary:hover:not(:disabled) {
 	background: color-mix(in srgb, var(--color-error) 88%, var(--color-text));
 	box-shadow: none;
 }

@@ -1,6 +1,6 @@
 <!--
 	Button or link styled as a button (base.css .btn). `variant`: primary (one per view),
-	secondary (default), ghost, danger; `size`: sm, md, lg. `icon` draws an icon before the text;
+	secondary (default), ghost, destructive; `size`: sm, md, lg. `icon` draws an icon before the text;
 	without children the button is square and needs an aria-label. `loading` disables it, sets
 	aria-busy and shows a spinner.
 -->
@@ -18,7 +18,7 @@
 		children,
 		...rest
 	}: {
-		variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+		variant?: 'primary' | 'secondary' | 'ghost' | 'destructive';
 		size?: 'sm' | 'md' | 'lg';
 		href?: string;
 		icon?: string;

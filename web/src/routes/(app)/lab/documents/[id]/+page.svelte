@@ -185,7 +185,7 @@
 		{#if doc.status !== 'deleted'}
 			<div class="actions">
 				<button class="btn" type="button" disabled={active} onclick={() => (extracting = true)}>{runs.length ? 'Extract again' : 'Extract'}</button>
-				<button class="btn danger" type="button" onclick={() => (deleting = true)}>Delete document</button>
+				<button class="btn destructive" type="button" onclick={() => (deleting = true)}>Delete document</button>
 			</div>
 		{/if}
 	</header>

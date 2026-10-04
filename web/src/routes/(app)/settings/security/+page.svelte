@@ -164,7 +164,7 @@
 				<TextField label="Authenticator code" name="totp_code" bind:value={totpCode} error={errors.totp_code} inputmode="numeric" autocomplete="one-time-code" />
 				<TextField label="Or a recovery code" name="recovery_code" bind:value={recoveryCode} error={errors.recovery_code} autocomplete="off" />
 				<div class="actions">
-					<button class="btn danger primary" type="submit" disabled={busy}>Turn off two-factor</button>
+					<button class="btn destructive primary" type="submit" disabled={busy}>Turn off two-factor</button>
 					<button class="btn" type="button" onclick={() => (disabling = false)}>Cancel</button>
 				</div>
 			</form>

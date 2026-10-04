@@ -65,7 +65,7 @@
 	</form>
 	{#snippet footer()}
 		<Button
-			variant={data === 'delete' ? 'danger' : 'primary'}
+			variant={data === 'delete' ? 'destructive' : 'primary'}
 			class={data === 'delete' ? 'primary' : undefined}
 			type="submit"
 			form={formId}

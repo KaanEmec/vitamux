@@ -28,7 +28,7 @@
 <Modal title="Delete document" {onclose}>
 	{#snippet footer()}
 		<button class="btn" type="button" onclick={onclose}>Cancel</button>
-		<button class="btn danger primary" type="submit" form={formId} disabled={busy}>Delete document</button>
+		<button class="btn destructive primary" type="submit" form={formId} disabled={busy}>Delete document</button>
 	{/snippet}
 	<p>
 		Deleting <strong>{doc.filename ?? 'this document'}</strong> destroys the PDF, its filename and every extraction run. This

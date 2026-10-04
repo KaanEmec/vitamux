@@ -155,11 +155,11 @@
 								<div class="actions">
 									{#if removing === p.id}
 										<span>Remove {p.tz}?</span>
-										<button class="btn sm danger primary" type="button" disabled={busy} onclick={() => remove(p)}>Confirm remove</button>
+										<button class="btn sm destructive primary" type="button" disabled={busy} onclick={() => remove(p)}>Confirm remove</button>
 										<button class="btn sm" type="button" onclick={() => (removing = null)}>Keep</button>
 									{:else}
 										<button class="btn sm" type="button" onclick={() => edit(p)} aria-label="Edit {p.tz} period">Edit</button>
-										<button class="btn sm danger" type="button" onclick={() => (removing = p.id)} aria-label="Remove {p.tz} period">Remove</button>
+										<button class="btn sm destructive" type="button" onclick={() => (removing = p.id)} aria-label="Remove {p.tz} period">Remove</button>
 									{/if}
 								</div>
 							</td>

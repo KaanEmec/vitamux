@@ -114,7 +114,7 @@
 									<span class="muted">Read-only</span>
 								{:else if removing === s.name}
 									<div class="actions">
-										<Button size="sm" variant="danger" disabled={busy} onclick={() => remove(s)}>{force ? 'Remove anyway' : 'Confirm remove'}</Button>
+										<Button size="sm" variant="destructive" disabled={busy} onclick={() => remove(s)}>{force ? 'Remove anyway' : 'Confirm remove'}</Button>
 										<Button size="sm" onclick={() => ((removing = null), (force = false), (problem = null))}>Keep</Button>
 									</div>
 								{:else}

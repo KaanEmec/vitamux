@@ -83,7 +83,7 @@
 										<a class="btn" href="/lab/documents/{d.id}">{d.status === 'needs_review' ? 'Review' : 'Open'}</a>
 									{/if}
 									{#if d.status !== 'deleted'}
-										<button class="btn danger" type="button" onclick={() => (deleting = d)} aria-label="Delete {name(d)}">Delete</button>
+										<button class="btn destructive" type="button" onclick={() => (deleting = d)} aria-label="Delete {name(d)}">Delete</button>
 									{/if}
 								</div>
 							</td>

@@ -152,11 +152,11 @@
 								{#if st !== 'revoked'}
 									{#if revoking === k.id}
 										<div class="actions">
-											<button class="btn sm danger primary" type="button" disabled={busy} onclick={() => revoke(k)}>Confirm revoke</button>
+											<button class="btn sm destructive primary" type="button" disabled={busy} onclick={() => revoke(k)}>Confirm revoke</button>
 											<button class="btn sm" type="button" onclick={() => (revoking = null)}>Keep</button>
 										</div>
 									{:else}
-										<button class="btn sm danger" type="button" onclick={() => (revoking = k.id)} aria-label="Revoke key {k.name}">Revoke</button>
+										<button class="btn sm destructive" type="button" onclick={() => (revoking = k.id)} aria-label="Revoke key {k.name}">Revoke</button>
 									{/if}
 								{/if}
 							</td>

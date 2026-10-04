@@ -140,7 +140,7 @@
 <section class="card" aria-labelledby="remove">
 	<h2 id="remove">Remove</h2>
 	<p>Disconnect {providerLabel(connection.provider)} and keep its data, or delete the connection with everything it collected.</p>
-	<Button variant="danger" onclick={() => (removing = true)}>Remove connection…</Button>
+	<Button variant="destructive" onclick={() => (removing = true)}>Remove connection…</Button>
 </section>
 
 {#if removing}<DeleteDialog {connection} onclose={() => (removing = false)} ondeleted={deleted} />{/if}
