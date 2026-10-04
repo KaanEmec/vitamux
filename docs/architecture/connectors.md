@@ -166,6 +166,8 @@ This mode exists for providers whose only usable client is in another language, 
 - Private HTTP with a shared bearer secret; the sidecar is stateless and has no DB access. The core plans; the sidecar fetches one page per call.
 - Endpoints: `GET /v1/describe`, `POST /v1/auth/begin|continue|refresh`, `POST /v1/fetch` (NDJSON raw lines, then one `result` or `error` line).
 - Errors are problem+json with `code` = a [typed error](#typed-errors) class.
+- Configured by `VITAMUX_SIDECARS` and one secret per sidecar ([configuration](../configuration.md#providers)). The core describes each sidecar at startup without waiting more than a few seconds and again on use at most once a minute; until a describe succeeds the provider is unavailable and its syncs fail transient. Each successful describe registers the provider and records `upstream` on its connections (audited as `connection.upstream_changed`).
+- The client dials loopback, private and link-local addresses only (checked on the resolved address of every connection) and enforces the spec's timeouts and size limits. A page commits only once its final line arrives, so a broken page never leaves partial raw data.
 - A conformance kit (`vitamux connector-test --url`) ships with the implementation.
 
 ## Third-party collectors
