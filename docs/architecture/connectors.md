@@ -156,6 +156,7 @@ Verified API facts and the exact mapping: [providers/withings.md](../providers/w
   - measure groups → `bp_reading` / `body_composition` groups, other types plain samples; value = `value × 10^unit`;
   - manual-entry attribution (`attrib` 2, 4) → `manual_entry` flag;
   - unknown meastype → warning (raw kept).
+- Streams `withings.activity`, `withings.intraday` and `withings.sleep` (scope `user.activity`): daily values, intraday intervals and samples, sleep sessions with stages ([details](../providers/withings.md#activity-intraday-and-sleep)).
 - Rotating refresh tokens (3 h access, the old refresh token dies once the new access token is used) use the single-flight refresh.
 - Notifications are optional (setting `withings.notifications`): subscribe with `/webhooks/withings/{hook_token}` (`appli` 1, 2, 4). A POST only enqueues a deduplicated window sync. Polling stays on. Details: [providers/withings.md](../providers/withings.md#how-vitamux-uses-notifications).
 

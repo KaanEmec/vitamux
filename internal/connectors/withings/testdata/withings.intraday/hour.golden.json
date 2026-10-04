@@ -1,0 +1,158 @@
+{
+  "synthetic": true,
+  "normalizer": "withings.intraday",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "synthetic-watch-01",
+        "type": "watch",
+        "manufacturer": "Withings",
+        "model": "ScanWatch"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "steps",
+        "kind": "interval",
+        "start": "2025-01-01T07:00:00Z",
+        "end": "2025-01-01T07:01:00Z",
+        "value": 84,
+        "unit": "count",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "intraday",
+          "external_id": "1735714800",
+          "component": "steps"
+        }
+      },
+      {
+        "metric": "floors_climbed",
+        "kind": "interval",
+        "start": "2025-01-01T07:00:00Z",
+        "end": "2025-01-01T07:01:00Z",
+        "value": 1,
+        "unit": "count",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "intraday",
+          "external_id": "1735714800",
+          "component": "floors_climbed"
+        }
+      },
+      {
+        "metric": "active_energy",
+        "kind": "interval",
+        "start": "2025-01-01T07:00:00Z",
+        "end": "2025-01-01T07:01:00Z",
+        "value": 4.2,
+        "unit": "kcal",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "intraday",
+          "external_id": "1735714800",
+          "component": "active_energy"
+        }
+      },
+      {
+        "metric": "distance_walk_run",
+        "kind": "interval",
+        "start": "2025-01-01T07:00:00Z",
+        "end": "2025-01-01T07:01:00Z",
+        "value": 61.5,
+        "unit": "m",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "intraday",
+          "external_id": "1735714800",
+          "component": "distance_walk_run"
+        }
+      },
+      {
+        "metric": "heart_rate",
+        "kind": "sample",
+        "start": "2025-01-01T07:01:00Z",
+        "value": 96,
+        "unit": "bpm",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "intraday",
+          "external_id": "1735714860",
+          "component": "heart_rate"
+        }
+      },
+      {
+        "metric": "spo2",
+        "kind": "sample",
+        "start": "2025-01-01T07:01:00Z",
+        "value": 97,
+        "unit": "%",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "intraday",
+          "external_id": "1735714860",
+          "component": "spo2"
+        }
+      },
+      {
+        "metric": "respiratory_rate",
+        "kind": "sample",
+        "start": "2025-01-01T07:01:00Z",
+        "value": 15,
+        "unit": "breaths/min",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "intraday",
+          "external_id": "1735714860",
+          "component": "respiratory_rate"
+        }
+      },
+      {
+        "metric": "hrv_rmssd",
+        "kind": "sample",
+        "start": "2025-01-01T07:01:00Z",
+        "value": 41,
+        "unit": "ms",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "intraday",
+          "external_id": "1735714860",
+          "component": "hrv_rmssd"
+        }
+      },
+      {
+        "metric": "hrv_sdnn",
+        "kind": "sample",
+        "start": "2025-01-01T07:01:00Z",
+        "value": 55,
+        "unit": "ms",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "intraday",
+          "external_id": "1735714860",
+          "component": "hrv_sdnn"
+        }
+      },
+      {
+        "metric": "swim_strokes",
+        "kind": "interval",
+        "start": "2025-01-01T07:02:00Z",
+        "end": "2025-01-01T07:04:00Z",
+        "value": 24,
+        "unit": "count",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "intraday",
+          "external_id": "1735714920",
+          "component": "swim_strokes"
+        }
+      }
+    ],
+    "warnings": [
+      {
+        "code": "intraday_without_duration",
+        "detail": "steps"
+      }
+    ]
+  }
+}

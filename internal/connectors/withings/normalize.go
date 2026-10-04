@@ -45,6 +45,34 @@ const maxMeasureDate = 253402300799
 // groupKinds orders the canonical groups one measure group can produce.
 var groupKinds = []string{"bp_reading", "body_composition"}
 
+// Normalizers returns the normalizer of every Withings stream.
+func Normalizers() []normalize.Normalizer {
+	return []normalize.Normalizer{Normalizer{},
+		streamNormalizer{StreamActivity, 1, normalizeActivity},
+		streamNormalizer{StreamIntraday, 1, normalizeIntraday},
+		streamNormalizer{StreamSleep, 1, normalizeSleep}}
+}
+
+// streamNormalizer normalizes the activity, intraday and sleep streams
+// (docs/providers/withings.md#activity-intraday-and-sleep). Normalize is pure: local days come
+// from each record's IANA timezone.
+type streamNormalizer struct {
+	stream  string
+	version int
+	fn      func(body []byte, out *normalize.Output) error
+}
+
+func (n streamNormalizer) ID() string                    { return n.stream }
+func (n streamNormalizer) Version() int                  { return n.version }
+func (n streamNormalizer) Accepts(stream, _ string) bool { return stream == n.stream }
+func (n streamNormalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ normalize.Env) (normalize.Output, error) {
+	var out normalize.Output
+	if err := n.fn(raw.Body, &out); err != nil {
+		return normalize.Output{}, err
+	}
+	return out, nil
+}
+
 // Normalizer turns one withings.measures record (docs/providers/withings.md#how-vitamux-syncs)
 // into canonical rows: blood pressure and body composition groups, other types as samples.
 type Normalizer struct{}
@@ -82,12 +110,7 @@ type deviceFields struct {
 // 1051–1060; the origin is flagged relayed, so it is never counted twice), and returns the
 // device fingerprint, origin key and device type.
 func (d deviceFields) source(out *normalize.Output) (dev, origin, typ string) {
-	id := 0
-	if d.ModelID != nil {
-		id = *d.ModelID
-	} else if d.SpecModelID != nil {
-		id = *d.SpecModelID
-	}
+	id := d.modelID()
 	var name string
 	_ = json.Unmarshal(d.Model, &name) // a number or null is no name
 	if id >= 1051 && id <= 1060 {
@@ -103,6 +126,17 @@ func (d deviceFields) source(out *normalize.Output) (dev, origin, typ string) {
 		out.Devices = append(out.Devices, normalize.Device{Fingerprint: dev, Type: typ, Manufacturer: "Withings", Model: name})
 	}
 	return dev, origin, typ
+}
+
+// modelID is the model id under either name; 0 when none is sent.
+func (d deviceFields) modelID() int {
+	switch {
+	case d.ModelID != nil:
+		return *d.ModelID
+	case d.SpecModelID != nil:
+		return *d.SpecModelID
+	}
+	return 0
 }
 
 func addOrigin(out *normalize.Output, o normalize.Origin) {

@@ -37,8 +37,8 @@ It queues a job for the running server; --wait prints the result when the job fi
 
 // normalizers is every normalizer this build ships. Connectors (E08, E15, E18, E19) add theirs here.
 func normalizers() (*normalize.Registry, error) {
-	ns := []normalize.Normalizer{withings.Normalizer{}, applehealth.Normalizer{}, applehealth.ExportNormalizer{}, normalize.Manual{},
-		example.Normalizer{Stream: example.SidecarStream}}
+	ns := append(withings.Normalizers(), applehealth.Normalizer{}, applehealth.ExportNormalizer{}, normalize.Manual{},
+		example.Normalizer{Stream: example.SidecarStream})
 	ns = append(ns, garmin.Normalizers()...)
 	return normalize.NewRegistry(append(ns, whoop.Normalizers()...)...)
 }

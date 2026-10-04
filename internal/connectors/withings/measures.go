@@ -7,35 +7,66 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/KaanEmec/vitamux/internal/connectors"
 	"github.com/KaanEmec/vitamux/internal/ingest"
 )
 
-const measurePath = "/measure"
+const (
+	measurePath   = "/measure"
+	measureV2Path = "/v2/measure"
+	sleepPath     = "/v2/sleep"
 
-// cursor is the withings.measures cursor. The stored stream cursor is {"lastupdate": N}; the
-// pages of one call add the next offset and, for lastupdate calls, the first page's
-// updatetime, which becomes the next lastupdate once the call is complete.
+	// lastupdateOverlap: getactivity and getsummary answer without an updatetime, so the next
+	// lastupdate is the run's slot minus this margin; re-fetched records are no-ops.
+	lastupdateOverlap = time.Hour
+)
+
+// cursor is the cursor of the lastupdate streams (measures, activity, sleep) and of intraday.
+// The stored cursor is {"lastupdate": N} (intraday: {"start": N}); the pages of one call add
+// the next offset and, for lastupdate calls, the updatetime that becomes the next lastupdate
+// once the call is complete.
 type cursor struct {
 	LastUpdate int64 `json:"lastupdate"`
 	Offset     int64 `json:"offset,omitempty"`
 	UpdateTime int64 `json:"updatetime,omitempty"`
+	Start      int64 `json:"start,omitempty"`
 }
 
-// Plan returns one unit. Incremental and manual runs call getmeas with the stored lastupdate
-// (0 before the first sync: the whole history); an interrupted call restarts from it, since
-// re-fetched groups are no-ops. Correction and backfill runs fetch [From, To) by measurement
-// date; the runtime splits backfills into 30-day units.
+func readCursor(b json.RawMessage) (cursor, error) {
+	var cur cursor
+	if len(b) > 0 {
+		if err := json.Unmarshal(b, &cur); err != nil {
+			return cursor{}, fmt.Errorf("withings: unreadable cursor: %w", connectors.ErrPermanent)
+		}
+	}
+	return cur, nil
+}
+
+// Plan returns one unit. Incremental and manual runs of the lastupdate streams call the API with
+// the stored lastupdate (0 before the first sync: the whole history); an interrupted call
+// restarts from it, since re-fetched records are no-ops. Intraday runs fetch from the stored
+// start (before the first sync, the last intradayFirst) to the slot. Correction and backfill
+// runs fetch [From, To) by date; the runtime splits backfills into units.
 func (*Connector) Plan(_ context.Context, _ connectors.Conn, req connectors.PlanRequest) ([]connectors.WorkUnit, error) {
+	cur, err := readCursor(req.Cursor)
+	if err != nil {
+		return nil, err
+	}
 	switch req.Mode {
 	case connectors.ModeIncremental, connectors.ModeManual:
-		var cur cursor
-		if len(req.Cursor) > 0 {
-			if err := json.Unmarshal(req.Cursor, &cur); err != nil {
-				return nil, fmt.Errorf("withings: unreadable cursor: %w", connectors.ErrPermanent)
+		switch req.Stream {
+		case StreamIntraday:
+			from := req.To.Add(-intradayFirst)
+			if cur.Start > 0 {
+				from = time.Unix(cur.Start, 0).UTC()
 			}
+			return []connectors.WorkUnit{intradayUnit(from, req.To)}, nil
+		case StreamActivity, StreamSleep:
+			b, _ := json.Marshal(cursor{LastUpdate: cur.LastUpdate, UpdateTime: req.To.Add(-lastupdateOverlap).Unix()})
+			return []connectors.WorkUnit{{Cursor: b}}, nil
 		}
 		b, _ := json.Marshal(cursor{LastUpdate: cur.LastUpdate})
 		return []connectors.WorkUnit{{Cursor: b}}, nil
@@ -43,20 +74,34 @@ func (*Connector) Plan(_ context.Context, _ connectors.Conn, req connectors.Plan
 		if req.From.IsZero() || !req.To.After(req.From) {
 			return nil, fmt.Errorf("withings: %s needs a window: %w", req.Mode, connectors.ErrPermanent)
 		}
+		if req.Stream == StreamIntraday {
+			return []connectors.WorkUnit{intradayUnit(req.From, req.To)}, nil
+		}
 		return []connectors.WorkUnit{{From: req.From, To: req.To}}, nil
 	}
 	return nil, fmt.Errorf("withings: unsupported mode %q: %w", req.Mode, connectors.ErrPermanent)
 }
 
-// Fetch gets one getmeas page and puts one raw record per measure group
-// (docs/providers/withings.md#how-vitamux-syncs).
+// Fetch gets one page of the unit's stream.
 func (w *Connector) Fetch(ctx context.Context, c connectors.Conn, cred connectors.Credentials, u connectors.WorkUnit, out *connectors.RawSink) (connectors.FetchResult, error) {
-	var cur cursor
-	if len(u.Cursor) > 0 {
-		if err := json.Unmarshal(u.Cursor, &cur); err != nil {
-			return connectors.FetchResult{}, fmt.Errorf("withings: unreadable cursor: %w", connectors.ErrPermanent)
-		}
+	cur, err := readCursor(u.Cursor)
+	if err != nil {
+		return connectors.FetchResult{}, err
 	}
+	switch u.Stream {
+	case StreamActivity:
+		return w.fetchActivity(ctx, c, cred, u, cur, out)
+	case StreamIntraday:
+		return w.fetchIntraday(ctx, c, cred, u, cur, out)
+	case StreamSleep:
+		return w.fetchSleep(ctx, c, cred, u, cur, out)
+	}
+	return w.fetchMeasures(ctx, c, cred, u, cur, out)
+}
+
+// fetchMeasures gets one getmeas page and puts one raw record per measure group
+// (docs/providers/withings.md#how-vitamux-syncs).
+func (w *Connector) fetchMeasures(ctx context.Context, c connectors.Conn, cred connectors.Credentials, u connectors.WorkUnit, cur cursor, out *connectors.RawSink) (connectors.FetchResult, error) {
 	incremental := u.From.IsZero() && u.To.IsZero()
 	form := url.Values{"action": {"getmeas"}, "category": {"1"}}
 	if incremental {
@@ -68,29 +113,16 @@ func (w *Connector) Fetch(ctx context.Context, c connectors.Conn, cred connector
 	if cur.Offset > 0 {
 		form.Set("offset", strconv.FormatInt(cur.Offset, 10))
 	}
-	env, err := w.post(ctx, c.HTTP, measurePath, cred.AccessToken, form)
-	switch {
-	case err != nil:
+	body, req, err := w.call(ctx, c, cred, measurePath, form)
+	if err != nil {
 		return connectors.FetchResult{}, err
-	case env.http != 0:
-		return connectors.FetchResult{}, fmt.Errorf("withings getmeas: HTTP %d: %w", env.http, connectors.ErrPermanent)
-	case env.Status != 0:
-		return connectors.FetchResult{}, statusError("getmeas", env.Status)
 	}
-	params := map[string]any{}
-	for k := range form {
-		params[k] = form.Get(k)
-	}
-	req := ingest.Request{Endpoint: "POST " + measurePath, Params: params}
-	p, err := decodePage(env.Body)
+	p, err := decodePage(body)
 	if err == nil && p.More && p.Offset <= cur.Offset {
 		err = errDrift // paging that does not advance would loop forever
 	}
 	if err != nil {
-		// Keep the page (the runtime stores it quarantined) and never substitute other data.
-		fp, _ := ingest.ShapeFingerprint(env.Body)
-		out.Put(ingest.RawItem{ExternalKey: "getmeas-page:" + fp, ContentType: "application/json", Body: env.Body, Request: req})
-		return connectors.FetchResult{}, &connectors.SchemaDriftError{Endpoint: "measure getmeas", Fingerprint: fp}
+		return connectors.FetchResult{}, drift(out, req, body)
 	}
 	var hw time.Time
 	for _, g := range p.groups {
@@ -102,24 +134,61 @@ func (w *Connector) Fetch(ctx context.Context, c connectors.Conn, cred connector
 			hw = t
 		}
 	}
+	if cur.UpdateTime == 0 {
+		cur.UpdateTime = p.UpdateTime
+	}
+	return cur.next(incremental, p.More, p.Offset, hw), nil
+}
+
+// next is the result of a page of a lastupdate call (incremental) or of a date window: the next
+// offset while more pages follow, then, for a lastupdate call, cur.UpdateTime as the next
+// lastupdate.
+func (cur cursor) next(incremental, more bool, offset int64, hw time.Time) connectors.FetchResult {
 	res := connectors.FetchResult{HighWatermark: hw}
 	next := cursor{LastUpdate: cur.LastUpdate, UpdateTime: cur.UpdateTime}
-	if next.UpdateTime == 0 {
-		next.UpdateTime = p.UpdateTime
-	}
 	switch {
-	case p.More:
-		next.Offset = p.Offset
+	case more:
+		next.Offset = offset
 		if !incremental {
-			next = cursor{Offset: p.Offset}
+			next = cursor{Offset: offset}
 		}
 	case incremental:
 		res.Done, next = true, cursor{LastUpdate: next.UpdateTime}
 	default:
-		return connectors.FetchResult{HighWatermark: hw, Done: true}, nil
+		res.Done = true
+		return res
 	}
 	res.NextCursor, _ = json.Marshal(next)
-	return res, nil
+	return res
+}
+
+// call posts one API action and returns its body and the request to record with raw items.
+// Transport and body-status failures are typed.
+func (w *Connector) call(ctx context.Context, c connectors.Conn, cred connectors.Credentials, path string, form url.Values) (json.RawMessage, ingest.Request, error) {
+	action := form.Get("action")
+	env, err := w.post(ctx, c.HTTP, path, cred.AccessToken, form)
+	switch {
+	case err != nil:
+		return nil, ingest.Request{}, err
+	case env.http != 0:
+		return nil, ingest.Request{}, fmt.Errorf("withings %s: HTTP %d: %w", action, env.http, connectors.ErrPermanent)
+	case env.Status != 0:
+		return nil, ingest.Request{}, statusError(action, env.Status)
+	}
+	params := map[string]any{}
+	for k := range form {
+		params[k] = form.Get(k)
+	}
+	return env.Body, ingest.Request{Endpoint: "POST " + path, Params: params}, nil
+}
+
+// drift keeps an unexpected response (the runtime stores it quarantined) and never substitutes
+// other data.
+func drift(out *connectors.RawSink, req ingest.Request, body []byte) error {
+	action, _ := req.Params["action"].(string)
+	fp, _ := ingest.ShapeFingerprint(body)
+	out.Put(ingest.RawItem{ExternalKey: action + "-page:" + fp, ContentType: "application/json", Body: body, Request: req})
+	return &connectors.SchemaDriftError{Endpoint: strings.TrimPrefix(req.Endpoint, "POST /") + " " + action, Fingerprint: fp}
 }
 
 // groupRecord is the raw body of one group: the response's timezone and the group as received.
@@ -133,7 +202,7 @@ func groupRecord(tz, group json.RawMessage) []byte {
 	return append(b, '}')
 }
 
-var errDrift = fmt.Errorf("withings: unexpected getmeas shape")
+var errDrift = fmt.Errorf("withings: unexpected response shape")
 
 type page struct {
 	UpdateTime int64

@@ -1,0 +1,6 @@
+{
+  "synthetic": true,
+  "normalizer": "withings.activity",
+  "version": 1,
+  "error": "withings: record without a known timezone"
+}

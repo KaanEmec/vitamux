@@ -1,0 +1,27 @@
+{
+  "synthetic": true,
+  "fields": {
+    "activity.active": "raw: total active time, the sum of the three intensity times",
+    "activity.brand": "raw: 1 Withings; 18 another app relayed into Withings (relay origin)",
+    "activity.calories": "active_energy",
+    "activity.date": "raw: calendar date that sets the local day",
+    "activity.deviceid": "raw: device fingerprint",
+    "activity.distance": "distance_walk_run",
+    "activity.elevation": "floors_climbed",
+    "activity.hash_deviceid": "raw: device fingerprint",
+    "activity.hr_average": "raw: daily heart-rate summary; heart rate comes from the intraday stream",
+    "activity.hr_max": "raw: daily heart-rate summary; heart rate comes from the intraday stream",
+    "activity.hr_min": "raw: daily minimum, not resting heart rate",
+    "activity.hr_zone_0": "raw: time in heart-rate zone, no catalogue code",
+    "activity.hr_zone_1": "raw: time in heart-rate zone, no catalogue code",
+    "activity.hr_zone_2": "raw: time in heart-rate zone, no catalogue code",
+    "activity.hr_zone_3": "raw: time in heart-rate zone, no catalogue code",
+    "activity.intense": "intensity_vigorous_time",
+    "activity.is_tracker": "raw: whether a tracker or the phone counted the day",
+    "activity.moderate": "intensity_moderate_time",
+    "activity.soft": "intensity_light_time",
+    "activity.steps": "steps",
+    "activity.timezone": "raw: IANA zone of the local day",
+    "activity.totalcalories": "total_energy"
+  }
+}

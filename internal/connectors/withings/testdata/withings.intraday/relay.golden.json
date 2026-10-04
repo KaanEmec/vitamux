@@ -1,0 +1,29 @@
+{
+  "synthetic": true,
+  "normalizer": "withings.intraday",
+  "version": 1,
+  "output": {
+    "origins": [
+      {
+        "key": "relay:model:1052",
+        "name": "Synthetic phone app"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "steps",
+        "kind": "interval",
+        "start": "2025-01-01T08:00:00Z",
+        "end": "2025-01-01T08:05:00Z",
+        "value": 40,
+        "unit": "count",
+        "origin": "relay:model:1052",
+        "key": {
+          "record_type": "intraday",
+          "external_id": "1735718400",
+          "component": "steps"
+        }
+      }
+    ]
+  }
+}

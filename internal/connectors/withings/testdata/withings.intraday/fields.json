@@ -1,0 +1,23 @@
+{
+  "synthetic": true,
+  "fields": {
+    "entries[].data.calories": "active_energy",
+    "entries[].data.deviceid": "raw: device fingerprint",
+    "entries[].data.distance": "distance_walk_run",
+    "entries[].data.duration": "raw: length of the entry's interval in seconds",
+    "entries[].data.elevation": "floors_climbed",
+    "entries[].data.hash_deviceid": "raw: device fingerprint",
+    "entries[].data.heart_rate": "heart_rate",
+    "entries[].data.hrv_quality": "raw: quality grade of the HRV window, no catalogue code",
+    "entries[].data.model": "raw: device model text",
+    "entries[].data.modelid": "raw: device type derived from the model id; 1051-1060 are phone-app relays",
+    "entries[].data.pool_lap": "raw: pool laps, no catalogue code",
+    "entries[].data.rmssd": "hrv_rmssd",
+    "entries[].data.rr": "respiratory_rate",
+    "entries[].data.sdnn1": "hrv_sdnn",
+    "entries[].data.spo2_auto": "spo2",
+    "entries[].data.steps": "steps",
+    "entries[].data.stroke": "swim_strokes",
+    "entries[].timestamp": "raw: start of the entry (interval start or sample time), the getintradayactivity series key"
+  }
+}

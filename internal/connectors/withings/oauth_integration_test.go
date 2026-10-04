@@ -40,7 +40,7 @@ func (e *env) begin(t *testing.T, conn *uuid.UUID) string {
 	}
 	q := u.Query()
 	if u.Path != "/oauth2_user/authorize2" || q.Get("response_type") != "code" || q.Get("client_id") != clientID ||
-		q.Get("scope") != "user.metrics" || q.Get("redirect_uri") != callback || q.Get("state") != state {
+		q.Get("scope") != "user.metrics,user.activity" || q.Get("redirect_uri") != callback || q.Get("state") != state {
 		t.Fatalf("consent URL has wrong parameters: path %s, keys %v", u.Path, keys(q))
 	}
 	return q.Get("state")
@@ -62,7 +62,7 @@ func exchange(code string, userid any, access, refresh string) fp.Step {
 			"client_id": {clientID}, "client_secret": {clientSecret}, "redirect_uri": {callback}},
 		Reply: fp.JSON(http.StatusOK, map[string]any{"status": 0, "body": map[string]any{
 			"userid": userid, "access_token": access, "refresh_token": refresh, "expires_in": 10800,
-			"scope": "user.metrics", "token_type": "Bearer",
+			"scope": "user.metrics,user.activity", "token_type": "Bearer",
 		}}),
 	}
 }
@@ -97,11 +97,11 @@ func TestOAuthLifecycle(t *testing.T) {
 	if n := e.count(`SELECT count(*) FROM credentials WHERE connection_id = $1 AND position('synthetic'::bytea IN ciphertext) = 0`, id); n != 1 {
 		t.Fatal("credentials missing or not sealed")
 	}
-	if n := e.count(`SELECT count(*) FROM schedules WHERE connection_id = $1`, id); n != 2 {
-		t.Fatalf("%d schedules, want incremental and correction", n)
+	if n := e.count(`SELECT count(*) FROM schedules WHERE connection_id = $1`, id); n != 8 {
+		t.Fatalf("%d schedules, want incremental and correction for each of the 4 streams", n)
 	}
-	if n := e.count(`SELECT count(*) FROM jobs WHERE connection_id = $1 AND kind = $2 AND payload->>'mode' = 'manual'`, id, jobs.KindSync); n != 1 {
-		t.Fatalf("%d first syncs queued", n)
+	if n := e.count(`SELECT count(*) FROM jobs WHERE connection_id = $1 AND kind = $2 AND payload->>'mode' = 'manual'`, id, jobs.KindSync); n != 4 {
+		t.Fatalf("%d first syncs queued, want one per stream", n)
 	}
 	if n := e.count(`SELECT count(*) FROM audit_events WHERE action = 'connection.connected' AND target_id = $1`, id.String()); n != 1 {
 		t.Fatal("connect not audited")
@@ -132,8 +132,8 @@ func TestOAuthLifecycle(t *testing.T) {
 	if n := e.count(`SELECT version FROM credentials WHERE connection_id = $1`, id); n != 2 {
 		t.Fatalf("credentials version %d after reconnect", n)
 	}
-	if n := e.count(`SELECT count(*) FROM jobs WHERE connection_id = $1 AND kind = $2`, id, jobs.KindSync); n != 1 {
-		t.Fatalf("%d syncs queued: the first-sync dedupe must hold", n)
+	if n := e.count(`SELECT count(*) FROM jobs WHERE connection_id = $1 AND kind = $2`, id, jobs.KindSync); n != 4 {
+		t.Fatalf("%d syncs queued, want one per stream: the first-sync dedupe must hold", n)
 	}
 
 	// A state dies with its session (logout) and with its expiry.
@@ -233,7 +233,8 @@ func TestRefreshRotation(t *testing.T) {
 		fp.Step{Method: http.MethodPost, Path: "/measure", Header: map[string]string{"Authorization": "Bearer synthetic-access-2"},
 			Form: url.Values{"action": {"getmeas"}, "lastupdate": {"0"}, "category": {"1"}}, Reply: fp.JSON(http.StatusOK, empty)},
 	)
-	e.run(t) // the first sync queued by the connect
+	e.exec(`DELETE FROM jobs WHERE payload->>'stream' <> $1`, StreamMeasures) // the script serves measures only
+	e.run(t)                                                                  // the first sync queued by the connect
 	e.allSucceeded(t)
 	if n := e.count(`SELECT version FROM credentials WHERE connection_id = $1`, id); n != 2 {
 		t.Fatalf("credentials version %d, want the rotated pair stored", n)

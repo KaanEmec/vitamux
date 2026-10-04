@@ -24,7 +24,7 @@ export const action = (p: Provider) => (p.setup_state === 'needs_app_credentials
 
 /** What a known provider brings, shown on its card. */
 export const about: Record<string, string> = {
-	withings: 'Blood pressure, weight and body composition through the official Withings API.',
+	withings: 'Blood pressure, weight, body composition, activity, intraday heart rate and sleep through the official Withings API.',
 	garmin: 'Daily summaries, heart rate, sleep, stress, HRV and activities. The first backfill goes day by day to stay within Garmin’s limits.',
 	whoop: 'Heart rate every 6 seconds, cycles, sleep and workouts, paced at one request per second. Heart-rate history goes back 90 days by default.'
 };

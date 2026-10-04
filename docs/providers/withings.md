@@ -28,7 +28,7 @@ Sources: the [OpenAPI spec](https://developer.withings.com/openapi.yaml) (author
 
 | Step | Request | Notes |
 | --- | --- | --- |
-| Authorize | `GET https://account.withings.com/oauth2_user/authorize2?response_type=code&client_id&scope&redirect_uri&state` | Vitamux asks for `user.metrics` (getmeas and notify). `mode=demo` uses the demo user. |
+| Authorize | `GET https://account.withings.com/oauth2_user/authorize2?response_type=code&client_id&scope&redirect_uri&state` | Vitamux asks for `user.metrics` (getmeas and notify) and `user.activity` (activity, intraday and sleep). A connection authorized before the activity streams lacks `user.activity`: reconnect it once. `mode=demo` uses the demo user. |
 | Callback | `redirect_uri?code=…&state=…` | The code is valid **30 seconds**: exchange at once. |
 | Exchange | `POST https://wbsapi.withings.net/v2/oauth2` form `action=requesttoken&grant_type=authorization_code&client_id&client_secret&code&redirect_uri` | Body has `userid`, `access_token`, `refresh_token`, `expires_in`, `scope`, `token_type`. Keep `userid`: Vitamux stores only its SHA-256 as `account_key`. `userid` is an integer in the spec and a string in examples; both are accepted. |
 | Refresh | same endpoint, `grant_type=refresh_token&refresh_token` | Always store the new refresh token. |
@@ -57,11 +57,29 @@ Open: how a *deleted* group appears in a `lastupdate` response is not documented
 
 Model id → device type: 1–7, 9–12, 14–16, 18 `scale`; 13 (Sleep Analyzer) and 60–63 `under_mattress`; 41–48 `bp_monitor` (45 BPM Connect); 51, 54, 58 `band`; 52, 53, 55, 59, 90–95 `watch`; 70, 71 `thermometer`. Without a model id, a word of the model name decides (`BPM`, `Sleep`, `Thermo`, `ScanWatch`, `Body`). 1051–1060 are phone apps relaying into Withings: their records carry the origin `relay:model:<id>` instead of a device type, and `known_relay_origins` (`relay:%` → `phone_app`) flags it relayed, so they are never counted twice. Activity rows of `brand` 18 are relays too (`relay:brand:18`).
 
+## Activity, intraday and sleep
+
+Field names checked 2026-10-04. All three are form POSTs with `data_fields` listing the fields Vitamux reads.
+
+| Stream | Call | Sync | Raw record |
+| --- | --- | --- | --- |
+| `withings.activity` | `POST /v2/measure`, `action=getactivity` | `lastupdate` hourly with `offset`/`more` paging; correction (7 days) and backfill (30-day units) by `startdateymd`/`enddateymd` | `activity:<date>:<brand>:<device>`, `{"activity": <as received>}` |
+| `withings.intraday` | `POST /v2/measure`, `action=getintradayactivity` | `startdate`/`enddate`, at most 24 h a call; whole hours from the stored start (first sync: the last 7 days) to the slot, then the next run starts 6 h earlier (late uploads); correction 2 days; backfill in 1-day units | `intraday:<hour>`, `{"entries": [{"timestamp", "data": <entry as received>}]}`, only entries inside the call's window, so an hour is always whole |
+| `withings.sleep` | `POST /v2/sleep`, `action=getsummary`, then `action=get` over each night (≤ 24 h) | as activity | `sleep:<id>`, `{"summary": …, "states": […]}` |
+
+getactivity and getsummary answer without an `updatetime`, so the next `lastupdate` is the run's slot minus one hour; re-fetched records are no-ops. An empty intraday `series` is `[]`.
+
+Normalizers (version 1 each; local days from each record's IANA `timezone`):
+
+- **Activity** → daily values: `steps`, `distance` → `distance_walk_run`, `elevation` (floors climbed) → `floors_climbed`, `calories` (active) → `active_energy`, `totalcalories` → `total_energy`, `soft`/`moderate`/`intense` → `intensity_light_time`/`intensity_moderate_time`/`intensity_vigorous_time`. Heart-rate summary and zones stay raw. The device carries no model, so it is typed by the intraday or measures records of the same fingerprint (a watch's steps then take part in the steps built-in). `brand` 18 rows are relays (`relay:brand:18`).
+- **Intraday** → `steps`, `elevation`, `calories`, `distance`, `stroke` (`swim_strokes`) as intervals `[t, t + duration)`; `heart_rate`, `spo2_auto` (`spo2`), `rr` (`respiratory_rate`), `rmssd` (`hrv_rmssd`, few-second window) and `sdnn1` (`hrv_sdnn`, 1-minute window) as samples. An interval field without `duration` → warning `intraday_without_duration`. Core body temperature is not mapped: no catalogue code and no verified field name yet.
+- **Sleep** → one session per night with stages: state 0 awake, 1 light, 2 deep, 3 rem, 4 (manual) and 5 `asleep_unspecified`, 15 `out_of_bed`; others → warning `unknown_sleep_state`. States of another model id in the same window are skipped. Totals from `total_sleep_time`, `deepsleepduration`, `lightsleepduration`, `remsleepduration`, `wakeupduration` and `sleep_latency`. Daily values of the night's `date`: `wakeupcount` → `sleep_awakenings`, `snoring` → `sleep_snoring_time`, `snoringepisodecount` → `sleep_snoring_episodes`, `apnea_hypopnea_index`, `sleep_score` → `withings_sleep_score`, `breathing_disturbances_intensity` → `withings_breathing_quality`, `hr_average` → `sleeping_heart_rate`, `rr_average` → `respiratory_rate_nightly`. `sleep_efficiency` (a ratio) and `waso` stay raw: the engine derives `sleep_efficiency` and `sleep_waso` from the session. `hr_min` is not resting heart rate. Sessions carry no flags, so state 4's manual origin is visible in raw only.
+
 ## Notifications
 
 - `POST https://wbsapi.withings.net/notify` with `action=subscribe|list|get|update|revoke`, `callbackurl`, `appli`; one subscription per user and `appli`.
 - At subscribe time Withings sends `HEAD` to the callback URL and expects 200 (204 is refused). Notifications are form POSTs (`userid`, `appli`, `startdate`, `enddate`, or `date`/`deviceid` for events) and must get HTTP 200 within a few seconds. Failures are retried 5 cycles over about 5 hours (2 attempts each, with jitter); persistent failure leads to warning emails and, after 20 days, cancellation.
-- `appli` values for measures: **1** weight and body composition, **2** temperature, **4** blood pressure, heart rate and SpO2. Others: 16 activity, 44 sleep, 46 profile change, 50–52 bed events, 54 ECG, 55 ECG failed, 58 glucose, 61 stethoscope, 62 HRV, 63 urine (U-Scan).
+- `appli` values for measures: **1** weight and body composition, **2** temperature, **4** blood pressure, heart rate and SpO2. Others (acknowledged and ignored; polling covers them): 16 activity, 44 sleep, 46 profile change, 50–52 bed events, 54 ECG, 55 ECG failed, 58 glucose, 61 stethoscope, 62 HRV, 63 urine (U-Scan).
 
 ### How Vitamux uses notifications
 

@@ -1,0 +1,151 @@
+{
+  "synthetic": true,
+  "normalizer": "withings.activity",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "synthetic-watch-01",
+        "manufacturer": "Withings"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "steps",
+        "kind": "daily_value",
+        "start": "2024-12-31T23:00:00Z",
+        "end": "2025-01-01T23:00:00Z",
+        "zone": {
+          "tz": "Europe/Berlin"
+        },
+        "value": 8421,
+        "unit": "count",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "activity",
+          "external_id": "2025-01-01:1:synthetic-watch-01",
+          "component": "steps"
+        }
+      },
+      {
+        "metric": "distance_walk_run",
+        "kind": "daily_value",
+        "start": "2024-12-31T23:00:00Z",
+        "end": "2025-01-01T23:00:00Z",
+        "zone": {
+          "tz": "Europe/Berlin"
+        },
+        "value": 6120.5,
+        "unit": "m",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "activity",
+          "external_id": "2025-01-01:1:synthetic-watch-01",
+          "component": "distance_walk_run"
+        }
+      },
+      {
+        "metric": "floors_climbed",
+        "kind": "daily_value",
+        "start": "2024-12-31T23:00:00Z",
+        "end": "2025-01-01T23:00:00Z",
+        "zone": {
+          "tz": "Europe/Berlin"
+        },
+        "value": 7,
+        "unit": "count",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "activity",
+          "external_id": "2025-01-01:1:synthetic-watch-01",
+          "component": "floors_climbed"
+        }
+      },
+      {
+        "metric": "active_energy",
+        "kind": "daily_value",
+        "start": "2024-12-31T23:00:00Z",
+        "end": "2025-01-01T23:00:00Z",
+        "zone": {
+          "tz": "Europe/Berlin"
+        },
+        "value": 412.3,
+        "unit": "kcal",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "activity",
+          "external_id": "2025-01-01:1:synthetic-watch-01",
+          "component": "active_energy"
+        }
+      },
+      {
+        "metric": "total_energy",
+        "kind": "daily_value",
+        "start": "2024-12-31T23:00:00Z",
+        "end": "2025-01-01T23:00:00Z",
+        "zone": {
+          "tz": "Europe/Berlin"
+        },
+        "value": 2290.8,
+        "unit": "kcal",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "activity",
+          "external_id": "2025-01-01:1:synthetic-watch-01",
+          "component": "total_energy"
+        }
+      },
+      {
+        "metric": "intensity_light_time",
+        "kind": "daily_value",
+        "start": "2024-12-31T23:00:00Z",
+        "end": "2025-01-01T23:00:00Z",
+        "zone": {
+          "tz": "Europe/Berlin"
+        },
+        "value": 4380,
+        "unit": "s",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "activity",
+          "external_id": "2025-01-01:1:synthetic-watch-01",
+          "component": "intensity_light_time"
+        }
+      },
+      {
+        "metric": "intensity_moderate_time",
+        "kind": "daily_value",
+        "start": "2024-12-31T23:00:00Z",
+        "end": "2025-01-01T23:00:00Z",
+        "zone": {
+          "tz": "Europe/Berlin"
+        },
+        "value": 1260,
+        "unit": "s",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "activity",
+          "external_id": "2025-01-01:1:synthetic-watch-01",
+          "component": "intensity_moderate_time"
+        }
+      },
+      {
+        "metric": "intensity_vigorous_time",
+        "kind": "daily_value",
+        "start": "2024-12-31T23:00:00Z",
+        "end": "2025-01-01T23:00:00Z",
+        "zone": {
+          "tz": "Europe/Berlin"
+        },
+        "value": 540,
+        "unit": "s",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "activity",
+          "external_id": "2025-01-01:1:synthetic-watch-01",
+          "component": "intensity_vigorous_time"
+        }
+      }
+    ]
+  }
+}
