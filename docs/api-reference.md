@@ -36,7 +36,7 @@ Normalized source records with provenance (docs/architecture/data-model.md).
 | --- | --- | --- | --- |
 | `GET` | `/api/v1/inventory` | `read:health` | Everything stored, per metric, group kind, event code, sleep, workouts and lab analyte |
 | `GET` | `/api/v1/events` | `read:health` | List health events |
-| `GET` | `/api/v1/sources/series` | `read:health` | Per-source series of one metric from the hourly aggregates |
+| `GET` | `/api/v1/sources/series` | `read:health` | Per-source series of one metric |
 | `GET` | `/api/v1/measurements` | `read:health` | List normalized measurements |
 | `POST` | `/api/v1/measurements/manual` | `write:config`, CSRF | Record a manual measurement (provider manual, audited) |
 | `GET` | `/api/v1/groups` | `read:health` | List measurement groups (blood-pressure readings, weigh-ins) |
