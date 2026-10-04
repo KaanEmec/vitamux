@@ -82,9 +82,9 @@
 		<p class="muted" role="status">{failed}</p>
 	{:else}
 		<div class="bar">
-			<button class="btn" type="button" disabled={page <= 1} onclick={() => (page -= 1)}>Previous page</button>
+			<button class="btn sm" type="button" disabled={page <= 1} onclick={() => (page -= 1)}>Previous page</button>
 			<span aria-live="polite">{pages ? `Page ${page} of ${pages}` : 'Loading PDF…'}</span>
-			<button class="btn" type="button" disabled={!pages || page >= pages} onclick={() => (page += 1)}>Next page</button>
+			<button class="btn sm" type="button" disabled={!pages || page >= pages} onclick={() => (page += 1)}>Next page</button>
 		</div>
 		<div class="scroller" bind:this={scroller}>
 			<div class="frame" bind:clientWidth={width} role="img" aria-label="Page {page} of the PDF{bbox ? ', selected row outlined' : ''}">

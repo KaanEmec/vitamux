@@ -9,6 +9,7 @@
 	import StatusIcon from '#lib/components/StatusIcon.svelte';
 	import TextField from '#lib/components/TextField.svelte';
 	import { when } from '#lib/settings/format.ts';
+	import Card from '#lib/settings/Card.svelte';
 	import Notice from '#lib/settings/Notice.svelte';
 
 	type Key = Schemas['APIKey'];
@@ -99,12 +100,11 @@
 
 <svelte:head><title>API keys · Vitamux</title></svelte:head>
 
-<section aria-labelledby="keys">
-	<h2 id="keys">API keys</h2>
-	<p class="muted">Keys let scripts and other tools call the API. Each key has only the scopes you give it.</p>
+<p class="lede">Keys let scripts and other tools call the API. Each key has only the scopes you give it.</p>
 
+<Card title="Your keys" id="keys">
 	{#if created}
-		<div class="card" role="status">
+		<div class="callout" role="status">
 			<strong>Key "{created.name}" created.</strong>
 			<p>Copy the secret now. It is shown once and cannot be retrieved later.</p>
 			<code class="secret" aria-label="API key secret">{created.token}</code>
@@ -122,49 +122,50 @@
 	{:else if keys.length === 0}
 		<p class="muted">No API keys yet.</p>
 	{:else}
-		<table>
-			<caption class="visually-hidden">API keys</caption>
-			<thead>
-				<tr>
-					<th scope="col">Name</th><th scope="col">Scopes</th><th scope="col">Created</th><th scope="col">Last used</th>
-					<th scope="col">Expires</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Actions</span></th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each keys as k (k.id)}
-					{@const st = keyState(k)}
+		<div class="table-wrap">
+			<table>
+				<caption class="visually-hidden">API keys</caption>
+				<thead>
 					<tr>
-						<th scope="row">{k.name}</th>
-						<td>{k.scopes.join(', ')}</td>
-						<td>{when(k.created_at)}</td>
-						<td>{k.last_used_at ? when(k.last_used_at) : 'Never'}</td>
-						<td>{k.expires_at ? when(k.expires_at) : 'No expiry'}</td>
-						<td>
-							{#if st === 'active'}<StatusIcon status="ok" /> Active
-							{:else if st === 'expired'}<StatusIcon status="warn" /> Expired
-							{:else}<StatusIcon status="off" /> Revoked{/if}
-						</td>
-						<td>
-							{#if st !== 'revoked'}
-								{#if revoking === k.id}
-									<div class="actions">
-										<button class="btn" type="button" disabled={busy} onclick={() => revoke(k)}>Confirm revoke</button>
-										<button class="btn" type="button" onclick={() => (revoking = null)}>Keep</button>
-									</div>
-								{:else}
-									<button class="btn" type="button" onclick={() => (revoking = k.id)} aria-label="Revoke key {k.name}">Revoke</button>
-								{/if}
-							{/if}
-						</td>
+						<th scope="col">Name</th><th scope="col">Scopes</th><th scope="col">Created</th><th scope="col">Last used</th>
+						<th scope="col">Expires</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Actions</span></th>
 					</tr>
-				{/each}
-			</tbody>
-		</table>
+				</thead>
+				<tbody>
+					{#each keys as k (k.id)}
+						{@const st = keyState(k)}
+						<tr>
+							<th scope="row">{k.name}</th>
+							<td>{k.scopes.join(', ')}</td>
+							<td>{when(k.created_at)}</td>
+							<td>{k.last_used_at ? when(k.last_used_at) : 'Never'}</td>
+							<td>{k.expires_at ? when(k.expires_at) : 'No expiry'}</td>
+							<td>
+								{#if st === 'active'}<StatusIcon status="ok" /> Active
+								{:else if st === 'expired'}<StatusIcon status="warn" /> Expired
+								{:else}<StatusIcon status="off" /> Revoked{/if}
+							</td>
+							<td>
+								{#if st !== 'revoked'}
+									{#if revoking === k.id}
+										<div class="actions">
+											<button class="btn sm" type="button" disabled={busy} onclick={() => revoke(k)}>Confirm revoke</button>
+											<button class="btn sm" type="button" onclick={() => (revoking = null)}>Keep</button>
+										</div>
+									{:else}
+										<button class="btn sm" type="button" onclick={() => (revoking = k.id)} aria-label="Revoke key {k.name}">Revoke</button>
+									{/if}
+								{/if}
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	{/if}
-</section>
+</Card>
 
-<section aria-labelledby="new-key">
-	<h2 id="new-key">Create a key</h2>
+<Card title="Create a key" id="new-key">
 	<form onsubmit={create}>
 		<TextField label="Name" name="name" bind:value={name} error={errors.name} hint="What the key is for, such as “home script”." maxlength={100} required />
 		<fieldset>
@@ -180,4 +181,4 @@
 		<TextField label="Expires on (optional)" name="expires_at" bind:value={expires} error={errors.expires_at} type="date" />
 		<button class="btn primary" type="submit" disabled={busy || chosen.length === 0}>Create key</button>
 	</form>
-</section>
+</Card>

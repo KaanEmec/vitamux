@@ -8,6 +8,7 @@
 	import { api, fieldErrors, type Problem, type Schemas } from '#lib/api/client.ts';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import StatusIcon from '#lib/components/StatusIcon.svelte';
+	import Card from '#lib/settings/Card.svelte';
 	import { ago, bytes, when } from '#lib/settings/format.ts';
 	import { lastBackup, loadStatus } from '#lib/settings/status.ts';
 
@@ -63,8 +64,13 @@
 
 <svelte:head><title>Backups and export · Vitamux</title></svelte:head>
 
-<section aria-labelledby="backup">
-	<h2 id="backup">Backups</h2>
+<p class="lede">Backups restore this server. An export is a portable copy of your data.</p>
+
+<Card
+	title="Backups"
+	id="backup"
+	description="Backups are made with vitamux backup (see the backup and restore guide). An export below is a portable copy of your data, not a restorable backup."
+>
 	{#if !statusLoaded}
 		<p class="muted" role="status">Checking the last backup…</p>
 	{:else if backupAt}
@@ -72,18 +78,13 @@
 	{:else}
 		<p><StatusIcon status="warn" /> No backup is recorded.</p>
 	{/if}
-	<p class="muted">
-		Backups are made with <code>vitamux backup</code> (see the backup and restore guide). An export below is a portable copy of
-		your data, not a restorable backup.
-	</p>
-</section>
+</Card>
 
-<section aria-labelledby="export">
-	<h2 id="export">Export your data</h2>
-	<p class="muted">
-		The export is a zip with one file per table and a manifest. It holds all of your health rows, rules and audit history,
-		so keep it private.
-	</p>
+<Card
+	title="Export your data"
+	id="export"
+	description="The export is a zip with one file per table and a manifest. It holds all of your health rows, rules and audit history, so keep it private."
+>
 	<ProblemAlert {problem} fields={['format', 'include_raw']} />
 
 	<form onsubmit={start}>
@@ -104,7 +105,7 @@
 	</form>
 
 	{#if job}
-		<div class="card" aria-live="polite">
+		<div class="callout job" aria-live="polite">
 			{#if job.status === 'queued' || job.status === 'running'}
 				<p><StatusIcon status="pending" /> Export {job.status === 'queued' ? 'queued' : 'running'}…</p>
 			{:else if job.status === 'failed'}
@@ -121,4 +122,13 @@
 			<p class="muted">Started {when(job.created_at)}</p>
 		</div>
 	{/if}
-</section>
+</Card>
+
+<style>
+	.job {
+		margin-top: var(--space-4);
+	}
+	.job p {
+		margin: 0 0 var(--space-2);
+	}
+</style>

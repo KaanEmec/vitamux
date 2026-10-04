@@ -51,13 +51,16 @@
 
 <ProblemAlert {problem} />
 {#if code && !expired}
-	<div class="card pairing">
+	<div class="pairing">
 		<QrCode value={code.qr_payload} label="Pairing QR code for {code.url}" />
-		<div>
-			<p>In the Vitamux app, scan this code, or enter the server address and this code:</p>
+		<div class="steps">
+			<ol>
+				<li>Open the Vitamux app on the iPhone.</li>
+				<li>Scan this code, or enter the server address and this code:</li>
+			</ol>
 			<p class="muted">Server <code>{code.url}</code></p>
 			<code class="secret" aria-label="Pairing code">{code.code}</code>
-			<p><StatusIcon status="pending" /> Expires in <span role="timer">{countdown(left)}</span>. It works once.</p>
+			<p class="expiry"><StatusIcon status="pending" /> Expires in <span role="timer">{countdown(left)}</span>. It works once.</p>
 			<button class="btn" type="button" disabled={busy} onclick={create}>New code</button>
 		</div>
 	</div>
@@ -73,7 +76,21 @@
 		gap: var(--space-5);
 		align-items: flex-start;
 	}
+	.steps {
+		flex: 1 1 16rem;
+	}
+	.steps ol {
+		margin: 0 0 var(--space-2);
+		padding-left: var(--space-5);
+	}
+	.steps p {
+		margin: 0;
+	}
+	.expiry {
+		margin-bottom: var(--space-3);
+	}
 	.pairing :global(.secret) {
+		width: fit-content;
 		font-size: var(--text-lg);
 		letter-spacing: 0.08em;
 	}
