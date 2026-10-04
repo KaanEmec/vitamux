@@ -1,6 +1,0 @@
-{
-  "synthetic": true,
-  "normalizer": "whoop.cycles",
-  "version": 1,
-  "error": "whoop.cycles: inline sleep without a valid during (shape drift)"
-}

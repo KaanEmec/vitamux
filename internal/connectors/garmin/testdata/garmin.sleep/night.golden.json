@@ -1,8 +1,15 @@
 {
   "synthetic": true,
   "normalizer": "garmin.sleep",
-  "version": 1,
+  "version": 2,
   "output": {
+    "devices": [
+      {
+        "fingerprint": "garmin:wearable",
+        "type": "watch",
+        "manufacturer": "Garmin"
+      }
+    ],
     "measurements": [
       {
         "metric": "garmin_sleep_score",
@@ -14,6 +21,7 @@
         },
         "value": 82,
         "unit": "index",
+        "device": "garmin:wearable",
         "key": {
           "record_type": "sleep",
           "external_id": "2026-06-15",
@@ -67,6 +75,7 @@
           "rem_s": 5400,
           "awake_s": 1800
         },
+        "device": "garmin:wearable",
         "key": {
           "record_type": "sleep",
           "external_id": "1781471400000"

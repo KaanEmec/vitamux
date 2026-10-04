@@ -1,8 +1,15 @@
 {
   "synthetic": true,
   "normalizer": "garmin.hrv",
-  "version": 1,
+  "version": 2,
   "output": {
+    "devices": [
+      {
+        "fingerprint": "garmin:wearable",
+        "type": "watch",
+        "manufacturer": "Garmin"
+      }
+    ],
     "measurements": [
       {
         "metric": "hrv_rmssd",
@@ -12,7 +19,8 @@
           "offset_min": 120
         },
         "value": 45,
-        "unit": "ms"
+        "unit": "ms",
+        "device": "garmin:wearable"
       },
       {
         "metric": "hrv_rmssd",
@@ -22,7 +30,8 @@
           "offset_min": 120
         },
         "value": 51,
-        "unit": "ms"
+        "unit": "ms",
+        "device": "garmin:wearable"
       },
       {
         "metric": "hrv_rmssd_nightly",
@@ -34,6 +43,7 @@
         },
         "value": 48,
         "unit": "ms",
+        "device": "garmin:wearable",
         "key": {
           "record_type": "hrv",
           "external_id": "2026-06-15",

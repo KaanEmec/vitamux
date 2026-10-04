@@ -43,15 +43,15 @@ var streams = map[string]struct {
 	version int
 	decode  func(b *builder, resp []byte) error
 }{
-	StreamDailySummary:      {2, dailySummary},
-	StreamHeartRate:         {1, heartRate},
-	StreamSteps:             {1, steps},
-	StreamStressBodyBattery: {1, stressBodyBattery},
-	StreamSleep:             {1, sleep},
-	StreamHRV:               {1, hrv},
-	StreamRespiration:       {1, respiration},
-	StreamSpO2:              {1, spo2},
-	StreamTraining:          {2, training},
+	StreamDailySummary:      {3, dailySummary},
+	StreamHeartRate:         {2, heartRate},
+	StreamSteps:             {2, steps},
+	StreamStressBodyBattery: {2, stressBodyBattery},
+	StreamSleep:             {2, sleep},
+	StreamHRV:               {2, hrv},
+	StreamRespiration:       {2, respiration},
+	StreamSpO2:              {2, spo2},
+	StreamTraining:          {3, training},
 	StreamBodyComposition:   {1, bodyComposition},
 	StreamBloodPressure:     {1, bloodPressure},
 	StreamActivities:        {1, activity},
@@ -158,7 +158,23 @@ func (b *builder) device(id *int64) string {
 	return fp
 }
 
+// wearable is the device behind Garmin's wellness data (heart rate, steps, stress, sleep, ...).
+// Those responses do not name it, so one stable fingerprint of type watch stands for the
+// account's wrist device; device-type rules such as builtin:steps need a type. Scale and
+// blood-pressure readings and activities keep the device Garmin names.
+func (b *builder) wearable() string {
+	const fp = "garmin:wearable"
+	if !slices.ContainsFunc(b.out.Devices, func(d normalize.Device) bool { return d.Fingerprint == fp }) {
+		b.out.Devices = append(b.out.Devices, normalize.Device{Fingerprint: fp, Type: "watch", Manufacturer: "Garmin"})
+	}
+	return fp
+}
+
+// sample adds a wellness sample, on the device Garmin names or else the wearable.
 func (b *builder) sample(metric string, at time.Time, z normalize.Zone, v float64, unit, device string) {
+	if device == "" {
+		device = b.wearable()
+	}
 	b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: metric, Kind: catalog.Sample,
 		Start: at, Zone: z, Value: v, Unit: unit, Device: device})
 }
@@ -166,7 +182,7 @@ func (b *builder) sample(metric string, at time.Time, z normalize.Zone, v float6
 // daily adds a provider daily value over [start, end), keyed by record type and calendar date.
 func (b *builder) daily(metric, record, date string, start, end time.Time, z normalize.Zone, v float64, unit string) {
 	b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: metric, Kind: catalog.DailyValue,
-		Start: start, End: &end, Zone: z, Value: v, Unit: unit,
+		Start: start, End: &end, Zone: z, Value: v, Unit: unit, Device: b.wearable(),
 		Key: normalize.Key{RecordType: record, ExternalID: date, Component: metric}})
 }
 
@@ -364,7 +380,7 @@ func steps(b *builder, resp []byte) error {
 		}
 		end := x.EndGMT.Time
 		b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: "steps", Kind: catalog.Interval,
-			Start: x.StartGMT.Time, End: &end, Value: *x.Steps, Unit: "count"})
+			Start: x.StartGMT.Time, End: &end, Value: *x.Steps, Unit: "count", Device: b.wearable()})
 	}
 	return nil
 }

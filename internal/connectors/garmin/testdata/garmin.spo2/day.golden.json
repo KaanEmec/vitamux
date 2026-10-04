@@ -1,8 +1,15 @@
 {
   "synthetic": true,
   "normalizer": "garmin.spo2",
-  "version": 1,
+  "version": 2,
   "output": {
+    "devices": [
+      {
+        "fingerprint": "garmin:wearable",
+        "type": "watch",
+        "manufacturer": "Garmin"
+      }
+    ],
     "measurements": [
       {
         "metric": "spo2",
@@ -12,7 +19,8 @@
           "offset_min": 120
         },
         "value": 96,
-        "unit": "%"
+        "unit": "%",
+        "device": "garmin:wearable"
       },
       {
         "metric": "spo2",
@@ -22,7 +30,8 @@
           "offset_min": 120
         },
         "value": 94,
-        "unit": "%"
+        "unit": "%",
+        "device": "garmin:wearable"
       }
     ]
   }

@@ -1,11 +1,12 @@
 // Package whoop holds the core side of the WHOOP connector (E19): the normalizers of the raw
 // payloads the whoop sidecar stores (docs/providers/whoop.md). Each raw body is
-// {"unit": {...}, "response": <WHOOP's response body verbatim>}. whoop.strain_deep_dive and
-// whoop.journal stay raw: no normalizer accepts them until their shapes are verified.
+// {"unit": {...}, "response": <WHOOP's response body verbatim>}. Of whoop.strain_deep_dive, an
+// untyped app screen, only the day's step total is read. whoop.journal is not synced.
 package whoop
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -19,18 +20,16 @@ import (
 )
 
 const (
-	Provider        = "whoop"
-	StreamHeartRate = "whoop.heart_rate"
-	StreamSteps     = "whoop.steps"
-	StreamCycles    = "whoop.cycles"
-	StreamSleep     = "whoop.sleep"
-	StreamWorkouts  = "whoop.workouts"
-
-	stepsStep = 5 * time.Minute // the getSteps step the sidecar requests
+	Provider             = "whoop"
+	StreamHeartRate      = "whoop.heart_rate"
+	StreamCycles         = "whoop.cycles"
+	StreamSleep          = "whoop.sleep"
+	StreamWorkouts       = "whoop.workouts"
+	StreamStrainDeepDive = "whoop.strain_deep_dive"
 )
 
 // versions is each stream normalizer's Version(): bump only the stream whose output changes.
-var versions = map[string]int{StreamHeartRate: 1, StreamSteps: 1, StreamCycles: 1, StreamSleep: 1, StreamWorkouts: 1}
+var versions = map[string]int{StreamHeartRate: 1, StreamCycles: 2, StreamSleep: 2, StreamWorkouts: 1, StreamStrainDeepDive: 2}
 
 // strap is the device of every WHOOP record: the private API names no device of its own.
 var strap = normalize.Device{Fingerprint: "whoop:strap", Type: "band", Manufacturer: "WHOOP"}
@@ -38,10 +37,10 @@ var strap = normalize.Device{Fingerprint: "whoop:strap", Type: "band", Manufactu
 // Normalizer normalizes one WHOOP stream; its ID is the stream name.
 type Normalizer struct{ Stream string }
 
-// Normalizers returns one normalizer per normalized stream, for normalize.NewRegistry.
+// Normalizers returns one normalizer per stored stream, for normalize.NewRegistry.
 func Normalizers() []normalize.Normalizer {
-	return []normalize.Normalizer{Normalizer{StreamHeartRate}, Normalizer{StreamSteps}, Normalizer{StreamCycles},
-		Normalizer{StreamSleep}, Normalizer{StreamWorkouts}}
+	return []normalize.Normalizer{Normalizer{StreamHeartRate}, Normalizer{StreamCycles}, Normalizer{StreamSleep},
+		Normalizer{StreamWorkouts}, Normalizer{StreamStrainDeepDive}}
 }
 
 func (n Normalizer) ID() string                    { return n.Stream }
@@ -75,14 +74,23 @@ func (b *builder) warn(code, detail string) {
 	b.out.Warnings = append(b.out.Warnings, normalize.Warning{Code: code, Detail: detail})
 }
 
-// Normalize is pure. Records without a WHOOP timezone_offset (HR, steps, the cycle's inline
-// sleeps) get their local dates from the owner's timezone periods.
+// rawUnit is a raw's unit. A whoop.sleep raw has the sleep's activity id, plus its nap flag and
+// offset, which the sidecar copies from the cycle's sleeps[] because the stage events lack them.
+// A window raw has start and end; for the strain deep dive they bound the owner's local day.
+type rawUnit struct {
+	Start          *time.Time `json:"start"`
+	End            *time.Time `json:"end"`
+	ID             string     `json:"id"`
+	IsNap          *bool      `json:"is_nap"`
+	TimezoneOffset string     `json:"timezone_offset"`
+}
+
+// Normalize is pure. Heart rate carries no WHOOP timezone_offset, so its local dates come from
+// the owner's timezone periods; everything else carries WHOOP's offset.
 func (n Normalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ normalize.Env) (normalize.Output, error) {
 	b := &builder{stream: n.Stream}
 	var body struct {
-		Unit struct {
-			ID string `json:"id"`
-		} `json:"unit"`
+		Unit     rawUnit         `json:"unit"`
 		Response json.RawMessage `json:"response"`
 	}
 	if err := json.Unmarshal(raw.Body, &body); err != nil || isNull(body.Response) {
@@ -91,15 +99,15 @@ func (n Normalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ nor
 	var err error
 	switch n.Stream {
 	case StreamHeartRate:
-		err = b.series(body.Response, "heart_rate")
-	case StreamSteps:
-		err = b.series(body.Response, "steps")
+		err = b.heartRate(body.Response)
 	case StreamCycles:
 		err = b.cycles(body.Response)
 	case StreamSleep:
-		err = b.sleep(body.Unit.ID, body.Response)
+		err = b.sleep(body.Unit, body.Response)
 	case StreamWorkouts:
 		err = b.workouts(body.Response)
+	case StreamStrainDeepDive:
+		err = b.dailySteps(body.Unit, body.Response)
 	default:
 		err = b.drift("stream is not normalized")
 	}
@@ -112,14 +120,68 @@ func (n Normalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ nor
 	return b.out, nil
 }
 
+// dailySteps reads the day's step total from the strain deep-dive screen: the metric
+// CONTRIBUTORS_TILE_STEPS, whose status is the count as display text ("7,421"). WHOOP's metrics
+// service no longer serves steps, so this daily total is the only step count WHOOP gives. A
+// screen without the tile writes nothing; the rest of the screen stays raw.
+func (b *builder) dailySteps(u rawUnit, resp json.RawMessage) error {
+	var r struct {
+		Sections []struct {
+			Items []struct {
+				Content struct {
+					Metrics []struct {
+						ID     string `json:"id"`
+						Status any    `json:"status"`
+					} `json:"metrics"`
+				} `json:"content"`
+			} `json:"items"`
+		} `json:"sections"`
+	}
+	if err := b.decode(resp, &r); err != nil {
+		return err
+	}
+	for _, sec := range r.Sections {
+		for _, it := range sec.Items {
+			for _, m := range it.Content.Metrics {
+				if m.ID != "CONTRIBUTORS_TILE_STEPS" {
+					continue
+				}
+				text, _ := m.Status.(string)
+				digits := strings.Map(func(r rune) rune {
+					if r >= '0' && r <= '9' {
+						return r
+					}
+					if r == ',' || r == '.' || r == ' ' || r == '\u00a0' || r == '\u202f' {
+						return -1 // thousands separators
+					}
+					return 'x'
+				}, strings.TrimSpace(text))
+				n, err := strconv.Atoi(digits)
+				if err != nil {
+					b.warn("steps_unreadable", "CONTRIBUTORS_TILE_STEPS status is not a count")
+					return nil
+				}
+				if u.Start == nil || u.End == nil {
+					return b.drift("unit without start and end")
+				}
+				b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: "steps",
+					Kind: catalog.DailyValue, Start: *u.Start, End: u.End, Value: float64(n), Unit: "count",
+					Device: strap.Fingerprint,
+					Key:    normalize.Key{RecordType: "day", ExternalID: u.Start.UTC().Format(time.RFC3339), Component: "steps"}})
+				return nil
+			}
+		}
+	}
+	return nil
+}
+
 func isNull(raw json.RawMessage) bool {
 	raw = bytes.TrimSpace(raw)
 	return len(raw) == 0 || string(raw) == "null"
 }
 
-// series maps a metrics-service body {"values": [{time, data}]}: heart rate as samples at their
-// native step, steps as counts over [time, time+step).
-func (b *builder) series(resp json.RawMessage, metric string) error {
+// heartRate maps a metrics-service body {"values": [{time, data}]} to samples at their native step.
+func (b *builder) heartRate(resp json.RawMessage) error {
 	var r struct {
 		Values *[]struct {
 			Time *int64   `json:"time"` // Unix ms
@@ -140,78 +202,63 @@ func (b *builder) series(resp json.RawMessage, metric string) error {
 		if t.Year() < 2000 || t.Year() > 9999 {
 			return b.drift("value time out of range")
 		}
-		m := normalize.Measurement{Metric: metric, Kind: catalog.Sample, Start: t, Value: *v.Data, Unit: "bpm", Device: strap.Fingerprint}
-		if metric == "steps" {
-			end := t.Add(stepsStep)
-			m.Kind, m.End, m.Unit = catalog.Interval, &end, "count"
-		}
-		b.out.Measurements = append(b.out.Measurements, m)
+		b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: "heart_rate", Kind: catalog.Sample,
+			Start: t, Value: *v.Data, Unit: "bpm", Device: strap.Fingerprint})
 	}
 	return nil
 }
 
-// rawCycle is one cycles-BFF item (docs/providers/whoop.md#content-of-records). The inner cycle
-// object is unverified; day strain is read from its score, a bare number (as in the BFF workout
-// records) or an object with strain (as in WHOOP's Cycle record).
-type rawCycle struct {
-	ID    json.RawMessage `json:"id"`
-	Days  []string        `json:"days"`
-	Cycle struct {
-		Score json.RawMessage `json:"score"`
+// cycleRecord is one item of the cycles BFF's records (docs/providers/whoop.md#content-of-records).
+// Fields not read here (cycle days and during, SpO2, skin temperature, sleep need and debt,
+// workouts, v2_activities) stay raw.
+type cycleRecord struct {
+	Cycle *struct {
+		ID             json.RawMessage `json:"id"`
+		TimezoneOffset string          `json:"timezone_offset"`
+		DayStrain      *float64        `json:"day_strain"`
 	} `json:"cycle"`
-	Sleep *struct {
-		ID json.RawMessage `json:"id"`
-	} `json:"sleep"`
-	Sleeps   []inlineSleep `json:"sleeps"`
 	Recovery *struct {
-		SleepID          json.RawMessage `json:"sleep_id"`
-		ScoreState       string          `json:"score_state"`
-		Score            json.RawMessage `json:"score"`
-		RecoveryScore    *float64        `json:"recovery_score"`
-		RestingHeartRate *float64        `json:"resting_heart_rate"`
-		HRVRMSSD         *float64        `json:"hrv_rmssd"` // seconds
+		RecoveryScore    *float64 `json:"recovery_score"`
+		RestingHeartRate *float64 `json:"resting_heart_rate"`
+		HRVRMSSD         *float64 `json:"hrv_rmssd"` // seconds
 	} `json:"recovery"`
+	Sleeps []cycleSleep `json:"sleeps"`
 }
 
-// inlineSleep is a sleep summary inside a cycle; durations are in ms. Its id is unverified and
-// read only if present.
-type inlineSleep struct {
-	ID              json.RawMessage `json:"id"`
-	During          string          `json:"during"`
-	State           *string         `json:"state"`
-	Wake            *float64        `json:"wake_duration"`
-	Light           *float64        `json:"light_sleep_duration"`
-	Deep            *float64        `json:"slow_wave_sleep_duration"`
-	REM             *float64        `json:"rem_sleep_duration"`
-	RespiratoryRate *float64        `json:"respiratory_rate"`
-	Significant     *bool           `json:"significant"` // false for a nap
+// cycleSleep is a sleep summary inside a cycle, naps included.
+type cycleSleep struct {
+	ActivityID      string   `json:"activity_id"`
+	During          string   `json:"during"`
+	TimezoneOffset  string   `json:"timezone_offset"`
+	IsNap           bool     `json:"is_nap"`
+	Significant     bool     `json:"significant"`
+	Score           *float64 `json:"score"` // sleep performance, %
+	RespiratoryRate *float64 `json:"respiratory_rate"`
 }
 
-func (s inlineSleep) nap() bool      { return s.Significant != nil && !*s.Significant }
-func (s inlineSleep) complete() bool { return s.State == nil || *s.State == "complete" }
-
-// cycles maps a cycles body (an array, or one wrapped in cycles, records, data or results).
-func (b *builder) cycles(resp json.RawMessage) error {
-	if !bytes.HasPrefix(bytes.TrimSpace(resp), []byte("[")) {
-		var w map[string]json.RawMessage
-		if err := b.decode(resp, &w); err != nil {
-			return err
-		}
-		resp = nil
-		for _, k := range []string{"cycles", "records", "data", "results"} {
-			if resp = w[k]; resp != nil {
-				break
-			}
-		}
-		if resp == nil {
-			return b.drift("response without a cycle list")
-		}
+// rank orders main-sleep candidates: a non-nap sleep, else a significant one, else none.
+func (s cycleSleep) rank() int {
+	switch {
+	case !s.IsNap:
+		return 2
+	case s.Significant:
+		return 1
 	}
-	var list []rawCycle
-	if err := b.decode(resp, &list); err != nil {
+	return 0
+}
+
+// cycles maps a cycles body {"records": [...]}.
+func (b *builder) cycles(resp json.RawMessage) error {
+	var r struct {
+		Records *[]cycleRecord `json:"records"`
+	}
+	if err := b.decode(resp, &r); err != nil {
 		return err
 	}
-	for _, c := range list {
+	if r.Records == nil {
+		return b.drift("response without records")
+	}
+	for _, c := range *r.Records {
 		if err := b.cycle(c); err != nil {
 			return err
 		}
@@ -219,263 +266,149 @@ func (b *builder) cycles(resp json.RawMessage) error {
 	return nil
 }
 
-// cycle maps one cycle. Its inline sleeps give each sleep's respiratory rate, and the sessions
-// of naps and of a main sleep whose stages whoop.sleep does not own (ownsStages). The main sleep
-// is keyed by mainSleepID, any other sleep by its own id or else by the cycle and its ordinal in
-// start order, so a rescore that moves its bounds supersedes it instead of adding a second one. A cycle runs
-// from one wake-up to the next, so it is not a local day: day strain, recovery, resting HR and
-// nightly RMSSD are daily values at the wake-up of the cycle's main sleep, so they share that
-// sleep's sleep_date (ADR-0009). SpO2 and skin temperature are overnight values without a
-// matching code and stay raw.
-func (b *builder) cycle(c rawCycle) error {
-	id := externalID(c.ID)
-	if id == "" && len(c.Days) > 0 {
-		id = c.Days[0]
+// cycle maps one record. Sleep sessions belong to whoop.sleep, which has their stages and is
+// keyed by the same activity_id; the cycle adds each sleep's respiratory rate and its main
+// sleep's performance. The main sleep is the longest of the highest rank (non-nap, else
+// significant). A cycle runs from one sleep to the next, so it is not a local day: day strain,
+// recovery, resting HR and nightly RMSSD are daily values at the main sleep's wake-up, so they
+// share its sleep_date (ADR-0009). Without a main sleep they stay raw.
+func (b *builder) cycle(c cycleRecord) error {
+	if c.Cycle == nil {
+		return b.drift("record without cycle")
 	}
+	id := externalID(c.Cycle.ID)
 	if id == "" {
-		return b.drift("cycle without id or days")
+		return b.drift("cycle without id")
 	}
-	mainID := c.mainSleepID()
-	// The main sleep is the complete non-nap sleep that ends last; its wake-up dates the cycle.
 	main, spans := -1, make([][2]time.Time, len(c.Sleeps))
 	for i, s := range c.Sleeps {
 		start, end, ok := during(s.During)
-		if !ok || !end.After(start) {
-			return b.drift("inline sleep without a valid during")
+		switch {
+		case s.ActivityID == "":
+			return b.drift("sleep without activity_id")
+		case !ok || !end.After(start):
+			return b.drift("sleep without a valid during")
 		}
 		spans[i] = [2]time.Time{start, end}
-		if !s.nap() && s.complete() && (main < 0 || end.After(spans[main][1])) {
+		if r := s.rank(); r > 0 && (main < 0 || r > c.Sleeps[main].rank() ||
+			r == c.Sleeps[main].rank() && end.Sub(start) > spans[main][1].Sub(spans[main][0])) {
 			main = i
 		}
 	}
+	var wake time.Time
+	var wakeZone normalize.Zone
 	for i, s := range c.Sleeps {
-		if !s.complete() {
-			continue
+		zone, err := b.zone(cmp.Or(s.TimezoneOffset, c.Cycle.TimezoneOffset))
+		if err != nil {
+			return err
 		}
 		start, end := spans[i][0], spans[i][1]
-		key := normalize.Key{RecordType: "sleep", ExternalID: externalID(s.ID)}
-		if i == main && mainID != "" {
-			key.ExternalID = mainID
-		}
-		if key.ExternalID == "" {
-			ord := 0
-			for j, sp := range spans {
-				if sp[0].Before(start) || (sp[0].Equal(start) && j < i) {
-					ord++
-				}
-			}
-			key = normalize.Key{RecordType: "cycle_sleep", ExternalID: id + "/" + strconv.Itoa(ord)}
-		}
-		if i != main || !ownsStages(mainID) {
-			b.out.Sleep = append(b.out.Sleep, normalize.SleepSession{Start: start, End: end, Nap: s.nap(),
-				Totals: inlineTotals(s), Device: strap.Fingerprint, Key: key})
+		key := func(metric string) normalize.Key {
+			return normalize.Key{RecordType: "sleep", ExternalID: s.ActivityID, Component: metric}
 		}
 		if s.RespiratoryRate != nil {
-			key.Component = "respiratory_rate"
 			b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: "respiratory_rate",
-				Kind: catalog.Sample, Start: start.Add(end.Sub(start) / 2), Value: *s.RespiratoryRate,
-				Unit: "breaths/min", Device: strap.Fingerprint, Key: key})
+				Kind: catalog.Sample, Start: start.Add(end.Sub(start) / 2), Zone: zone, Value: *s.RespiratoryRate,
+				Unit: "breaths/min", Device: strap.Fingerprint, Key: key("respiratory_rate")})
+		}
+		if i != main {
+			continue
+		}
+		wake, wakeZone = end, zone
+		if s.Score != nil {
+			b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: "whoop_sleep_performance",
+				Kind: catalog.Sample, Start: end, Zone: zone, Value: *s.Score, Unit: "%", Device: strap.Fingerprint,
+				Key: key("whoop_sleep_performance")})
 		}
 	}
-	strain, err := b.strain(c.Cycle.Score)
-	if err != nil {
-		return err
-	}
-	var wake time.Time
-	if main >= 0 {
-		wake = spans[main][1]
-	}
-	add := func(metric string, v *float64, unit string) {
-		if v != nil {
-			b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: metric, Kind: catalog.DailyValue,
-				Start: wake, End: &wake, Value: *v, Unit: unit, Device: strap.Fingerprint,
-				Key: normalize.Key{RecordType: "cycle", ExternalID: id, Component: metric}})
-		}
-	}
-	r := c.Recovery
-	scored := r != nil && !isNull(r.Score) && (r.ScoreState == "" || r.ScoreState == "SCORED")
-	flat := r != nil && r.RestingHeartRate != nil
 	if main < 0 {
-		if strain != nil || scored || flat {
+		if c.Cycle.DayStrain != nil || c.Recovery != nil {
 			b.warn("cycle_without_main_sleep", id)
 		}
 		return nil
 	}
-	add("whoop_strain", strain, "index")
-	switch {
-	case scored: // nested score, RMSSD in ms
-		var s struct {
-			RecoveryScore    *float64 `json:"recovery_score"`
-			RestingHeartRate *float64 `json:"resting_heart_rate"`
-			HRVRMSSDMilli    *float64 `json:"hrv_rmssd_milli"`
+	add := func(metric string, v *float64, unit string) {
+		if v != nil {
+			b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: metric, Kind: catalog.DailyValue,
+				Start: wake, End: &wake, Zone: wakeZone, Value: *v, Unit: unit, Device: strap.Fingerprint,
+				Key: normalize.Key{RecordType: "cycle", ExternalID: id, Component: metric}})
 		}
-		if err := b.decode(r.Score, &s); err != nil {
-			return err
-		}
-		add("whoop_recovery", s.RecoveryScore, "%")
-		add("resting_heart_rate", s.RestingHeartRate, "bpm")
-		add("hrv_rmssd_nightly", s.HRVRMSSDMilli, "ms")
-	case flat: // flat BFF fields, RMSSD in s; a resting HR means it is scored
+	}
+	add("whoop_strain", c.Cycle.DayStrain, "index")
+	if r := c.Recovery; r != nil {
 		add("whoop_recovery", r.RecoveryScore, "%")
 		add("resting_heart_rate", r.RestingHeartRate, "bpm")
-		add("hrv_rmssd_nightly", r.HRVRMSSD, "s")
+		add("hrv_rmssd_nightly", r.HRVRMSSD, "s") // WHOOP sends seconds; the writer stores ms
 	}
 	return nil
 }
 
-// strain reads day strain from the inner cycle's score.
-func (b *builder) strain(score json.RawMessage) (*float64, error) {
-	if isNull(score) {
-		return nil, nil
-	}
-	var f float64
-	if json.Unmarshal(score, &f) == nil {
-		return &f, nil
-	}
-	var s struct {
-		Strain *float64 `json:"strain"`
-	}
-	if err := b.decode(score, &s); err != nil {
-		return nil, err
-	}
-	return s.Strain, nil
-}
+// sleepStages maps sleep-event types, compared in lower case, as @dofek/whoop reads them;
+// no_data is a gap.
+var sleepStages = map[string]string{"awake": "awake", "light": "light", "deep": "deep", "slow_wave": "deep", "rem": "rem", "no_data": ""}
 
-func inlineTotals(s inlineSleep) *normalize.SleepTotals {
-	t := &normalize.SleepTotals{Awake: secs(s.Wake), Light: secs(s.Light), Deep: secs(s.Deep), REM: secs(s.REM)}
-	if t.Light != nil && t.Deep != nil && t.REM != nil {
-		asleep := *t.Light + *t.Deep + *t.REM
-		t.Asleep = &asleep
-	}
-	return t
-}
-
-func secs(ms *float64) *int32 {
-	if ms == nil || *ms < 0 || *ms > 7*24*3600*1000 {
-		return nil
-	}
-	v := int32(*ms / 1000)
-	return &v
-}
-
-// mainSleepID is the one id of a cycle's main sleep: recovery.sleep_id, else sleep.id. When both
-// are set and differ, sleep.id is ignored here and in the sidecar, which fetches whoop.sleep for
-// this id only, so the episode is never written under both.
-func (c rawCycle) mainSleepID() string {
-	id := ""
-	if c.Recovery != nil {
-		id = externalID(c.Recovery.SleepID)
-	}
-	if id == "" && c.Sleep != nil {
-		id = externalID(c.Sleep.ID)
-	}
-	return id
-}
-
-// ownsStages reports whether whoop.sleep writes the session of this sleep id. The sidecar fetches
-// stages for the cycle's mainSleepID and for v2 sleep activities (UUIDs: naps, or a second id of
-// the main sleep). Only numeric ids are owned there, so no episode is written twice; cycles writes
-// the rest, with WHOOP's nap flag and stage totals but without stages.
-func ownsStages(id string) bool {
-	_, err := strconv.ParseUint(id, 10, 64)
-	return err == nil
-}
-
-// sleepStages maps WHOOP sleep-event stages; no_data is a gap.
-var sleepStages = map[string]string{"awake": "awake", "light": "light", "deep": "deep", "slow_wave": "deep", "rem": "rem"}
-
-// sleep maps one sleep-events body (unit {"id"}) to the session with its stages, bounded by the
-// record's start and end (or during) or else by its stages. Sleep ids that cycles owns stay raw.
-// The older summary shape, if WHOOP sends it, adds stage totals, the offset and the sleep
-// performance of a main sleep at its wake-up; respiration comes from cycles only. A rescored
-// sleep keeps its id, so its rows are superseded.
-func (b *builder) sleep(id string, resp json.RawMessage) error {
-	var s struct {
-		Start          *time.Time `json:"start"`
-		End            *time.Time `json:"end"`
-		During         string     `json:"during"`
-		TimezoneOffset string     `json:"timezone_offset"`
-		Nap            bool       `json:"nap"`
-		Score          *struct {
-			StageSummary *struct {
-				Awake *float64 `json:"total_awake_time_milli"`
-				Light *float64 `json:"total_light_sleep_time_milli"`
-				Deep  *float64 `json:"total_slow_wave_sleep_time_milli"`
-				REM   *float64 `json:"total_rem_sleep_time_milli"`
-			} `json:"stage_summary"`
-			SleepPerformance *float64 `json:"sleep_performance_percentage"`
-		} `json:"score"`
-		Stages []struct { // nil when absent
-			Stage  string `json:"stage"`
-			During string `json:"during"`
-		} `json:"stages"`
-	}
-	if id == "" {
+// sleep maps one sleep-events body, an array of stage events [{during, type}], to the session of
+// the unit's activity id, bounded by its events. It is the only writer of WHOOP sleep sessions;
+// totals are summed from the stages. An unknown type is a warning and a gap. A raw stored by
+// sidecar 0.2.2 or older has no is_nap in its unit and stays raw until the sleep is fetched again.
+func (b *builder) sleep(u rawUnit, resp json.RawMessage) error {
+	if u.ID == "" {
 		return b.drift("sleep without unit id")
 	}
-	if err := b.decode(resp, &s); err != nil {
+	var events []struct {
+		During *string `json:"during"`
+		Type   *string `json:"type"`
+	}
+	if err := b.decode(resp, &events); err != nil {
 		return err
 	}
-	if !ownsStages(id) {
+	if u.IsNap == nil {
+		b.warn("sleep_unit_without_is_nap", "fetched by an older sidecar: sync whoop.sleep again")
 		return nil
 	}
-	start, end, bounded := during(s.During)
-	if s.Start != nil && s.End != nil {
-		start, end, bounded = s.Start.UTC(), s.End.UTC(), true
+	zone, err := b.zone(u.TimezoneOffset)
+	if err != nil {
+		return err
 	}
-	if s.Stages == nil && !bounded {
-		return b.drift("sleep without stages or bounds")
-	}
-	var zone normalize.Zone
-	if s.TimezoneOffset != "" {
-		off, err := b.offset(s.TimezoneOffset)
-		if err != nil {
-			return err
+	sess := normalize.SleepSession{Zone: zone, Nap: *u.IsNap, Device: strap.Fingerprint,
+		Key: normalize.Key{RecordType: "sleep", ExternalID: u.ID}}
+	warned := map[string]bool{}
+	for _, e := range events {
+		if e.During == nil || e.Type == nil {
+			return b.drift("stage event without during or type")
 		}
-		zone.OffsetMin = &off
-	}
-	sess := normalize.SleepSession{Zone: zone, Nap: s.Nap, Device: strap.Fingerprint,
-		Key: normalize.Key{RecordType: "sleep", ExternalID: id}}
-	for _, st := range s.Stages {
-		a, z, ok := during(st.During)
+		a, z, ok := during(*e.During)
 		if !ok || !z.After(a) {
-			return b.drift("sleep stage without a valid during")
+			return b.drift("stage event without a valid during")
 		}
-		kind, known := sleepStages[st.Stage]
+		if sess.Start.IsZero() || a.Before(sess.Start) {
+			sess.Start = a
+		}
+		if z.After(sess.End) {
+			sess.End = z
+		}
+		kind, known := sleepStages[strings.ToLower(*e.Type)]
 		switch {
-		case st.Stage == "no_data":
-		case !known:
-			b.warn("unknown_stage", st.Stage)
-		default:
+		case !known && !warned[*e.Type]:
+			warned[*e.Type] = true
+			b.warn("unknown_stage", *e.Type)
+		case kind != "":
 			sess.Stages = append(sess.Stages, normalize.SleepStage{Stage: kind, Start: a, End: z})
-			if sess.Start.IsZero() || a.Before(sess.Start) {
-				sess.Start = a
-			}
-			if z.After(sess.End) {
-				sess.End = z
-			}
 		}
 	}
-	if bounded {
-		sess.Start, sess.End = start, end
-	}
-	if !sess.End.After(sess.Start) {
-		if bounded {
-			return b.drift("sleep ends before it starts")
-		}
-		return nil // not scored yet: no stages
-	}
-	if s.Score != nil && s.Score.StageSummary != nil {
-		ss := s.Score.StageSummary
-		sess.Totals = inlineTotals(inlineSleep{Wake: ss.Awake, Light: ss.Light, Deep: ss.Deep, REM: ss.REM})
-	}
-	b.out.Sleep = append(b.out.Sleep, sess)
-	if s.Score != nil && s.Score.SleepPerformance != nil && !s.Nap {
-		b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: "whoop_sleep_performance",
-			Kind: catalog.Sample, Start: sess.End, Zone: zone, Value: *s.Score.SleepPerformance, Unit: "%",
-			Device: strap.Fingerprint, Key: normalize.Key{RecordType: "sleep", ExternalID: id, Component: "whoop_sleep_performance"}})
+	if len(events) > 0 { // none yet: not scored
+		b.out.Sleep = append(b.out.Sleep, sess)
 	}
 	return nil
+}
+
+// zone is WHOOP's timezone_offset as a record zone; empty means none.
+func (b *builder) zone(offset string) (normalize.Zone, error) {
+	if offset == "" {
+		return normalize.Zone{}, nil
+	}
+	off, err := b.offset(offset)
+	return normalize.Zone{OffsetMin: &off}, err
 }
 
 // offset parses WHOOP's timezone_offset ("-05:00", "-0500" or "Z").
@@ -586,13 +519,9 @@ func (b *builder) workout(raw json.RawMessage) error {
 	case w.Start == nil || w.End == nil || !w.End.After(*w.Start):
 		return b.drift("workout without start and a later end")
 	}
-	var zone normalize.Zone
-	if w.TimezoneOffset != "" {
-		off, err := b.offset(w.TimezoneOffset)
-		if err != nil {
-			return err
-		}
-		zone.OffsetMin = &off
+	zone, err := b.zone(w.TimezoneOffset)
+	if err != nil {
+		return err
 	}
 	provider := w.SportName
 	if provider == "" && w.SportID != nil {

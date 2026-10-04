@@ -1,0 +1,6 @@
+{
+  "synthetic": true,
+  "normalizer": "whoop.sleep",
+  "version": 2,
+  "error": "whoop.sleep: stage event without during or type (shape drift)"
+}

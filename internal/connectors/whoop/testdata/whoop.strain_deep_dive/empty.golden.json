@@ -1,6 +1,6 @@
 {
   "synthetic": true,
-  "normalizer": "garmin.hrv",
+  "normalizer": "whoop.strain_deep_dive",
   "version": 2,
   "output": {}
 }

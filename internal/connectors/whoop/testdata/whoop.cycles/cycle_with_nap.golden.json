@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "whoop.cycles",
-  "version": 1,
+  "version": 2,
   "output": {
     "devices": [
       {
@@ -14,34 +14,59 @@
       {
         "metric": "respiratory_rate",
         "kind": "sample",
-        "start": "2026-03-01T02:45:00Z",
-        "value": 14.8,
+        "start": "2026-03-01T10:20:00Z",
+        "zone": {
+          "offset_min": 180
+        },
+        "value": 15.1,
         "unit": "breaths/min",
         "device": "whoop:strap",
         "key": {
           "record_type": "sleep",
-          "external_id": "10235",
+          "external_id": "00000000-0000-4000-8000-000000000002",
           "component": "respiratory_rate"
         }
       },
       {
         "metric": "respiratory_rate",
         "kind": "sample",
-        "start": "2026-03-01T13:20:00Z",
-        "value": 15.1,
+        "start": "2026-02-28T23:45:00Z",
+        "zone": {
+          "offset_min": 180
+        },
+        "value": 14.8,
         "unit": "breaths/min",
         "device": "whoop:strap",
         "key": {
-          "record_type": "cycle_sleep",
-          "external_id": "100/1",
+          "record_type": "sleep",
+          "external_id": "00000000-0000-4000-8000-000000000001",
           "component": "respiratory_rate"
+        }
+      },
+      {
+        "metric": "whoop_sleep_performance",
+        "kind": "sample",
+        "start": "2026-03-01T03:30:00Z",
+        "zone": {
+          "offset_min": 180
+        },
+        "value": 91,
+        "unit": "%",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "sleep",
+          "external_id": "00000000-0000-4000-8000-000000000001",
+          "component": "whoop_sleep_performance"
         }
       },
       {
         "metric": "whoop_strain",
         "kind": "daily_value",
-        "start": "2026-03-01T06:30:00Z",
-        "end": "2026-03-01T06:30:00Z",
+        "start": "2026-03-01T03:30:00Z",
+        "end": "2026-03-01T03:30:00Z",
+        "zone": {
+          "offset_min": 180
+        },
         "value": 12.4,
         "unit": "index",
         "device": "whoop:strap",
@@ -54,8 +79,11 @@
       {
         "metric": "whoop_recovery",
         "kind": "daily_value",
-        "start": "2026-03-01T06:30:00Z",
-        "end": "2026-03-01T06:30:00Z",
+        "start": "2026-03-01T03:30:00Z",
+        "end": "2026-03-01T03:30:00Z",
+        "zone": {
+          "offset_min": 180
+        },
         "value": 78,
         "unit": "%",
         "device": "whoop:strap",
@@ -68,8 +96,11 @@
       {
         "metric": "resting_heart_rate",
         "kind": "daily_value",
-        "start": "2026-03-01T06:30:00Z",
-        "end": "2026-03-01T06:30:00Z",
+        "start": "2026-03-01T03:30:00Z",
+        "end": "2026-03-01T03:30:00Z",
+        "zone": {
+          "offset_min": 180
+        },
         "value": 52,
         "unit": "bpm",
         "device": "whoop:strap",
@@ -82,34 +113,18 @@
       {
         "metric": "hrv_rmssd_nightly",
         "kind": "daily_value",
-        "start": "2026-03-01T06:30:00Z",
-        "end": "2026-03-01T06:30:00Z",
-        "value": 65.5,
-        "unit": "ms",
+        "start": "2026-03-01T03:30:00Z",
+        "end": "2026-03-01T03:30:00Z",
+        "zone": {
+          "offset_min": 180
+        },
+        "value": 0.0655,
+        "unit": "s",
         "device": "whoop:strap",
         "key": {
           "record_type": "cycle",
           "external_id": "100",
           "component": "hrv_rmssd_nightly"
-        }
-      }
-    ],
-    "sleep": [
-      {
-        "start": "2026-03-01T13:00:00Z",
-        "end": "2026-03-01T13:40:00Z",
-        "nap": true,
-        "totals": {
-          "asleep_s": 2100,
-          "deep_s": 300,
-          "light_s": 1500,
-          "rem_s": 300,
-          "awake_s": 300
-        },
-        "device": "whoop:strap",
-        "key": {
-          "record_type": "cycle_sleep",
-          "external_id": "100/1"
         }
       }
     ]

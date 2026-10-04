@@ -17,8 +17,8 @@ func TestGoldenStreams(t *testing.T) {
 	}
 }
 
-// TestRawOnlyStreams: every normalized stream has exactly one normalizer; the unverified
-// strain deep dive and journal have none, so their payloads stay raw.
+// TestRawOnlyStreams: every stored stream has exactly one normalizer (the strain deep dive's
+// writes nothing); the unsynced journal and the removed steps have none.
 func TestRawOnlyStreams(t *testing.T) {
 	reg, err := normalize.NewRegistry(Normalizers()...)
 	if err != nil {
@@ -29,9 +29,9 @@ func TestRawOnlyStreams(t *testing.T) {
 			t.Errorf("%s: %v", stream, err)
 		}
 	}
-	for _, stream := range []string{"whoop.strain_deep_dive", "whoop.journal"} {
+	for _, stream := range []string{"whoop.journal", "whoop.steps"} {
 		if _, err := reg.For(stream, ""); !errors.Is(err, normalize.ErrNoNormalizer) {
-			t.Errorf("%s must stay raw: %v", stream, err)
+			t.Errorf("%s must have no normalizer: %v", stream, err)
 		}
 	}
 }

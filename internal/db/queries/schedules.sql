@@ -33,5 +33,21 @@ ORDER BY s.next_run_at
 LIMIT @max_rows
 FOR UPDATE OF s SKIP LOCKED;
 
+-- name: RetireStream :exec
+-- A stream its connector no longer declares: stop its schedules, clear its degraded mark, and
+-- leave the connection degraded only while another stream still is (CTEs see the old rows).
+WITH sched AS (
+  UPDATE schedules SET enabled = false WHERE connection_id = @connection_id AND stream = @stream
+), cur AS (
+  UPDATE sync_cursors SET status = 'ok', status_reason = NULL, updated_at = now()
+  WHERE connection_id = @connection_id AND stream = @stream
+)
+UPDATE connections
+SET status = CASE WHEN EXISTS (SELECT 1 FROM sync_cursors s WHERE s.connection_id = @connection_id
+                                 AND s.stream <> @stream AND s.status = 'degraded')
+                  THEN 'degraded' ELSE 'active' END,
+    updated_at = now()
+WHERE id = @connection_id AND status IN ('active', 'degraded');
+
 -- name: AdvanceSchedule :exec
 UPDATE schedules SET next_run_at = @next_run_at WHERE id = @id;

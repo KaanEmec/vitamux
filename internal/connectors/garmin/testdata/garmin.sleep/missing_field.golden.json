@@ -1,6 +1,6 @@
 {
   "synthetic": true,
   "normalizer": "garmin.sleep",
-  "version": 1,
+  "version": 2,
   "error": "garmin.sleep: schema drift: field dailySleepDTO.sleep{Start,End}Timestamp{GMT,Local} missing or retyped"
 }

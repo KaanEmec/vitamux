@@ -191,6 +191,33 @@ func (q *Queries) LockDueSchedules(ctx context.Context, arg LockDueSchedulesPara
 	return items, nil
 }
 
+const retireStream = `-- name: RetireStream :exec
+WITH sched AS (
+  UPDATE schedules SET enabled = false WHERE connection_id = $1 AND stream = $2
+), cur AS (
+  UPDATE sync_cursors SET status = 'ok', status_reason = NULL, updated_at = now()
+  WHERE connection_id = $1 AND stream = $2
+)
+UPDATE connections
+SET status = CASE WHEN EXISTS (SELECT 1 FROM sync_cursors s WHERE s.connection_id = $1
+                                 AND s.stream <> $2 AND s.status = 'degraded')
+                  THEN 'degraded' ELSE 'active' END,
+    updated_at = now()
+WHERE id = $1 AND status IN ('active', 'degraded')
+`
+
+type RetireStreamParams struct {
+	ConnectionID uuid.UUID
+	Stream       string
+}
+
+// A stream its connector no longer declares: stop its schedules, clear its degraded mark, and
+// leave the connection degraded only while another stream still is (CTEs see the old rows).
+func (q *Queries) RetireStream(ctx context.Context, arg RetireStreamParams) error {
+	_, err := q.db.Exec(ctx, retireStream, arg.ConnectionID, arg.Stream)
+	return err
+}
+
 const updateSchedule = `-- name: UpdateSchedule :one
 UPDATE schedules SET run_interval = $1, lookback = $2, enabled = $3,
        next_run_at = CASE WHEN run_interval = $1 THEN next_run_at

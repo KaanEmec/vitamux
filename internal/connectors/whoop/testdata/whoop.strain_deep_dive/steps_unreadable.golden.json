@@ -1,0 +1,13 @@
+{
+  "synthetic": true,
+  "normalizer": "whoop.strain_deep_dive",
+  "version": 2,
+  "output": {
+    "warnings": [
+      {
+        "code": "steps_unreadable",
+        "detail": "CONTRIBUTORS_TILE_STEPS status is not a count"
+      }
+    ]
+  }
+}

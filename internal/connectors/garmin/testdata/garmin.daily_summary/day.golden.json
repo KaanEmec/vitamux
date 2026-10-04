@@ -1,8 +1,15 @@
 {
   "synthetic": true,
   "normalizer": "garmin.daily_summary",
-  "version": 2,
+  "version": 3,
   "output": {
+    "devices": [
+      {
+        "fingerprint": "garmin:wearable",
+        "type": "watch",
+        "manufacturer": "Garmin"
+      }
+    ],
     "measurements": [
       {
         "metric": "steps",
@@ -14,6 +21,7 @@
         },
         "value": 412,
         "unit": "count",
+        "device": "garmin:wearable",
         "key": {
           "record_type": "daily_summary",
           "external_id": "2026-06-15",
@@ -30,6 +38,7 @@
         },
         "value": 35,
         "unit": "kcal",
+        "device": "garmin:wearable",
         "key": {
           "record_type": "daily_summary",
           "external_id": "2026-06-15",
@@ -46,6 +55,7 @@
         },
         "value": 1650,
         "unit": "kcal",
+        "device": "garmin:wearable",
         "key": {
           "record_type": "daily_summary",
           "external_id": "2026-06-15",
@@ -62,6 +72,7 @@
         },
         "value": 2.5,
         "unit": "count",
+        "device": "garmin:wearable",
         "key": {
           "record_type": "daily_summary",
           "external_id": "2026-06-15",

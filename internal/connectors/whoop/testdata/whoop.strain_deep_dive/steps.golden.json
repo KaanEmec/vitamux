@@ -1,0 +1,30 @@
+{
+  "synthetic": true,
+  "normalizer": "whoop.strain_deep_dive",
+  "version": 2,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "whoop:strap",
+        "type": "band",
+        "manufacturer": "WHOOP"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "steps",
+        "kind": "daily_value",
+        "start": "2026-02-28T21:00:00Z",
+        "end": "2026-03-01T21:00:00Z",
+        "value": 7421,
+        "unit": "count",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "day",
+          "external_id": "2026-02-28T21:00:00Z",
+          "component": "steps"
+        }
+      }
+    ]
+  }
+}

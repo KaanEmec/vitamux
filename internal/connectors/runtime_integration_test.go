@@ -600,3 +600,32 @@ func TestEnsureSchedules(t *testing.T) {
 		t.Fatalf("schedules: %+v", got)
 	}
 }
+
+func TestDroppedStreamIsRetired(t *testing.T) {
+	f := &fake{}
+	e := setup(t, f)
+	sc, err := jobs.EnsureSchedule(t.Context(), e.d.Q(), jobs.ScheduleSpec{ConnectionID: e.conn, Stream: "dropped", Mode: ModeIncremental, Interval: time.Hour})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The stream drifted before it was dropped, which left the connection degraded.
+	e.exec(`INSERT INTO sync_cursors (connection_id, stream, status, status_reason) VALUES ($1, 'dropped', 'degraded', 'schema_drift')`, e.conn)
+	e.exec(`UPDATE connections SET status = 'degraded' WHERE id = $1`, e.conn)
+	j := e.drive(t, e.rt, e.enqueue(t, jobs.SyncPayload{ScheduleID: sc.ID, Stream: "dropped"}), 1)
+	if j.Status != "succeeded" {
+		t.Fatalf("job %s, want succeeded", j.Status)
+	}
+	var enabled bool
+	e.scan(`SELECT enabled FROM schedules WHERE id = $1`, []any{sc.ID}, &enabled)
+	if enabled {
+		t.Fatal("schedule of a dropped stream stays enabled")
+	}
+	if s := e.connection(t); s.status != "active" || s.failures != 0 {
+		t.Fatalf("connection %+v, want active without failures", s)
+	}
+	var status string
+	e.scan(`SELECT status FROM sync_cursors WHERE connection_id = $1 AND stream = 'dropped'`, []any{e.conn}, &status)
+	if status != "ok" {
+		t.Fatalf("stream status %q, want ok", status)
+	}
+}

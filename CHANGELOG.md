@@ -2,6 +2,57 @@
 
 Newest first. Before a final release, `scripts/release-notes.sh --changelog vX.Y.Z` adds its section from the Conventional Commits since the previous final tag; edit it and add upgrade notes under "Breaking changes" before tagging. The release workflow refuses a final tag without its section and uses it as the release notes. Release candidates are described on their GitHub releases only.
 
+## v0.2.6 (2026-10-04)
+
+### Connectors
+
+- Garmin wellness data has a device: heart rate, steps, stress, Body Battery, HRV, respiration, SpO2, daily totals, sleep and training. Garmin's responses don't name the wrist device, so these rows had none, matched no device-type group, and were left out of `builtin:steps` and other device-type rules. They now use one stable device, "Garmin wearable", of type `watch`. Scale and blood-pressure readings and activities keep the device Garmin names. Garmin's wellness normalizers are bumped (daily summary and training to 3, the others to 2).
+
+### Breaking changes
+
+None. To attach the device to Garmin data already stored, reprocess every Garmin wellness stream, e.g. `vitamux reprocess --normalizer garmin.steps` and the same for `garmin.heart_rate`, `garmin.daily_summary`, `garmin.stress_body_battery`, `garmin.sleep`, `garmin.hrv`, `garmin.respiration`, `garmin.spo2` and `garmin.training`.
+
+## v0.2.5 (2026-10-04)
+
+### Connectors
+
+- WHOOP daily steps: read from the strain deep dive (`CONTRIBUTORS_TILE_STEPS`) as a daily total per local day. WHOOP no longer serves intraday steps. `whoop.strain_deep_dive` is now normalizer version 2.
+
+### Breaking changes
+
+None. To get daily steps from deep dives already stored: `vitamux reprocess --stream whoop.strain_deep_dive`.
+
+## v0.2.4 (2026-10-04)
+
+### Connectors
+
+- A stream a connector no longer declares (such as `whoop.steps` after v0.2.3) is retired on its next scheduled run. Its schedules stop, its degraded mark is cleared, and the connection returns to active once no other stream is degraded.
+
+### Breaking changes
+
+None.
+
+## v0.2.3 (2026-10-04)
+
+WHOOP now matches the responses of a live account.
+
+### Connectors
+
+- WHOOP cycles and sleep follow WHOOP's real response shapes:
+  - recovery, day strain, resting heart rate, nightly RMSSD, and sleep performance and respiratory rate come from cycles;
+  - sleep sessions and stages come from each sleep's stage events, naps included.
+  - `whoop.cycles` and `whoop.sleep` are now normalizer version 2.
+- WHOOP steps are removed: WHOOP's metrics endpoint now serves heart rate only.
+- WHOOP strain deep dive is stored raw only and no longer shows as a failed normalization.
+- When a connector drops a stream, its schedules are disabled instead of failing the whole connection.
+
+### Breaking changes
+
+None. After upgrading a WHOOP connection made with v0.2.2:
+
+1. Run a `whoop.sleep` backfill over your history. Sleep stored by v0.2.2 lacks the nap flag and normalizes only after it is fetched again.
+2. Run `vitamux reprocess --stream whoop.cycles`, `--stream whoop.sleep` and `--stream whoop.strain_deep_dive`.
+
 ## v0.2.2 (2026-10-04)
 
 Fixes for the Garmin and WHOOP connectors.

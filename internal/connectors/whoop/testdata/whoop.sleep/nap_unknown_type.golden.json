@@ -1,0 +1,47 @@
+{
+  "synthetic": true,
+  "normalizer": "whoop.sleep",
+  "version": 2,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "whoop:strap",
+        "type": "band",
+        "manufacturer": "WHOOP"
+      }
+    ],
+    "sleep": [
+      {
+        "start": "2026-03-01T10:00:00Z",
+        "end": "2026-03-01T10:40:00Z",
+        "zone": {
+          "offset_min": 180
+        },
+        "nap": true,
+        "stages": [
+          {
+            "stage": "awake",
+            "start": "2026-03-01T10:00:00Z",
+            "end": "2026-03-01T10:05:00Z"
+          },
+          {
+            "stage": "light",
+            "start": "2026-03-01T10:20:00Z",
+            "end": "2026-03-01T10:30:00Z"
+          }
+        ],
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "sleep",
+          "external_id": "00000000-0000-4000-8000-000000000002"
+        }
+      }
+    ],
+    "warnings": [
+      {
+        "code": "unknown_stage",
+        "detail": "synthetic_new_stage"
+      }
+    ]
+  }
+}

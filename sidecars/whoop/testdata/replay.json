@@ -72,20 +72,6 @@
           }
         ]
       }
-    },
-    {
-      "path": "/metrics-service/v1/metrics/user/4242",
-      "query": {
-        "name": "steps"
-      },
-      "body": {
-        "values": [
-          {
-            "time": 1789300800000,
-            "data": 12
-          }
-        ]
-      }
     }
   ]
 }

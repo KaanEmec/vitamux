@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "garmin.training",
-  "version": 2,
+  "version": 3,
   "output": {
     "measurements": [
       {
