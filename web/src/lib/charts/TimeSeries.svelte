@@ -89,7 +89,7 @@
 	const defined = (d: Row) => d.y != null;
 	const colour = (s: Series) => (s.source ? sourceClass(s.source) : 'resolved');
 	const dash = (s: Series, k: number, px = Infinity) =>
-		s.style === 'ghost' ? '6 4' : (k > 0 && s.xs.length < px && dashes[k % dashes.length]) || undefined;
+		s.style === 'ghost' ? '6 4' : s.style === 'trend' ? undefined : (k > 0 && s.xs.length < px && dashes[k % dashes.length]) || undefined;
 
 	function valueAt(s: Series, t: number): { v: number | null; j: number } {
 		const j = nearest(s.xs, t);
@@ -169,7 +169,7 @@
 						<Area data={rows[k]} x="x" y0={() => y[0]} y1="y" {defined} fill="url(#{uid}-fill)" class="area" />
 					{/if}
 					{#if s.style !== 'dots'}
-						<Spline data={rows[k]} x="x" y="y" {defined} class={['line', s.style, k > 0 && 'secondary'].filter(Boolean).join(' ')} stroke-dasharray={dash(s, k, f.right - f.left)} />
+						<Spline data={rows[k]} x="x" y="y" {defined} class={['line', s.style, k > 0 && s.style !== 'trend' && 'secondary'].filter(Boolean).join(' ')} stroke-dasharray={dash(s, k, f.right - f.left)} />
 					{/if}
 					{#if (step || s.style === 'dots') && s.xs.length <= markerLimit}
 						{#each s.xs as t, j (j)}

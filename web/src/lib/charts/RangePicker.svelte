@@ -22,8 +22,9 @@
 	let {
 		value = $bindable('3M'),
 		options = ['1D', '1W', '1M', '3M', '1Y', 'All'],
+		labels = {},
 		onchange
-	}: { value?: RangeKey; options?: RangeKey[]; onchange?: (key: RangeKey) => void } = $props();
+	}: { value?: RangeKey; options?: RangeKey[]; /** Text of a preset when it is not the key ("30D"). */ labels?: Partial<Record<RangeKey, string>>; onchange?: (key: RangeKey) => void } = $props();
 </script>
 
-<Segmented label="Range" options={options.map((k) => ({ value: k, label: k }))} bind:value {onchange} />
+<Segmented label="Range" options={options.map((k) => ({ value: k, label: labels[k] ?? k }))} bind:value {onchange} />

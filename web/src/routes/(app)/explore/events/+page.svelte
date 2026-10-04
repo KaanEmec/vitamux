@@ -76,7 +76,7 @@
 
 <svelte:head><title>Events · Vitamux</title></svelte:head>
 
-<ViewHead title="Events" text="Alerts, symptoms and other typed events, one lane per type. A bar spans an event from start to end.">
+<ViewHead title="Events" text="Alerts, symptoms and other typed events, one lane per type. A bar spans an event from start to end." tile={{ code: 'events' }}>
 	<RangePicker bind:value={rangeKey} options={['1M', '3M', '1Y', 'All']} />
 </ViewHead>
 
