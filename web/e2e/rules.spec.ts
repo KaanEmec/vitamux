@@ -123,7 +123,7 @@ test('the catalogue lists every metric with its rule, reason and coverage', asyn
 	const hr = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'heart_rate', exact: true }) });
 	await expect(hr.getByText('Built-in default')).toBeVisible();
 	await expect(hr.getByText('Chest straps are ECG-class, then wrist devices by independent validation.')).toBeVisible();
-	await expect(hr.getByRole('list', { name: 'Source order' }).getByRole('listitem')).toHaveText(['chest_strap', 'apple_watch', 'garmin']);
+	await expect(hr.getByRole('list', { name: 'Source order' }).getByRole('listitem')).toHaveText(['chest_strap', 'Apple Watch', 'garmin']);
 	await expect(hr.getByText('For each 5-minute bucket, use the first source in order with data')).toBeVisible();
 	const rhr = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'resting_heart_rate' }) });
 	await expect(rhr.getByText('Your rule · version 2')).toBeVisible();
