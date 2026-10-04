@@ -90,6 +90,33 @@ func (m Metric) BaseBucket() time.Duration {
 	return 0
 }
 
+// Intraday is the bucket ladder of a metric's day view (J22.26): Default for a 24-hour span,
+// Finest the smallest step a client may zoom to. Values are bucket sizes (30s, 1m, 5m, 15m,
+// 30m) or raw for the stored samples.
+type Intraday struct{ Default, Finest string }
+
+// dense lists the intensive codes sent seconds apart. Other intensive codes arrive a minute or
+// more apart (SpO2, respiration, temperature, HRV, stress, glucose, gait), so their view starts coarser.
+var dense = []string{"heart_rate", "physical_effort", "power_cycling", "power_running", "cadence_cycling",
+	"speed_cycling", "speed_running", "speed_rowing", "speed_paddle",
+	"running_ground_contact_time", "running_stride_length", "running_vertical_oscillation"}
+
+// Intraday returns the day-view ladder by aggregation class; ok is false for metrics measured
+// once a day or night (daily summaries, latest readings, sleep and derived night codes).
+func (m Metric) Intraday() (in Intraday, ok bool) {
+	switch {
+	case m.DerivedFrom != "":
+		return Intraday{}, false
+	case m.Agg == Intensive && slices.Contains(dense, m.Code):
+		return Intraday{Default: "1m", Finest: "raw"}, true
+	case m.Agg == Intensive:
+		return Intraday{Default: "5m", Finest: "raw"}, true
+	case m.Agg == Additive:
+		return Intraday{Default: "30m", Finest: "1m"}, true
+	}
+	return Intraday{}, false
+}
+
 // Windows lists the window kinds a rule may use for this metric.
 func (m Metric) Windows() []Window {
 	if m.DerivedFrom != "" {

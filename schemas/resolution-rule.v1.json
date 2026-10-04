@@ -19,7 +19,7 @@
       "required": ["kind"],
       "properties": {
         "kind": {"enum": ["bucket", "hour", "local_day", "local_night", "sleep_episode", "latest", "reading"]},
-        "size": {"enum": ["1m", "5m", "15m", "30m"]}
+        "size": {"enum": ["30s", "1m", "5m", "15m", "30m"]}
       },
       "if": {"properties": {"kind": {"const": "bucket"}}},
       "then": {"required": ["size"]},

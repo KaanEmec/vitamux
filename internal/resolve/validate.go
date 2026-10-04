@@ -44,7 +44,7 @@ func ValidateSet(rules []*Rule) error { return validateSet(rules, catalog.Lookup
 var (
 	groupIDRe  = regexp.MustCompile(`^[a-z][a-z0-9_]{0,31}$`)
 	providerRe = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
-	bucketSize = map[Duration]bool{"1m": true, "5m": true, "15m": true, "30m": true}
+	bucketSize = map[Duration]bool{"30s": true, "1m": true, "5m": true, "15m": true, "30m": true}
 	flagNames  = map[string]bool{"manual_entry": true, "motion_context": true, "implausible": true,
 		"relayed": true, "migrated_without_raw": true, "prorated_source": true, "calibrating": true}
 	windowKinds = []catalog.Window{catalog.WindowBucket, catalog.WindowHour, catalog.WindowLocalDay,
@@ -210,7 +210,7 @@ func (c *checker) window(r *Rule, m catalog.Metric) {
 	}
 	c.check(m.AllowsWindow(w.Kind), "/window/kind", fmt.Sprintf("window %s is not allowed for %s (%s)", w.Kind, m.Code, m.Agg))
 	if w.Kind == catalog.WindowBucket {
-		c.check(bucketSize[w.Size], "/window/size", "must be 1m, 5m, 15m or 30m")
+		c.check(bucketSize[w.Size], "/window/size", "must be 30s, 1m, 5m, 15m or 30m")
 	} else {
 		c.check(w.Size == "", "/window/size", "only bucket windows take a size")
 	}

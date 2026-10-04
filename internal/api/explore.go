@@ -4,7 +4,10 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"maps"
+	"math"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -264,11 +267,14 @@ func (o *owner) ListEvents(ctx context.Context, req oapi.ListEventsRequestObject
 const (
 	maxHourSeriesDays = 93
 	maxDaySeriesDays  = 3660
+	maxIntradaySpan   = 25 * time.Hour // a local day, DST included
+	maxRawPoints      = 2000
 )
 
 // GetSourceSeries answers each source's own values of a metric per local hour or day from the
-// hourly aggregates, plus per day the source's reported daily values. Nothing is resolved: each
-// source only carries where the rule in effect places it.
+// hourly aggregates, plus per day the source's reported daily values, or within a day per
+// bucket or row from measurements. Nothing is resolved: each source only carries where the rule
+// in effect places it.
 func (o *owner) GetSourceSeries(ctx context.Context, req oapi.GetSourceSeriesRequestObject) (oapi.GetSourceSeriesResponseObject, error) {
 	d, err := o.ownerDB()
 	if err != nil {
@@ -283,49 +289,29 @@ func (o *owner) GetSourceSeries(ctx context.Context, req oapi.GetSourceSeriesReq
 		return nil, problemErr(CodeValidationFailed, "no hourly aggregates", FieldError{Pointer: "/metric", Detail: "sleep and derived codes have none; use /resolved/series"})
 	}
 	grain := cmp.Or(ptrVal(prm.Grain), oapi.GetSourceSeriesParamsGrainDay)
-	maxDays := maxDaySeriesDays
+	span, most := maxIntradaySpan, "a day"
 	switch grain {
 	case oapi.GetSourceSeriesParamsGrainHour:
-		maxDays = maxHourSeriesDays
+		span, most = maxHourSeriesDays*24*time.Hour, fmt.Sprintf("%d days", maxHourSeriesDays)
 	case oapi.GetSourceSeriesParamsGrainDay:
+		span, most = maxDaySeriesDays*24*time.Hour, fmt.Sprintf("%d days", maxDaySeriesDays)
+	case oapi.GetSourceSeriesParamsGrainN30S, oapi.GetSourceSeriesParamsGrainN1M, oapi.GetSourceSeriesParamsGrainN5M,
+		oapi.GetSourceSeriesParamsGrainN15M, oapi.GetSourceSeriesParamsGrainN30M, oapi.GetSourceSeriesParamsGrainRaw:
 	default:
-		return nil, problemErr(CodeValidationFailed, "invalid grain", FieldError{Pointer: "/grain", Detail: "must be hour or day"})
+		return nil, problemErr(CodeValidationFailed, "invalid grain", FieldError{Pointer: "/grain", Detail: "must be 30s, 1m, 5m, 15m, 30m, raw, hour or day"})
 	}
 	switch {
 	case !prm.End.After(prm.Start):
 		return nil, problemErr(CodeValidationFailed, "invalid range", FieldError{Pointer: "/end", Detail: "must be after start"})
-	case prm.End.Sub(prm.Start) > time.Duration(maxDays)*24*time.Hour:
-		return nil, problemErr(CodeValidationFailed, "invalid range", FieldError{Pointer: "/end", Detail: fmt.Sprintf("at most %d days for %s", maxDays, grain)})
+	case prm.End.Sub(prm.Start) > span:
+		return nil, problemErr(CodeValidationFailed, "invalid range", FieldError{Pointer: "/end", Detail: fmt.Sprintf("at most %s for %s", most, grain)})
 	}
 	z, err := o.zones(ctx)
 	if err != nil {
 		return nil, err
 	}
-	fromDate, err := z.localDate(prm.Start)
-	if err != nil {
-		return nil, resolveErr(err)
-	}
-	toDate, err := z.localDate(prm.End.Add(-time.Nanosecond))
-	if err != nil {
-		return nil, resolveErr(err)
-	}
-	user, q, byDay := auth.PrincipalFrom(ctx).UserID, d.Q(), grain == oapi.GetSourceSeriesParamsGrainDay
-	rows, err := q.SourceSeriesAggregates(ctx, dbq.SourceSeriesAggregatesParams{UserID: user, Metric: m.Code, FromAt: prm.Start, ToAt: prm.End, ByDay: byDay})
-	if err != nil {
-		return nil, db.MapErr(err)
-	}
-	var daily []dbq.SourceDailyValuesRow
-	if byDay && slices.Contains(m.Kinds, catalog.DailyValue) {
-		if daily, err = q.SourceDailyValues(ctx, dbq.SourceDailyValuesParams{UserID: user, Metric: m.Code, FromDate: fromDate, ToDate: toDate}); err != nil {
-			return nil, db.MapErr(err)
-		}
-	}
-	behind, err := q.AggregatesPending(ctx, dbq.AggregatesPendingParams{UserID: user, Metric: &m.Code, FromDate: &fromDate, ToDate: &toDate})
-	if err != nil {
-		return nil, db.MapErr(err)
-	}
 	out := oapi.GetSourceSeries200JSONResponse{Metric: m.Code, Unit: m.Unit, Aggregation: oapi.SourceSeriesAggregation(m.Agg),
-		Grain: oapi.SourceSeriesGrain(grain), Timezone: z.name(prm.Start), Behind: behind, Sources: []oapi.SourceSeriesSource{}}
+		Grain: oapi.SourceSeriesGrain(grain), Timezone: z.name(prm.Start), Sources: []oapi.SourceSeriesSource{}}
 	v, err := o.ruleFor(ctx, m.Code)
 	if err != nil {
 		return nil, err
@@ -357,6 +343,35 @@ func (o *owner) GetSourceSeries(ctx context.Context, req oapi.GetSourceSeriesReq
 		idx[key] = len(out.Sources)
 		out.Sources = append(out.Sources, s)
 		return idx[key]
+	}
+	if grain != oapi.GetSourceSeriesParamsGrainHour && grain != oapi.GetSourceSeriesParamsGrainDay {
+		if err := o.intradaySeries(ctx, d, m, prm, z, &out, source); err != nil {
+			return nil, err
+		}
+		return out, nil
+	}
+
+	fromDate, err := z.localDate(prm.Start)
+	if err != nil {
+		return nil, resolveErr(err)
+	}
+	toDate, err := z.localDate(prm.End.Add(-time.Nanosecond))
+	if err != nil {
+		return nil, resolveErr(err)
+	}
+	user, q, byDay := auth.PrincipalFrom(ctx).UserID, d.Q(), grain == oapi.GetSourceSeriesParamsGrainDay
+	rows, err := q.SourceSeriesAggregates(ctx, dbq.SourceSeriesAggregatesParams{UserID: user, Metric: m.Code, FromAt: prm.Start, ToAt: prm.End, ByDay: byDay})
+	if err != nil {
+		return nil, db.MapErr(err)
+	}
+	var daily []dbq.SourceDailyValuesRow
+	if byDay && slices.Contains(m.Kinds, catalog.DailyValue) {
+		if daily, err = q.SourceDailyValues(ctx, dbq.SourceDailyValuesParams{UserID: user, Metric: m.Code, FromDate: fromDate, ToDate: toDate}); err != nil {
+			return nil, db.MapErr(err)
+		}
+	}
+	if out.Behind, err = q.AggregatesPending(ctx, dbq.AggregatesPendingParams{UserID: user, Metric: &m.Code, FromDate: &fromDate, ToDate: &toDate}); err != nil {
+		return nil, db.MapErr(err)
 	}
 	for _, r := range rows {
 		i := source(r.ConnectionID, r.DeviceID, r.OriginID, resolve.Source{Provider: r.Provider, DeviceType: r.DeviceType,
@@ -404,6 +419,160 @@ func (o *owner) GetSourceSeries(ctx context.Context, req oapi.GetSourceSeriesReq
 		slices.SortStableFunc(out.Sources[i].Points, func(a, b oapi.SourcePoint) int { return a.LocalDate.Compare(b.LocalDate.Time) })
 	}
 	return out, nil
+}
+
+// intradaySeries fills out from the metric's sample and interval rows in a span of at most a
+// day: one point per row for raw, paged, else per source and bucket of the grain, aggregated as
+// the hourly aggregates are (additive intervals pro-rated and summed; other values the mean of
+// base-bucket means with min and max). Each source gets its median row spacing.
+func (o *owner) intradaySeries(ctx context.Context, d *db.DB, m catalog.Metric, prm oapi.GetSourceSeriesParams, z *zones,
+	out *oapi.GetSourceSeries200JSONResponse, source func(conn uuid.UUID, dev, origin *uuid.UUID, src resolve.Source) int,
+) error {
+	arg := dbq.SourceSeriesMeasurementsParams{UserID: auth.PrincipalFrom(ctx).UserID, Metric: m.Code, FromAt: prm.Start, ToAt: prm.End, Lim: math.MaxInt32}
+	raw := *prm.Grain == oapi.GetSourceSeriesParamsGrainRaw
+	var p page
+	if raw {
+		bound := prm
+		bound.Limit, bound.Cursor = nil, nil
+		var err error
+		if p, err = o.newPage("source-series", bound, prm.Limit, prm.Cursor); err != nil {
+			return err
+		}
+		if p.limit > maxRawPoints {
+			return problemErr(CodeValidationFailed, "limit is out of range", FieldError{Pointer: "/limit", Detail: fmt.Sprintf("at most %d for raw", maxRawPoints)})
+		}
+		after, err := p.afterKey()
+		if err != nil {
+			return err
+		}
+		if after != nil {
+			if arg.AfterID, err = p.afterInt(); err != nil {
+				return err
+			}
+			arg.AfterAt = *after
+		}
+		arg.Lim = p.lim()
+	} else if m.Agg == catalog.Additive {
+		arg.FromAt = prm.Start.Add(-24 * time.Hour) // intervals that began before the span
+	}
+	rows, err := d.Q().SourceSeriesMeasurements(ctx, arg)
+	if err != nil {
+		return db.MapErr(err)
+	}
+	if raw {
+		var more bool
+		rows, more, out.NextCursor = trim(o, p, rows, func(r dbq.SourceSeriesMeasurementsRow) (time.Time, string) {
+			return r.StartAt, strconv.FormatInt(r.ID, 10)
+		})
+		out.HasMore = &more
+	}
+
+	size := resolve.Duration(*prm.Grain).Std()
+	base := size
+	if b := m.BaseBucket(); b > 0 && b < size {
+		base = b
+	}
+	type cell struct {
+		source int
+		start  time.Time
+	}
+	type sub struct {
+		start  time.Time
+		sum, n float64
+	}
+	type acc struct {
+		n             int
+		sum, min, max float64
+		subs          []sub // base buckets in time order
+	}
+	cells := map[cell]*acc{}
+	add := func(c cell, v float64) *acc {
+		a := cells[c]
+		if a == nil {
+			a = &acc{min: v, max: v}
+			cells[c] = a
+		}
+		a.n++
+		a.min, a.max = min(a.min, v), max(a.max, v)
+		return a
+	}
+	starts := map[int][]time.Time{}
+	for _, r := range rows {
+		i := source(r.ConnectionID, r.DeviceID, r.OriginID, resolve.Source{Provider: r.Provider, DeviceType: r.DeviceType,
+			DeviceModel: r.DeviceModel, DeviceManufacturer: r.DeviceManufacturer, OriginKey: r.OriginKey, OriginName: r.OriginName,
+			Relayed: r.Relayed})
+		if !r.StartAt.Before(prm.Start) {
+			starts[i] = append(starts[i], r.StartAt)
+		}
+		switch {
+		case raw:
+			pt := oapi.SourcePoint{Start: z.ptr(r.StartAt), LocalDate: apiDate(r.LocalDate), N: 1, Value: optNum(r.Value)}
+			if r.EndAt != nil {
+				pt.End = z.ptr(*r.EndAt)
+			}
+			out.Sources[i].Points = append(out.Sources[i].Points, pt)
+		case m.Agg == catalog.Additive:
+			// Pro-rate the interval into the buckets it overlaps; an instant goes whole to its bucket.
+			end, dur := r.StartAt, time.Duration(0)
+			if r.EndAt != nil && r.EndAt.After(r.StartAt) {
+				end, dur = *r.EndAt, r.EndAt.Sub(r.StartAt)
+			}
+			for b := r.StartAt.Truncate(size); b.Equal(r.StartAt.Truncate(size)) || b.Before(end); b = b.Add(size) {
+				if !b.Add(size).After(prm.Start) || !b.Before(prm.End) {
+					continue
+				}
+				share := 1.0
+				if dur > 0 {
+					share = float64(min(end.Sub(b), size)-max(r.StartAt.Sub(b), 0)) / float64(dur)
+				}
+				add(cell{i, b}, r.Value*share).sum += r.Value * share
+			}
+		default:
+			a, k := add(cell{i, r.StartAt.Truncate(size)}, r.Value), r.StartAt.Truncate(base)
+			if len(a.subs) == 0 || !a.subs[len(a.subs)-1].start.Equal(k) {
+				a.subs = append(a.subs, sub{start: k})
+			}
+			a.subs[len(a.subs)-1].sum += r.Value
+			a.subs[len(a.subs)-1].n++
+		}
+	}
+	keys := slices.SortedFunc(maps.Keys(cells), func(a, b cell) int { return cmp.Or(cmp.Compare(a.source, b.source), a.start.Compare(b.start)) })
+	for _, c := range keys {
+		a := cells[c]
+		date, err := z.localDate(c.start)
+		if err != nil {
+			return resolveErr(err)
+		}
+		pt := oapi.SourcePoint{Start: z.ptr(c.start), LocalDate: apiDate(date), N: a.n}
+		if m.Agg == catalog.Additive {
+			pt.Sum = optNum(a.sum)
+		} else {
+			mean := 0.0
+			for _, s := range a.subs {
+				mean += s.sum / s.n
+			}
+			pt.Mean, pt.Min, pt.Max = optNum(mean/float64(len(a.subs))), optNum(a.min), optNum(a.max)
+		}
+		out.Sources[c.source].Points = append(out.Sources[c.source].Points, pt)
+	}
+	for i, s := range starts {
+		out.Sources[i].SpacingS = medianGap(s)
+	}
+	return nil
+}
+
+// medianGap is the median gap in seconds between consecutive instants in time order; nil
+// with fewer than two.
+func medianGap(ts []time.Time) *float64 {
+	if len(ts) < 2 {
+		return nil
+	}
+	gaps := make([]float64, len(ts)-1)
+	for i := range gaps {
+		gaps[i] = ts[i+1].Sub(ts[i]).Seconds()
+	}
+	slices.Sort(gaps)
+	return optNum(gaps[len(gaps)/2])
 }
 
 func optNum(f float64) *float64 {

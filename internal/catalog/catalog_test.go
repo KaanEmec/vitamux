@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -101,6 +102,42 @@ func TestStrategiesAndWindows(t *testing.T) {
 	}
 	if hr.BaseBucket().Minutes() != 5 || bp.BaseBucket() != 0 {
 		t.Error("base bucket: 5 minutes for intensive, none for latest")
+	}
+}
+
+// TestIntraday checks the J22.26 ladder: every stored intensive and additive code has a day
+// view, dense series start at 1 minute, and codes measured once a day or night have none.
+func TestIntraday(t *testing.T) {
+	for _, code := range dense {
+		if m, ok := Lookup(code); !ok || m.Agg != Intensive {
+			t.Errorf("dense code %s is not an intensive catalogue code", code)
+		}
+	}
+	for _, m := range metrics {
+		in, ok := m.Intraday()
+		stored := (m.Agg == Intensive || m.Agg == Additive) && m.DerivedFrom == ""
+		switch {
+		case !stored || strings.HasSuffix(m.Code, "_nightly"):
+			if ok {
+				t.Errorf("%s (%s): measured once a day or night, so no intraday view: %v", m.Code, m.Agg, in)
+			}
+		case m.Agg == Additive && in != Intraday{"30m", "1m"}:
+			t.Errorf("%s: additive ladder %v, want 30m → 1m", m.Code, in)
+		case m.Agg == Intensive && (in.Finest != "raw" || in.Default != "1m" && in.Default != "5m"):
+			t.Errorf("%s: intensive ladder %v, want 1m or 5m → raw", m.Code, in)
+		}
+	}
+	want := map[string]Intraday{
+		"heart_rate": {"1m", "raw"}, "spo2": {"5m", "raw"}, "respiratory_rate": {"5m", "raw"},
+		"hrv_rmssd": {"5m", "raw"}, "garmin_stress": {"5m", "raw"}, "garmin_body_battery": {"5m", "raw"},
+		"skin_temperature": {"5m", "raw"}, "walking_step_length": {"5m", "raw"}, "steps": {"30m", "1m"},
+		"resting_heart_rate": {}, "weight": {}, "sleep_deep": {}, "spo2_nightly": {}, "spo2_night_min": {},
+	}
+	for code, w := range want {
+		m, _ := Lookup(code)
+		if in, ok := m.Intraday(); in != w || ok != (w != Intraday{}) {
+			t.Errorf("%s: intraday %v, want %v", code, in, w)
+		}
 	}
 }
 

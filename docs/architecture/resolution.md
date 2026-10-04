@@ -56,7 +56,7 @@ The provider names are illustrative; rules work for any provider. Coverage and w
 
 | Kind | Definition (in the user's timezone for that date) |
 | --- | --- |
-| `bucket(size)` | 1, 5, 15, or 30 min, aligned to local midnight. DST follows the wall clock. Planned ([J22.26](../plan/E22-ios-app/J22.26-intraday-views.md)): 30 s for intensive metrics. |
+| `bucket(size)` | 30 s, or 1, 5, 15, or 30 min, aligned to local midnight. DST follows the wall clock. Never cached. |
 | `hour` | Local hours. DST days have 23 or 25. |
 | `local_day` | Rows with stored `local_date = D`, so a travel day is not split |
 | `local_night` | Main sleep episode of night D: candidates end in `[D−1 anchor, D anchor)` ([ADR-0009](../adr/0009-sleep-date-night-window.md)) |
@@ -65,6 +65,8 @@ The provider names are illustrative; rules work for any provider. Coverage and w
 | `reading` | One result per measurement group (e.g., each BP reading) |
 
 A window ending in the future returns `partial: true`.
+
+**Day view.** Each metric's catalogue `intraday` gives the bucket for a 24-hour span and the finest step ([metrics](../metrics.md)): dense intensive series (heart rate; workout speed, power and cadence) 1 min → raw rows, other intensive metrics (SpO2, respiration, temperature, HRV, stress, glucose, gait) 5 min → raw, additive metrics 30 min → 1 min. Daily summaries, latest readings, sleep and night codes have none. A bucket series spans at most a day for 30 s and 1 min, a week for 5 min and longer; a source is never drawn finer than its native spacing, which `/sources/series` reports.
 
 ## Within-source aggregation
 

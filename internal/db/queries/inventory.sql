@@ -166,6 +166,27 @@ WHERE a.user_id = @user_id AND a.metric_id = (SELECT id FROM metric_catalog WHER
 GROUP BY CASE WHEN @by_day::boolean THEN NULL ELSE a.hour_start END, a.local_date, a.connection_id, a.device_id, a.origin_id, p.code, d.device_type, d.model, d.manufacturer, o.origin_key, o.name, o.relayed_provider_id
 ORDER BY a.connection_id, a.device_id NULLS FIRST, a.origin_id NULLS FIRST, 1;
 
+-- name: SourceSeriesMeasurements :many
+-- One metric's active sample and interval rows starting from from_at before to_at, with their
+-- source identity, after the (after_at, after_id) cursor, at most lim rows, in time order.
+SELECT x.id, x.kind, x.start_at, x.end_at, x.local_date, x.value,
+  x.connection_id, x.device_id, x.origin_id, p.code AS provider,
+  COALESCE(d.device_type, '')::text AS device_type, COALESCE(d.model, '')::text AS device_model,
+  COALESCE(d.manufacturer, '')::text AS device_manufacturer,
+  COALESCE(o.origin_key, '')::text AS origin_key, COALESCE(o.name, '')::text AS origin_name,
+  (o.relayed_provider_id IS NOT NULL)::boolean AS relayed
+FROM measurements x
+JOIN providers p ON p.id = x.provider_id
+LEFT JOIN devices d ON d.id = x.device_id
+LEFT JOIN data_origins o ON o.id = x.origin_id
+WHERE x.user_id = @user_id AND x.metric_id = (SELECT id FROM metric_catalog WHERE code = @metric::text)
+  AND x.kind IN ('sample', 'interval')
+  AND x.start_at >= @from_at AND x.start_at < @to_at
+  AND x.superseded_at IS NULL AND x.deleted_at IS NULL
+  AND (x.start_at, x.id) > (@after_at::timestamptz, @after_id::bigint)
+ORDER BY x.start_at, x.id
+LIMIT @lim;
+
 -- name: SourceDailyValues :many
 -- One metric's active daily values on the local dates from_date through to_date, the newest per
 -- source and date, with the source identity.

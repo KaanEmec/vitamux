@@ -94,7 +94,7 @@ export const windowKinds: { kind: string; label: string }[] = [
 	{ kind: 'latest', label: 'Latest value' },
 	{ kind: 'reading', label: 'Each reading' }
 ];
-export const bucketSizes = ['1m', '5m', '15m', '30m'];
+export const bucketSizes = ['30s', '1m', '5m', '15m', '30m'];
 
 export function windowLabel(w: Rule['window']): string {
 	const k = windowKinds.find((x) => x.kind === w.kind)?.label ?? w.kind;
