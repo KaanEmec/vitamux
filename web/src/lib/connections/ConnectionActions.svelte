@@ -8,7 +8,7 @@
 	import { api, type Problem, type Schemas } from '../api/client.ts';
 	import Modal from '../components/Modal.svelte';
 	import ProblemAlert from '../components/ProblemAlert.svelte';
-	import StatusIcon from '../components/StatusIcon.svelte';
+	import Notice from '../settings/Notice.svelte';
 	import Button from '../ui/Button.svelte';
 	import AuthPrompt from './AuthPrompt.svelte';
 	import { goToProvider, providerLabel, type Connection } from './connections.ts';
@@ -79,11 +79,10 @@
 
 <ProblemAlert {problem} />
 {#if queued}
-	<p class="done" role="status">
-		<StatusIcon status="ok" />
-		<span>Sync queued: {queued.map((j) => `${streamOf(j)} (${j.status})`).join(', ') || 'nothing to sync'}.</span>
+	<Notice>
+		Sync queued: {queued.map((j) => `${streamOf(j)} (${j.status})`).join(', ') || 'nothing to sync'}.
 		<a href="/connections/{connection.id}?tab=history">See history</a>
-	</p>
+	</Notice>
 {/if}
 
 {#if prompt}
@@ -99,15 +98,8 @@
 		gap: var(--space-2);
 		align-items: center;
 	}
-	.note,
-	.done {
+	.note {
 		margin: var(--space-2) 0 0;
 		font-size: var(--text-sm);
-	}
-	.done {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-2);
-		align-items: center;
 	}
 </style>

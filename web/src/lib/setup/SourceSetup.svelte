@@ -87,8 +87,8 @@
 			{#each providers as p (p.code)}
 				{@const open = choosable(p)}
 				{@const st = states[p.setup_state]}
-				<div class={['choice', !open && 'off']}>
-					<label>
+				<div class="option-card choice">
+					<label class="check">
 						<input type="radio" name="provider" value={p.code} bind:group={provider} disabled={!open} aria-describedby="{uid}-{p.code}" />
 						<Monogram provider={p.code} />
 						<span class="name">{p.name}</span>
@@ -141,33 +141,19 @@
 		gap: var(--space-3);
 		align-items: start;
 		margin: 0 0 var(--space-4);
-		padding: 0;
-		border: 0;
 	}
 	.choice {
-		padding: var(--space-3);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-md);
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0;
+		cursor: default;
 	}
-	.choice:has(input:checked) {
-		background: var(--color-accent-soft);
-		border-color: var(--color-accent);
-	}
-	.choice:has(input:focus-visible) {
-		outline: 2px solid var(--color-focus);
-		outline-offset: 2px;
-	}
-	.choice label {
-		display: flex;
-		gap: var(--space-3);
+	.choice .check {
 		align-items: center;
-		cursor: pointer;
+		gap: var(--space-3);
 	}
-	.off label {
-		cursor: not-allowed;
-	}
-	.off :global(.mono) {
-		opacity: 0.6;
+	.choice .check > input {
+		margin-top: 0;
 	}
 	.name {
 		flex: 1;
@@ -187,8 +173,5 @@
 		gap: var(--space-2);
 		align-items: center;
 		font-weight: 500;
-	}
-	.state :global(.status-icon) {
-		flex: none;
 	}
 </style>

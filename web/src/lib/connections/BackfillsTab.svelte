@@ -7,6 +7,7 @@
 	import { api, type Problem, type Schemas } from '../api/client.ts';
 	import ProblemAlert from '../components/ProblemAlert.svelte';
 	import StatusIcon, { type Status } from '../components/StatusIcon.svelte';
+	import Notice from '../settings/Notice.svelte';
 	import Button from '../ui/Button.svelte';
 	import BackfillDialog from './BackfillDialog.svelte';
 	import DataTable from './DataTable.svelte';
@@ -91,7 +92,7 @@
 </div>
 
 <ProblemAlert {problem} />
-{#if message}<p class="done" role="status"><StatusIcon status="ok" /> {message}</p>{/if}
+{#if message}<Notice>{message}</Notice>{/if}
 
 {#if backfills === null}
 	<p class="muted" role="status">Loading backfills…</p>
@@ -166,7 +167,6 @@
 
 <style>
 	.bar,
-	.done,
 	.actions {
 		display: flex;
 		flex-wrap: wrap;
