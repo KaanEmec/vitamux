@@ -8,7 +8,7 @@
 </script>
 
 <div class="empty">
-	<Icon d={icon} size={22} />
+	<span class="tile"><Icon d={icon} size={20} /></span>
 	<p class="title">{title}</p>
 	{#if text}<p class="muted">{text}</p>{/if}
 	{#if children}<div class="actions">{@render children()}</div>{/if}
@@ -20,11 +20,24 @@
 		flex-direction: column;
 		align-items: center;
 		gap: var(--space-2);
-		padding: var(--space-5);
+		padding: var(--space-6) var(--space-5);
 		text-align: center;
 		color: var(--color-text-muted);
+		background: var(--color-inset);
 		border: 1px dashed var(--color-border-strong);
 		border-radius: var(--radius-lg);
+	}
+	.tile {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: var(--tile-size-lg);
+		height: var(--tile-size-lg);
+		margin-bottom: var(--space-1);
+		color: var(--color-accent);
+		background: var(--color-accent-soft);
+		border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
+		border-radius: var(--radius-md);
 	}
 	p {
 		margin: 0;

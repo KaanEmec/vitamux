@@ -121,7 +121,8 @@
 		box-shadow: var(--shadow-2);
 	}
 	dialog::backdrop {
-		background: rgb(0 0 0 / 0.5);
+		background: var(--color-backdrop);
+		backdrop-filter: blur(6px);
 	}
 	.search {
 		display: flex;
@@ -139,6 +140,10 @@
 		background: transparent;
 		border: 0;
 		outline: none;
+	}
+	/* The palette's search row is borderless; the global field focus glow does not apply. */
+	.search input:focus {
+		box-shadow: none;
 	}
 	kbd {
 		padding: 1px var(--space-2);

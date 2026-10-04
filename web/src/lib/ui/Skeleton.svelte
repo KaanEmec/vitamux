@@ -7,7 +7,7 @@
 
 <style>
 	.skeleton {
-		background: var(--color-surface-2);
+		background: linear-gradient(90deg, var(--color-surface-2) 25%, var(--color-selected) 50%, var(--color-surface-2) 75%) 0 0 / 200% 100%;
 		border-radius: var(--radius-sm);
 	}
 	.line {
@@ -23,12 +23,15 @@
 	}
 	@media (prefers-reduced-motion: no-preference) {
 		.skeleton {
-			animation: pulse 1.4s ease-in-out infinite;
+			animation: shimmer 1.6s ease-in-out infinite;
 		}
 	}
-	@keyframes pulse {
-		50% {
-			opacity: 0.55;
+	@keyframes shimmer {
+		from {
+			background-position: 100% 0;
+		}
+		to {
+			background-position: -100% 0;
 		}
 	}
 </style>
