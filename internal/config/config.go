@@ -121,7 +121,7 @@ func load(env Lookup, readFile ReadFile) (Config, error) {
 	} else {
 		c.BackupKeep = n
 	}
-	for _, p := range strings.Split(get("PREVIOUS_MASTER_KEY_FILES", ""), ",") {
+	for p := range strings.SplitSeq(get("PREVIOUS_MASTER_KEY_FILES", ""), ",") {
 		if p = strings.TrimSpace(p); p != "" {
 			c.PreviousMasterKeyFiles = append(c.PreviousMasterKeyFiles, p)
 		}
@@ -147,7 +147,7 @@ func load(env Lookup, readFile ReadFile) (Config, error) {
 	}
 	c.PublicURL = pub
 
-	for _, part := range strings.Split(get("TRUSTED_PROXIES", ""), ",") {
+	for part := range strings.SplitSeq(get("TRUSTED_PROXIES", ""), ",") {
 		if part = strings.TrimSpace(part); part == "" {
 			continue
 		}

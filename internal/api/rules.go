@@ -183,7 +183,7 @@ func overrideBody(r resolve.Override) oapi.Override {
 }
 
 func overrideOf(row dbq.ManualOverride) resolve.Override {
-	o := resolve.Override{ID: row.ID, Scope: resolve.Scope{Metric: row.Metric, Kind: catalog.Window(row.WindowKind), Key: row.WindowKey, LocalDate: row.LocalDate},
+	o := resolve.Override{ID: row.ID, Metric: row.Metric, Kind: catalog.Window(row.WindowKind), Key: row.WindowKey, LocalDate: row.LocalDate,
 		Action: resolve.OverrideAction(row.Action), CreatedBy: row.CreatedBy, CreatedAt: row.CreatedAt, RevokedAt: row.RevokedAt}
 	o.InputID, o.Group, o.Value, o.Unit, o.Note, o.RevokedBy = ptrVal(row.InputID), ptrVal(row.SourceGroup), ptrVal(row.Value), ptrVal(row.Unit), ptrVal(row.Note), ptrVal(row.RevokedBy)
 	return o
@@ -225,7 +225,7 @@ func (o *owner) CreateOverride(ctx context.Context, req oapi.CreateOverrideReque
 		return nil, err
 	}
 	b := req.Body
-	n := resolve.NewOverride{Scope: resolve.Scope{Metric: b.Metric, Kind: catalog.Window(b.Window.Kind), Key: b.Window.Key, LocalDate: b.Window.LocalDate.Time},
+	n := resolve.NewOverride{Metric: b.Metric, Kind: catalog.Window(b.Window.Kind), Key: b.Window.Key, LocalDate: b.Window.LocalDate.Time,
 		Action: resolve.OverrideAction(b.Action), Group: ptrVal(b.Group), Value: ptrVal(b.Value), Unit: ptrVal(b.Unit), Note: ptrVal(b.Note)}
 	if b.InputID != nil {
 		id, err := strconv.ParseInt(*b.InputID, 10, 64)

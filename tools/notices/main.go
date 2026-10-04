@@ -22,6 +22,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -117,7 +118,7 @@ func goDeps() ([]dep, error) {
 	root, _ := os.Getwd()
 
 	byPath := map[string]*dep{}
-	for _, line := range strings.Split(stdout.String(), "\n") {
+	for line := range strings.SplitSeq(stdout.String(), "\n") {
 		path, lic, ok := strings.Cut(strings.TrimSpace(line), "|")
 		if !ok || strings.HasPrefix(path, root+string(filepath.Separator)) { // skip this repository
 			continue
@@ -173,8 +174,8 @@ func npmDeps() (all, withText []dep, err error) {
 		if key == "" {
 			continue
 		}
-		i := strings.LastIndex(key, "node_modules/")
-		d := dep{name: key[i+len("node_modules/"):], version: p.Version, licenses: []string{"UNKNOWN"}}
+		_, name, _ := strings.CutLast(key, "node_modules/")
+		d := dep{name: name, version: p.Version, licenses: []string{"UNKNOWN"}}
 		var s string
 		if json.Unmarshal(p.License, &s) == nil && s != "" {
 			d.licenses = []string{s}
@@ -211,10 +212,8 @@ func licenseFile(dir string) (string, error) {
 }
 
 func appendUnique(s []string, v string) []string {
-	for _, x := range s {
-		if x == v {
-			return s
-		}
+	if slices.Contains(s, v) {
+		return s
 	}
 	return append(s, v)
 }
@@ -233,7 +232,7 @@ func sortDeps(d []dep) {
 // flattened, which is exact for the common (A OR B) and A AND B shapes.
 func disallowed(groups ...[]dep) []string {
 	allowed := map[string]bool{}
-	for _, l := range strings.Split(allowedFile, "\n") {
+	for l := range strings.SplitSeq(allowedFile, "\n") {
 		if l = strings.TrimSpace(l); l != "" && !strings.HasPrefix(l, "#") {
 			allowed[l] = true
 		}
@@ -253,9 +252,9 @@ func disallowed(groups ...[]dep) []string {
 
 func exprAllowed(expr string, allowed map[string]bool) bool {
 	flat := strings.NewReplacer("(", " ", ")", " ").Replace(expr)
-	for _, and := range strings.Split(flat, " AND ") {
+	for and := range strings.SplitSeq(flat, " AND ") {
 		ok := false
-		for _, or := range strings.Split(and, " OR ") {
+		for or := range strings.SplitSeq(and, " OR ") {
 			ok = ok || allowed[strings.TrimSpace(or)]
 		}
 		if !ok {

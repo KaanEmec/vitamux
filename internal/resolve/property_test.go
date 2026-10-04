@@ -21,7 +21,7 @@ func TestPropertyDensityInvariance(t *testing.T) {
 		r := &Rule{Schema: SchemaV1, Metric: "heart_rate", Window: RuleWindow{Kind: catalog.WindowHour}, Strategy: Strategy{Op: op},
 			Groups: []Group{{ID: "watch", Match: []Selector{{DeviceType: "watch", Provider: "apple_health"}}},
 				{ID: "ring", Match: []Selector{{DeviceType: "ring"}}}, {ID: "garmin", Match: []Selector{{Provider: "garmin"}}}},
-			Quality: &Quality{MinCoverage: biRatio(rng.Float64() * 0.6)}}
+			Quality: &Quality{MinCoverage: new(rng.Float64() * 0.6)}}
 		var in []Input
 		for _, src := range srcs {
 			for range rng.IntN(60) {
@@ -83,7 +83,7 @@ func TestPropertyEveryGroupListed(t *testing.T) {
 			metric, kind = "heart_rate", catalog.WindowHour
 		}
 		r := &Rule{Schema: SchemaV1, Metric: metric, Window: RuleWindow{Kind: kind}, Strategy: Strategy{Op: op, MinSources: rng.IntN(3)},
-			Quality: &Quality{MinCoverage: biRatio(rng.Float64() * 0.3)}}
+			Quality: &Quality{MinCoverage: new(rng.Float64() * 0.3)}}
 		for g := range 1 + rng.IntN(4) {
 			r.Groups = append(r.Groups, Group{ID: string(rune('a' + g)), Match: []Selector{sels[rng.IntN(len(sels))]}})
 		}

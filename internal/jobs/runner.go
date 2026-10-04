@@ -256,19 +256,19 @@ func (r *Runner) finish(ctx context.Context, j Job, herr error, shuttingDown boo
 			run.Outcome = "succeeded"
 			err = fence(q.CompleteJob(ctx, dbq.CompleteJobParams{ID: j.ID, Owner: j.lease.owner, Attempt: j.Attempt}))
 		case shuttingDown:
-			run.Outcome, run.ErrorClass = "rescheduled", ptr("shutdown")
+			run.Outcome, run.ErrorClass = "rescheduled", new("shutdown")
 			err = fence(q.RequeueJob(ctx, dbq.RequeueJobParams{ID: j.ID, Owner: j.lease.owner, Attempt: j.Attempt}))
 		case errors.As(herr, &resched):
 			run.Outcome = "rescheduled"
 			if resched.cause != nil {
-				run.ErrorClass, run.ErrorMessage = ptr(errorClass(resched.cause)), ptr(errorMessage(resched.cause))
+				run.ErrorClass, run.ErrorMessage = new(errorClass(resched.cause)), new(errorMessage(resched.cause))
 			}
 			err = fence(q.RequeueJob(ctx, dbq.RequeueJobParams{RunAt: &resched.at, ID: j.ID, Owner: j.lease.owner, Attempt: j.Attempt}))
 		case errors.As(herr, &perm) || j.Attempt >= j.MaxAttempts:
-			run.Outcome, run.ErrorClass, run.ErrorMessage = "failed", ptr(errorClass(herr)), ptr(errorMessage(herr))
+			run.Outcome, run.ErrorClass, run.ErrorMessage = "failed", new(errorClass(herr)), new(errorMessage(herr))
 			err = fence(q.KillJob(ctx, dbq.KillJobParams{ID: j.ID, Owner: j.lease.owner, Attempt: j.Attempt}))
 		default:
-			run.Outcome, run.ErrorClass, run.ErrorMessage = "failed", ptr(errorClass(herr)), ptr(errorMessage(herr))
+			run.Outcome, run.ErrorClass, run.ErrorMessage = "failed", new(errorClass(herr)), new(errorMessage(herr))
 			err = fence(q.RetryJob(ctx, dbq.RetryJobParams{
 				Delay: RetryDelay(j.Attempt, r.cfg.RetryBase, r.cfg.RetryMax), ID: j.ID, Owner: j.lease.owner, Attempt: j.Attempt,
 			}))
@@ -410,8 +410,6 @@ func defaultOwner() string {
 	_, _ = rand.Read(b)
 	return fmt.Sprintf("%s:%d:%s", host, os.Getpid(), hex.EncodeToString(b))
 }
-
-func ptr[T any](v T) *T { return &v }
 
 func deref(s *string) string {
 	if s == nil {

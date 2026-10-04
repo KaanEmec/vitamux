@@ -36,7 +36,7 @@ func resolveCmd(args []string, stdout, stderr io.Writer) int {
 	n := fs.Int("windows", 1000, "random (metric, date) pairs to compare")
 	fromS := fs.String("from", today.AddDate(0, 0, -365).Format(time.DateOnly), "first local date")
 	toS := fs.String("to", today.AddDate(0, 0, -1).Format(time.DateOnly), "last local date")
-	seed := fs.Uint64("seed", uint64(time.Now().UnixNano()), "random seed") //nolint:gosec // a seed, not a size
+	seed := fs.Uint64("seed", uint64(time.Now().UnixNano()), "random seed")
 	if err := fs.Parse(args[1:]); err != nil {
 		return 2
 	}

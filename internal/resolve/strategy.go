@@ -364,7 +364,7 @@ func (r *Rule) Select(w Window, gvs []GroupValue, opt Options) (WindowResult, er
 			break
 		}
 		sel := valid[0]
-		for pos := 0; pos < sel; pos++ {
+		for pos := range sel {
 			warn(WarnPreferredUnavailable, groups[pos].ID)
 		}
 		st := ResultDirect

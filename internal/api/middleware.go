@@ -12,6 +12,7 @@ import (
 	"net/netip"
 	"regexp"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"time"
 )
@@ -133,8 +134,8 @@ func clientOf(r *http.Request, trusted []netip.Prefix) (netip.Addr, string) {
 	}
 	client := peer
 	hops := strings.Split(strings.Join(r.Header.Values("X-Forwarded-For"), ","), ",")
-	for i := len(hops) - 1; i >= 0; i-- {
-		a, err := netip.ParseAddr(strings.TrimSpace(hops[i]))
+	for _, hop := range slices.Backward(hops) {
+		a, err := netip.ParseAddr(strings.TrimSpace(hop))
 		if err != nil {
 			break // garbage from a proxy: keep the last address we could vouch for
 		}

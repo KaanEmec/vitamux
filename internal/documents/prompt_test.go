@@ -14,7 +14,7 @@ var forbiddenRe = regexp.MustCompile(`(?i)\b(ab)?normal|\b(un)?healthy|\brisk|\b
 
 func TestPromptHasNoInterpretiveLanguage(t *testing.T) {
 	for _, path := range []string{"../../prompts/lab-extraction/v1.md", "../../schemas/lab-extraction.v1.json"} {
-		b, err := os.ReadFile(path) //nolint:gosec // fixed repository paths
+		b, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -9,9 +9,14 @@ linters:
     - exhaustive
     - gosec
     - misspell
+    - modernize
     - noctx
+    - nolintlint
     - sqlclosecheck
   settings:
+    nolintlint:
+      require-explanation: true
+      require-specific: true
     exhaustive:
       default-signifies-exhaustive: true
     depguard:

@@ -22,7 +22,7 @@ func TestLabUICopyHasNoInterpretiveLanguage(t *testing.T) {
 			if err != nil || d.IsDir() {
 				return err
 			}
-			b, err := os.ReadFile(path) //nolint:gosec // repository files under fixed roots
+			b, err := os.ReadFile(path)
 			if err != nil {
 				return err
 			}

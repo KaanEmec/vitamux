@@ -42,7 +42,7 @@ func TestGroundTruthValidates(t *testing.T) {
 		t.Fatalf("want at least 10 ground truth files in %s, got %d (%v)", labFixtures, len(files), err)
 	}
 	for _, f := range files {
-		doc, err := os.ReadFile(f) //nolint:gosec // repository fixtures
+		doc, err := os.ReadFile(f)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -119,8 +119,7 @@ func TestExtractionValidatorMatchesSchema(t *testing.T) {
 			t.Errorf("%s: JSON Schema accepted it", name)
 		}
 		_, err := DecodeExtraction(doc)
-		var xe *ExtractionError
-		if !errors.As(err, &xe) {
+		if _, ok := errors.AsType[*ExtractionError](err); !ok {
 			t.Errorf("%s: DecodeExtraction returned %v, want an ExtractionError", name, err)
 		}
 	}

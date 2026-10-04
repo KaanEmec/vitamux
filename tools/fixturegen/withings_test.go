@@ -31,7 +31,7 @@ type wpage struct {
 
 func readPage(t *testing.T, path string) wpage {
 	t.Helper()
-	b, err := os.ReadFile(path) //nolint:gosec // test output dir
+	b, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,8 +61,8 @@ func TestWithingsPages(t *testing.T) {
 	}
 	ids, offset := map[int64]bool{}, 0
 	for i, path := range pages {
-		other, _ := os.ReadFile(filepath.Join(b, "withings", filepath.Base(path))) //nolint:gosec // test output dir
-		mine, _ := os.ReadFile(path)                                               //nolint:gosec // test output dir
+		other, _ := os.ReadFile(filepath.Join(b, "withings", filepath.Base(path)))
+		mine, _ := os.ReadFile(path)
 		if !bytes.Equal(mine, other) {
 			t.Fatalf("%s differs between runs", filepath.Base(path))
 		}

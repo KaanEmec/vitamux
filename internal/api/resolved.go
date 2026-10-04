@@ -1027,7 +1027,7 @@ func (o *owner) drillProvenance(ctx context.Context, srcs []resolve.SourceView) 
 	var p dbq.ResolvedSourceProvenanceParams
 	for i, s := range srcs {
 		for _, id := range s.RecordRefs {
-			p.Ids, p.Srcs = append(p.Ids, id), append(p.Srcs, int32(i)) //nolint:gosec // a window has few sources
+			p.Ids, p.Srcs = append(p.Ids, id), append(p.Srcs, int32(i))
 		}
 	}
 	if len(p.Ids) == 0 {

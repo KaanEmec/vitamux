@@ -129,8 +129,7 @@ func TestBatchValidatorMatchesSchema(t *testing.T) {
 			t.Errorf("%s: JSON Schema accepted it", name)
 		}
 		_, err := DecodeBatch(doc)
-		var ve *ValidationError
-		if !errors.As(err, &ve) {
+		if _, ok := errors.AsType[*ValidationError](err); !ok {
 			t.Errorf("%s: DecodeBatch returned %v, want a ValidationError", name, err)
 		}
 	}

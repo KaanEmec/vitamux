@@ -2,6 +2,7 @@ package normalize
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -68,7 +69,7 @@ func RecomputeLocalDates(ctx context.Context, d *db.DB, userID uuid.UUID, r Rang
 					return err
 				}
 				// Both the day the row leaves and the day it joins need new resolved values.
-				all := append(dates[:len(dates):len(dates)], dates0(ch)...)
+				all := append(slices.Clip(dates), dates0(ch)...)
 				return q.MarkLocalDatesDirty(ctx, dbq.MarkLocalDatesDirtyParams{UserID: userID, MetricID: id, Dates: all})
 			},
 		})

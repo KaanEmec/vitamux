@@ -200,7 +200,7 @@ func generate(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	_, file, _, _ := runtime.Caller(0)
-	cmd := exec.CommandContext(t.Context(), "go", "run", "./tools/fixturegen", "-out", dir, "-start", "2025-02-15", "-days", "5", "-hr-step", "60") //nolint:gosec // fixed tool path
+	cmd := exec.CommandContext(t.Context(), "go", "run", "./tools/fixturegen", "-out", dir, "-start", "2025-02-15", "-days", "5", "-hr-step", "60")
 	cmd.Dir = filepath.Join(filepath.Dir(file), "..", "..")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("fixturegen: %v\n%s", err, out)
@@ -265,7 +265,7 @@ func fileSums(t *testing.T, dir string) map[string]string {
 		if err != nil || e.IsDir() {
 			return err
 		}
-		b, err := os.ReadFile(p) //nolint:gosec // test temp dir
+		b, err := os.ReadFile(p)
 		sum := sha256.Sum256(b)
 		rel, _ := filepath.Rel(dir, p)
 		out[rel] = hex.EncodeToString(sum[:])

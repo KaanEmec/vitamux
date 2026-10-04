@@ -30,8 +30,8 @@ func TestLabPDFMatchesCommitted(t *testing.T) {
 		t.Fatalf("generated %d truth files, %d committed", len(got), len(want))
 	}
 	for _, g := range got {
-		a, _ := os.ReadFile(g)                                               //nolint:gosec // test output dir
-		b, err := os.ReadFile(filepath.Join(committedLab, filepath.Base(g))) //nolint:gosec // repository fixture
+		a, _ := os.ReadFile(g)
+		b, err := os.ReadFile(filepath.Join(committedLab, filepath.Base(g)))
 		if err != nil || !bytes.Equal(a, b) {
 			t.Errorf("%s differs from the committed copy (%v); regenerate with: go run ./tools/fixturegen labpdf", filepath.Base(g), err)
 		}
@@ -42,8 +42,8 @@ func TestLabPDFMatchesCommitted(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, name := range []string{"lab-01.pdf", "lab-10.pdf"} {
-		a, _ := os.ReadFile(filepath.Join(out, name))  //nolint:gosec // test output dir
-		b, _ := os.ReadFile(filepath.Join(out2, name)) //nolint:gosec // test output dir
+		a, _ := os.ReadFile(filepath.Join(out, name))
+		b, _ := os.ReadFile(filepath.Join(out2, name))
 		if !bytes.Equal(a, b) {
 			t.Errorf("%s: two runs differ", name)
 		}
@@ -52,8 +52,8 @@ func TestLabPDFMatchesCommitted(t *testing.T) {
 	if err := generateLabPDFs(out3, truth3, 7); err != nil {
 		t.Fatal(err)
 	}
-	a, _ := os.ReadFile(filepath.Join(truth, "lab-01.json"))  //nolint:gosec // test output dir
-	b, _ := os.ReadFile(filepath.Join(truth3, "lab-01.json")) //nolint:gosec // test output dir
+	a, _ := os.ReadFile(filepath.Join(truth, "lab-01.json"))
+	b, _ := os.ReadFile(filepath.Join(truth3, "lab-01.json"))
 	if bytes.Equal(a, b) {
 		t.Error("different seeds gave identical ground truth")
 	}
@@ -74,7 +74,7 @@ func loadLabManifest(t *testing.T) labManifest {
 
 func loadTruth(t *testing.T, id string) *documents.Extraction {
 	t.Helper()
-	b, err := os.ReadFile(filepath.Join(committedLab, id+".json")) //nolint:gosec // repository fixture
+	b, err := os.ReadFile(filepath.Join(committedLab, id+".json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +154,7 @@ func TestLabPDFStructure(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, r := range loadLabManifest(t).Reports {
-		pdf, err := os.ReadFile(filepath.Join(out, r.PDF)) //nolint:gosec // test output dir
+		pdf, err := os.ReadFile(filepath.Join(out, r.PDF))
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -65,7 +65,7 @@ func repoRoot() string {
 func generate(t *testing.T, args ...string) string {
 	t.Helper()
 	dir := t.TempDir()
-	cmd := exec.CommandContext(t.Context(), "go", append([]string{"run", "./tools/fixturegen", "-out", dir}, args...)...) //nolint:gosec // fixed tool path
+	cmd := exec.CommandContext(t.Context(), "go", append([]string{"run", "./tools/fixturegen", "-out", dir}, args...)...)
 	cmd.Dir = repoRoot()
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("fixturegen: %v\n%s", err, out)
@@ -81,7 +81,7 @@ func loadDataset(t *testing.T, dir string) *dataset {
 		Start string
 		Days  int
 	}
-	b, err := os.ReadFile(filepath.Join(dir, "manifest.json")) //nolint:gosec // dataset dir
+	b, err := os.ReadFile(filepath.Join(dir, "manifest.json"))
 	if err != nil {
 		t.Fatal(err)
 	}

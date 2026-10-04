@@ -69,7 +69,7 @@ type link struct {
 
 // links returns the link targets of a Markdown file outside code blocks and code spans.
 func links(t *testing.T, path string) []link {
-	b, err := os.ReadFile(path) //nolint:gosec // repository files
+	b, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,14 +148,14 @@ func check(file, target string, cache map[string]map[string]bool) string {
 
 // anchorsOf returns the anchors GitHub generates for a file's headings, plus explicit HTML ones.
 func anchorsOf(path string) map[string]bool {
-	b, err := os.ReadFile(path) //nolint:gosec // repository files
+	b, err := os.ReadFile(path)
 	out := map[string]bool{}
 	if err != nil {
 		return out
 	}
 	count := map[string]int{}
 	fence := ""
-	for _, line := range strings.Split(string(b), "\n") {
+	for line := range strings.SplitSeq(string(b), "\n") {
 		if f := fenceOf(line); f != "" && (fence == "" || strings.HasPrefix(f, fence)) {
 			if fence == "" {
 				fence = f

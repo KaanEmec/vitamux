@@ -205,7 +205,7 @@ func exNocturnalRule() *Rule {
 	return &Rule{Schema: SchemaV1, Metric: "resting_heart_rate_nocturnal", Window: RuleWindow{Kind: catalog.WindowLocalNight},
 		Groups:       []Group{{ID: "apple_watch", Match: []Selector{{DeviceType: "watch"}}}, {ID: "ring", Match: []Selector{{DeviceType: "ring"}}}},
 		WithinSource: &WithinSource{Statistic: StatMinRollingMean, Span: "30m"},
-		Strategy:     Strategy{Op: OpFirstAvailable}, Quality: &Quality{MinCoverage: biRatio(0.7)},
+		Strategy:     Strategy{Op: OpFirstAvailable}, Quality: &Quality{MinCoverage: new(0.7)},
 		Contexts: map[Context][]string{ContextSleep: {"ring"}}}
 }
 

@@ -45,7 +45,7 @@ func TestFixtureGroundTruthIsClean(t *testing.T) {
 	allowed := []string{WarnUnknownAnalyte, WarnDuplicateInRun}
 	for i := 1; i <= 12; i++ {
 		id := "lab-" + []string{"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"}[i-1]
-		pdf, err := os.ReadFile(filepath.Join(dir, id+".pdf")) //nolint:gosec // test output dir
+		pdf, err := os.ReadFile(filepath.Join(dir, id+".pdf"))
 		if err != nil {
 			t.Fatal(err)
 		}

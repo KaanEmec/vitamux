@@ -56,7 +56,7 @@ func each(t *testing.T, fn func(t *testing.T, path string, f file, raw []byte)) 
 
 func load(t *testing.T, path string) (file, []byte) {
 	t.Helper()
-	raw, err := os.ReadFile(path) //nolint:gosec // fixed repository paths
+	raw, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}

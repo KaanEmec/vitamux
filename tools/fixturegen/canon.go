@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -286,7 +287,7 @@ func (c *canonicalWriter) Revision(r Revision) error {
 
 // Close flushes every file and writes manifest.json.
 func (c *canonicalWriter) Close() error {
-	counts := ""
+	var counts strings.Builder
 	for i, name := range c.order {
 		n := c.files[name]
 		if err := n.w.Flush(); err != nil {
@@ -296,11 +297,11 @@ func (c *canonicalWriter) Close() error {
 			return err
 		}
 		if i > 0 {
-			counts += ","
+			counts.WriteString(",")
 		}
-		counts += fmt.Sprintf("\n    %q: %d", name, n.n)
+		fmt.Fprintf(&counts, "\n    %q: %d", name, n.n)
 	}
 	manifest := fmt.Sprintf("{\n  \"synthetic\": true,\n  \"schema\": %q,\n  \"seed\": %d,\n  \"start\": %q,\n  \"days\": %d,\n  \"records\": {%s\n  }\n}\n",
-		schema, c.hdr.Seed, c.hdr.Start, c.hdr.Days, counts)
+		schema, c.hdr.Seed, c.hdr.Start, c.hdr.Days, counts.String())
 	return os.WriteFile(filepath.Join(c.dir, "manifest.json"), []byte(manifest), 0o600)
 }

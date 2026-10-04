@@ -10,7 +10,7 @@ import (
 
 func TestRetryDelay(t *testing.T) {
 	base, maxDelay := 30*time.Second, 30*time.Minute
-	for attempt := int32(0); attempt < 100; attempt++ {
+	for attempt := range int32(100) {
 		want := min(maxDelay, base*time.Duration(1<<min(attempt, 20)))
 		for range 50 {
 			d := RetryDelay(attempt, base, maxDelay)

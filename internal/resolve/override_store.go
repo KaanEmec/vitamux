@@ -121,7 +121,7 @@ func (s *Overrides) Active(ctx context.Context, userID uuid.UUID, metric string,
 
 // History returns up to limit overrides of metric, revoked ones included, newest first.
 func (s *Overrides) History(ctx context.Context, userID uuid.UUID, metric string, limit int) ([]Override, error) {
-	rows, err := s.db.Q().ListOverrideHistory(ctx, dbq.ListOverrideHistoryParams{UserID: userID, Metric: metric, MaxRows: int32(min(max(limit, 1), 1000))}) //nolint:gosec // clamped
+	rows, err := s.db.Q().ListOverrideHistory(ctx, dbq.ListOverrideHistoryParams{UserID: userID, Metric: metric, MaxRows: int32(min(max(limit, 1), 1000))})
 	return overridesOf(rows), db.MapErr(err)
 }
 
@@ -150,7 +150,7 @@ func overridesOf(rows []dbq.ManualOverride) []Override {
 }
 
 func overrideOf(r dbq.ManualOverride) Override {
-	o := Override{ID: r.ID, Scope: Scope{Metric: r.Metric, Kind: catalog.Window(r.WindowKind), Key: r.WindowKey, LocalDate: r.LocalDate},
+	o := Override{ID: r.ID, Metric: r.Metric, Kind: catalog.Window(r.WindowKind), Key: r.WindowKey, LocalDate: r.LocalDate,
 		Action: OverrideAction(r.Action), CreatedBy: r.CreatedBy, CreatedAt: r.CreatedAt, RevokedAt: r.RevokedAt}
 	if r.InputID != nil {
 		o.InputID = *r.InputID

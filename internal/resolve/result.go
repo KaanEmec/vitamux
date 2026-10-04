@@ -2,6 +2,7 @@ package resolve
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"time"
@@ -118,13 +119,13 @@ func BuildResult(metric string, v Version, res Resolved, computedAt time.Time) R
 		if res.Components != nil {
 			out.Components = res.Components
 		} else {
-			out.Value = ptrTo(res.Value)
+			out.Value = new(res.Value)
 		}
 	}
 	if c := res.Computed; c != nil && len(res.Overrides) > 0 {
 		out.Computed = &ComputedValue{Status: c.Status, Components: c.Components, Selected: c.Selected}
 		if c.Status != ResultNoData && c.Components == nil {
-			out.Computed.Value = ptrTo(c.Value)
+			out.Computed.Value = new(c.Value)
 		}
 	}
 	for _, h := range res.Hours {
@@ -148,7 +149,7 @@ func BuildResult(metric string, v Version, res Resolved, computedAt time.Time) R
 			if g.Components != nil {
 				in.Components = g.Components
 			} else {
-				in.Value = ptrTo(g.Value)
+				in.Value = new(g.Value)
 			}
 		}
 		out.Inputs = append(out.Inputs, in)
@@ -285,9 +286,7 @@ func BuildSources(r *Rule, w Window, s Series, now time.Time) ([]SourceView, err
 			gv.aggReadings(sp, rows, w, StatLatest)
 			v.Values["readings"] = float64(countReadings(sp, rows))
 			if sp.family {
-				for code, x := range gv.Components {
-					v.Values[code] = x
-				}
+				maps.Copy(v.Values, gv.Components)
 			} else if gv.Count > 0 {
 				v.Values["latest"] = gv.Value
 			}
@@ -417,5 +416,3 @@ func selectorText(s Selector) string {
 	add("entry", string(s.Entry))
 	return strings.Join(parts, " ")
 }
-
-func ptrTo(v float64) *float64 { return &v }

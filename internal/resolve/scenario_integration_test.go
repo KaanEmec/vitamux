@@ -47,7 +47,7 @@ func generate(t testing.TB, dir, start string, days int, flags ...string) string
 	t.Helper()
 	_, file, _, _ := runtime.Caller(0)
 	args := append([]string{"run", "./tools/fixturegen", "-out", dir, "-start", start, "-days", strconv.Itoa(days)}, flags...)
-	cmd := exec.CommandContext(context.Background(), "go", args...) //nolint:gosec // fixed tool path
+	cmd := exec.CommandContext(context.Background(), "go", args...)
 	cmd.Dir = filepath.Join(filepath.Dir(file), "..", "..")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("fixturegen: %v\n%s", err, out)
@@ -384,8 +384,8 @@ func TestScenariosMarch(t *testing.T) {
 
 	// A force_source override on the sleep family takes the Garmin night instead.
 	ov := NewOverrides(s.d)
-	if _, err := ov.Create(s.ctx, By{UserID: s.user, Actor: "api_key:test"}, NewOverride{Scope: Scope{Metric: FamilySleep, Kind: catalog.WindowLocalNight,
-		Key: night, LocalDate: date(night)}, Action: ForceSource, Group: "garmin"}); err != nil {
+	if _, err := ov.Create(s.ctx, By{UserID: s.user, Actor: "api_key:test"}, NewOverride{Metric: FamilySleep, Kind: catalog.WindowLocalNight,
+		Key: night, LocalDate: date(night), Action: ForceSource, Group: "garmin"}); err != nil {
 		t.Fatal(err)
 	}
 	forced := s.run(t, "sleep_deep", catalog.WindowLocalNight, night, night, nil, now)[0]

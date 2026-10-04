@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -141,9 +142,7 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	for k, vs := range st.Reply.Header {
-		w.Header()[k] = vs
-	}
+	maps.Copy(w.Header(), st.Reply.Header)
 	status := st.Reply.Status
 	if status == 0 {
 		status = http.StatusOK

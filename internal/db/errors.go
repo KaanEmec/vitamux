@@ -3,6 +3,7 @@ package db
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -44,10 +45,5 @@ func sqlState(err error, codes ...string) bool {
 	if !errors.As(err, &pg) {
 		return false
 	}
-	for _, c := range codes {
-		if pg.Code == c {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(codes, pg.Code)
 }

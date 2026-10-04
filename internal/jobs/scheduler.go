@@ -130,9 +130,7 @@ func validate(mode, stream string, interval, lookback time.Duration) error {
 func fromRow(r dbq.Schedule) Schedule {
 	return Schedule{
 		ID: r.ID, NextRunAt: r.NextRunAt, Enabled: r.Enabled,
-		ScheduleSpec: ScheduleSpec{
-			ConnectionID: r.ConnectionID, Stream: r.Stream, Mode: r.Mode, Interval: r.RunInterval, Lookback: r.Lookback,
-		},
+		ConnectionID: r.ConnectionID, Stream: r.Stream, Mode: r.Mode, Interval: r.RunInterval, Lookback: r.Lookback,
 	}
 }
 

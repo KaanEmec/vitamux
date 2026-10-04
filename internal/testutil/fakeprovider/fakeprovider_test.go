@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -159,7 +160,7 @@ func (r *recorder) Errorf(format string, args ...any) {
 }
 func (r *recorder) Cleanup(f func()) { r.cleanups = append(r.cleanups, f) }
 func (r *recorder) runCleanups() {
-	for i := len(r.cleanups) - 1; i >= 0; i-- {
-		r.cleanups[i]()
+	for _, v := range slices.Backward(r.cleanups) {
+		v()
 	}
 }

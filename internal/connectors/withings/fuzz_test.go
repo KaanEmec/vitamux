@@ -23,7 +23,7 @@ func FuzzNormalizeMeasures(f *testing.F) {
 		f.Fatalf("no seed records: %v", err)
 	}
 	for _, name := range files {
-		b, err := os.ReadFile(name) //nolint:gosec // test data
+		b, err := os.ReadFile(name)
 		if err != nil {
 			f.Fatal(err)
 		}

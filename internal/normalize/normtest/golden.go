@@ -40,7 +40,7 @@ func Golden(t *testing.T, n normalize.Normalizer, raw normalize.RawPayload, env 
 	}
 	update := os.Getenv("UPDATE_GOLDEN") == "1"
 	for _, path := range cases {
-		name := strings.SplitN(filepath.Base(path), ".raw.", 2)[0]
+		name, _, _ := strings.Cut(filepath.Base(path), ".raw.")
 		t.Run(name, func(t *testing.T) {
 			body, err := os.ReadFile(path) //nolint:gosec // test data path
 			if err != nil {

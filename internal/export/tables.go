@@ -495,7 +495,7 @@ var tables = []table{
 
 // withoutFile names every other table and why it has no file of its own; a test fails for
 // a table that is in neither list.
-var withoutFile = map[string]string{ //nolint:unused // checked by TestEveryTableClassified (integration build)
+var withoutFile = map[string]string{ //nolint:unused,nolintlint // read by TestEveryTableClassified (integration build only)
 	"blobs":               "carried as _blob in the referencing rows, content in blob_content.ndjson",
 	"goose_db_version":    "migration state",
 	"users":               "the target keeps its own owner account",

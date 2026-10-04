@@ -64,7 +64,7 @@ func TestStateGauges(t *testing.T) {
 
 func grep(s, sub string) string {
 	var out []string
-	for _, l := range strings.Split(s, "\n") {
+	for l := range strings.SplitSeq(s, "\n") {
 		if strings.Contains(l, sub) {
 			out = append(out, l)
 		}

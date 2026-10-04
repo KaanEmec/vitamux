@@ -228,7 +228,7 @@ func TestGeneratedFilesUpToDate(t *testing.T) {
 		t.Fatal(err)
 	}
 	for path, want := range map[string]string{seed: SeedSQL(), filepath.Join(root, DocPath): Doc()} {
-		got, err := os.ReadFile(path) //nolint:gosec // repository file
+		got, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatalf("%s: %v (run: go run ./internal/documents/analytes/gen)", path, err)
 		}

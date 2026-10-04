@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"runtime/debug"
+	"slices"
 	"strings"
 
 	"github.com/KaanEmec/vitamux/internal/blob"
@@ -160,7 +161,7 @@ func (p *Processor) attempt(ctx context.Context, id int64, vers map[string]int32
 		if err := ingest.SetStatus(ctx, q, id, ingest.StatusNormalized); err != nil {
 			return err
 		}
-		warnings := append(out.Warnings[:len(out.Warnings):len(out.Warnings)], stats.Warnings...)
+		warnings := append(slices.Clip(out.Warnings), stats.Warnings...)
 		if err := setResult(ctx, q, id, &versionID, "", warnings); err != nil {
 			return err
 		}

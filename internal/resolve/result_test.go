@@ -68,7 +68,7 @@ func golden(t *testing.T, name string, rs ...Result) {
 		}
 		return
 	}
-	want, err := os.ReadFile(path) //nolint:gosec // fixed test directory
+	want, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("%v (run with UPDATE_GOLDEN=1)", err)
 	}
@@ -233,7 +233,7 @@ func TestExplanationTemplates(t *testing.T) {
 		return &Rule{Schema: SchemaV1, Metric: "heart_rate", Window: RuleWindow{Kind: catalog.WindowHour}, Strategy: Strategy{Op: op, MinSources: 2},
 			Groups: []Group{{ID: "watch", Match: []Selector{{DeviceType: "watch", Provider: "apple_health"}}}, {ID: "ring", Match: []Selector{{DeviceType: "ring"}}},
 				{ID: "garmin", Match: []Selector{{Provider: "garmin"}}}},
-			Quality: &Quality{MinCoverage: biRatio(0.5), ExcludeFlags: []string{"manual_entry"}, MaxStaleness: "2h"}}
+			Quality: &Quality{MinCoverage: new(0.5), ExcludeFlags: []string{"manual_entry"}, MaxStaleness: "2h"}}
 	}
 	hour, _ := Buckets(date(day), time.Hour, berlin)
 	h10 := hour[10]

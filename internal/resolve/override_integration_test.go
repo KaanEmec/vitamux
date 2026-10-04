@@ -228,7 +228,7 @@ func TestOverridesDirtyAuditAndConflict(t *testing.T) {
 		t.Fatal(err)
 	}
 	var actions []string
-	for _, line := range strings.Split(events, "\n") {
+	for line := range strings.SplitSeq(events, "\n") {
 		f := strings.SplitN(line, "|", 4)
 		if len(f) != 4 {
 			t.Fatalf("audit line %q", line)

@@ -147,7 +147,7 @@ func pdfObjects(pdf []byte) map[int][]byte {
 func objStreams(objs map[int][]byte) [][]byte {
 	var out [][]byte
 	for _, body := range objs {
-		if i := bytes.Index(body, []byte("stream")); i >= 0 && objStmTag.Match(body[:i]) {
+		if before, _, ok := bytes.Cut(body, []byte("stream")); ok && objStmTag.Match(before) {
 			out = append(out, body)
 		}
 	}
@@ -321,7 +321,7 @@ func literalString(c []byte, i int) ([]byte, int) {
 						v = v*8 + int(c[i+k]-'0')
 					}
 					i += k - 1
-					out = append(out, byte(v)) //nolint:gosec // three octal digits wrap like PDF readers do
+					out = append(out, byte(v))
 				} else {
 					out = append(out, e)
 				}

@@ -209,8 +209,10 @@ func unitFails(ctx context.Context, j jobs.Job, err error) bool {
 }
 
 func errorClassOf(err error) string {
-	var c interface{ ErrorClass() string }
-	if errors.As(err, &c) {
+	if c, ok := errors.AsType[interface {
+		error
+		ErrorClass() string
+	}](err); ok {
 		return c.ErrorClass()
 	}
 	return ClassTransient

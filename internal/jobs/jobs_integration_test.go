@@ -198,7 +198,7 @@ func TestStress(t *testing.T) {
 			}
 			defer f.Add(-1)
 		}
-		time.Sleep(time.Duration(rand.N(500)) * time.Microsecond) //nolint:gosec // test jitter
+		time.Sleep(time.Duration(rand.N(500)) * time.Microsecond)
 		if j.Attempt <= p.Fail {
 			return errors.New("synthetic failure")
 		}

@@ -117,7 +117,7 @@ func (m meter) read(pg bool) sample {
 // parseCPU reads ps time: [[H:]M:]S.ss
 func parseCPU(s string) float64 {
 	t := 0.0
-	for _, p := range strings.Split(s, ":") {
+	for p := range strings.SplitSeq(s, ":") {
 		v, _ := strconv.ParseFloat(p, 64)
 		t = t*60 + v
 	}
@@ -527,7 +527,7 @@ func TestResourceBudget(t *testing.T) {
 			t.Fatalf("dashboard %s: %v\n%s", mode, werr, out.String())
 		}
 		rusage(t, "dashboard "+mode, c.ProcessState)
-		for _, l := range strings.Split(out.String(), "\n") {
+		for l := range strings.SplitSeq(out.String(), "\n") {
 			if strings.HasPrefix(l, "DURATIONS ") {
 				t.Logf("RESULT %s", l)
 			}

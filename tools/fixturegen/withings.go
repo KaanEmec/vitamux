@@ -80,7 +80,7 @@ func (w *withingsWriter) Revision(r Revision) error {
 func grpid(ext string) int64 {
 	h := fnv.New64a()
 	_, _ = h.Write([]byte(ext))
-	return int64(h.Sum64() & (1<<47 - 1)) //nolint:gosec // masked to 47 bits
+	return int64(h.Sum64() & (1<<47 - 1))
 }
 
 func (w *withingsWriter) Close() error {

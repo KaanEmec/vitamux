@@ -18,7 +18,7 @@ func digest(t *testing.T, dir string) string {
 	t.Helper()
 	h := sha256.New()
 	for _, name := range []string{"manifest.json", "sources.ndjson", "measurements.ndjson", "groups.ndjson", "sleep.ndjson", "revisions.ndjson"} {
-		b, err := os.ReadFile(filepath.Join(dir, name)) //nolint:gosec // test output dir
+		b, err := os.ReadFile(filepath.Join(dir, name))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -81,8 +81,8 @@ func TestSubsetMatches(t *testing.T) {
 	if err := generate(sub, 42, "2025-03-30", 1, 60); err != nil {
 		t.Fatal(err)
 	}
-	fa, _ := os.ReadFile(filepath.Join(full, "measurements.ndjson")) //nolint:gosec // test output dir
-	fb, _ := os.ReadFile(filepath.Join(sub, "measurements.ndjson"))  //nolint:gosec // test output dir
+	fa, _ := os.ReadFile(filepath.Join(full, "measurements.ndjson"))
+	fb, _ := os.ReadFile(filepath.Join(sub, "measurements.ndjson"))
 	for _, line := range strings.Split(strings.TrimSpace(string(fb)), "\n")[1:] {
 		if !strings.Contains(string(fa), line+"\n") {
 			t.Fatalf("subset line missing from full run: %s", line)
@@ -140,7 +140,7 @@ func TestMatchesCatalogue(t *testing.T) {
 
 func readLines(t *testing.T, path string) []string {
 	t.Helper()
-	b, err := os.ReadFile(path) //nolint:gosec // test output dir
+	b, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -162,8 +162,8 @@ func (c *rasterCanvas) text(x, y, _ int, bold bool, s string) {
 				if face.Mask.(*image.Alpha).AlphaAt(dx, top+dy).A < 0x80 {
 					continue
 				}
-				for k := 0; k < rasterScale; k++ {
-					for l := 0; l < rasterScale; l++ {
+				for k := range rasterScale {
+					for l := range rasterScale {
 						c.set(gx+dx*rasterScale+l, py+(dy-face.Ascent)*rasterScale+k)
 						if bold {
 							c.set(gx+dx*rasterScale+l+1, py+(dy-face.Ascent)*rasterScale+k)

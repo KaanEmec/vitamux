@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/zlib"
 	"fmt"
+	"slices"
 	"testing"
 )
 
@@ -13,12 +14,12 @@ func synthPDF(flate bool, extra string, contents ...string) []byte {
 	var b bytes.Buffer
 	b.WriteString("%PDF-1.4\n% synthetic: true\n1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n")
 	kids := ""
-	for i := len(contents) - 1; i >= 0; i-- {
+	for i := range slices.Backward(contents) {
 		kids = fmt.Sprintf("%d 0 R ", 10+2*i) + kids
 	}
 	fmt.Fprintf(&b, "2 0 obj << /Type /Pages /Kids [%s] /Count %d >> endobj\n", kids, len(contents))
-	for i := len(contents) - 1; i >= 0; i-- {
-		data, filter := []byte(contents[i]), ""
+	for i, content := range slices.Backward(contents) {
+		data, filter := []byte(content), ""
 		if flate {
 			var z bytes.Buffer
 			w := zlib.NewWriter(&z)

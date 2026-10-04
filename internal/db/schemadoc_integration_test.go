@@ -31,7 +31,7 @@ func TestSchemaDoc(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)
 	path := filepath.Join(filepath.Dir(file), "..", "..", "docs", "schema", "README.md")
 	if os.Getenv(updateSchemaDocEnv) != "" {
-		if err := os.WriteFile(path, []byte(got), 0o644); err != nil { //nolint:gosec // a committed doc
+		if err := os.WriteFile(path, []byte(got), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		return

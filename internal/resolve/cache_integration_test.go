@@ -129,7 +129,7 @@ func TestCacheInvalidation(t *testing.T) {
 	// An override marks its date; the cache then serves the overridden value.
 	warm("weight")
 	if _, err := NewOverrides(s.d).Create(s.ctx, By{UserID: s.user, Actor: "test"}, NewOverride{
-		Scope:  Scope{Metric: "weight", Kind: catalog.WindowLocalDay, Key: "2025-02-20", LocalDate: date("2025-02-20")},
+		Metric: "weight", Kind: catalog.WindowLocalDay, Key: "2025-02-20", LocalDate: date("2025-02-20"),
 		Action: SetValue, Value: 70, Unit: "kg", Note: "synthetic"}); err != nil {
 		t.Fatal(err)
 	}

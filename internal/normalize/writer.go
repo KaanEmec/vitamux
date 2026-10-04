@@ -636,7 +636,7 @@ func (w *writer) workout(x Workout) error {
 	}
 	segs := make([]segRow, len(x.Segments))
 	for i, s := range x.Segments {
-		segs[i] = segRow{Seq: int32(i), Kind: s.Kind, Start: micro(s.Start), End: microp(s.End), Data: s.Data} //nolint:gosec // segment counts are small
+		segs[i] = segRow{Seq: int32(i), Kind: s.Kind, Start: micro(s.Start), End: microp(s.End), Data: s.Data}
 	}
 	dev := w.device(x.Device)
 	org, _ := w.origin(x.Origin)

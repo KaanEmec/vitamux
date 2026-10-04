@@ -142,7 +142,7 @@ func TestNight(t *testing.T) {
 		{"at the anchor", "2026-09-15T16:00:00Z", normalize.Zone{}, "2026-09-16"},                                 // 18:00
 		{"evening nap", "2026-09-15T17:00:00Z", normalize.Zone{}, "2026-09-16"},                                   // 19:00
 		{"ends before midnight", "2026-09-15T21:50:00Z", normalize.Zone{}, "2026-09-16"},                          // 23:50
-		{"record offset wins", "2026-09-15T20:00:00Z", normalize.Zone{OffsetMin: ptr(int16(-240))}, "2026-09-15"}, // 16:00 at -04:00, 22:00 in Berlin
+		{"record offset wins", "2026-09-15T20:00:00Z", normalize.Zone{OffsetMin: new(int16(-240))}, "2026-09-15"}, // 16:00 at -04:00, 22:00 in Berlin
 		{"record zone wins", "2026-09-15T23:00:00Z", normalize.Zone{TZ: "America/New_York"}, "2026-09-16"},        // 19:00 New York
 	}
 	for _, tc := range cases {

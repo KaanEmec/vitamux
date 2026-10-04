@@ -3,6 +3,7 @@ package ingest
 import (
 	"bytes"
 	"encoding/json"
+	"maps"
 	"net/textproto"
 	"net/url"
 	"regexp"
@@ -48,9 +49,7 @@ func SanitizeRequest(r Request) json.RawMessage {
 			}
 		}
 	}
-	for k, v := range sanitizeMap(generic(r.Params)) {
-		params[k] = v
-	}
+	maps.Copy(params, sanitizeMap(generic(r.Params)))
 	if len(params) > 0 {
 		meta["params"] = params
 	}

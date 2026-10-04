@@ -35,7 +35,7 @@ type Run struct {
 
 // RecentRuns returns the newest runs first, optionally of one connection and/or kind.
 func RecentRuns(ctx context.Context, d *db.DB, f RunFilter) ([]Run, error) {
-	p := dbq.ListRecentJobRunsParams{ConnectionID: f.ConnectionID, RowLimit: int32(min(max(f.Limit, 1), 500))} //nolint:gosec // bounded
+	p := dbq.ListRecentJobRunsParams{ConnectionID: f.ConnectionID, RowLimit: int32(min(max(f.Limit, 1), 500))}
 	if f.Limit == 0 {
 		p.RowLimit = 50
 	}

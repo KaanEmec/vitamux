@@ -97,7 +97,7 @@ func owner(cmd string, stdin *os.File, stdout, stderr io.Writer) int {
 // readCredentials prompts on a terminal (password not echoed, asked twice) or reads two
 // lines, username then password, from a pipe.
 func readCredentials(in *os.File, prompt io.Writer) (username, password string, err error) {
-	fd := int(in.Fd()) //nolint:gosec // file descriptors fit in int
+	fd := int(in.Fd())
 	if !term.IsTerminal(fd) {
 		sc := bufio.NewScanner(in)
 		lines := make([]string, 0, 2)

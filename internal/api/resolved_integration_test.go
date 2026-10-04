@@ -43,7 +43,7 @@ func newResolvedEnv(t *testing.T, start string, days int) *resolvedEnv {
 	ctx := context.Background()
 	dir := t.TempDir()
 	_, file, _, _ := runtime.Caller(0)
-	cmd := exec.CommandContext(ctx, "go", "run", "./tools/fixturegen", "-out", dir, "-start", start, "-days", strconv.Itoa(days), "-hr-step", "60") //nolint:gosec // fixed tool path
+	cmd := exec.CommandContext(ctx, "go", "run", "./tools/fixturegen", "-out", dir, "-start", start, "-days", strconv.Itoa(days), "-hr-step", "60")
 	cmd.Dir = filepath.Join(filepath.Dir(file), "..", "..")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("fixturegen: %v\n%s", err, out)

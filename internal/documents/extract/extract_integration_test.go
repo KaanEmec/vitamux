@@ -142,7 +142,7 @@ func TestFakeEndToEnd(t *testing.T) {
 	ctx := context.Background()
 	dir := fixturePDFs(t)
 	for _, id := range []string{"lab-01", "lab-07"} {
-		pdf, err := os.ReadFile(filepath.Join(dir, id+".pdf")) //nolint:gosec // test output dir
+		pdf, err := os.ReadFile(filepath.Join(dir, id+".pdf"))
 		if err != nil {
 			t.Fatal(err)
 		}

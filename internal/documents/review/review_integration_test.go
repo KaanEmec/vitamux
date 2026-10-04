@@ -88,7 +88,7 @@ func newEnv(t *testing.T) *env {
 // extract uploads a fixture PDF (or finds it again) and runs a fake extraction to completion.
 func (e *env) extract(id string) (doc, run uuid.UUID) {
 	e.t.Helper()
-	pdf, err := os.ReadFile(filepath.Join(e.pdfs, id+".pdf")) //nolint:gosec // test output dir
+	pdf, err := os.ReadFile(filepath.Join(e.pdfs, id+".pdf"))
 	if err != nil {
 		e.t.Fatal(err)
 	}

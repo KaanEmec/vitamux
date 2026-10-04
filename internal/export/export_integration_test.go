@@ -108,7 +108,7 @@ func dataset(t *testing.T, start string, days int) string {
 		t.Fatal(err)
 	}
 	_, file, _, _ := runtime.Caller(0)
-	cmd := exec.CommandContext(t.Context(), "go", "run", "./tools/fixturegen", "-out", dir, "-start", start, "-days", fmt.Sprint(days)) //nolint:gosec // fixed tool
+	cmd := exec.CommandContext(t.Context(), "go", "run", "./tools/fixturegen", "-out", dir, "-start", start, "-days", fmt.Sprint(days))
 	cmd.Dir = filepath.Join(filepath.Dir(file), "..", "..")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("fixturegen: %v\n%s", err, out)

@@ -7,8 +7,6 @@ import (
 	"github.com/google/uuid"
 )
 
-func ptr[T any](v T) *T { return &v }
-
 var (
 	connA   = uuid.MustParse("0190a6a0-0000-7000-8000-00000000000a")
 	connB   = uuid.MustParse("0190a6a0-0000-7000-8000-00000000000b")
@@ -39,9 +37,9 @@ func TestSelectorMatches(t *testing.T) {
 		{"origin prefix", Selector{OriginKeyPrefix: "com.apple.health."}, appleWatch, true},
 		{"origin prefix needs an origin", Selector{OriginKeyPrefix: "c"}, withingsCuff, false},
 		{"origin name", Selector{OriginName: "iPhone"}, iPhone, true},
-		{"relayed true", Selector{Relayed: ptr(true)}, relayGarmin, true},
-		{"relayed false", Selector{Relayed: ptr(false)}, relayGarmin, false},
-		{"relayed false matches direct", Selector{Relayed: ptr(false)}, appleWatch, true},
+		{"relayed true", Selector{Relayed: new(true)}, relayGarmin, true},
+		{"relayed false", Selector{Relayed: new(false)}, relayGarmin, false},
+		{"relayed false matches direct", Selector{Relayed: new(false)}, appleWatch, true},
 		{"device model", Selector{DeviceModel: "Watch7,1"}, appleWatch, true},
 		{"device id", Selector{DeviceID: devWear.String()}, appleWatch, true},
 		{"device id needs a device", Selector{DeviceID: devWear.String()}, iPhone, false},
@@ -64,7 +62,7 @@ func TestAssign(t *testing.T) {
 			{ID: "cuff", Match: []Selector{{DeviceType: "bp_monitor"}}},
 			{ID: "apple_any", Match: []Selector{{Provider: "apple_health"}}},
 		},
-		Exclude: []Selector{{Entry: EntryManual}, {Provider: "apple_health", Relayed: ptr(true)}},
+		Exclude: []Selector{{Entry: EntryManual}, {Provider: "apple_health", Relayed: new(true)}},
 	}
 	cases := []struct {
 		name    string

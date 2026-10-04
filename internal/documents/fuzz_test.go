@@ -50,7 +50,7 @@ func FuzzDecodeExtraction(f *testing.F) {
 		f.Fatalf("no seed extractions: %v", err)
 	}
 	for _, name := range files[:4] {
-		b, err := os.ReadFile(name) //nolint:gosec // repository fixtures
+		b, err := os.ReadFile(name)
 		if err != nil {
 			f.Fatal(err)
 		}

@@ -71,7 +71,7 @@ func (e *env) write(version int, out normalize.Output) int64 {
 		VALUES ($1, $2, $3, 'sample.readings.v1', $4, sha256($5::bytea), 'application/json', now(), '{"endpoint": "/measure"}', 'fp1') RETURNING id`,
 		e.user, e.conn, batch, batch.String(), body[:])
 	err := e.d.Tx(ctx, func(q *dbq.Queries) error {
-		nv, err := q.RegisterNormalizerVersion(ctx, dbq.RegisterNormalizerVersionParams{Name: "sample.readings", Version: int32(version), GitSha: "abc123"}) //nolint:gosec // small
+		nv, err := q.RegisterNormalizerVersion(ctx, dbq.RegisterNormalizerVersionParams{Name: "sample.readings", Version: int32(version), GitSha: "abc123"})
 		if err != nil {
 			return err
 		}
