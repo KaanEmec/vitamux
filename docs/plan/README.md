@@ -45,6 +45,12 @@ Conventions:
 | [E21](E21-visualisation/README.md) | Panel redesign, dashboard and data exploration | v0.2.0 | E11, E12, E15, E17–E19 (shipped in v0.1.1) |
 | [E22](E22-ios-app/README.md) | Vitamux iOS app (replaces Vitamux Bridge; full Apple Watch data) | v0.4.0 | E15, E21, G6 (J22.1 and J22.15 can start now) |
 | [E23](E23-chart-redesign/README.md) | Charts and metric visualisation redesign (LayerChart) | v0.3.0 | E21 |
+| [E24](E24-resolution-visibility/README.md) | Resolution defaults, opt-in gates and visible data | v0.3.1 | E09, E21, E23 |
+| [E25](E25-catalogue-mappings/README.md) | Catalogue completeness and mapping corrections | v0.3.1 | E07, E08, E15, E18, E19 |
+| [E26](E26-intraday-views/README.md) | Intraday views on the server and the panel | v0.3.2 | E23, E25 |
+| [E27](E27-oura/README.md) | Oura official connector | v0.3.3 | E20, E25 |
+| [E28](E28-polar/README.md) | Polar official connector | v0.3.4 | E20, E25 |
+| [E29](E29-google-health/README.md) | Fitbit and Pixel through the Google Health API (blocked) | when unblocked | E20, E25 |
 
 ```mermaid
 flowchart LR
@@ -66,6 +72,9 @@ flowchart LR
   E15 & E21 --> E22
   E20 -->|G6| E22
   E21 --> E23 -.->|chart language| E22
+  E23 --> E24 & E26
+  E18 & E19 --> E25 --> E26 -.->|server and panel half of J22.26| E22
+  E25 --> E27 & E28 & E29
 ```
 
 ## Gates
@@ -97,3 +106,4 @@ flowchart LR
 10. J21.1, J21.2, J21.5 and J21.6 (design spec, chart ADR, inventory and summary APIs) can start now. J21.3 (design system and shell) can land before E20's UI jobs so they build on it.
 11. J22.1 (app ADR) and J22.15 (Watch data contract) can start now; app sessions, the native auth return and VitamuxKit (J22.2–J22.4) follow J22.1. Once J22.5 lands, the screen jobs J22.7–J22.13 and Apple Health (J22.14) run in parallel; the setup wizards in J22.11 follow E20. The Watch kit and server jobs (J22.16, J22.17) run alongside them.
 12. J23.1, J23.2 (LayerChart ADR) and J23.5 (API fields) can start now. Once J23.4 lands, J23.6–J23.8 run in parallel.
+13. E24 (J24.1–J24.3, J24.6) and J25.1 can start now; J25.2–J25.5 and J25.7 run in parallel after J25.1. E26 follows E25. J27.1 and J28.1 (API verification) can start any time; E29 waits on Google's onboarding (J29.1).

@@ -19,4 +19,4 @@ Read first: [connectors#withings-connector-reference-pattern](../../architecture
 | [J08.3](J08.3-measures.md) | Measures stream and normalizer | J08.2, J06.6, J07.4 | None |
 | [J08.4](J08.4-notifications.md) | Notifications (optional per install) | J08.3 | None |
 | [J08.5](J08.5-lifecycle-e2e.md) | Lifecycle end-to-end test | J08.2, J08.3, J08.4 | None |
-| [J08.6](J08.6-activity-sleep.md) | Activity and sleep streams (post-MVP) | J08.5 | None |
+| [J08.6](J08.6-activity-sleep.md) | Activity and sleep streams (moved to [J25.3](../E25-catalogue-mappings/J25.3-withings-activity-sleep.md)) | J08.5 | None |
