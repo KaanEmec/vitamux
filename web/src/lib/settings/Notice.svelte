@@ -9,11 +9,4 @@
 	const tone: Record<Status, string> = { ok: 'ok', warn: 'warn', error: 'error', info: 'info', pending: 'info', off: 'info' };
 </script>
 
-<p class={['inline-alert', 'notice', tone[status]]} role="status"><StatusIcon {status} /> <span>{@render children()}</span></p>
-
-<style>
-	.notice {
-		gap: var(--space-2);
-		padding: var(--space-2) var(--space-3);
-	}
-</style>
+<p class={['inline-alert', tone[status]]} role="status"><StatusIcon {status} /> <span>{@render children()}</span></p>

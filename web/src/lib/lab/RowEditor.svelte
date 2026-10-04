@@ -205,7 +205,7 @@
 			<button class="btn" type="button" disabled={busy} onclick={() => (form = initial(row))}>Undo changes</button>
 		{/if}
 		{#if row.review_status !== 'rejected'}
-			<button class="btn" type="button" disabled={busy} onclick={() => void send('reject')}>Reject row</button>
+			<button class="btn danger" type="button" disabled={busy} onclick={() => void send('reject')}>Reject row</button>
 		{/if}
 	</div>
 

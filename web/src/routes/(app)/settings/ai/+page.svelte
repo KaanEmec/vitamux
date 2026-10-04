@@ -9,6 +9,7 @@
 	import { loadSettings, patchSettings, type SettingsMap } from '#lib/settings/api.ts';
 	import Card from '#lib/settings/Card.svelte';
 	import Notice from '#lib/settings/Notice.svelte';
+	import Switch from '#lib/ui/Switch.svelte';
 
 	const providers = [
 		{ key: 'documents.external_ai.gemini.enabled', name: 'Google Gemini' },
@@ -71,15 +72,13 @@
 	{:else if saved}
 		<form onsubmit={save}>
 			{#each providers as p (p.key)}
-				<label class="check">
-					<input type="checkbox" name={p.key} bind:checked={enabled[p.key]} onchange={() => (done = false)} />
-					<span>
-						Enable {p.name}
-						<span class="hint">
-							When you consent for a document, its PDF is sent to {p.name} for extraction. Without that consent, it is not sent.
-						</span>
-					</span>
-				</label>
+				<Switch
+					label="Enable {p.name}"
+					hint="When you consent for a document, its PDF is sent to {p.name} for extraction. Without that consent, it is not sent."
+					name={p.key}
+					bind:checked={enabled[p.key]}
+					onchange={() => (done = false)}
+				/>
 			{/each}
 			<button class="btn primary" type="submit" disabled={busy}>Save</button>
 		</form>

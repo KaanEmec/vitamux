@@ -48,7 +48,7 @@
 		as the lab printed them.
 	</p>
 	<ProblemAlert {problem} />
-	{#if notice}<p role="status"><StatusIcon status="ok" /> {notice}</p>{/if}
+	{#if notice}<p class="inline-alert ok" role="status"><StatusIcon status="ok" /> <span>{notice}</span></p>{/if}
 
 	{#if docs === null && !problem}
 		<p class="muted" role="status">Loading documents…</p>
@@ -83,7 +83,7 @@
 										<a class="btn" href="/lab/documents/{d.id}">{d.status === 'needs_review' ? 'Review' : 'Open'}</a>
 									{/if}
 									{#if d.status !== 'deleted'}
-										<button class="btn" type="button" onclick={() => (deleting = d)} aria-label="Delete {name(d)}">Delete</button>
+										<button class="btn danger" type="button" onclick={() => (deleting = d)} aria-label="Delete {name(d)}">Delete</button>
 									{/if}
 								</div>
 							</td>
@@ -150,8 +150,5 @@
 		display: flex;
 		gap: var(--space-2);
 		justify-content: flex-end;
-	}
-	a.btn {
-		text-decoration: none;
 	}
 </style>

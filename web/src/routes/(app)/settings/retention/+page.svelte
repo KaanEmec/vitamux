@@ -11,6 +11,7 @@
 	import { loadSettings, patchSettings, type SettingsMap } from '#lib/settings/api.ts';
 	import Card from '#lib/settings/Card.svelte';
 	import Notice from '#lib/settings/Notice.svelte';
+	import Switch from '#lib/ui/Switch.svelte';
 
 	const docDays = 'documents.retention_days';
 	const docDelete = 'documents.delete_original_after_confirmation';
@@ -169,13 +170,7 @@
 				hint="Counted from upload, for every stored document. Empty keeps them."
 				inputmode="numeric"
 			/>
-			<label class="check">
-				<input type="checkbox" name={docDelete} bind:checked={delOriginal} />
-				<span>
-					Delete the PDF once its extraction is confirmed
-					<span class="hint">The confirmed results are kept.</span>
-				</span>
-			</label>
+			<Switch label="Delete the PDF once its extraction is confirmed" hint="The confirmed results are kept." name={docDelete} bind:checked={delOriginal} />
 			{#if errors[docDelete]}<div class="field"><span class="error">{errors[docDelete]}</span></div>{/if}
 		</Card>
 
@@ -238,10 +233,7 @@
 			<Card title="Other settings" id="other">
 				{#each extras as x (x.key)}
 					{#if typeof x.orig === 'boolean'}
-						<label class="check">
-							<input type="checkbox" name={x.key} bind:checked={x.on} />
-							<span><code>{x.key}</code>{#if errors[x.key]}<span class="hint">{errors[x.key]}</span>{/if}</span>
-						</label>
+						<Switch label={x.key} hint={errors[x.key]} name={x.key} bind:checked={x.on} />
 					{:else}
 						<TextField label={x.key} name={x.key} bind:value={x.text} error={errors[x.key]} />
 					{/if}
