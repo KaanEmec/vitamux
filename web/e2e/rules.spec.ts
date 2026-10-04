@@ -123,7 +123,8 @@ test('the catalogue lists every metric with its rule, reason and coverage', asyn
 	const hr = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'heart_rate', exact: true }) });
 	await expect(hr.getByText('Built-in default')).toBeVisible();
 	await expect(hr.getByText('Chest straps are ECG-class, then wrist devices by independent validation.')).toBeVisible();
-	await expect(hr.getByText('chest_strap › apple_watch › garmin')).toBeVisible();
+	await expect(hr.getByRole('list', { name: 'Source order' }).getByRole('listitem')).toHaveText(['chest_strap', 'apple_watch', 'garmin']);
+	await expect(hr.getByText('For each 5-minute bucket, use the first source in order with data')).toBeVisible();
 	const rhr = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'resting_heart_rate' }) });
 	await expect(rhr.getByText('Your rule · version 2')).toBeVisible();
 	const skin = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'skin_temperature' }) });
@@ -178,7 +179,7 @@ test('preview shows the per-day differences from the active rule', async ({ page
 	await expect(page.getByRole('status').filter({ hasText: 'days change' })).toHaveText('3 of 14 days change with this draft.');
 	const table = page.getByRole('table');
 	await expect(table.getByRole('row')).toHaveCount(15);
-	const body = rules.previews[0] as { spec: Json; start_date: string; end_date: string };
+	const body = rules.previews.at(-1) as { spec: Json; start_date: string; end_date: string };
 	expect((body.spec.strategy as Json).op).toBe('mean_across_sources');
 	expect((body.spec.groups as { id: string }[]).map((g) => g.id)).toEqual(['chest_strap', 'garmin', 'apple_watch']);
 	expect((Date.parse(body.end_date) - Date.parse(body.start_date)) / 86_400_000).toBe(13);
@@ -209,9 +210,9 @@ test('save creates a version; history shows the diff and activates another versi
 	await expect(page.getByText('Saved version 2.')).toBeVisible();
 	await expect(page.getByRole('heading', { name: 'In effect: version 2' })).toBeVisible();
 	const history = page.getByRole('region', { name: 'Version history' });
-	const v1 = history.getByRole('row', { name: /rule:heart_rate:1/ });
+	const v1 = history.getByRole('listitem').filter({ hasText: 'rule:heart_rate:1' });
 	await expect(v1).toContainText('from builtin:heart_rate:1');
-	await expect(history.getByRole('row', { name: /rule:heart_rate:2/ })).toContainText('try the max');
+	await expect(history.getByRole('listitem').filter({ hasText: 'rule:heart_rate:2' })).toContainText('try the max');
 	await expect(page.getByRole('table', { name: 'Changes from version 2 to version 1' }).getByRole('row', { name: /strategy\.op/ })).toContainText(
 		'"maximum_across_sources"'
 	);
@@ -219,7 +220,7 @@ test('save creates a version; history shows the diff and activates another versi
 	await v1.getByRole('button', { name: 'Activate version 1' }).click();
 	await expect(page.getByText('Version 1 is now active.')).toBeVisible();
 	await expect(page.getByRole('heading', { name: 'In effect: version 1' })).toBeVisible();
-	await expect(history.getByRole('row', { name: /rule:heart_rate:1/ })).toContainText('Active');
+	await expect(history.getByRole('listitem').filter({ hasText: 'rule:heart_rate:1' })).toContainText('Active');
 	await expect(history.getByRole('button', { name: 'Activate version 2' })).toBeVisible();
 });
 
