@@ -35,16 +35,11 @@ type Request struct {
 	Live bool
 }
 
-// Resolve resolves metric for every window of kind ("" for the rule's) on the local dates from
-// through to, with the rule in effect and the active overrides. It only reads: rule, timezone
-// periods, overrides, the metric's rows (and its wear series), sleep sessions and workouts for
+// Run resolves req.Metric for every window of req.Kind ("" for the rule's) on the local dates
+// req.From through req.To, with the rule in effect and the active overrides. It only reads:
+// rule, timezone periods, overrides, the metric's rows (and its wear series), sleep sessions and workouts for
 // contexts and night windows, and the follow leader's results; closed dates come from and go to
 // resolved_cache (cache.go).
-func Resolve(ctx context.Context, d *db.DB, userID uuid.UUID, metric string, kind catalog.Window, from, to time.Time) ([]Result, error) {
-	return Run(ctx, d, Request{UserID: userID, Metric: metric, Kind: kind, From: from, To: to})
-}
-
-// Run is Resolve with every option of Request.
 func Run(ctx context.Context, d *db.DB, req Request) ([]Result, error) {
 	days, err := run(ctx, d, req)
 	if err != nil {
