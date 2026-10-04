@@ -8,7 +8,7 @@ import (
 	"github.com/KaanEmec/vitamux/internal/connectors"
 )
 
-// Webhook callbacks are public: probes answer 204 and touch nothing; a notification without a
+// Webhook callbacks are public: probes answer 200 and touch nothing; a notification without a
 // known hook is 404. The service behind it is tested in internal/connectors/withings.
 func TestWithingsWebhookRoutes(t *testing.T) {
 	h, err := NewHandler(slog.New(slog.DiscardHandler), newUITestFS(), Options{})
@@ -16,7 +16,7 @@ func TestWithingsWebhookRoutes(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, m := range []string{http.MethodHead, http.MethodGet} {
-		if res := serve(t, h, request(t, m, "/webhooks/withings/synthetic-hook", nil)); res.StatusCode != http.StatusNoContent {
+		if res := serve(t, h, request(t, m, "/webhooks/withings/synthetic-hook", nil)); res.StatusCode != http.StatusOK {
 			t.Fatalf("%s: %d", m, res.StatusCode)
 		}
 	}

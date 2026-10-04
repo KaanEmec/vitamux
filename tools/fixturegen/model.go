@@ -22,8 +22,8 @@ const (
 // Source is one device or app stream: a (provider, device, origin) triple. Key is stable and is
 // how records refer to it.
 type Source struct {
-	Key, Provider, DeviceType, Fingerprint, Model string
-	OriginKey, RelayedProvider                    string // origin only for apple_health streams
+	Key, Provider, DeviceType, Fingerprint, Manufacturer, Model string
+	OriginKey, RelayedProvider                                  string // origin only for apple_health streams
 }
 
 type Measurement struct {
@@ -86,13 +86,13 @@ type Revision struct {
 }
 
 var (
-	garminWatch = &Source{Key: "garmin_watch", Provider: "garmin", DeviceType: "watch", Fingerprint: "synthetic-garmin-watch-01", Model: "Synthetic Band H"}
-	appleWatch  = &Source{Key: "apple_watch", Provider: "apple_health", DeviceType: "watch", Fingerprint: "synthetic-apple-watch-01", Model: "Synthetic Watch", OriginKey: "com.apple.health.synthetic-watch"}
-	iphone      = &Source{Key: "iphone", Provider: "apple_health", DeviceType: "phone", Fingerprint: "synthetic-iphone-01", Model: "Synthetic Phone", OriginKey: "com.apple.health.synthetic-phone"}
-	garminHK    = &Source{Key: "garmin_via_healthkit", Provider: "apple_health", DeviceType: "watch", Fingerprint: "synthetic-garmin-watch-01", Model: "Synthetic Band H", OriginKey: "com.garmin.connect.mobile", RelayedProvider: "garmin"}
-	bpMonitor   = &Source{Key: "withings_bp", Provider: "withings", DeviceType: "bp_monitor", Fingerprint: "synthetic-bp-monitor-01", Model: "Synthetic BP Cuff"}
-	scale       = &Source{Key: "withings_scale", Provider: "withings", DeviceType: "scale", Fingerprint: "synthetic-scale-01", Model: "Synthetic Scale"}
-	scaleHK     = &Source{Key: "withings_via_healthkit", Provider: "apple_health", DeviceType: "scale", Fingerprint: "synthetic-scale-01", Model: "Synthetic Scale", OriginKey: "com.withings.wiScaleNG", RelayedProvider: "withings"}
+	garminWatch = &Source{Key: "garmin_watch", Provider: "garmin", DeviceType: "watch", Fingerprint: "synthetic-garmin-watch-01", Manufacturer: "Garmin", Model: "Synthetic Band H"}
+	appleWatch  = &Source{Key: "apple_watch", Provider: "apple_health", DeviceType: "watch", Fingerprint: "synthetic-apple-watch-01", Manufacturer: "Apple Inc.", Model: "Watch", OriginKey: "com.apple.health.synthetic-watch"}
+	iphone      = &Source{Key: "iphone", Provider: "apple_health", DeviceType: "phone", Fingerprint: "synthetic-iphone-01", Manufacturer: "Apple Inc.", Model: "iPhone", OriginKey: "com.apple.health.synthetic-phone"}
+	garminHK    = &Source{Key: "garmin_via_healthkit", Provider: "apple_health", DeviceType: "watch", Fingerprint: "synthetic-garmin-watch-01", Manufacturer: "Garmin", Model: "Synthetic Band H", OriginKey: "com.garmin.connect.mobile", RelayedProvider: "garmin"}
+	bpMonitor   = &Source{Key: "withings_bp", Provider: "withings", DeviceType: "bp_monitor", Fingerprint: "synthetic-bp-monitor-01", Manufacturer: "Withings", Model: "Synthetic BP Cuff"}
+	scale       = &Source{Key: "withings_scale", Provider: "withings", DeviceType: "scale", Fingerprint: "synthetic-scale-01", Manufacturer: "Withings", Model: "Synthetic Scale"}
+	scaleHK     = &Source{Key: "withings_via_healthkit", Provider: "apple_health", DeviceType: "scale", Fingerprint: "synthetic-scale-01", Manufacturer: "Withings", Model: "Synthetic Scale", OriginKey: "com.withings.wiScaleNG", RelayedProvider: "withings"}
 	manualEntry = &Source{Key: "manual_entry", Provider: "manual"}
 
 	allSources = []*Source{garminWatch, appleWatch, iphone, garminHK, bpMonitor, scale, scaleHK, manualEntry}

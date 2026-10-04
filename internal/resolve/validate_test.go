@@ -130,6 +130,9 @@ func TestInvalidRules(t *testing.T) {
 		{"origin key and prefix", "claude-apple-watch-first.json", func(m map[string]any) {
 			m["exclude"] = []any{map[string]any{"origin_key": "a.b", "origin_key_prefix": "a."}}
 		}, "/exclude/0/origin_key_prefix", "not both", true},
+		{"brand too long", "brand-selectors.json", func(m map[string]any) {
+			m["exclude"] = []any{map[string]any{"device_manufacturer": strings.Repeat("g", 257)}}
+		}, "/exclude/0/device_manufacturer", "at most 256", true},
 		{"bad entry", "claude-apple-watch-first.json", func(m map[string]any) { m["exclude"] = []any{map[string]any{"entry": "typed"}} }, "/exclude/0/entry", "device or manual", true},
 		{"unknown op", "claude-heart-rate-mean.json", func(m map[string]any) { obj(m, "strategy")["op"] = "median_across_sources" }, "/strategy/op", "must be", true},
 		{"single_source with two groups", "claude-heart-rate-mean.json", func(m map[string]any) { m["strategy"] = map[string]any{"op": "single_source"} }, "/groups", "exactly one group", true},

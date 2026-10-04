@@ -121,7 +121,7 @@ Provider connections, syncs, backfills and streams (docs/architecture/connectors
 | `GET` | `/api/v1/schedules` | `read:config` | List sync schedules |
 | `PATCH` | `/api/v1/schedules/{id}` | `write:config`, CSRF | Change a schedule's interval, lookback or enabled flag |
 | `GET` | `/oauth/{provider}/callback` | `public` | OAuth redirect target; completes the authorization and redirects to the UI |
-| `GET` | `/webhooks/withings/{hook_token}` | `public` | Withings callback validation; HEAD and GET answer 204 without side effects |
+| `GET` | `/webhooks/withings/{hook_token}` | `public` | Withings callback validation; HEAD and GET answer 200 without side effects |
 | `POST` | `/webhooks/withings/{hook_token}` | `public` | Withings notification; enqueues one deduplicated window sync |
 
 ## devices
@@ -137,6 +137,8 @@ Paired devices such as the Apple Health bridge (docs/architecture/apple-health.m
 | `GET` | `/api/v1/origins` | `read:config` | List the apps (origins) data was recorded by, with their native or relayed state |
 | `PATCH` | `/api/v1/origins/{id}` | `write:config`, CSRF | Set or clear the vendor an origin relays |
 | `GET` | `/api/v1/source-devices` | `read:config` | List the devices measurements were recorded on (not the paired apps) |
+| `PATCH` | `/api/v1/source-devices/{id}` | `session`, CSRF | Set a device's type or name (audited) |
+| `POST` | `/api/v1/source-devices/{id}/merge` | `session`, CSRF | Merge a device into another device of the same provider (audited, irreversible) |
 
 ## documents
 

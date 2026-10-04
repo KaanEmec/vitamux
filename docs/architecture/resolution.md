@@ -30,7 +30,20 @@ The provider names are illustrative; rules work for any provider.
 
 ## Selectors and validation
 
-- Selector fields: `provider`, `connection_id`, `origin_key`, `origin_key_prefix`, `origin_name`, `relayed`, `device_type`, `device_model`, `device_id`, `entry` (`device|manual`). Fields within one selector are ANDed; a list of selectors is ORed. `exclude` wins over every group; contexts (E1) reorder groups but never change membership.
+- Selector fields: `provider`, `connection_id`, `origin_key`, `origin_key_prefix`, `origin_name`, `relayed`, `device_type`, `device_model`, `device_manufacturer` (the brand, case-insensitive), `device_id`, `entry` (`device|manual`). Fields within one selector are ANDed; a list of selectors is ORed. `exclude` wins over every group; contexts (E1) reorder groups but never change membership.
+- Comparisons are exact except `origin_key_prefix` (a prefix) and `device_manufacturer` (case-insensitive). A set field never matches a row without that value, so a brand or model selector skips rows without a device.
+- Named choices ([J09.11](../plan/E09-resolution/J09.11-brand-device-selectors.md)): the rule builder offers presets built from the owner's own devices (`GET /source-devices`) and providers, and the built-ins use the same groups ([defaults](resolution-defaults.md#how-brands-are-selected)):
+
+  | Choice | Selector |
+  | --- | --- |
+  | Apple Health (all data) | `{provider: apple_health}` |
+  | Apple Watch / iPhone | `{provider: apple_health, device_manufacturer: "Apple Inc.", device_model: Watch}` / `… iPhone` |
+  | Garmin Connect (all data) | `{provider: garmin}` |
+  | Garmin (any device), direct and through Apple Health | `{device_manufacturer: Garmin}` |
+  | One model | `{device_manufacturer: Garmin, device_model: "Forerunner 965"}` |
+  | One named device | `{device_id: <id>}` |
+
+  `relayed: false` still narrows a choice. Merged devices are not offered, because their records live on the target device.
 - Validation rejects:
   - unknown fields;
   - windows or strategies not allowed for the metric's aggregation;

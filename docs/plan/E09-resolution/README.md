@@ -30,3 +30,4 @@ Read first: [resolution#rule-specification](../../architecture/resolution.md#rul
 | [J09.8](J09.8-results-scenarios.md) | Results, explanations and scenario suite | J09.5, J09.6, J09.7, J09.10 | None |
 | [J09.9](J09.9-cache.md) | Materialization and cache | J09.8, J04.4 | None |
 | [J09.10](J09.10-rule-extensions.md) | Context ladders, window statistics, wear gate, coherence, hour composition (E1, E2, E3, E5, E9) | J09.5, J09.6 | None |
+| [J09.11](J09.11-brand-device-selectors.md) | Brand and device choices in rules, defaults rebuilt on them | J09.3, J09.2, J20.7 | None |

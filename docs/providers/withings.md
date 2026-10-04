@@ -14,7 +14,7 @@ Sources: the [OpenAPI spec](https://developer.withings.com/openapi.yaml) (author
 | meastype codes | **Confirmed** for every code in the `W` column of [metric-catalog.md](../architecture/metric-catalog.md) and [metrics.md](../metrics.md). Vascular age is 155 in the OpenAPI spec (the AI-agent page says 140; the spec wins). |
 | `value×10^unit` | **Confirmed** (`unit` is the power of ten). Exception: 130 and 139 are classification integers, not quantities. |
 | Notify `appli` codes | **Corrected**: they were unspecified in our docs, and the AI-agent page lists wrong values (16 for BP, 4 for sleep). The category page is authoritative: see [notifications](#notifications). |
-| HEAD-validated callbacks | **Corrected in scope**: Withings sends `HEAD` to the *notification* callback when subscribing (2xx required). Nothing documents a HEAD on the OAuth redirect URI; Vitamux still answers `HEAD /oauth/withings/callback` with 204 because a probe must never consume a state. |
+| HEAD-validated callbacks | **Corrected in scope**: Withings sends `HEAD` to the *notification* callback when subscribing (200 required, 204 refused). The dashboard's *Test* button probes the registered OAuth URL and accepts only 200 (it reports 204 as "couldn't reach"), so Vitamux answers `HEAD /oauth/withings/callback` with an empty 200 that never consumes a state. |
 | Rate limits | **Confirmed with numbers**: 120 requests per minute per application on the standard plan; poll a user at most every 10 minutes. HTTP 429 or body status 601 means too many requests. |
 
 ## App registration and callback
@@ -55,7 +55,7 @@ Open: how a *deleted* group appears in a `lastupdate` response is not documented
 ## Notifications
 
 - `POST https://wbsapi.withings.net/notify` with `action=subscribe|list|get|update|revoke`, `callbackurl`, `appli`; one subscription per user and `appli`.
-- At subscribe time Withings sends `HEAD` to the callback URL and expects 2xx. Notifications are form POSTs (`userid`, `appli`, `startdate`, `enddate`, or `date`/`deviceid` for events) and must get HTTP 2xx within a few seconds. Failures are retried 5 cycles over about 5 hours (2 attempts each, with jitter); persistent failure leads to warning emails and, after 20 days, cancellation.
+- At subscribe time Withings sends `HEAD` to the callback URL and expects 200 (204 is refused). Notifications are form POSTs (`userid`, `appli`, `startdate`, `enddate`, or `date`/`deviceid` for events) and must get HTTP 200 within a few seconds. Failures are retried 5 cycles over about 5 hours (2 attempts each, with jitter); persistent failure leads to warning emails and, after 20 days, cancellation.
 - `appli` values for measures: **1** weight and body composition, **2** temperature, **4** blood pressure, heart rate and SpO2. Others: 16 activity, 44 sleep, 46 profile change, 50–52 bed events, 54 ECG, 55 ECG failed, 58 glucose, 61 stethoscope, 62 HRV, 63 urine (U-Scan).
 
 ### How Vitamux uses notifications
@@ -63,7 +63,7 @@ Open: how a *deleted* group appears in a `lastupdate` response is not documented
 - Optional per install: owner setting `withings.notifications` (default off; `withings.Notifications.SetEnabled`). Polling runs either way; notifications only lower latency. Turning it on needs `VITAMUX_PUBLIC_URL`.
 - On: each active connection (and every later connect or reauthorization) gets applis 1, 2 and 4 on one callback `${VITAMUX_PUBLIC_URL}/webhooks/withings/<hook_token>`. The token is 32 random bytes; only its SHA-256 is stored (`connections.hook_token_hash`) and the token is only ever sent to Withings. Subscribing lists the profiles first, so repeating it is safe; Vitamux callbacks with older tokens are revoked.
 - Off: every Vitamux profile is revoked and the hash cleared, so later notifications get 404 (Withings cancels a callback that keeps failing).
-- `HEAD`/`GET` on the callback answer 204. A `POST` with an unknown token is 404 and enqueues nothing. A measures notification (appli 1, 2, 4) whose `userid` matches the connection enqueues one correction sync of `[startdate, enddate]` (by measurement date; the cursor stays), deduplicated per connection, stream and window while it is queued or running. Other categories, users or windows longer than 31 days are acknowledged (204) and ignored. A notification that arrives while the same window is already running is folded into it; the next `lastupdate` poll catches anything it missed.
+- `HEAD`/`GET` on the callback answer an empty 200. A `POST` with an unknown token is 404 and enqueues nothing. A measures notification (appli 1, 2, 4) whose `userid` matches the connection enqueues one correction sync of `[startdate, enddate]` (by measurement date; the cursor stays), deduplicated per connection, stream and window while it is queued or running. Other categories, users or windows longer than 31 days are acknowledged (200) and ignored. A notification that arrives while the same window is already running is folded into it; the next `lastupdate` poll catches anything it missed.
 
 ## Fixtures
 

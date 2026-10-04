@@ -8,25 +8,25 @@ A built-in applies while the owner has no rule for the metric. The first edit co
 
 | Rule | Window | Strategy and gates | Ladder | Why |
 | --- | --- | --- | --- | --- |
-| `builtin:steps:2` | local_day | first_available · min_coverage 0.6 · require_wear heart_rate · compose first_available by hour (E9) | `watch` › `watch_relayed` › `ring` › `ring_relayed` › `band` › `band_relayed` › `phone` | Watch, ring, band, phone, each direct before relayed; hours resolve separately so a watch left on the charger falls back to the phone for those hours only. |
-| `builtin:distance_walk_run:2` | local_day | first_available · min_coverage 0.6 · require_wear heart_rate · compose first_available by hour (E9) · contexts.workout @workout_source (E1) | `watch` › `watch_relayed` › `phone` › `ring` › `ring_relayed` | Follows the step source; inside a workout, the device that recorded it. |
-| `builtin:active_energy:2` | local_day | first_available · min_coverage 0.8 · require_wear heart_rate | `watch` › `watch_relayed` › `band` › `band_relayed` › `ring` › `ring_relayed` › `phone` | Every device is far off; one worn source per day keeps days comparable. |
-| `builtin:heart_rate:1` | bucket 5m | first_available · plausible_range 25–230 · exclude_flags manual_entry · contexts.workout chest_strap, arm_band, @workout_source (E1) | `chest_strap` › `arm_band` › `apple_watch` › `garmin` › `garmin_apple` › `fitbit` › `samsung` › `whoop` › `polar` › `xiaomi` › `amazfit` › `oura` › `oura_apple` | Chest straps are ECG-class, then wrist devices by independent validation; inside workouts the recording device follows the straps. |
-| `builtin:resting_heart_rate:1` | local_day | first_available · max_staleness 36h | `oura` › `oura_apple` › `whoop` › `polar` › `apple` › `garmin` › `garmin_apple` › `fitbit` › `samsung` | Selection only (definitions differ); ranked by nightly error against a chest strap. |
+| `builtin:steps:3` | local_day | first_available · min_coverage 0.6 · require_wear heart_rate · compose first_available by hour (E9) | `watch` › `watch_relayed` › `ring` › `ring_relayed` › `band` › `band_relayed` › `iphone` › `phone` | Watch, ring, band, iPhone, other phones, each direct before relayed; hours resolve separately so a watch left on the charger falls back to the phone for those hours only. |
+| `builtin:distance_walk_run:3` | local_day | first_available · min_coverage 0.6 · require_wear heart_rate · compose first_available by hour (E9) · contexts.workout @workout_source (E1) | `watch` › `watch_relayed` › `iphone` › `phone` › `ring` › `ring_relayed` | Follows the step source; inside a workout, the device that recorded it. |
+| `builtin:active_energy:3` | local_day | first_available · min_coverage 0.8 · require_wear heart_rate | `watch` › `watch_relayed` › `band` › `band_relayed` › `ring` › `ring_relayed` › `iphone` › `phone` | Every device is far off; one worn source per day keeps days comparable. |
+| `builtin:heart_rate:2` | bucket 5m | first_available · plausible_range 25–230 · exclude_flags manual_entry · contexts.workout chest_strap, arm_band, @workout_source (E1) | `chest_strap` › `arm_band` › `apple_watch` › `garmin` › `garmin_apple` › `fitbit` › `fitbit_apple` › `samsung` › `whoop` › `whoop_apple` › `polar` › `polar_apple` › `xiaomi` › `amazfit` › `oura` › `oura_apple` | Chest straps are ECG-class, then wrist devices by independent validation; inside workouts the recording device follows the straps. |
+| `builtin:resting_heart_rate:2` | local_day | first_available · max_staleness 36h | `oura` › `oura_apple` › `whoop` › `whoop_apple` › `polar` › `polar_apple` › `apple` › `garmin` › `garmin_apple` › `fitbit` › `fitbit_apple` › `samsung` | Selection only (definitions differ); ranked by nightly error against a chest strap. |
 | `builtin:hrv_sdnn:1` | local_day | single_source | `apple` | Spot SDNN is its own method and comes from Apple only; never mixed with RMSSD. |
-| `builtin:hrv_rmssd:1` | local_night | first_available | `oura` › `oura_apple` › `whoop` › `garmin` › `garmin_apple` › `polar` › `fitbit` › `samsung` | For sources that send 5-minute samples; never combined with hrv_rmssd_nightly. |
-| `builtin:hrv_rmssd_nightly:1` | local_day | first_available · max_staleness 36h | `oura` › `oura_apple` › `whoop` › `garmin` › `garmin_apple` › `polar` › `fitbit` › `samsung` | Selection only (overnight windows differ); ranked by agreement with ECG. |
-| `builtin:vo2max:1` | latest | first_available · max_staleness 30d | `garmin` › `garmin_apple` › `apple` › `polar` › `samsung` | Ranked by published error against lab tests; older than 30 days counts as stale. |
-| `builtin:pulse_wave_velocity:1` | latest | first_available | `withings` › `withings_apple` | Only Withings reports this measure; other sources join the ladder when they exist. |
-| `builtin:vascular_age:1` | latest | first_available | `withings` › `withings_apple` | Only Withings reports this measure; other sources join the ladder when they exist. |
+| `builtin:hrv_rmssd:2` | local_night | first_available | `oura` › `oura_apple` › `whoop` › `garmin` › `garmin_apple` › `polar` › `fitbit` › `samsung` | For sources that send 5-minute samples; never combined with hrv_rmssd_nightly. |
+| `builtin:hrv_rmssd_nightly:2` | local_day | first_available · max_staleness 36h | `oura` › `oura_apple` › `whoop` › `garmin` › `garmin_apple` › `polar` › `fitbit` › `samsung` | Selection only (overnight windows differ); ranked by agreement with ECG. |
+| `builtin:vo2max:2` | latest | first_available · max_staleness 30d | `garmin` › `garmin_apple` › `apple` › `polar` › `polar_apple` › `samsung` | Ranked by published error against lab tests; older than 30 days counts as stale. |
+| `builtin:pulse_wave_velocity:2` | latest | first_available | `withings` › `withings_apple` | Only Withings reports this measure; other sources join the ladder when they exist. |
+| `builtin:vascular_age:2` | latest | first_available | `withings` › `withings_apple` | Only Withings reports this measure; other sources join the ladder when they exist. |
 | `builtin:blood_pressure:1` | local_day | first_available · statistic mean | `bp_monitor` › `watch_cuff` › `manual` | Validated cuffs first, then watches with a micro-cuff, then manual entries; one reading never mixes sources, and a day is the mean of its readings. |
-| `builtin:spo2:1` | local_night | first_available | `apple` › `samsung` › `withings` › `withings_apple` › `garmin` › `garmin_apple` › `fitbit` › `oura` › `oura_apple` › `whoop` | Nightly mean, ranked by published error against reference oximetry; ring values are a trend only. |
-| `builtin:respiratory_rate:1` | local_night | first_available | `samsung` › `oura` › `oura_apple` › `whoop` › `apple` › `fitbit` › `garmin` › `garmin_apple` | All published evidence is vendor-funded; low confidence across the board. |
+| `builtin:spo2:2` | local_night | first_available | `apple` › `samsung` › `withings` › `withings_apple` › `garmin` › `garmin_apple` › `fitbit` › `fitbit_apple` › `oura` › `oura_apple` › `whoop` › `whoop_apple` | Nightly mean, ranked by published error against reference oximetry; ring values are a trend only. |
+| `builtin:respiratory_rate:2` | local_night | first_available | `samsung` › `oura` › `oura_apple` › `whoop` › `whoop_apple` › `apple` › `fitbit` › `fitbit_apple` › `garmin` › `garmin_apple` | All published evidence is vendor-funded; low confidence across the board. |
 | `builtin:body_temperature:1` | latest | latest | `device` › `manual` | Spot readings: the newest measured value wins, else the newest manual entry. |
 | `builtin:weight:1` | local_day | first_available · statistic latest | `scale` › `scale_apps` › `manual` | Scales agree closely; the latest reading of the day, from a scale before scale apps and manual entries. |
 | `builtin:height:1` | latest | latest | `device` › `manual` | The newest value from any source. |
-| `builtin:resting_heart_rate_nocturnal:1` | local_night | first_available · min_coverage 0.7 · plausible_range 25–230 · exclude_flags manual_entry · statistic min_rolling_mean 30m | `chest_strap` › `arm_band` › `apple_watch` › `garmin` › `garmin_apple` › `fitbit` › `samsung` › `whoop` › `polar` › `xiaomi` › `amazfit` › `oura` › `oura_apple` | One definition across brands: the lowest 30-minute mean of heart rate in the main sleep episode, from the heart-rate ladder; sparse night data fails the coverage gate. |
-| `builtin:spo2_night_min:1` | local_night | first_available · statistic min | `apple` › `samsung` › `withings` › `withings_apple` › `garmin` › `garmin_apple` › `fitbit` › `oura` › `oura_apple` › `whoop` | The lowest 5-minute SpO2 mean in the main sleep episode, from the SpO2 ladder; a failed reading is never 0 %. |
+| `builtin:resting_heart_rate_nocturnal:2` | local_night | first_available · min_coverage 0.7 · plausible_range 25–230 · exclude_flags manual_entry · statistic min_rolling_mean 30m | `chest_strap` › `arm_band` › `apple_watch` › `garmin` › `garmin_apple` › `fitbit` › `fitbit_apple` › `samsung` › `whoop` › `whoop_apple` › `polar` › `polar_apple` › `xiaomi` › `amazfit` › `oura` › `oura_apple` | One definition across brands: the lowest 30-minute mean of heart rate in the main sleep episode, from the heart-rate ladder; sparse night data fails the coverage gate. |
+| `builtin:spo2_night_min:2` | local_night | first_available · statistic min | `apple` › `samsung` › `withings` › `withings_apple` › `garmin` › `garmin_apple` › `fitbit` › `fitbit_apple` › `oura` › `oura_apple` › `whoop` › `whoop_apple` | The lowest 5-minute SpO2 mean in the main sleep episode, from the SpO2 ladder; a failed reading is never 0 %. |
 | `builtin:body_fat_ratio:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
 | `builtin:fat_mass:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
 | `builtin:fat_free_mass:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
@@ -39,7 +39,7 @@ A built-in applies while the owner has no rule for the metric. The first edit co
 | `builtin:basal_metabolic_rate:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
 | `builtin:bmi:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
 | `builtin:lean_body_mass:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
-| `builtin:sleep:1` | local_night | event_priority · max_staleness 36h · match_overlap 0.5 · min_episode_coverage 0.7 | `oura` › `oura_apple` › `apple_watch` › `fitbit` › `under_mattress` › `samsung` › `whoop` › `garmin` › `garmin_apple` › `polar` › `xiaomi` › `amazfit` | One night comes from one source, ranked by independent four-stage agreement with PSG; a device on the charger fails the coverage gate. |
+| `builtin:sleep:2` | local_night | event_priority · max_staleness 36h · match_overlap 0.5 · min_episode_coverage 0.7 | `oura` › `oura_apple` › `apple_watch` › `fitbit` › `fitbit_apple` › `under_mattress` › `samsung` › `whoop` › `whoop_apple` › `garmin` › `garmin_apple` › `polar` › `polar_apple` › `xiaomi` › `amazfit` | One night comes from one source, ranked by independent four-stage agreement with PSG; a device on the charger fails the coverage gate. |
 
 ## Groups
 
@@ -49,7 +49,7 @@ A group id means the same selectors in every built-in. Fields of one selector ar
 | --- | --- |
 | `amazfit` | `{"provider":"amazfit"}` |
 | `apple` | `{"provider":"apple_health","origin_key_prefix":"com.apple.health"}` |
-| `apple_watch` | `{"provider":"apple_health","origin_key_prefix":"com.apple.health","device_type":"watch"}` |
+| `apple_watch` | `{"provider":"apple_health","origin_key_prefix":"com.apple.health","device_model":"Watch","device_manufacturer":"Apple Inc."}` |
 | `arm_band` | `{"device_type":"arm_band","entry":"device"}` |
 | `band` | `{"relayed":false,"device_type":"band","entry":"device"}` |
 | `band_relayed` | `{"relayed":true,"device_type":"band","entry":"device"}` |
@@ -57,13 +57,16 @@ A group id means the same selectors in every built-in. Fields of one selector ar
 | `chest_strap` | `{"device_type":"chest_strap","entry":"device"}` |
 | `device` | `{"entry":"device"}` |
 | `fitbit` | `{"provider":"fitbit"}` |
+| `fitbit_apple` | `{"provider":"apple_health","origin_key":"com.fitbit.FitbitMobile"}` |
 | `garmin` | `{"provider":"garmin"}` |
-| `garmin_apple` | `{"provider":"apple_health","origin_key":"com.garmin.connect.mobile"}` |
+| `garmin_apple` | `{"provider":"apple_health","origin_key":"com.garmin.connect.mobile"}` or `{"provider":"apple_health","device_manufacturer":"Garmin"}` |
+| `iphone` | `{"provider":"apple_health","origin_key_prefix":"com.apple.health","device_model":"iPhone","device_manufacturer":"Apple Inc."}` |
 | `manual` | `{"entry":"manual"}` |
 | `oura` | `{"provider":"oura"}` |
 | `oura_apple` | `{"provider":"apple_health","origin_key":"com.ouraring.oura"}` |
 | `phone` | `{"device_type":"phone","entry":"device"}` |
 | `polar` | `{"provider":"polar"}` |
+| `polar_apple` | `{"provider":"apple_health","origin_key":"fi.polar.polarflow"}` |
 | `ring` | `{"relayed":false,"device_type":"ring","entry":"device"}` |
 | `ring_relayed` | `{"relayed":true,"device_type":"ring","entry":"device"}` |
 | `samsung` | `{"provider":"samsung"}` |
@@ -74,8 +77,9 @@ A group id means the same selectors in every built-in. Fields of one selector ar
 | `watch_cuff` | `{"device_type":"watch","entry":"device"}` |
 | `watch_relayed` | `{"relayed":true,"device_type":"watch","entry":"device"}` |
 | `whoop` | `{"provider":"whoop"}` |
+| `whoop_apple` | `{"provider":"apple_health","origin_key":"com.whoop.iphone"}` |
 | `withings` | `{"provider":"withings"}` |
-| `withings_apple` | `{"provider":"apple_health","origin_key":"com.withings.wiScaleNG"}` |
+| `withings_apple` | `{"provider":"apple_health","origin_key":"com.withings.wiScaleNG"}` or `{"provider":"apple_health","device_manufacturer":"Withings"}` |
 | `xiaomi` | `{"provider":"xiaomi"}` |
 
 ## Coverage

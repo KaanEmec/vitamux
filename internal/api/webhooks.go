@@ -15,14 +15,15 @@ func (rt *router) webhookRoutes() {
 	rt.handle("POST /webhooks/withings/{hook_token}", public, rt.withingsNotify)
 }
 
-// webhookProbe answers the provider's validation request (Withings sends HEAD on subscribe).
+// webhookProbe answers the provider's validation request (Withings sends HEAD on subscribe and
+// accepts only 200, not 204).
 func (rt *router) webhookProbe(w http.ResponseWriter, _ *http.Request) {
-	w.WriteHeader(http.StatusNoContent)
+	w.WriteHeader(http.StatusOK)
 }
 
 // withingsNotify enqueues at most one deduplicated window sync. An unknown token is 404 with no
-// job; an ignored notification is still 204, because Withings retries and eventually cancels
-// callbacks that do not answer 2xx.
+// job; an ignored notification is still 200, because Withings retries and eventually cancels
+// callbacks that do not answer 200.
 func (rt *router) withingsNotify(w http.ResponseWriter, r *http.Request) {
 	if rt.opts.Withings == nil {
 		writeProblem(w, r, CodeNotFound, "no such hook")
@@ -35,6 +36,6 @@ func (rt *router) withingsNotify(w http.ResponseWriter, r *http.Request) {
 	case err != nil:
 		rt.internal(w, r, "withings notification", err)
 	default:
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusOK)
 	}
 }

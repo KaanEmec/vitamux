@@ -156,6 +156,7 @@
         "relayed": {"type": "boolean"},
         "device_type": {"type": "string", "minLength": 1, "maxLength": 256},
         "device_model": {"type": "string", "minLength": 1, "maxLength": 256},
+        "device_manufacturer": {"type": "string", "minLength": 1, "maxLength": 256},
         "device_id": {"$ref": "#/$defs/uuid"},
         "entry": {"enum": ["device", "manual"]}
       },

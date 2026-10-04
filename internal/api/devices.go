@@ -36,6 +36,8 @@ func (rt *router) deviceRoutes() {
 	rt.handle("GET /api/v1/origins", scope(auth.ReadConfig), rt.ops.ListOrigins)
 	rt.handle("PATCH /api/v1/origins/{id}", write, rt.ops.ClassifyOrigin)
 	rt.handle("GET /api/v1/source-devices", scope(auth.ReadConfig), rt.ops.ListSourceDevices)
+	rt.handle("PATCH /api/v1/source-devices/{id}", session, rt.ops.UpdateSourceDevice)
+	rt.handle("POST /api/v1/source-devices/{id}/merge", session, rt.ops.MergeSourceDevice)
 
 	client := access{ingest: true}
 	rt.handle("POST /api/ingest/v1/devices/pair", public, rt.pairDevice)

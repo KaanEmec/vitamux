@@ -488,6 +488,7 @@ const sourceDailyValues = `-- name: SourceDailyValues :many
 SELECT DISTINCT ON (x.connection_id, x.device_id, x.origin_id, x.local_date)
   x.local_date, x.value, x.connection_id, x.device_id, x.origin_id, p.code AS provider,
   COALESCE(d.device_type, '')::text AS device_type, COALESCE(d.model, '')::text AS device_model,
+  COALESCE(d.manufacturer, '')::text AS device_manufacturer,
   COALESCE(o.origin_key, '')::text AS origin_key, COALESCE(o.name, '')::text AS origin_name,
   (o.relayed_provider_id IS NOT NULL)::boolean AS relayed
 FROM measurements x
@@ -508,17 +509,18 @@ type SourceDailyValuesParams struct {
 }
 
 type SourceDailyValuesRow struct {
-	LocalDate    time.Time
-	Value        float64
-	ConnectionID uuid.UUID
-	DeviceID     *uuid.UUID
-	OriginID     *uuid.UUID
-	Provider     string
-	DeviceType   string
-	DeviceModel  string
-	OriginKey    string
-	OriginName   string
-	Relayed      bool
+	LocalDate          time.Time
+	Value              float64
+	ConnectionID       uuid.UUID
+	DeviceID           *uuid.UUID
+	OriginID           *uuid.UUID
+	Provider           string
+	DeviceType         string
+	DeviceModel        string
+	DeviceManufacturer string
+	OriginKey          string
+	OriginName         string
+	Relayed            bool
 }
 
 // One metric's active daily values on the local dates from_date through to_date, the newest per
@@ -546,6 +548,7 @@ func (q *Queries) SourceDailyValues(ctx context.Context, arg SourceDailyValuesPa
 			&i.Provider,
 			&i.DeviceType,
 			&i.DeviceModel,
+			&i.DeviceManufacturer,
 			&i.OriginKey,
 			&i.OriginName,
 			&i.Relayed,
@@ -564,6 +567,7 @@ const sourceSeriesAggregates = `-- name: SourceSeriesAggregates :many
 SELECT min(a.hour_start)::timestamptz AS hour_start, a.local_date,
   a.connection_id, a.device_id, a.origin_id, p.code AS provider,
   COALESCE(d.device_type, '')::text AS device_type, COALESCE(d.model, '')::text AS device_model,
+  COALESCE(d.manufacturer, '')::text AS device_manufacturer,
   COALESCE(o.origin_key, '')::text AS origin_key, COALESCE(o.name, '')::text AS origin_name,
   (o.relayed_provider_id IS NOT NULL)::boolean AS relayed,
   sum(a.samples)::integer AS samples, sum(a.buckets)::integer AS buckets, sum(a.bucket_mean_sum)::float8 AS bucket_mean_sum,
@@ -575,7 +579,7 @@ LEFT JOIN devices d ON d.id = a.device_id
 LEFT JOIN data_origins o ON o.id = a.origin_id
 WHERE a.user_id = $1 AND a.metric_id = (SELECT id FROM metric_catalog WHERE code = $2::text)
   AND a.hour_start >= $3 AND a.hour_start < $4
-GROUP BY CASE WHEN $5::boolean THEN NULL ELSE a.hour_start END, a.local_date, a.connection_id, a.device_id, a.origin_id, p.code, d.device_type, d.model, o.origin_key, o.name, o.relayed_provider_id
+GROUP BY CASE WHEN $5::boolean THEN NULL ELSE a.hour_start END, a.local_date, a.connection_id, a.device_id, a.origin_id, p.code, d.device_type, d.model, d.manufacturer, o.origin_key, o.name, o.relayed_provider_id
 ORDER BY a.connection_id, a.device_id NULLS FIRST, a.origin_id NULLS FIRST, 1
 `
 
@@ -588,23 +592,24 @@ type SourceSeriesAggregatesParams struct {
 }
 
 type SourceSeriesAggregatesRow struct {
-	HourStart     time.Time
-	LocalDate     time.Time
-	ConnectionID  uuid.UUID
-	DeviceID      *uuid.UUID
-	OriginID      *uuid.UUID
-	Provider      string
-	DeviceType    string
-	DeviceModel   string
-	OriginKey     string
-	OriginName    string
-	Relayed       bool
-	Samples       int32
-	Buckets       int32
-	BucketMeanSum float64
-	MinValue      float64
-	MaxValue      float64
-	IntervalSum   float64
+	HourStart          time.Time
+	LocalDate          time.Time
+	ConnectionID       uuid.UUID
+	DeviceID           *uuid.UUID
+	OriginID           *uuid.UUID
+	Provider           string
+	DeviceType         string
+	DeviceModel        string
+	DeviceManufacturer string
+	OriginKey          string
+	OriginName         string
+	Relayed            bool
+	Samples            int32
+	Buckets            int32
+	BucketMeanSum      float64
+	MinValue           float64
+	MaxValue           float64
+	IntervalSum        float64
 }
 
 // One metric's hourly aggregates from from_at to to_at per source with its identity, by local
@@ -634,6 +639,7 @@ func (q *Queries) SourceSeriesAggregates(ctx context.Context, arg SourceSeriesAg
 			&i.Provider,
 			&i.DeviceType,
 			&i.DeviceModel,
+			&i.DeviceManufacturer,
 			&i.OriginKey,
 			&i.OriginName,
 			&i.Relayed,

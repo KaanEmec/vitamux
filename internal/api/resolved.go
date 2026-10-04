@@ -839,7 +839,7 @@ func (o *owner) GetResolvedWorkouts(ctx context.Context, req oapi.GetResolvedWor
 	ws := make([]resolve.WorkoutInput, len(rows))
 	for i, row := range rows {
 		src := resolve.Source{Provider: row.Provider, ConnectionID: row.ConnectionID, DeviceType: row.DeviceType, DeviceModel: row.DeviceModel,
-			OriginKey: row.OriginKey, OriginName: row.OriginName, Relayed: row.Relayed, Manual: row.Provider == "manual"}
+			DeviceManufacturer: row.DeviceManufacturer, OriginKey: row.OriginKey, OriginName: row.OriginName, Relayed: row.Relayed, Manual: row.Provider == "manual"}
 		if row.DeviceID != nil {
 			src.DeviceID = *row.DeviceID
 		}

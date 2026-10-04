@@ -27,26 +27,29 @@ SELECT id, code FROM units;
 
 -- Descriptive fields only fill in or change; a field the source stops sending keeps its value.
 -- name: UpsertDevice :one
+-- Returns the device records of the fingerprint are written to: the device, or the one the owner
+-- merged it into. A type the owner set is kept.
 WITH ins AS (
   INSERT INTO devices AS d (id, user_id, provider_id, fingerprint, device_type, manufacturer, model,
                             hardware_version, software_version)
   VALUES (@id, @user_id, @provider_id, @fingerprint, sqlc.narg(device_type), sqlc.narg(manufacturer),
           sqlc.narg(model), sqlc.narg(hardware_version), sqlc.narg(software_version))
   ON CONFLICT (user_id, provider_id, fingerprint) DO UPDATE SET
-    device_type      = COALESCE(EXCLUDED.device_type, d.device_type),
+    device_type      = CASE WHEN d.device_type_by_owner THEN d.device_type ELSE COALESCE(EXCLUDED.device_type, d.device_type) END,
     manufacturer     = COALESCE(EXCLUDED.manufacturer, d.manufacturer),
     model            = COALESCE(EXCLUDED.model, d.model),
     hardware_version = COALESCE(EXCLUDED.hardware_version, d.hardware_version),
     software_version = COALESCE(EXCLUDED.software_version, d.software_version)
   WHERE (d.device_type, d.manufacturer, d.model, d.hardware_version, d.software_version) IS DISTINCT FROM
-        (COALESCE(EXCLUDED.device_type, d.device_type), COALESCE(EXCLUDED.manufacturer, d.manufacturer),
+        (CASE WHEN d.device_type_by_owner THEN d.device_type ELSE COALESCE(EXCLUDED.device_type, d.device_type) END,
+         COALESCE(EXCLUDED.manufacturer, d.manufacturer),
          COALESCE(EXCLUDED.model, d.model), COALESCE(EXCLUDED.hardware_version, d.hardware_version),
          COALESCE(EXCLUDED.software_version, d.software_version))
-  RETURNING d.id
+  RETURNING COALESCE(d.merged_into, d.id) AS id
 )
 SELECT id FROM ins
 UNION ALL
-SELECT id FROM devices WHERE user_id = @user_id AND provider_id = @provider_id AND fingerprint = @fingerprint
+SELECT COALESCE(merged_into, id) FROM devices WHERE user_id = @user_id AND provider_id = @provider_id AND fingerprint = @fingerprint
 LIMIT 1;
 
 -- A new origin takes its relay target from known_relay_origins; later edits to the origin win.

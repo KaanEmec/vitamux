@@ -34,7 +34,7 @@ anonTest('login', async ({ page }) => {
 });
 
 connTest('Dashboard and connections', async ({ page }) => {
-	for (const path of ['/', '/connections', `/connections/${ids.ultrahuman}`, `/connections/${ids.ultrahuman}?tab=backfills`, `/connections/${ids.withings}?tab=settings`]) {
+	for (const path of ['/', '/connections', `/connections/${ids.ultrahuman}`, `/connections/${ids.ultrahuman}?tab=backfills`, `/connections/${ids.ultrahuman}?tab=devices`, `/connections/${ids.withings}?tab=settings`]) {
 		await page.goto(path);
 		await scan(page, path);
 	}

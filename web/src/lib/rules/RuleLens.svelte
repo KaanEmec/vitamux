@@ -21,13 +21,15 @@
 	import Badge from '../ui/Badge.svelte';
 	import EmptyState from '../ui/EmptyState.svelte';
 	import { sourceClass } from '../ui/source.ts';
-	import { selectorChips, type Chip } from './chips.ts';
+	import { selectorChips, sourceChoices, type Chip } from './chips.ts';
 	import { dayChanged, numeric, selectedGroup, showResolved, summarize } from './preview.ts';
 	import {
 		bucketSizes,
 		fromSpec,
+		groupLabel,
 		needsSumAck,
 		ops,
+		selectorKey,
 		selectorText,
 		sumWarning,
 		toSpec,
@@ -72,7 +74,8 @@
 	let def = $state<Schemas['Metric'] | null>(null);
 	let versions = $state<Version[] | null>(null);
 	let loadProblem = $state<Problem | null>(null);
-	let chips = $state<Chip[]>([]);
+	let chips = $state<Chip[]>([]); // one-click exclusions: the named choices, then the origins and device types
+	let choices = $state<Chip[]>([]);
 
 	let base = $state<Version | null>(null);
 	let baseJson = '';
@@ -104,7 +107,7 @@
 	);
 	const coverage = $derived(Math.round(Number(form?.minCoverage || 0) * 100) || 0);
 	const exclusionChips = $derived(
-		chips.filter((c) => !form?.exclude.some((s) => selectorText(s) === c.label))
+		[...choices, ...chips].filter((c) => !form?.exclude.some((s) => selectorKey(s) === selectorKey(c.selector)))
 	);
 
 	// Field errors from a save or a preview, shown by their control; ProblemAlert lists the rest.
@@ -129,8 +132,9 @@
 		loadProblem = null;
 		message = '';
 		revertTo = null;
-		void Promise.all([api.GET('/api/v1/origins'), api.GET('/api/v1/source-devices')]).then(([o, d]) => {
+		void Promise.all([api.GET('/api/v1/origins'), api.GET('/api/v1/source-devices'), api.GET('/api/v1/providers')]).then(([o, d, p]) => {
 			chips = selectorChips(o.data?.origins ?? [], d.data?.devices ?? []);
+			choices = sourceChoices(d.data?.devices ?? [], p.data?.providers ?? []);
 		});
 		const [d] = await Promise.all([api.GET('/api/v1/metrics/{code}', { params: { path: { code: m } } }), reload(m)]);
 		def = d.data ?? null;
@@ -190,7 +194,7 @@
 		if (!form || to < 0 || to >= form.groups.length || from === to) return;
 		const [g] = form.groups.splice(from, 1);
 		form.groups.splice(to, 0, g);
-		moved = `${g.id} moved to position ${to + 1} of ${form.groups.length}.`;
+		moved = `${groupLabel(g.id)} moved to position ${to + 1} of ${form.groups.length}.`;
 		if (!focus) return;
 		await tick();
 		const want = document.getElementById(`${uid}-${focus}-${g.key}`) as HTMLButtonElement | null;
@@ -201,7 +205,7 @@
 	let dragFrom = $state<number | null>(null);
 
 	function addExclusion(label: string) {
-		const c = chips.find((x) => x.label === label);
+		const c = [...choices, ...chips].find((x) => x.label === label);
 		if (c && form) form.exclude.push({ ...c.selector });
 	}
 
@@ -321,13 +325,13 @@
 							<span class="rank">{i + 1}</span>
 							<span class="dot" aria-hidden="true"></span>
 							<span class="who">
-								<span class="name">{g.id}{#if baseIds.indexOf(g.id) !== i}<Badge tone="draft">moved</Badge>{/if}</span>
-								<span class="muted small">{g.match.map(selectorText).join(' or ')}</span>
+								<span class="name"><span class="dot" aria-hidden="true"></span>{groupLabel(g.id)}{#if baseIds.indexOf(g.id) !== i}<Badge tone="draft">moved</Badge>{/if}</span>
+								<span class="muted small">{g.match.map((s) => selectorText(s, choices)).join(' or ')}</span>
 							</span>
 							{#if counts}<span class="count muted small">{counts[g.id] ?? 0} {counts[g.id] === 1 ? 'day' : 'days'}</span>{/if}
 							<span class="arrows">
-								<button id="{uid}-up-{g.key}" class="btn ghost sm icon-btn" type="button" disabled={i === 0} aria-label="Move {g.id} up" onclick={() => move(i, i - 1, 'up')}>↑</button>
-								<button id="{uid}-down-{g.key}" class="btn ghost sm icon-btn" type="button" disabled={i === form.groups.length - 1} aria-label="Move {g.id} down" onclick={() => move(i, i + 1, 'down')}>↓</button>
+								<button id="{uid}-up-{g.key}" class="btn ghost sm icon-btn" type="button" disabled={i === 0} aria-label="Move {groupLabel(g.id)} up" onclick={() => move(i, i - 1, 'up')}>↑</button>
+								<button id="{uid}-down-{g.key}" class="btn ghost sm icon-btn" type="button" disabled={i === form.groups.length - 1} aria-label="Move {groupLabel(g.id)} down" onclick={() => move(i, i + 1, 'down')}>↓</button>
 							</span>
 						</li>
 					{/each}
@@ -339,8 +343,8 @@
 					<span class="muted small">Never use:</span>
 					{#each form.exclude as s, i (i)}
 						<span class="chip">
-							{selectorText(s) || 'empty exclusion'}
-							<button type="button" class="x" aria-label="Remove exclusion {selectorText(s)}" onclick={() => form?.exclude.splice(i, 1)}>×</button>
+							{selectorText(s, choices) || 'empty exclusion'}
+							<button type="button" class="x" aria-label="Remove exclusion {selectorText(s, choices)}" onclick={() => form?.exclude.splice(i, 1)}>×</button>
 						</span>
 					{:else}
 						<span class="muted small">nothing excluded</span>

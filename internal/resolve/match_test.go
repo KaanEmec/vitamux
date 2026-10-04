@@ -18,6 +18,12 @@ var (
 	manualEntry  = Source{Provider: "apple_health", ConnectionID: connA, OriginKey: "com.apple.Health", Manual: true}
 	withingsCuff = Source{Provider: "withings", ConnectionID: connB, DeviceType: "bp_monitor"}
 	oura         = Source{Provider: "oura", ConnectionID: connB, DeviceType: "ring"}
+
+	hkWatch   = Source{Provider: "apple_health", ConnectionID: connA, OriginKey: "com.apple.health.watch", DeviceID: devWear, DeviceType: "watch", DeviceManufacturer: "Apple Inc.", DeviceModel: "Watch"}
+	hkPhone   = Source{Provider: "apple_health", ConnectionID: connA, OriginKey: "com.apple.health.phone", DeviceID: devWear, DeviceType: "phone", DeviceManufacturer: "Apple Inc.", DeviceModel: "iPhone"}
+	hkGarmin  = Source{Provider: "apple_health", ConnectionID: connA, OriginKey: "com.garmin.connect.mobile", Relayed: true, DeviceID: devWear, DeviceType: "watch", DeviceManufacturer: "Garmin", DeviceModel: "Forerunner 965"}
+	garminFR  = Source{Provider: "garmin", ConnectionID: connB, DeviceID: devWear, DeviceType: "watch", DeviceManufacturer: "Garmin"}
+	garminRow = Source{Provider: "garmin", ConnectionID: connB} // a Garmin row without a device
 )
 
 func TestSelectorMatches(t *testing.T) {
@@ -46,6 +52,15 @@ func TestSelectorMatches(t *testing.T) {
 		{"entry manual", Selector{Entry: EntryManual}, manualEntry, true},
 		{"entry device", Selector{Entry: EntryDevice}, manualEntry, false},
 		{"entry device matches devices", Selector{Entry: EntryDevice}, appleWatch, true},
+		{"brand ignores case", Selector{DeviceManufacturer: "apple inc."}, hkWatch, true},
+		{"brand differs", Selector{DeviceManufacturer: "Garmin"}, hkWatch, false},
+		{"brand matches direct", Selector{DeviceManufacturer: "Garmin"}, garminFR, true},
+		{"brand matches relayed", Selector{DeviceManufacturer: "GARMIN"}, hkGarmin, true},
+		{"brand needs a device", Selector{DeviceManufacturer: "Garmin"}, garminRow, false},
+		{"brand and model", Selector{DeviceManufacturer: "Apple Inc.", DeviceModel: "Watch"}, hkWatch, true},
+		{"brand and other model", Selector{DeviceManufacturer: "Apple Inc.", DeviceModel: "Watch"}, hkPhone, false},
+		{"brand not relayed", Selector{DeviceManufacturer: "Garmin", Relayed: new(false)}, hkGarmin, false},
+		{"brand not relayed matches direct", Selector{DeviceManufacturer: "Garmin", Relayed: new(false)}, garminFR, true},
 	}
 	for _, tc := range cases {
 		if got := tc.sel.Matches(tc.src); got != tc.want {

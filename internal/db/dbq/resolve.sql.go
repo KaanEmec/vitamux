@@ -126,6 +126,7 @@ SELECT x.id, x.start_at, x.end_at, x.tz_offset_min, x.is_nap, x.has_stages,
   x.asleep_s, x.deep_s, x.light_s, x.rem_s, x.awake_s, x.latency_s,
   p.code AS provider, x.connection_id, x.device_id,
   COALESCE(d.device_type, '')::text AS device_type, COALESCE(d.model, '')::text AS device_model,
+  COALESCE(d.manufacturer, '')::text AS device_manufacturer,
   COALESCE(o.origin_key, '')::text AS origin_key, COALESCE(o.name, '')::text AS origin_name,
   (o.relayed_provider_id IS NOT NULL)::boolean AS relayed
 FROM sleep_sessions x
@@ -144,26 +145,27 @@ type ResolveSleepSessionsParams struct {
 }
 
 type ResolveSleepSessionsRow struct {
-	ID           uuid.UUID
-	StartAt      time.Time
-	EndAt        time.Time
-	TzOffsetMin  *int16
-	IsNap        bool
-	HasStages    bool
-	AsleepS      *int32
-	DeepS        *int32
-	LightS       *int32
-	RemS         *int32
-	AwakeS       *int32
-	LatencyS     *int32
-	Provider     string
-	ConnectionID uuid.UUID
-	DeviceID     *uuid.UUID
-	DeviceType   string
-	DeviceModel  string
-	OriginKey    string
-	OriginName   string
-	Relayed      bool
+	ID                 uuid.UUID
+	StartAt            time.Time
+	EndAt              time.Time
+	TzOffsetMin        *int16
+	IsNap              bool
+	HasStages          bool
+	AsleepS            *int32
+	DeepS              *int32
+	LightS             *int32
+	RemS               *int32
+	AwakeS             *int32
+	LatencyS           *int32
+	Provider           string
+	ConnectionID       uuid.UUID
+	DeviceID           *uuid.UUID
+	DeviceType         string
+	DeviceModel        string
+	DeviceManufacturer string
+	OriginKey          string
+	OriginName         string
+	Relayed            bool
 }
 
 // Active sleep sessions with sleep_date from from_date through to_date. A night reads its own
@@ -195,6 +197,7 @@ func (q *Queries) ResolveSleepSessions(ctx context.Context, arg ResolveSleepSess
 			&i.DeviceID,
 			&i.DeviceType,
 			&i.DeviceModel,
+			&i.DeviceManufacturer,
 			&i.OriginKey,
 			&i.OriginName,
 			&i.Relayed,
@@ -250,6 +253,7 @@ func (q *Queries) ResolveSleepStages(ctx context.Context, sessionIds []uuid.UUID
 const resolveSourceIdentities = `-- name: ResolveSourceIdentities :many
 SELECT k.i::integer AS i, p.code AS provider,
   COALESCE(d.device_type, '')::text AS device_type, COALESCE(d.model, '')::text AS device_model,
+  COALESCE(d.manufacturer, '')::text AS device_manufacturer,
   COALESCE(o.origin_key, '')::text AS origin_key, COALESCE(o.name, '')::text AS origin_name,
   (o.relayed_provider_id IS NOT NULL)::boolean AS relayed
 FROM (SELECT unnest($1::smallint[]) AS provider_id, unnest($2::uuid[]) AS device_id,
@@ -267,13 +271,14 @@ type ResolveSourceIdentitiesParams struct {
 }
 
 type ResolveSourceIdentitiesRow struct {
-	I           int32
-	Provider    string
-	DeviceType  string
-	DeviceModel string
-	OriginKey   string
-	OriginName  string
-	Relayed     bool
+	I                  int32
+	Provider           string
+	DeviceType         string
+	DeviceModel        string
+	DeviceManufacturer string
+	OriginKey          string
+	OriginName         string
+	Relayed            bool
 }
 
 // The selector identity of (provider, device, origin) id triples; uuid.Nil stands for none.
@@ -292,6 +297,7 @@ func (q *Queries) ResolveSourceIdentities(ctx context.Context, arg ResolveSource
 			&i.Provider,
 			&i.DeviceType,
 			&i.DeviceModel,
+			&i.DeviceManufacturer,
 			&i.OriginKey,
 			&i.OriginName,
 			&i.Relayed,
@@ -309,6 +315,7 @@ func (q *Queries) ResolveSourceIdentities(ctx context.Context, arg ResolveSource
 const resolveWearBuckets = `-- name: ResolveWearBuckets :many
 SELECT b.bucket::timestamptz AS bucket, p.code AS provider, b.connection_id, b.device_id,
   COALESCE(d.device_type, '')::text AS device_type, COALESCE(d.model, '')::text AS device_model,
+  COALESCE(d.manufacturer, '')::text AS device_manufacturer,
   COALESCE(o.origin_key, '')::text AS origin_key, COALESCE(o.name, '')::text AS origin_name,
   (o.relayed_provider_id IS NOT NULL)::boolean AS relayed
 FROM (
@@ -338,15 +345,16 @@ type ResolveWearBucketsParams struct {
 }
 
 type ResolveWearBucketsRow struct {
-	Bucket       time.Time
-	Provider     string
-	ConnectionID uuid.UUID
-	DeviceID     *uuid.UUID
-	DeviceType   string
-	DeviceModel  string
-	OriginKey    string
-	OriginName   string
-	Relayed      bool
+	Bucket             time.Time
+	Provider           string
+	ConnectionID       uuid.UUID
+	DeviceID           *uuid.UUID
+	DeviceType         string
+	DeviceModel        string
+	DeviceManufacturer string
+	OriginKey          string
+	OriginName         string
+	Relayed            bool
 }
 
 // The wear series of quality.require_wear (E3) as the UTC-aligned 5-minute buckets in which each
@@ -375,6 +383,7 @@ func (q *Queries) ResolveWearBuckets(ctx context.Context, arg ResolveWearBuckets
 			&i.DeviceID,
 			&i.DeviceType,
 			&i.DeviceModel,
+			&i.DeviceManufacturer,
 			&i.OriginKey,
 			&i.OriginName,
 			&i.Relayed,
@@ -393,6 +402,7 @@ const resolveWorkouts = `-- name: ResolveWorkouts :many
 SELECT x.id, x.start_at, x.end_at, x.sport, x.distance_m, x.energy_kcal, x.avg_hr_bpm, x.max_hr_bpm,
   p.code AS provider, x.connection_id, x.device_id,
   COALESCE(d.device_type, '')::text AS device_type, COALESCE(d.model, '')::text AS device_model,
+  COALESCE(d.manufacturer, '')::text AS device_manufacturer,
   COALESCE(o.origin_key, '')::text AS origin_key, COALESCE(o.name, '')::text AS origin_name,
   (o.relayed_provider_id IS NOT NULL)::boolean AS relayed
 FROM workouts x
@@ -413,22 +423,23 @@ type ResolveWorkoutsParams struct {
 }
 
 type ResolveWorkoutsRow struct {
-	ID           uuid.UUID
-	StartAt      time.Time
-	EndAt        time.Time
-	Sport        string
-	DistanceM    *float64
-	EnergyKcal   *float64
-	AvgHrBpm     *float64
-	MaxHrBpm     *float64
-	Provider     string
-	ConnectionID uuid.UUID
-	DeviceID     *uuid.UUID
-	DeviceType   string
-	DeviceModel  string
-	OriginKey    string
-	OriginName   string
-	Relayed      bool
+	ID                 uuid.UUID
+	StartAt            time.Time
+	EndAt              time.Time
+	Sport              string
+	DistanceM          *float64
+	EnergyKcal         *float64
+	AvgHrBpm           *float64
+	MaxHrBpm           *float64
+	Provider           string
+	ConnectionID       uuid.UUID
+	DeviceID           *uuid.UUID
+	DeviceType         string
+	DeviceModel        string
+	DeviceManufacturer string
+	OriginKey          string
+	OriginName         string
+	Relayed            bool
 }
 
 // Active workouts overlapping from_at to to_at. Callers set starts_from a day before from_at.
@@ -460,6 +471,7 @@ func (q *Queries) ResolveWorkouts(ctx context.Context, arg ResolveWorkoutsParams
 			&i.DeviceID,
 			&i.DeviceType,
 			&i.DeviceModel,
+			&i.DeviceManufacturer,
 			&i.OriginKey,
 			&i.OriginName,
 			&i.Relayed,

@@ -300,6 +300,35 @@ func TestWriterReconnectCreatesNoDuplicates(t *testing.T) {
 	}
 }
 
+// TestWriterFollowsMergedDevice: after the owner merges dev-1 into another device (J20.7, rows
+// repointed as the merge endpoint does), replaying the payload is a no-op and the device's
+// fingerprint resolves to the target.
+func TestWriterFollowsMergedDevice(t *testing.T) {
+	e := writerEnv(t)
+	e.write(e.conn, 1, fixture(61))
+	target := uuid.New()
+	e.exec(`INSERT INTO devices (id, user_id, provider_id, fingerprint) SELECT $1, $2, id, 'dev-2' FROM providers WHERE code = 'withings'`, target, e.user)
+	for _, table := range []string{"measurements", "measurement_groups", "sleep_sessions", "workouts", "health_events"} {
+		e.exec(`UPDATE `+table+` SET device_id = $1 WHERE device_id = (SELECT id FROM devices WHERE fingerprint = 'dev-1')`, target)
+	}
+	e.exec(`UPDATE devices SET merged_into = $1 WHERE fingerprint = 'dev-1'`, target)
+	h := e.activeHash()
+
+	st := e.write(e.conn, 1, fixture(61))
+	if st.Inserted != 0 || st.Superseded != 0 || st.Unchanged != recordsInFixture {
+		t.Fatalf("replay after merge %+v", st)
+	}
+	if e.activeHash() != h {
+		t.Error("replay after merge changed active rows")
+	}
+	if st := e.write(e.conn, 1, fixture(62)); st.Inserted != 1 || st.Superseded != 1 {
+		t.Fatalf("correction after merge %+v", st)
+	}
+	if n := e.int(`SELECT count(*) FROM measurements WHERE external_id = 'r1' AND superseded_at IS NULL AND device_id = $1`, target); n != 1 {
+		t.Error("the corrected row is not on the target device")
+	}
+}
+
 func TestWriterVersionBumpOnlyReversions(t *testing.T) {
 	e := writerEnv(t)
 	e.write(e.conn, 1, fixture(61))

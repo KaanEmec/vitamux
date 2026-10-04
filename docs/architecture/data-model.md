@@ -62,7 +62,8 @@ erDiagram
 
 Device fields used by rule selectors:
 
-- `devices.device_type` vocabulary: `watch`, `band`, `ring`, `phone`, `chest_strap`, `arm_band`, `scale`, `bp_monitor`, `under_mattress`, `cgm`, `glucose_meter`, `other`.
+- `devices.device_type` vocabulary (`resolve.DeviceTypes`): `watch`, `band`, `ring`, `phone`, `chest_strap`, `arm_band`, `scale`, `bp_monitor`, `under_mattress`, `sleep_monitor`, `cgm`, `glucose_meter`, `other`. A type the owner sets (`device_type_by_owner`) wins over the normalizer's.
+- The owner can name a device and merge it into another of the same provider (`merged_into`, never a chain): its records move and the writer stores later ones of its fingerprint on the target ([source devices](api.md#source-devices)).
 - `devices` versions hold hardware and firmware versions, plus the provider's algorithm version when exposed. A sleep session stores the provider's algorithm version in its context when the payload carries one. Device accuracy changes between algorithm updates, so this lets [resolution-defaults](resolution-defaults.md#review-policy) reviews and owner rules tell versions apart.
 
 All canonical event tables share the source and provenance columns: `connection_id`, `provider_id`, `device_id`, `origin_id`, `external_id`, `dedupe_key`, `raw_payload_id`, `normalizer_version_id`, `superseded_*`, `deleted_*`.

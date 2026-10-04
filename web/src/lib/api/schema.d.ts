@@ -1260,11 +1260,51 @@ export interface paths {
         };
         /**
          * List the devices measurements were recorded on (not the paired apps)
-         * @description The values the device_type and device_model rule selectors match.
+         * @description The values the device_type, device_manufacturer and device_model rule selectors match (the rule builder's brand and device choices), the owner's names and merges, and the device types the owner can set. `include=records` adds each device's active records per connection.
          */
         get: operations["listSourceDevices"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/source-devices/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Set a device's type or name (audited)
+         * @description Merge patch: a field present replaces the value, null clears it. A type set here wins over the one the normalizer reports (null hands it back); rules that select by device type are recomputed. 409 for a merged device: edit the device it was merged into.
+         */
+        patch: operations["updateSourceDevice"];
+        trace?: never;
+    };
+    "/api/v1/source-devices/{id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge a device into another device of the same provider (audited, irreversible)
+         * @description One transaction moves every record of the device (measurements, groups, sleep sessions, workouts, health events, superseded versions included) to the target, points the device and those already merged into it at the target, and marks the moved dates for recomputation. Later records of the device's fingerprint are written to the target. Dedupe keys keep the fingerprint, so reprocessing changes nothing. Rules that name the merged device by id stop matching it. 409 when either device is already merged; 422 for the device itself or a device of another provider.
+         */
+        post: operations["mergeSourceDevice"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1855,7 +1895,7 @@ export interface paths {
         };
         /**
          * OAuth redirect target; completes the authorization and redirects to the UI
-         * @description Authorized by the signed, single-use `state` and the browser-binding cookie, not by the session. Always answers 303 to /connections?connected=<provider> or /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable&provider=<provider>. HEAD answers 204 without side effects. A provider without a connector is 404.
+         * @description Authorized by the signed, single-use `state` and the browser-binding cookie, not by the session. Always answers 303 to /connections?connected=<provider> or /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable&provider=<provider>. HEAD answers 200 without side effects. A provider without a connector is 404.
          */
         get: operations["oauthCallback"];
         put?: never;
@@ -1876,7 +1916,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Withings callback validation; HEAD and GET answer 204 without side effects */
+        /** Withings callback validation; HEAD and GET answer 200 without side effects */
         get: operations["withingsNotifyProbe"];
         put?: never;
         /**
@@ -3514,11 +3554,43 @@ export interface components {
         SourceDevice: {
             id: components["schemas"]["DeviceID"];
             provider: string;
+            /** @description The device's identity at the provider, as the normalizer reports it. */
+            fingerprint: string;
+            /** @description The owner's label. */
+            name: string | null;
             /** @description The `device_type` rule selector value, e.g. watch. */
             device_type: string | null;
+            /** @description The `device_manufacturer` rule selector value (the brand; matched case-insensitively). */
             manufacturer: string | null;
             /** @description The `device_model` rule selector value. */
             model: string | null;
+            /** @description The device this one was merged into; its records live there. */
+            merged_into: components["schemas"]["DeviceID"] | null;
+            /** @description With include=records: the connections with active records of the device, and how many. */
+            connections?: components["schemas"]["DeviceConnectionRecords"][];
+        };
+        /** @description Merge patch of a device; null clears a field. */
+        SourceDevicePatch: {
+            /** @description One of device_types from GET /source-devices. */
+            device_type?: string | null;
+            name?: string | null;
+        };
+        DeviceConnectionRecords: {
+            connection_id: string;
+            records: components["schemas"]["DeviceRecords"];
+        };
+        /** @description Rows per table. Measurements count hourly aggregate rows plus daily values in a listing (an interval once per hour it touches, behind while aggregates rebuild), and rows in a merge. */
+        DeviceRecords: {
+            /** Format: int64 */
+            measurements: number;
+            /** Format: int64 */
+            groups: number;
+            /** Format: int64 */
+            sleep_sessions: number;
+            /** Format: int64 */
+            workouts: number;
+            /** Format: int64 */
+            events: number;
         };
         AnchorReset: {
             /** @description A HealthKit type identifier, or * for every type. */
@@ -6231,7 +6303,10 @@ export interface operations {
     };
     listSourceDevices: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Comma-separated expansions. */
+                include?: "records"[];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -6246,11 +6321,78 @@ export interface operations {
                 content: {
                     "application/json": {
                         devices: components["schemas"]["SourceDevice"][];
+                        /** @description The values PATCH accepts for device_type, which the built-in rules match. */
+                        device_types: string[];
                     };
                 };
             };
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    updateSourceDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceDevicePatch"];
+            };
+        };
+        responses: {
+            /** @description Updated. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    mergeSourceDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    into: components["schemas"]["DeviceID"];
+                };
+            };
+        };
+        responses: {
+            /** @description Merged; the rows moved per table. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        moved: components["schemas"]["DeviceRecords"];
+                    };
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
         };
     };
     listDocuments: {
@@ -7349,7 +7491,7 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description HEAD probe. */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7378,7 +7520,7 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Probe answered. */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7409,7 +7551,7 @@ export interface operations {
         };
         responses: {
             /** @description Accepted (or ignored). */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

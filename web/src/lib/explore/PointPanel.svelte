@@ -9,6 +9,7 @@
 	import ProvenanceDialog from '../components/ProvenanceDialog.svelte';
 	import ResultStatus from '../components/ResultStatus.svelte';
 	import { formatValue } from '../data/format.ts';
+	import { groupLabel } from '../rules/rule.ts';
 	import Button from '../ui/Button.svelte';
 	import { icons } from '../ui/icons.ts';
 	import { dayLabel } from '../views/format.ts';
@@ -40,7 +41,7 @@
 		<p class="headline">
 			<ResultStatus status={value.status} partial={value.partial} />
 			<strong class="value">{value.status === 'no_data' ? '–' : formatValue(value.value, value.unit)}</strong>
-			{#if value.selected}<span class="muted">from {value.selected}</span>{/if}
+			{#if value.selected}<span class="muted">from {groupLabel(value.selected)}</span>{/if}
 		</p>
 		<p>{value.explanation}</p>
 		{#if warnings.length}<p class="warn">Warnings: {warnings.join(', ')}</p>{/if}
@@ -48,7 +49,7 @@
 			<ul class="inputs" aria-label="Rule inputs">
 				{#each value.inputs as inp, i (i)}
 					<li>
-						<span><strong>{inp.group ?? 'Outside the rule'}</strong> · {inp.status.replaceAll('_', ' ')}{#if inp.selected} · selected{/if}</span>
+						<span><strong>{inp.group ? groupLabel(inp.group) : 'Outside the rule'}</strong> · {inp.status.replaceAll('_', ' ')}{#if inp.selected} · selected{/if}</span>
 						{#if inp.value != null}<span class="muted">{formatValue(inp.value, value.unit)}</span>{/if}
 						{#if inp.reason}<span class="muted">{inp.reason}</span>{/if}
 						{#each (inp.record_refs ?? []).slice(0, 3) as ref (ref)}

@@ -1154,20 +1154,21 @@ WITH ins AS (
   VALUES ($1, $2, $3, $4, $5, $6,
           $7, $8, $9)
   ON CONFLICT (user_id, provider_id, fingerprint) DO UPDATE SET
-    device_type      = COALESCE(EXCLUDED.device_type, d.device_type),
+    device_type      = CASE WHEN d.device_type_by_owner THEN d.device_type ELSE COALESCE(EXCLUDED.device_type, d.device_type) END,
     manufacturer     = COALESCE(EXCLUDED.manufacturer, d.manufacturer),
     model            = COALESCE(EXCLUDED.model, d.model),
     hardware_version = COALESCE(EXCLUDED.hardware_version, d.hardware_version),
     software_version = COALESCE(EXCLUDED.software_version, d.software_version)
   WHERE (d.device_type, d.manufacturer, d.model, d.hardware_version, d.software_version) IS DISTINCT FROM
-        (COALESCE(EXCLUDED.device_type, d.device_type), COALESCE(EXCLUDED.manufacturer, d.manufacturer),
+        (CASE WHEN d.device_type_by_owner THEN d.device_type ELSE COALESCE(EXCLUDED.device_type, d.device_type) END,
+         COALESCE(EXCLUDED.manufacturer, d.manufacturer),
          COALESCE(EXCLUDED.model, d.model), COALESCE(EXCLUDED.hardware_version, d.hardware_version),
          COALESCE(EXCLUDED.software_version, d.software_version))
-  RETURNING d.id
+  RETURNING COALESCE(d.merged_into, d.id) AS id
 )
 SELECT id FROM ins
 UNION ALL
-SELECT id FROM devices WHERE user_id = $2 AND provider_id = $3 AND fingerprint = $4
+SELECT COALESCE(merged_into, id) FROM devices WHERE user_id = $2 AND provider_id = $3 AND fingerprint = $4
 LIMIT 1
 `
 
@@ -1184,6 +1185,8 @@ type UpsertDeviceParams struct {
 }
 
 // Descriptive fields only fill in or change; a field the source stops sending keeps its value.
+// Returns the device records of the fingerprint are written to: the device, or the one the owner
+// merged it into. A type the owner set is kept.
 func (q *Queries) UpsertDevice(ctx context.Context, arg UpsertDeviceParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, upsertDevice,
 		arg.ID,

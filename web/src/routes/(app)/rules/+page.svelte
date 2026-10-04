@@ -8,7 +8,7 @@
 	import { api, type Problem, type Schemas } from '#lib/api/client.ts';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import Notice from '#lib/settings/Notice.svelte';
-	import { lastDays, type Rule } from '#lib/rules/rule.ts';
+	import { groupLabel, lastDays, type Rule } from '#lib/rules/rule.ts';
 	import { ruleSentence } from '#lib/rules/sentence.ts';
 	import { getCoverage, type Coverage } from '#lib/rules/stubs.ts';
 	import Badge from '#lib/ui/Badge.svelte';
@@ -125,7 +125,7 @@
 					{@const r = spec(e.rule)}
 					<p class="sentence">{ruleSentence(r)}</p>
 					<ol class="order" aria-label="Source order">
-						{#each r.groups as g, i (i)}<li><Chip source={provider(g)}>{g.id}</Chip></li>{/each}
+						{#each r.groups as g, i (i)}<li><Chip source={provider(g)}>{groupLabel(g.id)}</Chip></li>{/each}
 					</ol>
 				{:else}
 					<p class="muted small">Only the all-sources view shows this metric until you pick a source.</p>

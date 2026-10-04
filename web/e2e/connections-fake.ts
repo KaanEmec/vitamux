@@ -100,6 +100,15 @@ export class ConnectionsApi {
 		}
 	];
 	runs: Record<string, Json[]> = { [ids.ultrahuman]: seedRuns() };
+	/** Devices of GET /source-devices (internal/api/origins.go): two for one Ultrahuman ring, one Withings scale. */
+	sourceDevices: Json[] = [
+		device('1', 'ultrahuman', 'ultrahuman:wearable', 'ring', ids.ultrahuman, { measurements: 1440, sleep_sessions: 7 }),
+		device('2', 'ultrahuman', '1000000001', null, ids.ultrahuman, { measurements: 12, workouts: 3 }),
+		device('3', 'withings', 'synthetic-scale', 'scale', ids.withings, { groups: 30 })
+	];
+	/** Bodies of PATCH /source-devices/{id} and POST …/merge, with the device id. */
+	devicePatches: { id: string; body: Json }[] = [];
+	merges: { id: string; body: Json }[] = [];
 	/** Status of GET /resolved/daily; 503 simulates the endpoint not being ready. */
 	resolvedStatus = 200;
 	/** Query strings of DELETE /connections/{id}. */
@@ -141,6 +150,7 @@ export class ConnectionsApi {
 			return s ? json(r, 200, { ...s, ...(r.request().postDataJSON() as Json) }) : problem(r, 404, 'not_found', 'no such schedule');
 		}
 		if (path === '/schedules') return json(r, 200, { schedules: this.schedules().filter((s) => !q.get('connection') || s.connection_id === q.get('connection')) });
+		if (path.startsWith('/source-devices')) return this.devices(r, path, method, q);
 		if (!(m = path.match(/^\/connections\/(conn_[0-9a-f]{32})(\/.*)?$/))) return r.fallback();
 		const c = this.connections.find((x) => x.id === m![1]);
 		if (!c) return problem(r, 404, 'not_found', 'no such connection');
@@ -254,6 +264,32 @@ export class ConnectionsApi {
 		return json(r, 200, { connection_id: c.id });
 	}
 
+	private devices(r: Route, path: string, method: string, q: URLSearchParams) {
+		if (path === '/source-devices' && method === 'GET') {
+			const records = (q.get('include') ?? '').split(',').includes('records');
+			const devices = this.sourceDevices.map(({ connections, ...d }) => (records ? { ...d, connections } : d));
+			return json(r, 200, { devices, device_types: deviceTypes });
+		}
+		const m = path.match(/^\/source-devices\/([^/]+)(\/merge)?$/);
+		const d = m && this.sourceDevices.find((x) => x.id === m[1]);
+		if (!m || !d) return problem(r, 404, 'not_found', 'no such device');
+		const body = r.request().postDataJSON() as Json;
+		if (d.merged_into) return problem(r, 409, 'conflict', `${d.id} is merged into ${d.merged_into}; use that device`);
+		if (!m[2] && method === 'PATCH') {
+			this.devicePatches.push({ id: d.id as string, body });
+			Object.assign(d, body);
+			return r.fulfill({ status: 204 });
+		}
+		this.merges.push({ id: d.id as string, body });
+		const into = this.sourceDevices.find((x) => x.id === body.into)!;
+		const moved: Record<string, number> = { measurements: 0, groups: 0, sleep_sessions: 0, workouts: 0, events: 0 };
+		for (const c of d.connections as { records: Record<string, number> }[]) for (const k in moved) moved[k] += c.records[k];
+		const target = (into.connections as { records: Record<string, number> }[])[0].records;
+		for (const k in moved) target[k] += moved[k];
+		Object.assign(d, { merged_into: into.id, connections: [] });
+		return json(r, 200, { moved });
+	}
+
 	private schedules() {
 		return this.connections.filter((c) => c.mode === 'in_process').flatMap((c, i) =>
 			streamsOf[c.provider].flatMap((stream) => [
@@ -286,6 +322,15 @@ export class ConnectionsApi {
 		const days = [start, end].map((d) => ({ local_date: d, metrics: Object.fromEntries(metrics.map((m) => [m, value(m, d)])) }));
 		return json(r, 200, { timezone: 'Europe/Amsterdam', days });
 	}
+}
+
+const deviceTypes = ['watch', 'band', 'ring', 'phone', 'chest_strap', 'arm_band', 'scale', 'bp_monitor', 'under_mattress', 'sleep_monitor', 'cgm', 'glucose_meter', 'other'];
+
+function device(n: string, provider: string, fingerprint: string, type: string | null, connection: string, records: Record<string, number>): Json {
+	return {
+		id: 'dev_' + n.repeat(32), provider, fingerprint, name: null, device_type: type, manufacturer: null, model: null, merged_into: null,
+		connections: [{ connection_id: connection, records: { measurements: 0, groups: 0, sleep_sessions: 0, workouts: 0, events: 0, ...records } }]
+	};
 }
 
 /** Hourly-ish syncs on each of the last 14 local days (noon), one of which failed (the day before yesterday). */

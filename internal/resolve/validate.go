@@ -170,7 +170,8 @@ func (c *checker) selector(s Selector, ptr string) {
 	c.check(s.DeviceID == "" || canonicalUUID(s.DeviceID), ptr+"/device_id", "must be a lowercase UUID")
 	c.check(s.OriginKey == "" || s.OriginKeyPrefix == "", ptr+"/origin_key_prefix", "set origin_key or origin_key_prefix, not both")
 	for name, v := range map[string]string{"origin_key": s.OriginKey, "origin_key_prefix": s.OriginKeyPrefix,
-		"origin_name": s.OriginName, "device_type": s.DeviceType, "device_model": s.DeviceModel} {
+		"origin_name": s.OriginName, "device_type": s.DeviceType, "device_model": s.DeviceModel,
+		"device_manufacturer": s.DeviceManufacturer} {
 		c.check(len(v) <= 256, ptr+"/"+name, "at most 256 characters")
 	}
 	c.check(s.Entry == "" || s.Entry == EntryDevice || s.Entry == EntryManual, ptr+"/entry", "must be device or manual")

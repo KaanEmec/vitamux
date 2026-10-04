@@ -163,11 +163,11 @@ func (rt *router) authContinue(w http.ResponseWriter, r *http.Request) {
 }
 
 // oauthCallback completes the flow and sends the browser back to the UI with the outcome:
-// /connections?connected=<provider> or /connections?auth_error=<reason>&provider=<provider>. HEAD answers 204
-// and touches nothing, so a probe never uses up a state. A provider without a connector is 404.
+// /connections?connected=<provider> or /connections?auth_error=<reason>&provider=<provider>. HEAD answers 200
+// (the Withings dashboard test refuses 204) and touches nothing, so a probe never uses up a state. A provider without a connector is 404.
 func (rt *router) oauthCallback(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodHead {
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 	provider := r.PathValue("provider")

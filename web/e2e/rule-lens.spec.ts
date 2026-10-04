@@ -14,13 +14,13 @@ test('reorder, preview, save and activate, then revert', async ({ page, rules })
 	await expect(lens.getByText('Change the rule to preview it')).toBeVisible();
 	expect(rules.previews).toHaveLength(0);
 
-	// Drag garmin to the top, then move apple_watch up with its button.
+	// Drag garmin to the top, then move Apple Watch up with its button.
 	const items = lens.getByRole('list', { name: 'Source priority' }).getByRole('listitem');
 	await items.filter({ hasText: 'garmin' }).dragTo(items.filter({ hasText: 'chest_strap' }));
-	await expect(items).toContainText(['garmin', 'chest_strap', 'apple_watch']);
-	await lens.getByRole('button', { name: 'Move apple_watch up' }).click();
-	await expect(items).toContainText(['garmin', 'apple_watch', 'chest_strap']);
-	await expect(lens.getByRole('button', { name: 'Move apple_watch up' })).toBeFocused();
+	await expect(items).toContainText(['garmin', 'chest_strap', 'Apple Watch']);
+	await lens.getByRole('button', { name: 'Move Apple Watch up' }).click();
+	await expect(items).toContainText(['garmin', 'Apple Watch', 'chest_strap']);
+	await expect(lens.getByRole('button', { name: 'Move Apple Watch up' })).toBeFocused();
 	await expect(lens.getByText('Draft · not saved')).toBeVisible();
 
 	// The preview covers the page's 30 days and summarises the changed days.
@@ -44,7 +44,7 @@ test('reorder, preview, save and activate, then revert', async ({ page, rules })
 	await lens.getByRole('button', { name: 'Revert to version 1' }).click();
 	await expect(lens.getByRole('status')).toContainText('Reverted: version 1 is active again.');
 	await expect(page.getByRole('heading', { name: 'In effect: version 1' })).toBeVisible();
-	await expect(items).toContainText(['chest_strap', 'apple_watch', 'garmin']);
+	await expect(items).toContainText(['chest_strap', 'Apple Watch', 'garmin']);
 
 	// Both changes are in the version history.
 	const history = page.getByRole('region', { name: 'Version history' });
@@ -131,4 +131,13 @@ test('a bottom sheet on a phone', async ({ page }) => {
 	await sheet.getByRole('button', { name: 'Move garmin up' }).click();
 	await sheet.getByRole('button', { name: 'Close' }).click();
 	await expect(page.getByRole('button', { name: /How this is calculated.*Draft/ })).toBeVisible();
+});
+
+test('named sources can be excluded and read by their names', async ({ page }) => {
+	await page.goto('/rules/heart_rate');
+	const lens = lensOf(page);
+	await expect(lens.getByRole('listitem').filter({ hasText: 'Apple Watch' })).toBeVisible();
+	await lens.getByLabel('Add an exclusion').selectOption('Garmin (any device)');
+	await expect(lens.getByRole('button', { name: 'Remove exclusion Garmin (any device)' })).toBeVisible();
+	await expect(lens.getByLabel('Add an exclusion').getByRole('option', { name: 'Garmin (any device)' })).toHaveCount(0);
 });

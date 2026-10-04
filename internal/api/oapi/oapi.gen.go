@@ -1644,6 +1644,21 @@ func (e GetSleepParamsInclude) Valid() bool {
 	}
 }
 
+// Defines values for ListSourceDevicesParamsInclude.
+const (
+	Records ListSourceDevicesParamsInclude = "records"
+)
+
+// Valid indicates whether the value is a known member of the ListSourceDevicesParamsInclude enum.
+func (e ListSourceDevicesParamsInclude) Valid() bool {
+	switch e {
+	case Records:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetSourceSeriesParamsGrain.
 const (
 	GetSourceSeriesParamsGrainDay  GetSourceSeriesParamsGrain = "day"
@@ -2092,8 +2107,25 @@ type DataOrigin struct {
 	RelayedProvider *string `json:"relayed_provider"`
 }
 
+// DeviceConnectionRecords defines model for DeviceConnectionRecords.
+type DeviceConnectionRecords struct {
+	ConnectionID string `json:"connection_id"`
+
+	// Records Rows per table. Measurements count hourly aggregate rows plus daily values in a listing (an interval once per hour it touches, behind while aggregates rebuild), and rows in a merge.
+	Records DeviceRecords `json:"records"`
+}
+
 // DeviceID defines model for DeviceID.
 type DeviceID = string
+
+// DeviceRecords Rows per table. Measurements count hourly aggregate rows plus daily values in a listing (an interval once per hour it touches, behind while aggregates rebuild), and rows in a merge.
+type DeviceRecords struct {
+	Events        int64 `json:"events"`
+	Groups        int64 `json:"groups"`
+	Measurements  int64 `json:"measurements"`
+	SleepSessions int64 `json:"sleep_sessions"`
+	Workouts      int64 `json:"workouts"`
+}
 
 // DeviceRef defines model for DeviceRef.
 type DeviceRef struct {
@@ -3648,15 +3680,32 @@ type SleepStageStage string
 
 // SourceDevice defines model for SourceDevice.
 type SourceDevice struct {
+	// Connections With include=records: the connections with active records of the device, and how many.
+	Connections *[]DeviceConnectionRecords `json:"connections,omitempty"`
+
 	// DeviceType The `device_type` rule selector value, e.g. watch.
-	DeviceType   *string  `json:"device_type"`
-	ID           DeviceID `json:"id"`
-	Manufacturer *string  `json:"manufacturer"`
+	DeviceType *string `json:"device_type"`
+
+	// Fingerprint The device's identity at the provider, as the normalizer reports it.
+	Fingerprint string   `json:"fingerprint"`
+	ID          DeviceID `json:"id"`
+
+	// Manufacturer The `device_manufacturer` rule selector value (the brand; matched case-insensitively).
+	Manufacturer *string `json:"manufacturer"`
+
+	// MergedInto The device this one was merged into; its records live there.
+	MergedInto *DeviceID `json:"merged_into"`
 
 	// Model The `device_model` rule selector value.
-	Model    *string `json:"model"`
+	Model *string `json:"model"`
+
+	// Name The owner's label.
+	Name     *string `json:"name"`
 	Provider string  `json:"provider"`
 }
+
+// SourceDevicePatch Merge patch of a device; null clears a field.
+type SourceDevicePatch = json.RawMessage
 
 // SourcePoint One source's values in a local hour or day: additive metrics the intervals pro-rated to it (sum), the others the mean of its 5-minute bucket means with min and max.
 type SourcePoint struct {
@@ -4521,6 +4570,20 @@ type GetSleepParams struct {
 // GetSleepParamsInclude defines parameters for GetSleep.
 type GetSleepParamsInclude string
 
+// ListSourceDevicesParams defines parameters for ListSourceDevices.
+type ListSourceDevicesParams struct {
+	// Include Comma-separated expansions.
+	Include *[]ListSourceDevicesParamsInclude `form:"include,omitempty" json:"include,omitempty"`
+}
+
+// ListSourceDevicesParamsInclude defines parameters for ListSourceDevices.
+type ListSourceDevicesParamsInclude string
+
+// MergeSourceDeviceJSONBody defines parameters for MergeSourceDevice.
+type MergeSourceDeviceJSONBody struct {
+	Into DeviceID `json:"into"`
+}
+
 // GetSourceSeriesParams defines parameters for GetSourceSeries.
 type GetSourceSeriesParams struct {
 	// Metric Catalogue code.
@@ -4675,6 +4738,12 @@ type PutDashboardLayoutJSONRequestBody = DashboardLayoutInput
 
 // CreateSidecarJSONRequestBody defines body for CreateSidecar for application/json ContentType.
 type CreateSidecarJSONRequestBody CreateSidecarJSONBody
+
+// UpdateSourceDeviceJSONRequestBody defines body for UpdateSourceDevice for application/json ContentType.
+type UpdateSourceDeviceJSONRequestBody = SourceDevicePatch
+
+// MergeSourceDeviceJSONRequestBody defines body for MergeSourceDevice for application/json ContentType.
+type MergeSourceDeviceJSONRequestBody MergeSourceDeviceJSONBody
 
 // CreateTimezonePeriodJSONRequestBody defines body for CreateTimezonePeriod for application/json ContentType.
 type CreateTimezonePeriodJSONRequestBody = TimezonePeriodInput
@@ -5133,7 +5202,13 @@ type ServerInterface interface {
 	GetSleep(w http.ResponseWriter, r *http.Request, id ID, params GetSleepParams)
 	// ListSourceDevices List the devices measurements were recorded on (not the paired apps)
 	// (GET /api/v1/source-devices)
-	ListSourceDevices(w http.ResponseWriter, r *http.Request)
+	ListSourceDevices(w http.ResponseWriter, r *http.Request, params ListSourceDevicesParams)
+	// UpdateSourceDevice Set a device's type or name (audited)
+	// (PATCH /api/v1/source-devices/{id})
+	UpdateSourceDevice(w http.ResponseWriter, r *http.Request, id ID)
+	// MergeSourceDevice Merge a device into another device of the same provider (audited, irreversible)
+	// (POST /api/v1/source-devices/{id}/merge)
+	MergeSourceDevice(w http.ResponseWriter, r *http.Request, id ID)
 	// GetSourceSeries Per-source series of one metric from the hourly aggregates
 	// (GET /api/v1/sources/series)
 	GetSourceSeries(w http.ResponseWriter, r *http.Request, params GetSourceSeriesParams)
@@ -5164,7 +5239,7 @@ type ServerInterface interface {
 	// OauthCallback OAuth redirect target; completes the authorization and redirects to the UI
 	// (GET /oauth/{provider}/callback)
 	OauthCallback(w http.ResponseWriter, r *http.Request, provider string, params OauthCallbackParams)
-	// WithingsNotifyProbe Withings callback validation; HEAD and GET answer 204 without side effects
+	// WithingsNotifyProbe Withings callback validation; HEAD and GET answer 200 without side effects
 	// (GET /webhooks/withings/{hook_token})
 	WithingsNotifyProbe(w http.ResponseWriter, r *http.Request, hookToken string)
 	// WithingsNotify Withings notification; enqueues one deduplicated window sync
@@ -8773,8 +8848,79 @@ func (siw *ServerInterfaceWrapper) GetSleep(w http.ResponseWriter, r *http.Reque
 // ListSourceDevices operation middleware
 func (siw *ServerInterfaceWrapper) ListSourceDevices(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListSourceDevicesParams
+
+	// ------------- Optional query parameter "include" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "include", r.URL.Query(), &params.Include, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListSourceDevices(w, r)
+		siw.Handler.ListSourceDevices(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateSourceDevice operation middleware
+func (siw *ServerInterfaceWrapper) UpdateSourceDevice(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateSourceDevice(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MergeSourceDevice operation middleware
+func (siw *ServerInterfaceWrapper) MergeSourceDevice(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MergeSourceDevice(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -9464,6 +9610,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/origins", wrapper.ListOrigins)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/origins/{id}", wrapper.ClassifyOrigin)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/source-devices", wrapper.ListSourceDevices)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/source-devices/{id}", wrapper.UpdateSourceDevice)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/source-devices/{id}/merge", wrapper.MergeSourceDevice)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/documents", wrapper.ListDocuments)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/documents", wrapper.UploadDocument)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/documents/{id}", wrapper.DeleteDocument)
@@ -16894,6 +17042,7 @@ func (response GetSleep422ApplicationProblemPlusJSONResponse) VisitGetSleepRespo
 }
 
 type ListSourceDevicesRequestObject struct {
+	Params ListSourceDevicesParams
 }
 
 type ListSourceDevicesResponseObject interface {
@@ -16901,7 +17050,9 @@ type ListSourceDevicesResponseObject interface {
 }
 
 type ListSourceDevices200JSONResponse struct {
-	Devices []SourceDevice `json:"devices"`
+	// DeviceTypes The values PATCH accepts for device_type, which the built-in rules match.
+	DeviceTypes []string       `json:"device_types"`
+	Devices     []SourceDevice `json:"devices"`
 }
 
 func (response ListSourceDevices200JSONResponse) VisitListSourceDevicesResponse(w http.ResponseWriter) error {
@@ -16942,6 +17093,207 @@ func (response ListSourceDevices403ApplicationProblemPlusJSONResponse) VisitList
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSourceDevices422ApplicationProblemPlusJSONResponse Problem
+
+func (response ListSourceDevices422ApplicationProblemPlusJSONResponse) VisitListSourceDevicesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSourceDeviceRequestObject struct {
+	ID   ID `json:"id"`
+	Body *UpdateSourceDeviceJSONRequestBody
+}
+
+type UpdateSourceDeviceResponseObject interface {
+	VisitUpdateSourceDeviceResponse(w http.ResponseWriter) error
+}
+
+type UpdateSourceDevice204Response struct {
+}
+
+func (response UpdateSourceDevice204Response) VisitUpdateSourceDeviceResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UpdateSourceDevice401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response UpdateSourceDevice401ApplicationProblemPlusJSONResponse) VisitUpdateSourceDeviceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSourceDevice403ApplicationProblemPlusJSONResponse Problem
+
+func (response UpdateSourceDevice403ApplicationProblemPlusJSONResponse) VisitUpdateSourceDeviceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSourceDevice404ApplicationProblemPlusJSONResponse Problem
+
+func (response UpdateSourceDevice404ApplicationProblemPlusJSONResponse) VisitUpdateSourceDeviceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSourceDevice409ApplicationProblemPlusJSONResponse Problem
+
+func (response UpdateSourceDevice409ApplicationProblemPlusJSONResponse) VisitUpdateSourceDeviceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSourceDevice422ApplicationProblemPlusJSONResponse Problem
+
+func (response UpdateSourceDevice422ApplicationProblemPlusJSONResponse) VisitUpdateSourceDeviceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MergeSourceDeviceRequestObject struct {
+	ID   ID `json:"id"`
+	Body *MergeSourceDeviceJSONRequestBody
+}
+
+type MergeSourceDeviceResponseObject interface {
+	VisitMergeSourceDeviceResponse(w http.ResponseWriter) error
+}
+
+type MergeSourceDevice200JSONResponse struct {
+	// Moved Rows per table. Measurements count hourly aggregate rows plus daily values in a listing (an interval once per hour it touches, behind while aggregates rebuild), and rows in a merge.
+	Moved DeviceRecords `json:"moved"`
+}
+
+func (response MergeSourceDevice200JSONResponse) VisitMergeSourceDeviceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MergeSourceDevice401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response MergeSourceDevice401ApplicationProblemPlusJSONResponse) VisitMergeSourceDeviceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MergeSourceDevice403ApplicationProblemPlusJSONResponse Problem
+
+func (response MergeSourceDevice403ApplicationProblemPlusJSONResponse) VisitMergeSourceDeviceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MergeSourceDevice404ApplicationProblemPlusJSONResponse Problem
+
+func (response MergeSourceDevice404ApplicationProblemPlusJSONResponse) VisitMergeSourceDeviceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MergeSourceDevice409ApplicationProblemPlusJSONResponse Problem
+
+func (response MergeSourceDevice409ApplicationProblemPlusJSONResponse) VisitMergeSourceDeviceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MergeSourceDevice422ApplicationProblemPlusJSONResponse Problem
+
+func (response MergeSourceDevice422ApplicationProblemPlusJSONResponse) VisitMergeSourceDeviceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -17558,11 +17910,11 @@ type OauthCallbackResponseObject interface {
 	VisitOauthCallbackResponse(w http.ResponseWriter) error
 }
 
-type OauthCallback204Response struct {
+type OauthCallback200Response struct {
 }
 
-func (response OauthCallback204Response) VisitOauthCallbackResponse(w http.ResponseWriter) error {
-	w.WriteHeader(204)
+func (response OauthCallback200Response) VisitOauthCallbackResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
 	return nil
 }
 
@@ -17598,11 +17950,11 @@ type WithingsNotifyProbeResponseObject interface {
 	VisitWithingsNotifyProbeResponse(w http.ResponseWriter) error
 }
 
-type WithingsNotifyProbe204Response struct {
+type WithingsNotifyProbe200Response struct {
 }
 
-func (response WithingsNotifyProbe204Response) VisitWithingsNotifyProbeResponse(w http.ResponseWriter) error {
-	w.WriteHeader(204)
+func (response WithingsNotifyProbe200Response) VisitWithingsNotifyProbeResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
 	return nil
 }
 
@@ -17631,11 +17983,11 @@ type WithingsNotifyResponseObject interface {
 	VisitWithingsNotifyResponse(w http.ResponseWriter) error
 }
 
-type WithingsNotify204Response struct {
+type WithingsNotify200Response struct {
 }
 
-func (response WithingsNotify204Response) VisitWithingsNotifyResponse(w http.ResponseWriter) error {
-	w.WriteHeader(204)
+func (response WithingsNotify200Response) VisitWithingsNotifyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
 	return nil
 }
 
@@ -17968,6 +18320,12 @@ type StrictServerInterface interface {
 	// ListSourceDevices List the devices measurements were recorded on (not the paired apps)
 	// (GET /api/v1/source-devices)
 	ListSourceDevices(ctx context.Context, request ListSourceDevicesRequestObject) (ListSourceDevicesResponseObject, error)
+	// UpdateSourceDevice Set a device's type or name (audited)
+	// (PATCH /api/v1/source-devices/{id})
+	UpdateSourceDevice(ctx context.Context, request UpdateSourceDeviceRequestObject) (UpdateSourceDeviceResponseObject, error)
+	// MergeSourceDevice Merge a device into another device of the same provider (audited, irreversible)
+	// (POST /api/v1/source-devices/{id}/merge)
+	MergeSourceDevice(ctx context.Context, request MergeSourceDeviceRequestObject) (MergeSourceDeviceResponseObject, error)
 	// GetSourceSeries Per-source series of one metric from the hourly aggregates
 	// (GET /api/v1/sources/series)
 	GetSourceSeries(ctx context.Context, request GetSourceSeriesRequestObject) (GetSourceSeriesResponseObject, error)
@@ -17998,7 +18356,7 @@ type StrictServerInterface interface {
 	// OauthCallback OAuth redirect target; completes the authorization and redirects to the UI
 	// (GET /oauth/{provider}/callback)
 	OauthCallback(ctx context.Context, request OauthCallbackRequestObject) (OauthCallbackResponseObject, error)
-	// WithingsNotifyProbe Withings callback validation; HEAD and GET answer 204 without side effects
+	// WithingsNotifyProbe Withings callback validation; HEAD and GET answer 200 without side effects
 	// (GET /webhooks/withings/{hook_token})
 	WithingsNotifyProbe(ctx context.Context, request WithingsNotifyProbeRequestObject) (WithingsNotifyProbeResponseObject, error)
 	// WithingsNotify Withings notification; enqueues one deduplicated window sync
@@ -20746,8 +21104,10 @@ func (sh *strictHandler) GetSleep(w http.ResponseWriter, r *http.Request, id ID,
 }
 
 // ListSourceDevices operation middleware
-func (sh *strictHandler) ListSourceDevices(w http.ResponseWriter, r *http.Request) {
+func (sh *strictHandler) ListSourceDevices(w http.ResponseWriter, r *http.Request, params ListSourceDevicesParams) {
 	var request ListSourceDevicesRequestObject
+
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.ListSourceDevices(ctx, request.(ListSourceDevicesRequestObject))
@@ -20762,6 +21122,72 @@ func (sh *strictHandler) ListSourceDevices(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListSourceDevicesResponseObject); ok {
 		if err := validResponse.VisitListSourceDevicesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateSourceDevice operation middleware
+func (sh *strictHandler) UpdateSourceDevice(w http.ResponseWriter, r *http.Request, id ID) {
+	var request UpdateSourceDeviceRequestObject
+
+	request.ID = id
+
+	var body UpdateSourceDeviceJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateSourceDevice(ctx, request.(UpdateSourceDeviceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateSourceDevice")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateSourceDeviceResponseObject); ok {
+		if err := validResponse.VisitUpdateSourceDeviceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// MergeSourceDevice operation middleware
+func (sh *strictHandler) MergeSourceDevice(w http.ResponseWriter, r *http.Request, id ID) {
+	var request MergeSourceDeviceRequestObject
+
+	request.ID = id
+
+	var body MergeSourceDeviceJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.MergeSourceDevice(ctx, request.(MergeSourceDeviceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "MergeSourceDevice")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(MergeSourceDeviceResponseObject); ok {
+		if err := validResponse.VisitMergeSourceDeviceResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

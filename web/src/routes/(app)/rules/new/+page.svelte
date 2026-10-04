@@ -15,7 +15,7 @@
 	import TextField from '#lib/components/TextField.svelte';
 	import Notice from '#lib/settings/Notice.svelte';
 	import Button from '#lib/ui/Button.svelte';
-	import { selectorChips, seenValues } from '#lib/rules/chips.ts';
+	import { selectorChips, seenValues, sourceChoices } from '#lib/rules/chips.ts';
 	import PreviewTable from '#lib/rules/PreviewTable.svelte';
 	import RuleDiff from '#lib/rules/RuleDiff.svelte';
 	import SelectorList from '#lib/rules/SelectorList.svelte';
@@ -25,6 +25,7 @@
 		fromSpec,
 		groupKey,
 		lastDays,
+		groupLabel,
 		needsSumAck,
 		opLabel,
 		ops,
@@ -50,7 +51,9 @@
 	// Origins and devices data came from, for one-click selectors; the builder works without them.
 	let origins = $state<Schemas['DataOrigin'][]>([]);
 	let sourceDevices = $state<Schemas['SourceDevice'][]>([]);
+	let providers = $state<Schemas['Provider'][]>([]);
 	const chips = $derived(selectorChips(origins, sourceDevices));
+	const choices = $derived(sourceChoices(sourceDevices, providers));
 
 	let metric = $state('');
 	let startFrom = $state<'current' | 'blank'>('current');
@@ -94,9 +97,10 @@
 	});
 
 	onMount(async () => {
-		void Promise.all([api.GET('/api/v1/origins'), api.GET('/api/v1/source-devices')]).then(([o, d]) => {
+		void Promise.all([api.GET('/api/v1/origins'), api.GET('/api/v1/source-devices'), api.GET('/api/v1/providers')]).then(([o, d, p]) => {
 			origins = o.data?.origins ?? [];
 			sourceDevices = d.data?.devices ?? [];
+			providers = p.data?.providers ?? [];
 		});
 		const [rules, cat] = await Promise.all([api.GET('/api/v1/rules'), api.GET('/api/v1/metrics')]);
 		if (rules.error) {
@@ -326,7 +330,7 @@
 					</div>
 				</div>
 				{#if errors[`spec.groups.${i}`]}<p class="error">{errors[`spec.groups.${i}`]}</p>{/if}
-				<SelectorList bind:list={g.match} kind="Match" errorPrefix="spec.groups.{i}.match" {errors} {suggestions} {chips} />
+				<SelectorList bind:list={g.match} kind="Match" errorPrefix="spec.groups.{i}.match" {errors} {suggestions} {chips} {choices} />
 			</fieldset>
 		{/each}
 		<p class="add"><Button onclick={() => form?.groups.push({ key: groupKey(), id: '', match: [{ provider: '' }] })}>Add group</Button></p>
@@ -343,7 +347,7 @@
 					</div>
 				</div>
 			{/if}
-			<SelectorList bind:list={form.exclude} kind="Exclusion" errorPrefix="spec.exclude" {errors} {suggestions} {chips} />
+			<SelectorList bind:list={form.exclude} kind="Exclusion" errorPrefix="spec.exclude" {errors} {suggestions} {chips} {choices} />
 		</fieldset>
 	{:else if form && step === 2}
 		<fieldset class="ops">
@@ -510,10 +514,10 @@
 			<dt>Groups</dt>
 			<dd>
 				<ol>
-					{#each draft.groups as g, i (i)}<li><code>{g.id}</code> <span class="muted">{g.match.map(selectorText).join(' or ')}</span></li>{/each}
+					{#each draft.groups as g, i (i)}<li><code>{groupLabel(g.id)}</code> <span class="muted">{g.match.map((s) => selectorText(s, choices)).join(' or ')}</span></li>{/each}
 				</ol>
 			</dd>
-			{#if draft.exclude?.length}<dt>Excluded</dt><dd>{draft.exclude.map(selectorText).join('; ')}</dd>{/if}
+			{#if draft.exclude?.length}<dt>Excluded</dt><dd>{draft.exclude.map((s) => selectorText(s, choices)).join('; ')}</dd>{/if}
 			{#if draft.acknowledged_warnings?.length}<dt>Acknowledged</dt><dd>{draft.acknowledged_warnings.join(', ')}</dd>{/if}
 		</dl>
 		<details>

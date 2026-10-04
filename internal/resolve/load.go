@@ -464,7 +464,7 @@ func (l *loader) loadSleep(ctx context.Context) error {
 	for i, row := range rows {
 		l.sleepIn[i] = SleepInput{ID: row.ID, Start: l.local(row.StartAt), End: l.local(row.EndAt), Zone: normalize.Zone{OffsetMin: row.TzOffsetMin},
 			IsNap: row.IsNap, HasStages: row.HasStages, Stages: bySession[row.ID],
-			Source: sourceOf(row.Provider, row.ConnectionID, row.DeviceID, row.DeviceType, row.DeviceModel, row.OriginKey, row.OriginName, row.Relayed, 0),
+			Source: sourceOf(row.Provider, row.ConnectionID, row.DeviceID, row.DeviceType, row.DeviceModel, row.DeviceManufacturer, row.OriginKey, row.OriginName, row.Relayed, 0),
 			Totals: normalize.SleepTotals{Asleep: row.AsleepS, Deep: row.DeepS, Light: row.LightS, REM: row.RemS, Awake: row.AwakeS, Latency: row.LatencyS}}
 	}
 	l.nights = map[time.Time]SleepAlignment{}
@@ -528,7 +528,7 @@ func (l *loader) loadSeries(ctx context.Context, codes []string, from, to time.T
 		flags := normalize.Flags(row.QualityFlags)
 		in := Input{ID: row.ID, Kind: catalog.Kind(row.Kind), Start: l.local(row.StartAt), LocalDate: row.LocalDate,
 			Value: row.Value, Flags: flags, GroupID: row.GroupID,
-			Source: sourceOf(f.Provider, row.ConnectionID, row.DeviceID, f.DeviceType, f.DeviceModel, f.OriginKey, f.OriginName, f.Relayed, flags)}
+			Source: sourceOf(f.Provider, row.ConnectionID, row.DeviceID, f.DeviceType, f.DeviceModel, f.DeviceManufacturer, f.OriginKey, f.OriginName, f.Relayed, flags)}
 		if row.EndAt != nil {
 			in.End = l.local(*row.EndAt)
 		}
@@ -586,7 +586,7 @@ func (l *loader) loadWear(ctx context.Context, r *Rule, code string, from, to ti
 	out := make([]Input, len(rows))
 	for i, row := range rows {
 		out[i] = Input{Kind: catalog.Sample, Start: l.local(row.Bucket),
-			Source: sourceOf(row.Provider, row.ConnectionID, row.DeviceID, row.DeviceType, row.DeviceModel, row.OriginKey, row.OriginName, row.Relayed, 0)}
+			Source: sourceOf(row.Provider, row.ConnectionID, row.DeviceID, row.DeviceType, row.DeviceModel, row.DeviceManufacturer, row.OriginKey, row.OriginName, row.Relayed, 0)}
 	}
 	return out, nil
 }
@@ -601,7 +601,7 @@ func (l *loader) loadWorkouts(ctx context.Context, from, to time.Time) ([]Workou
 	for i, row := range rows {
 		out[i] = WorkoutInput{ID: row.ID, Start: l.local(row.StartAt), End: l.local(row.EndAt), Sport: row.Sport, DistanceM: row.DistanceM,
 			EnergyKcal: row.EnergyKcal, AvgHRBpm: row.AvgHrBpm, MaxHRBpm: row.MaxHrBpm,
-			Source: sourceOf(row.Provider, row.ConnectionID, row.DeviceID, row.DeviceType, row.DeviceModel, row.OriginKey, row.OriginName, row.Relayed, 0)}
+			Source: sourceOf(row.Provider, row.ConnectionID, row.DeviceID, row.DeviceType, row.DeviceModel, row.DeviceManufacturer, row.OriginKey, row.OriginName, row.Relayed, 0)}
 	}
 	return out, nil
 }
@@ -639,9 +639,10 @@ var minTime, maxTime = time.Unix(-1<<62, 0), time.Unix(1<<62, 0)
 
 // sourceOf builds the selector identity of a row; manual means provider manual or the
 // manual_entry quality flag.
-func sourceOf(provider string, conn uuid.UUID, device *uuid.UUID, deviceType, model, originKey, originName string, relayed bool, flags normalize.Flags) Source {
-	s := Source{Provider: provider, ConnectionID: conn, DeviceType: deviceType, DeviceModel: model, OriginKey: originKey,
-		OriginName: originName, Relayed: relayed, Manual: provider == "manual" || flags&normalize.FlagManualEntry != 0}
+func sourceOf(provider string, conn uuid.UUID, device *uuid.UUID, deviceType, model, manufacturer, originKey, originName string, relayed bool, flags normalize.Flags) Source {
+	s := Source{Provider: provider, ConnectionID: conn, DeviceType: deviceType, DeviceModel: model,
+		DeviceManufacturer: manufacturer, OriginKey: originKey, OriginName: originName, Relayed: relayed,
+		Manual: provider == "manual" || flags&normalize.FlagManualEntry != 0}
 	if device != nil {
 		s.DeviceID = *device
 	}

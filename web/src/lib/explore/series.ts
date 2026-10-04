@@ -4,6 +4,7 @@
 import type { Schemas } from '../api/client.ts';
 import type { Series } from '../charts/types.ts';
 import { providerLabel } from '../connections/connections.ts';
+import { groupLabel } from '../rules/rule.ts';
 import { dayMs } from '../views/format.ts';
 
 /** A resolved value as a number: itself, or the metric's entry of a family value. */
@@ -28,7 +29,7 @@ export function dayProviders(v: Resolved | undefined): string[] {
 }
 
 /** A resolved value's warning codes, with the rule group they concern. */
-export const warningCodes = (v: Resolved | undefined) => (v?.warnings ?? []).map((w) => (w.group ? `${w.code} (${w.group})` : w.code));
+export const warningCodes = (v: Resolved | undefined) => (v?.warnings ?? []).map((w) => (w.group ? `${w.code} (${groupLabel(w.group)})` : w.code));
 
 export function sourceLabel(s: Source): string {
 	const parts = [providerLabel(s.provider)];

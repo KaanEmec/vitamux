@@ -3,6 +3,7 @@
 import { api, type Problem, type Schemas } from '../api/client.ts';
 import { metricLabel } from '../data/format.ts';
 import { providerLabel } from '../connections/connections.ts';
+import { groupLabel } from '../rules/rule.ts';
 import { hm } from '../views/format.ts';
 
 export type Summary = Schemas['MetricSummary'];
@@ -81,7 +82,7 @@ export function cardView(code: string, s: Summary, additive: boolean): CardView 
 		if (!i.selected || !i.group || seen.has(i.group)) return [];
 		seen.add(i.group);
 		const provider = i.sources?.[0]?.provider;
-		return [{ provider, label: provider === i.group ? providerLabel(provider) : metricLabel(i.group) }];
+		return [{ provider, label: provider === i.group ? providerLabel(provider) : groupLabel(i.group) === i.group ? metricLabel(i.group) : groupLabel(i.group) }];
 	});
 
 	const out: CardView = {

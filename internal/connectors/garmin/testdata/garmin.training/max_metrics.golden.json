@@ -1,8 +1,15 @@
 {
   "synthetic": true,
   "normalizer": "garmin.training",
-  "version": 3,
+  "version": 4,
   "output": {
+    "devices": [
+      {
+        "fingerprint": "garmin:wearable",
+        "type": "watch",
+        "manufacturer": "Garmin"
+      }
+    ],
     "measurements": [
       {
         "metric": "vo2max",
@@ -13,6 +20,7 @@
         },
         "value": 47.3,
         "unit": "mL/kg/min",
+        "device": "garmin:wearable",
         "key": {
           "record_type": "maxmet",
           "external_id": "2026-06-15",
