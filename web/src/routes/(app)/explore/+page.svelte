@@ -1,7 +1,8 @@
 <!--
 	Explore: everything Vitamux has stored (GET /inventory), grouped by section. Each row shows a
-	30-day sparkline (GET /resolved/summary, metrics only), the latest value, its sources, days
-	with data and the last record, and opens its view (lib/explore/links.ts). Filters: text,
+	metric tile, a 30-day sparkline in the metric hue (GET /resolved/summary, metrics only), the
+	latest value, its sources, days with data and the last record, and opens its view
+	(lib/explore/links.ts). Filters: text,
 	provider, device and origin; catalogue metrics without data can be listed too (GET /metrics).
 -->
 <script lang="ts">
@@ -17,6 +18,8 @@
 	import EmptyState from '#lib/ui/EmptyState.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
 	import { icons } from '#lib/ui/icons.ts';
+	import { metricLook } from '#lib/ui/metric.ts';
+	import MetricTile from '#lib/ui/MetricTile.svelte';
 	import Skeleton from '#lib/ui/Skeleton.svelte';
 
 	const sparkline = import('#lib/charts/Sparkline.svelte');
@@ -193,7 +196,8 @@
 							{@const key = pinKey(it)}
 							{@const latest = latestValue(it)}
 							{@const name = itemName(it)}
-							<tr class:empty={!it.days}>
+							{@const section = it.metric?.section}
+							<tr class:empty={!it.days} style:--metric={metricLook(it.code, section).color}>
 								<td class="pin">
 									{#if key && pins.layout}
 										<button
@@ -208,8 +212,13 @@
 									{/if}
 								</td>
 								<td>
-									<a class="name" href={exploreHref(it)}>{name}</a>
-									<div class="code">{it.code}</div>
+									<div class="item">
+										<MetricTile code={it.code} {section} size="sm" />
+										<div class="item-text">
+											<a class="name" href={exploreHref(it)}>{name}</a>
+											<div class="code">{it.code}</div>
+										</div>
+									</div>
 								</td>
 								<td class="wide spark">
 									{#if sparks[it.code]?.some((v) => v != null)}
@@ -218,7 +227,7 @@
 										{/await}
 									{/if}
 								</td>
-								<td class="num nowrap"><strong>{latest.value}</strong> <span class="muted unit">{latest.unit}</span></td>
+								<td class="num nowrap latest-value"><strong>{latest.value}</strong> <span class="muted unit">{latest.unit}</span></td>
 								<td class="wide">
 									<div class="sources">
 										{#each it.providers as p (p)}<Chip source={p}>{providerLabel(p)}</Chip>{/each}
@@ -377,15 +386,36 @@
 	}
 	th {
 		padding: var(--space-2) var(--space-3);
-		font-size: var(--text-xs);
+		font-size: var(--text-2xs);
 		font-weight: 500;
+		letter-spacing: var(--tracking-label);
+		text-transform: uppercase;
 		color: var(--color-text-muted);
 		text-align: left;
 	}
 	td {
-		padding: var(--space-2) var(--space-3);
+		padding: var(--space-3);
 		border-top: 1px solid var(--color-border);
 		vertical-align: middle;
+	}
+	tbody tr:hover {
+		background: var(--color-surface-2);
+	}
+	.item {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		min-width: 0;
+	}
+	.item-text {
+		min-width: 0;
+	}
+	.latest-value {
+		font-variant-numeric: tabular-nums;
+	}
+	.latest-value strong {
+		font-size: var(--text-md);
+		font-weight: 600;
 	}
 	.num {
 		text-align: right;
@@ -429,19 +459,23 @@
 		color: var(--color-text-faint);
 	}
 	.spark {
-		width: 10rem;
-	}
-	.latest {
-		width: 9rem;
-	}
-	.sources-col {
-		width: 30%;
-	}
-	.days {
 		width: 8rem;
 	}
+	td.spark :global(.spark) {
+		height: 2rem;
+	}
+	.latest {
+		width: 8rem;
+	}
+	/* The name column takes what is left. */
+	.sources-col {
+		width: 22%;
+	}
+	.days {
+		width: 6.5rem;
+	}
 	.last {
-		width: 8.5rem;
+		width: 7rem;
 	}
 	td {
 		overflow-wrap: anywhere;

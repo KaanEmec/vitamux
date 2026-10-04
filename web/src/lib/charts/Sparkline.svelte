@@ -1,5 +1,6 @@
 <!--
-	A small trend for cards: a line (or bars) with an optional range band and mean line. No axes or
+	A small trend for cards: a line (or bars) with an optional range band and mean line, and an
+	optional dashed `ghost` line over the same points (a draft beside the rule in effect). No axes or
 	interaction; give `label` when it carries meaning, otherwise it is decorative.
 -->
 <script lang="ts">
@@ -10,19 +11,21 @@
 		bars = false,
 		band,
 		mean,
+		ghost,
 		label = ''
 	}: {
 		ys: (number | null)[];
 		bars?: boolean;
 		band?: [number, number];
 		mean?: number;
+		ghost?: (number | null)[];
 		label?: string;
 	} = $props();
 
 	const w = 240;
 	const h = 48;
 	const xs = $derived(ys.map((_, i) => i));
-	const y = $derived(extent([...ys, ...(band ?? []), mean, ...(bars ? [0] : [])], bars ? 0 : 0.1));
+	const y = $derived(extent([...ys, ...(ghost ?? []), ...(band ?? []), mean, ...(bars ? [0] : [])], bars ? 0 : 0.1));
 	const sx = $derived(bars ? linear([0, ys.length], [0, w]) : linear([0, Math.max(ys.length - 1, 1)], [2, w - 2]));
 	const sy = $derived(linear(y, [h - 3, 3]));
 </script>
@@ -43,6 +46,7 @@
 	{:else}
 		<path class="line" d={linePath(xs, ys, sx, sy)} />
 	{/if}
+	{#if ghost}<path class="line ghost" d={linePath(xs, ghost, sx, sy)} />{/if}
 	{#if mean != null}<line class="mean" x1="0" x2={w} y1={sy(mean)} y2={sy(mean)} />{/if}
 </svg>
 
@@ -63,6 +67,11 @@
 		stroke-width: 2;
 		stroke-linejoin: round;
 		vector-effect: non-scaling-stroke;
+	}
+	.ghost {
+		stroke: var(--color-text);
+		stroke-width: 1.5;
+		stroke-dasharray: 4 3;
 	}
 	.bar {
 		fill: color-mix(in srgb, var(--hue) 40%, transparent);

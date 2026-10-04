@@ -65,6 +65,16 @@ dataTest('Explore: inventory, metric detail, day view', async ({ page }) => {
 		await page.goto(path);
 		await scan(page, path);
 	}
+	// The metric page with its overlays, the previous period and the rule lens, wide and at 390 px.
+	for (const width of [1280, 390]) {
+		await page.setViewportSize({ width, height: 900 });
+		await page.goto('/explore/resting_heart_rate?range=1M&end=2026-09-16');
+		await page.getByRole('group', { name: 'Series' }).getByRole('button', { name: 'Garmin' }).click();
+		await page.getByRole('button', { name: 'Compare previous' }).click();
+		await page.getByRole('button', { name: 'How it’s calculated' }).click();
+		await expect(page.getByRole('complementary', { name: 'How this is calculated' })).toBeVisible();
+		await scan(page, `/explore/[metric] (overlays and lens, ${width} px)`);
+	}
 	// The override dialog is part of the drilldown.
 	await page.goto(day);
 	await page.getByRole('button', { name: 'Set a value…' }).click();
