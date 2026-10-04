@@ -1,0 +1,18 @@
+{
+  "login": [
+    {"values": {"username": "synthetic-user", "password": "synthetic-pass"}},
+    {"values": {"code": "123456"}}
+  ],
+  "rotated": {
+    "login": [
+      {"values": {"username": "synthetic-rotate", "password": "synthetic-pass"}},
+      {"values": {"code": "123456"}}
+    ]
+  },
+  "errors": {
+    "reauth_required": {"login": [{"values": {"username": "synthetic-expired", "password": "synthetic-pass"}}, {"values": {"code": "123456"}}]},
+    "rate_limited": {"login": [{"values": {"username": "synthetic-limited", "password": "synthetic-pass"}}, {"values": {"code": "123456"}}]},
+    "transient": {"login": [{"values": {"username": "synthetic-flaky", "password": "synthetic-pass"}}, {"values": {"code": "123456"}}]},
+    "schema_drift": {"login": [{"values": {"username": "synthetic-drift", "password": "synthetic-pass"}}, {"values": {"code": "123456"}}]}
+  }
+}

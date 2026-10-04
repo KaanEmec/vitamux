@@ -10,6 +10,7 @@ instead of `_`). The template is skipped by the license gate and by the sidecar 
 | `UPSTREAM.md` | Repo, package, locked version and tag, license, official or unofficial, license review. |
 | `compose.yaml` | Replace `<name>`; keep the limits, read-only root, healthcheck and `frontend`-only network. |
 | `pyproject.toml` + `uv.lock` (or `package.json` + `package-lock.json`) | Not in the template: create them with the upstream package as a dependency and commit the lockfile. |
+| `conformance.json` | Optional [scenario](../../schemas/connector-test-scenario.v1.json) for `vitamux connector-test`: synthetic sign-in values and error cases ([example](../../examples/sidecar-python/conformance.json)). |
 | `src/`, `tests/`, `testdata/` | Your wrapper, unit tests, and synthetic recorded upstream responses (cassettes, `synthetic: true`). |
 
 Then add the directory's entry to `.github/dependabot.yml` (see the commented template there).

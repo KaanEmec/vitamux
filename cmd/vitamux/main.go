@@ -54,6 +54,7 @@ Commands:
   backup    [--out DIR|-] (database dump, blobs and manifest; default VITAMUX_BACKUP_DIR)
   restore   --from DIR (into an empty database and data dir, then migrate up)
   resolve   verify [--windows N] (compare the resolved cache with live resolution)
+  connector-test  --url URL --secret-file FILE [--scenario FILE] (check a sidecar connector)
   version   print version information
 `
 
@@ -91,6 +92,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return restoreCmd(args[1:], stdout, stderr)
 	case "resolve":
 		return resolveCmd(args[1:], stdout, stderr)
+	case "connector-test":
+		return connectorTestCmd(args[1:], stdout, stderr)
 	case "help", "-h", "--help":
 		fmt.Fprint(stdout, usage)
 		return 0

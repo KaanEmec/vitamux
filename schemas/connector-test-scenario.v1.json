@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/KaanEmec/vitamux/schemas/connector-test-scenario.v1.json",
+  "title": "vitamux connector-test scenario",
+  "description": "Inputs for `vitamux connector-test --scenario`: which synthetic values sign in to the sidecar under test and which logins provoke which typed error. Synthetic values only, never real credentials. Without a scenario the kit checks the first auth step and fetches with placeholder credentials, which only a sidecar in REPLAY mode serves. login and credentials at the top level are the subject of the fetch checks.",
+  "type": "object",
+  "additionalProperties": false,
+  "not": {"required": ["login", "credentials"]},
+  "properties": {
+    "login": {"$ref": "#/$defs/login"},
+    "credentials": {"$ref": "#/$defs/credentials"},
+    "stream": {"description": "Stream to fetch; default: the first stream of describe.", "type": "string", "maxLength": 64},
+    "mode": {"description": "Fetch mode; default: incremental.", "enum": ["incremental", "correction", "manual", "backfill"]},
+    "rotated": {"description": "A subject whose fetch hands back rotated credentials and whose refresh returns new tokens.", "$ref": "#/$defs/subject"},
+    "errors": {
+      "description": "A subject per typed error class: its fetch must end in that class.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reauth_required": {"$ref": "#/$defs/subject"},
+        "rate_limited": {"$ref": "#/$defs/subject"},
+        "transient": {"$ref": "#/$defs/subject"},
+        "schema_drift": {"$ref": "#/$defs/subject"}
+      }
+    }
+  },
+  "$defs": {
+    "subject": {
+      "description": "Who the kit acts as: the owner's answers to each auth step in turn (login), or ready-made credentials. Not both.",
+      "type": "object",
+      "additionalProperties": false,
+      "not": {"required": ["login", "credentials"]},
+      "properties": {
+        "login": {"$ref": "#/$defs/login"},
+        "credentials": {"$ref": "#/$defs/credentials"}
+      }
+    },
+    "login": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "values": {"description": "Answers to a prompt step, by field name.", "type": "object", "additionalProperties": {"type": "string"}},
+          "callback": {"description": "The OAuth callback query for a redirect step.", "type": "object", "additionalProperties": {"type": "array", "items": {"type": "string"}}}
+        }
+      }
+    },
+    "credentials": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "access_token": {"type": "string"},
+        "refresh_token": {"type": "string"},
+        "expires_at": {"type": "string", "format": "date-time"},
+        "extra": {}
+      }
+    }
+  }
+}
