@@ -1260,7 +1260,7 @@ export interface paths {
         };
         /**
          * List the devices measurements were recorded on (not the paired apps)
-         * @description The values the device_type and device_model rule selectors match, the owner's names and merges, and the device types the owner can set. `include=records` adds each device's active records per connection.
+         * @description The values the device_type, device_manufacturer and device_model rule selectors match (the rule builder's brand and device choices), the owner's names and merges, and the device types the owner can set. `include=records` adds each device's active records per connection.
          */
         get: operations["listSourceDevices"];
         put?: never;
@@ -3539,6 +3539,7 @@ export interface components {
             name: string | null;
             /** @description The `device_type` rule selector value, e.g. watch. */
             device_type: string | null;
+            /** @description The `device_manufacturer` rule selector value (the brand; matched case-insensitively). */
             manufacturer: string | null;
             /** @description The `device_model` rule selector value. */
             model: string | null;

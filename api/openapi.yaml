@@ -1910,8 +1910,8 @@ paths:
       operationId: listSourceDevices
       summary: List the devices measurements were recorded on (not the paired apps)
       description: >-
-        The values the device_type and device_model rule selectors match, the owner's names and merges, and the
-        device types the owner can set. `include=records` adds each device's active records per connection.
+        The values the device_type, device_manufacturer and device_model rule selectors match (the rule builder's
+        brand and device choices), the owner's names and merges, and the device types the owner can set. `include=records` adds each device's active records per connection.
       security: [{session: []}, {apiKey: ['read:config']}]
       parameters:
         - name: include
@@ -4734,7 +4734,7 @@ components:
         fingerprint: {type: string, description: "The device's identity at the provider, as the normalizer reports it."}
         name: {type: [string, 'null'], description: The owner's label.}
         device_type: {type: [string, 'null'], description: 'The `device_type` rule selector value, e.g. watch.'}
-        manufacturer: {type: [string, 'null']}
+        manufacturer: {type: [string, 'null'], description: 'The `device_manufacturer` rule selector value (the brand; matched case-insensitively).'}
         model: {type: [string, 'null'], description: 'The `device_model` rule selector value.'}
         merged_into:
           oneOf: [{$ref: '#/components/schemas/DeviceID'}, {type: 'null'}]

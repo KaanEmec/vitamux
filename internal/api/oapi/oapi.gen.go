@@ -3631,9 +3631,11 @@ type SourceDevice struct {
 	DeviceType *string `json:"device_type"`
 
 	// Fingerprint The device's identity at the provider, as the normalizer reports it.
-	Fingerprint  string   `json:"fingerprint"`
-	ID           DeviceID `json:"id"`
-	Manufacturer *string  `json:"manufacturer"`
+	Fingerprint string   `json:"fingerprint"`
+	ID          DeviceID `json:"id"`
+
+	// Manufacturer The `device_manufacturer` rule selector value (the brand; matched case-insensitively).
+	Manufacturer *string `json:"manufacturer"`
 
 	// MergedInto The device this one was merged into; its records live there.
 	MergedInto *DeviceID `json:"merged_into"`
