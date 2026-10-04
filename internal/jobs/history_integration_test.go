@@ -29,10 +29,11 @@ func TestHistoryAndMetrics(t *testing.T) {
 
 	okJob := enqueue(t, d, NewJob{Kind: "sweep_blobs", ConnectionID: &conn})
 	badJob := enqueue(t, d, NewJob{Kind: "export", ConnectionID: &conn})
-	enqueue(t, d, NewJob{Kind: "sweep_blobs", ConnectionID: &other})
+	otherJob := enqueue(t, d, NewJob{Kind: "sweep_blobs", ConnectionID: &other})
 	stop := start(r)
 	waitFor(t, 5*time.Second, "jobs to finish", func() bool {
-		return job(t, d, okJob).Status == "succeeded" && job(t, d, badJob).Status == "dead"
+		return job(t, d, okJob).Status == "succeeded" && job(t, d, badJob).Status == "dead" &&
+			job(t, d, otherJob).Status == "succeeded"
 	})
 	stop()
 
