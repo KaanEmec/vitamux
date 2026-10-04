@@ -195,11 +195,12 @@ services:
       master-key: {condition: service_completed_successfully}
 
   # Disaster recovery from the server's shell (docs/operations/backup.md#restore).
+  # No `command: []`: `entrypoint` already drops the image's CMD, and Coolify rewrites an empty
+  # list to `{}`, which Compose rejects.
   restore:
     image: ${VITAMUX_IMAGE:-ghcr.io/kaanemec/vitamux:latest}
     profiles: [restore]
     entrypoint: ["/vitamux", "restore"]
-    command: []
     restart: "no"
     exclude_from_hc: true
     environment:
