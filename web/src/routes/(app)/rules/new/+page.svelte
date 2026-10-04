@@ -36,6 +36,8 @@
 		type Rule,
 		type SelectorField
 	} from '#lib/rules/rule.ts';
+	import { dayChanged, numeric } from '#lib/rules/preview.ts';
+	import { ruleSentence } from '#lib/rules/sentence.ts';
 	import { previewRule, type PreviewOutcome } from '#lib/rules/stubs.ts';
 
 	const steps = ['Metric', 'Sources', 'Strategy', 'Window and quality', 'Review'];
@@ -182,6 +184,37 @@
 			!form.exclude.some((s) => s.provider === 'apple_health' && s.relayed === true)
 	);
 
+	// Live preview beside steps 2–4: the draft against the rule in effect, debounced.
+	const live = $derived(!!form && step >= 1 && step <= 3);
+	const baseJson = $derived(currentSpec ? JSON.stringify(toSpec(fromSpec(currentSpec))) : '');
+	const changed = $derived(!!draft && JSON.stringify(draft) !== baseJson);
+	let side = $state<PreviewOutcome | 'loading' | null>(null);
+	let sideSeq = 0;
+	$effect(() => {
+		const [d, on] = [draft, live && changed];
+		const n = ++sideSeq;
+		if (!d || !on) {
+			side = null;
+			return;
+		}
+		const t = setTimeout(async () => {
+			side = 'loading';
+			const { start, end } = lastDays(14);
+			const out = await previewRule(d, start, end);
+			if (n === sideSeq) side = out;
+		}, 400);
+		return () => clearTimeout(t);
+	});
+	const sideDays = $derived(side && side !== 'loading' && 'preview' in side ? side.preview.days : null);
+	const sideSeries = $derived.by(() => {
+		if (!sideDays?.some((d) => numeric(d.draft.value) !== null || numeric(d.active.value) !== null)) return null;
+		const xs = sideDays.map((d) => Date.parse(`${d.local_date}T12:00:00Z`));
+		return [
+			{ label: 'Rule in effect', xs, ys: sideDays.map((d) => numeric(d.active.value)) },
+			{ label: 'Draft', xs, ys: sideDays.map((d) => numeric(d.draft.value)), style: 'ghost' as const }
+		];
+	});
+
 	async function save() {
 		if (!form) return;
 		if (needsSumAck(form) && !form.acknowledged.includes(sumWarning)) {
@@ -213,8 +246,18 @@
 
 <svelte:head><title>Rule builder · Vitamux</title></svelte:head>
 
-<p class="crumb"><a href="/rules">Rules</a> /</p>
-<h1>Rule builder</h1>
+<nav class="crumb" aria-label="Breadcrumb"><a href="/rules">Rules</a> <span aria-hidden="true">/</span>{#if form}<span>{` ${form.metric}`}</span>{/if}</nav>
+<div class="head">
+	<div>
+		<h1>Rule builder</h1>
+		{#if form}
+			<p class="muted">
+				{form.metric} · starting from {startFrom === 'blank' ? 'an empty rule' : fromVersion ? `version ${fromVersion}` : 'the rule in effect'}
+			</p>
+		{/if}
+	</div>
+	<a class="btn ghost" href={form ? `/rules/${form.metric}` : '/rules'}>Cancel</a>
+</div>
 
 <nav aria-label="Builder steps">
 	<ol class="steps">
@@ -222,12 +265,12 @@
 			<li>
 				<button
 					type="button"
-					class="step"
+					class={['step', form && i < step && 'done']}
 					aria-current={step === i ? 'step' : undefined}
 					disabled={i > 0 && !form}
 					onclick={() => go(i)}
 				>
-					<span class="num">{i + 1}</span>
+					<span class="num" aria-hidden="true">{form && i < step ? '✓' : i + 1}</span>
 					{label}
 					{#if stepHasErrors(i)}<StatusIcon status="error" label="has errors" />{/if}
 				</button>
@@ -239,6 +282,7 @@
 <ProblemAlert problem={loadProblem} />
 <ProblemAlert {problem} fields={shown} />
 
+<div class={['layout', live && 'with-side']}>
 <section class="card" aria-labelledby="step-title">
 	<h2 id="step-title" tabindex="-1" bind:this={heading}>{step + 1}. {steps[step]}</h2>
 
@@ -496,51 +540,168 @@
 	<div class="nav">
 		{#if step > 0}<button class="btn" type="button" onclick={() => go(step - 1)}>Back</button>{/if}
 		{#if step < 4}
-			<button class="btn primary" type="button" disabled={step === 0 && !metric} onclick={() => go(step + 1)}>Next</button>
+			<button class="btn primary" type="button" disabled={step === 0 && !metric} onclick={() => go(step + 1)}>
+				Next: {steps[step + 1].toLowerCase()}
+			</button>
 		{:else}
 			<button class="btn primary" type="button" disabled={saving} onclick={save}>{saving ? 'Saving…' : 'Save version'}</button>
 		{/if}
 	</div>
 </section>
 
+{#if live && draft}
+	<aside class="side card" aria-labelledby="live-title">
+		<div class="side-head">
+			<h2 id="live-title">Live preview</h2>
+			<span class="muted small">Last 14 days</span>
+		</div>
+		<p class="sentence">{ruleSentence(draft)}</p>
+		<div aria-live="polite">
+			{#if !changed}
+				<p class="muted small">No changes from the rule in effect yet.</p>
+			{:else if side === null || side === 'loading'}
+				<p class="muted small">Resolving the draft…</p>
+			{:else if 'unavailable' in side}
+				<p class="note"><StatusIcon status="info" /> Preview unavailable on this server; the review step still checks the rule.</p>
+			{:else if 'problem' in side}
+				<p class="muted small">Not ready to preview: {side.problem.detail || side.problem.title}</p>
+			{:else if sideDays}
+				<p class="small"><strong>{sideDays.filter(dayChanged).length} of {sideDays.length} days differ</strong> from the rule in effect.</p>
+			{/if}
+		</div>
+		{#if changed && sideSeries}
+			{#await import('#lib/charts/TimeSeries.svelte') then { default: TimeSeries }}
+				<TimeSeries series={sideSeries} label="Rule in effect and draft, last 14 days" unit={sideDays?.[0]?.draft.unit ?? ''} height={180} zoom={false} withTime={false} />
+			{/await}
+		{/if}
+		<details>
+			<summary>Rule JSON and diff</summary>
+			<pre>{JSON.stringify(draft, null, 2)}</pre>
+			{#if currentSpec}<RuleDiff before={currentSpec} after={draft} caption="Rule in effect → draft" labels={['In effect', 'Draft']} />{/if}
+		</details>
+	</aside>
+{/if}
+</div>
+
 <style>
 	.crumb {
 		margin: 0;
 		font-size: var(--text-sm);
 	}
-	.steps {
+	.head {
 		display: flex;
 		flex-wrap: wrap;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: var(--space-3);
+		margin-bottom: var(--space-4);
+	}
+	.head h1,
+	.head p {
+		margin: 0;
+	}
+	.steps {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
 		gap: var(--space-2);
-		margin: 0 0 var(--space-4);
+		margin: 0 0 var(--space-5);
 		padding: 0;
 		list-style: none;
 	}
 	.step {
-		display: inline-flex;
+		display: flex;
 		gap: var(--space-2);
 		align-items: center;
-		padding: var(--space-1) var(--space-3);
+		width: 100%;
+		min-height: var(--control-h);
+		padding: var(--space-2) var(--space-3);
 		font: inherit;
 		font-size: var(--text-sm);
-		color: var(--color-text);
+		font-weight: 500;
+		color: var(--color-text-muted);
+		text-align: left;
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);
-		border-radius: 999px;
+		border-radius: var(--radius-md);
 		cursor: pointer;
+	}
+	.step.done {
+		color: var(--color-text);
 	}
 	.step[aria-current='step'] {
 		font-weight: 600;
+		color: var(--color-text);
+		background: var(--color-accent-soft);
 		border-color: var(--color-accent);
-		box-shadow: inset 0 0 0 1px var(--color-accent);
 	}
 	.step:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
 	}
 	.num {
+		display: inline-grid;
+		place-items: center;
+		flex: none;
+		width: 1.625rem;
+		height: 1.625rem;
+		font-size: var(--text-xs);
 		font-weight: 700;
-		color: var(--color-accent);
+		background: var(--color-surface-2);
+		border-radius: 50%;
+	}
+	.done .num {
+		color: var(--color-link);
+	}
+	[aria-current='step'] .num {
+		color: var(--color-on-accent);
+		background: var(--color-accent);
+	}
+	.layout {
+		display: grid;
+		gap: var(--space-5);
+		align-items: start;
+	}
+	.layout.with-side {
+		grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+	}
+	@media (max-width: 64rem) {
+		.layout.with-side {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+	.layout > .card {
+		min-width: 0;
+	}
+	.side {
+		position: sticky;
+		top: var(--space-4);
+		display: grid;
+		gap: var(--space-3);
+		padding: var(--space-4);
+		background: var(--color-inset);
+	}
+	.side p,
+	.side h2 {
+		margin: 0;
+	}
+	.side-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: var(--space-2);
+	}
+	.side-head h2 {
+		font-size: var(--text-md);
+	}
+	.sentence {
+		padding: var(--space-3);
+		font-size: var(--text-sm);
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+	}
+	.small {
+		font-size: var(--text-xs);
 	}
 	h2:focus {
 		outline: none;

@@ -1,20 +1,30 @@
 <!--
-	Rules catalogue: every metric with the rule in effect (the owner's version or the built-in
-	default with its reason) and a 90-day per-source coverage heatmap.
+	Rules catalogue: a card per metric with the rule in effect in plain words (the owner's version
+	or the built-in default with its reason), its source order and a 90-day per-source coverage
+	heatmap; search and a custom / built-in filter.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { api, type Problem, type Schemas } from '#lib/api/client.ts';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import StatusIcon from '#lib/components/StatusIcon.svelte';
-	import { ladder, lastDays, opLabel, windowLabel, type Rule } from '#lib/rules/rule.ts';
+	import { lastDays, type Rule } from '#lib/rules/rule.ts';
+	import { ruleSentence } from '#lib/rules/sentence.ts';
 	import { getCoverage, type Coverage } from '#lib/rules/stubs.ts';
+	import Badge from '#lib/ui/Badge.svelte';
+	import Chip from '#lib/ui/Chip.svelte';
+	import EmptyState from '#lib/ui/EmptyState.svelte';
+	import Segmented from '#lib/ui/Segmented.svelte';
+	import Skeleton from '#lib/ui/Skeleton.svelte';
 
 	type Entry = { metric: string; rule: Schemas['RuleVersion'] | null };
+	type Filter = 'all' | 'custom' | 'builtin';
 
 	let entries = $state<Entry[] | null>(null);
 	let problem = $state<Problem | null>(null);
 	let coverage = $state<Coverage | null>(null);
+	let query = $state('');
+	let filter = $state<Filter>('all');
 	const range = lastDays(90);
 
 	onMount(async () => {
@@ -36,7 +46,28 @@
 		entries = list;
 	});
 
+	const isCustom = (e: Entry) => !!e.rule && !e.rule.builtin;
+	const isBuiltin = (e: Entry) => !!e.rule?.builtin;
+	const count = (f: (e: Entry) => boolean) => entries?.filter(f).length ?? 0;
+	const filters = $derived<{ value: Filter; label: string }[]>([
+		{ value: 'all', label: `All ${entries?.length ?? 0}` },
+		{ value: 'custom', label: `Custom ${count(isCustom)}` },
+		{ value: 'builtin', label: `Built-in ${count(isBuiltin)}` }
+	]);
+	const visible = $derived(
+		(entries ?? []).filter(
+			(e) =>
+				e.metric.includes(query.trim().toLowerCase().replaceAll(' ', '_')) &&
+				(filter === 'all' || (filter === 'custom' ? isCustom(e) : isBuiltin(e)))
+		)
+	);
+
 	const spec = (r: Schemas['RuleVersion']) => r.spec as unknown as Rule;
+	/** The provider a group names, for its colour. */
+	const provider = (g: Rule['groups'][number]) => {
+		const p = g.match.find((s) => typeof s.provider === 'string' && s.provider)?.provider;
+		return typeof p === 'string' ? p : g.id;
+	};
 	const rowsFor = (metric: string) =>
 		(coverage?.rows ?? []).filter((r) => r.metric === metric).map((r) => ({ label: r.source, days: r.days }));
 </script>
@@ -44,48 +75,59 @@
 <svelte:head><title>Rules · Vitamux</title></svelte:head>
 
 <div class="head">
-	<h1>Rules</h1>
-	<a class="btn primary" href="/rules/new">New rule</a>
+	<div>
+		<h1>Rules</h1>
+		<p class="muted">
+			How each metric picks one value when several sources report it. Built-in defaults apply until you edit a metric;
+			every change is a new version you can roll back.
+		</p>
+	</div>
+	<a class="btn" href="/rules/new">New rule</a>
 </div>
-<p class="muted">
-	Which source each metric uses, per window. Built-in defaults apply until you edit a metric; your first edit copies the
-	default into your own version 1.
-</p>
 
 <ProblemAlert {problem} />
 
-{#if !coverage && entries}
-	<p class="note"><StatusIcon status="info" /> Coverage heatmaps are not available yet.</p>
-{/if}
-
 {#if entries === null && !problem}
-	<p class="muted" role="status">Loading rules…</p>
+	<div class="grid">
+		{#each [1, 2, 3] as i (i)}<Skeleton variant="block" label="Loading rules…" />{/each}
+	</div>
 {:else if entries}
-	<ul class="catalogue">
-		{#each entries as e (e.metric)}
+	<div class="tools">
+		<div class="field search">
+			<label class="visually-hidden" for="rules-search">Search rules</label>
+			<input id="rules-search" type="search" placeholder="Search metric" bind:value={query} />
+		</div>
+		<Segmented label="Filter" options={filters} bind:value={filter} />
+	</div>
+
+	{#if !coverage}
+		<p class="note"><StatusIcon status="info" /> Coverage heatmaps are not available yet.</p>
+	{/if}
+
+	{#if visible.length === 0}
+		<EmptyState title="No rules match" text="Try another name or filter." />
+	{/if}
+	<ul class="grid">
+		{#each visible as e (e.metric)}
 			<li class="card" aria-labelledby="m-{e.metric}">
 				<div class="title">
 					<h2 id="m-{e.metric}"><a href="/rules/{e.metric}">{e.metric}</a></h2>
 					{#if !e.rule}
-						<span class="badge"><StatusIcon status="off" /> No rule</span>
+						<Badge>No rule</Badge>
 					{:else if e.rule.builtin}
-						<span class="badge"><StatusIcon status="info" /> Built-in default</span>
+						<Badge>Built-in default</Badge>
 					{:else}
-						<span class="badge"><StatusIcon status="ok" /> Your rule · version {e.rule.version}</span>
+						<Badge tone="draft">Your rule · version {e.rule.version}</Badge>
 					{/if}
 				</div>
 				{#if e.rule}
 					{@const r = spec(e.rule)}
-					<p class="meta">{windowLabel(r.window)} · {opLabel(r.strategy.op)}</p>
-					<p class="ladder"><span class="muted">Order:</span> <code>{ladder(r)}</code></p>
-					{#if e.rule.builtin}
-						<p class="reason">
-							{#if e.rule.reason}{e.rule.reason}{/if}
-							<span class="muted">Suggested order; you can reorder or replace it.</span>
-						</p>
-					{/if}
+					<p class="sentence">{ruleSentence(r)}</p>
+					<ol class="order" aria-label="Source order">
+						{#each r.groups as g, i (i)}<li><Chip source={provider(g)}>{g.id}</Chip></li>{/each}
+					</ol>
 				{:else}
-					<p class="muted">Only the all-sources view shows this metric until you pick a source.</p>
+					<p class="muted small">Only the all-sources view shows this metric until you pick a source.</p>
 				{/if}
 				{#if coverage}
 					{@const rows = rowsFor(e.metric)}
@@ -95,13 +137,15 @@
 						<p class="muted small">No data in the last 90 days.</p>
 					{/if}
 				{/if}
+				{#if e.rule?.builtin && e.rule.reason}
+					<p class="muted small">{e.rule.reason} Suggested order; you can reorder or replace it.</p>
+				{/if}
 				<div class="actions">
-					<a href="/rules/{e.metric}">History</a>
 					{#if e.rule}
-						<a href="/rules/new?metric={e.metric}">Reorder or edit</a>
-						<a href="/rules/new?metric={e.metric}&amp;blank=1">Replace</a>
+						<a class="btn sm" href="/rules/{e.metric}">Edit with data</a>
+						<a class="btn ghost sm" href="/rules/{e.metric}#history">History</a>
 					{:else}
-						<a href="/rules/new?metric={e.metric}&amp;blank=1">Create a rule</a>
+						<a class="btn sm" href="/rules/new?metric={e.metric}&amp;blank=1">Create a rule</a>
 					{/if}
 				</div>
 			</li>
@@ -112,9 +156,27 @@
 <style>
 	.head {
 		display: flex;
-		align-items: center;
+		flex-wrap: wrap;
+		align-items: flex-end;
 		justify-content: space-between;
 		gap: var(--space-4);
+		margin-bottom: var(--space-5);
+	}
+	.head p {
+		max-width: 44rem;
+		margin: 0;
+	}
+	.tools {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-3);
+		margin-bottom: var(--space-4);
+	}
+	.search {
+		flex: 1 1 16rem;
+		max-width: 22rem;
+		margin: 0;
 	}
 	.note {
 		display: flex;
@@ -124,19 +186,20 @@
 		background: var(--color-info-bg);
 		border-radius: var(--radius-sm);
 	}
-	.catalogue {
+	.grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
 		gap: var(--space-4);
 		margin: 0;
 		padding: 0;
 		list-style: none;
 	}
 	.card {
-		display: grid;
-		gap: var(--space-2);
-		align-content: start;
-		padding: var(--space-4);
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-3);
+		min-width: 0;
+		padding: var(--space-4) var(--space-5);
 	}
 	.card p {
 		margin: 0;
@@ -144,7 +207,7 @@
 	.title {
 		display: flex;
 		flex-wrap: wrap;
-		align-items: baseline;
+		align-items: center;
 		justify-content: space-between;
 		gap: var(--space-2);
 	}
@@ -153,25 +216,33 @@
 		font-size: var(--text-md);
 		font-family: var(--font-mono);
 	}
-	.badge {
-		display: inline-flex;
+	h2 a {
+		color: var(--color-text);
+		text-decoration: none;
+	}
+	h2 a:hover {
+		text-decoration: underline;
+	}
+	.sentence {
+		font-size: var(--text-sm);
+		line-height: 1.5;
+	}
+	.order {
+		display: flex;
+		flex-wrap: wrap;
 		gap: var(--space-1);
-		align-items: center;
-		font-size: var(--text-sm);
+		margin: 0;
+		padding: 0;
+		list-style: none;
 	}
-	.meta,
-	.reason,
 	.small {
-		font-size: var(--text-sm);
-	}
-	.ladder code {
 		font-size: var(--text-xs);
-		overflow-wrap: anywhere;
 	}
 	.actions {
 		display: flex;
 		flex-wrap: wrap;
-		gap: var(--space-4);
-		font-size: var(--text-sm);
+		gap: var(--space-2);
+		margin-top: auto;
+		padding-top: var(--space-1);
 	}
 </style>
