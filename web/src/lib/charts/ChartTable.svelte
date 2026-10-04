@@ -12,7 +12,7 @@
 <details bind:open>
 	<summary>Show as a table</summary>
 	{#if table}
-		<div class="scroll">
+		<div class="scroll" tabindex="0" role="region" aria-label={caption}>
 			<table>
 				<caption class="visually-hidden">{caption}</caption>
 				<thead>
