@@ -20,6 +20,7 @@
 		height,
 		baseline,
 		status,
+		providers,
 		format = (v: number) => `${formatNumber(v)}${unit ? ` ${unit}` : ''}`,
 		actions,
 		onselect
@@ -33,6 +34,8 @@
 		baseline?: { value: number; label: string };
 		/** Per window, for the tooltip of a single stack. */
 		status?: (DataStatus | null)[];
+		/** Per window, the providers behind the value (GET /resolved/series `providers`), for the tooltip. */
+		providers?: (string[] | null)[];
 		format?: (v: number) => string;
 		actions?: TipAction[];
 		onselect?: (i: number) => void;
@@ -50,7 +53,7 @@
 		const total = totals[i];
 		return {
 			title: formatInstant(xs[i], timezone, withTime),
-			lead: total == null ? { value: 'No data' } : { value: format(total), status: status?.[i] ?? undefined },
+			lead: total == null ? { value: 'No data' } : { value: format(total), status: status?.[i] ?? undefined, providers: providers?.[i] ?? undefined },
 			rows: stacked ? stacks.map((s) => ({ label: s.label, value: s.ys[i] == null ? '–' : format(s.ys[i] ?? 0) })) : []
 		};
 	}

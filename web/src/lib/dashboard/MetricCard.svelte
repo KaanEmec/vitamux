@@ -1,6 +1,6 @@
 <!--
-	One dashboard card: the metric, its value for the day with status, a neutral delta against the
-	30-day mean, a sparkline and the sources behind it. The title links to the metric (a stretched
+	One pinned dashboard card: the metric's tile and source, its value for the day with status, a
+	neutral delta against the 30-day mean and a sparkline in the metric hue. The title links to the metric (a stretched
 	link, so the whole card opens it); with `tools` the card is being edited and does not link.
 -->
 <script lang="ts">
@@ -42,7 +42,8 @@
 	const kit = import('../charts/Sparkline.svelte');
 	const stack = import('../charts/StageStack.svelte');
 	const titleId = $props.id();
-	const shown = $derived(view?.chips.slice(0, 3) ?? []);
+	const chip = $derived(view?.chips[0]);
+	const more = $derived(view?.chips.slice(1, 3) ?? []);
 </script>
 
 <article
@@ -61,13 +62,16 @@
 		<h3 id={titleId}>
 			{#if edit}{label}{:else}<a href={metricHref(code)}>{label}</a>{/if}
 		</h3>
-		{#if view}<span class="status"><ResultStatus status={view.status} partial={view.partial} /></span>{/if}
+		{#if chip}<Chip source={chip.provider}>{chip.label}</Chip>{/if}
 	</header>
 
 	{#if !view}
 		<p class="value muted" role="status">Loading…</p>
 	{:else}
-		<p class="value">{view.value}{#if view.unit}<span class="unit">{view.unit}</span>{/if}</p>
+		<div class="reading">
+			<p class="value">{view.value}{#if view.unit}<span class="unit">{view.unit}</span>{/if}</p>
+			<span class="status"><ResultStatus status={view.status} partial={view.partial} /></span>
+		</div>
 		{#if view.sub}<p class="sub">{view.sub}</p>{/if}
 
 		{#if view.stages}
@@ -85,9 +89,9 @@
 		{/if}
 
 		<footer>
-			{#each shown as c (c.label)}<Chip source={c.provider}>{c.label}</Chip>{/each}
-			{#if view.chips.length > shown.length}<span class="muted">+{view.chips.length - shown.length}</span>{/if}
 			{#if view.delta}<span class="delta">{view.delta}</span>{/if}
+			{#each more as c (c.label)}<Chip source={c.provider}>{c.label}</Chip>{/each}
+			{#if view.chips.length > more.length + 1}<span class="muted">+{view.chips.length - more.length - 1}</span>{/if}
 			{#if !edit && view.hasData && view.status !== 'no_data' && date}
 				<a class="all" href="/explore/{code}/day/{date}">All sources<span class="visually-hidden"> for {label}</span></a>
 			{/if}
@@ -105,9 +109,11 @@
 		min-height: 11.5rem;
 		padding: var(--space-4);
 	}
-	.m,
-	.l {
-		grid-column: span 2;
+	@media (min-width: 36rem) {
+		.m,
+		.l {
+			grid-column: span 2;
+		}
 	}
 	.edit {
 		padding-top: var(--space-3);
@@ -150,6 +156,13 @@
 		outline: 2px solid var(--color-focus);
 		outline-offset: 2px;
 	}
+	.reading {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: var(--space-2);
+	}
 	.status {
 		font-size: var(--text-xs);
 		color: var(--color-text-muted);
@@ -164,6 +177,10 @@
 		font-size: var(--text-2xl);
 		font-weight: 600;
 		letter-spacing: var(--tracking-tight);
+		font-variant-numeric: tabular-nums;
+	}
+	.delta {
+		font-variant-numeric: tabular-nums;
 	}
 	.unit,
 	.sub {

@@ -199,3 +199,108 @@ test('no serious axe violations: view and edit mode, light and dark, desktop and
 	const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 	expect(overflow).toBeLessThanOrEqual(0);
 });
+
+const tile = (page: Page, name: string) => page.getByRole('region', { name: 'Highlights' }).getByRole('button', { name: new RegExp(name) });
+const hero = (page: Page) => page.locator('section.hero');
+
+test('hero tiles drive the hero chart; the period switch reloads it, 1Y as weekly means', async ({ page, dash }) => {
+	await page.goto('/');
+	const tiles = page.getByRole('region', { name: 'Highlights' }).getByRole('button');
+	await expect(tiles).toHaveCount(4);
+	await expect(tiles.nth(0)).toContainText('Steps');
+	await expect(tile(page, 'Steps')).toHaveAttribute('aria-pressed', 'true');
+	await expect(tile(page, 'Steps')).toContainText(/30-day mean [\d,.]+/);
+	await expect(hero(page).getByRole('heading', { level: 2 })).toHaveText('Steps');
+	await expect(hero(page).getByText(/^[+−±][\d,.]+ vs previous 30 days$/)).toBeVisible();
+	await expect(hero(page).getByText('Apple Health')).toBeVisible();
+	await expect(hero(page).getByRole('link', { name: /Open in Explore/ })).toHaveAttribute('href', '/explore/steps');
+	expect(dash.charts.at(-1)).toMatch(/^series metric=steps&.*window=local_day/);
+
+	// Another tile takes over the chart: a line for a daily summary, with its gaps.
+	await tile(page, 'Resting heart rate').click();
+	await expect(tile(page, 'Resting heart rate')).toHaveAttribute('aria-pressed', 'true');
+	await expect(tile(page, 'Steps')).toHaveAttribute('aria-pressed', 'false');
+	await expect(hero(page).getByRole('heading', { level: 2 })).toHaveText('Resting heart rate');
+	await expect(hero(page).locator('.hole').first()).toBeAttached();
+	await expect(hero(page).getByText('WHOOP')).toBeVisible();
+
+	// Periods: the tiles' means and the delta follow; 1Y reads weekly means from the trend.
+	const period = hero(page).getByRole('group', { name: 'Period' });
+	await period.getByRole('button', { name: '7D' }).click();
+	await expect(period.getByRole('button', { name: '7D' })).toHaveAttribute('aria-pressed', 'true');
+	await expect(tile(page, 'Steps')).toContainText(/7-day mean/);
+	await expect(hero(page).getByText(/vs previous 7 days$/)).toBeVisible();
+	await period.getByRole('button', { name: '1Y' }).click();
+	await expect(hero(page).getByText('Weekly means of daily values')).toBeVisible();
+	await expect(hero(page).getByText(/vs previous year$/)).toBeVisible();
+	await expect(tile(page, 'Weight')).toContainText(/1-year mean/);
+	expect(dash.charts.at(-1)).toMatch(/^trend metric=resting_heart_rate&.*grain=week/);
+});
+
+test('the hero tooltip: value, status and source; a click pins the day action', async ({ page }) => {
+	await page.goto('/');
+	await tile(page, 'Weight').click();
+	const chart = hero(page).getByRole('group', { name: /^Weight, daily values of the last 30 days/ });
+	await chart.focus();
+	const tip = hero(page).locator('.tip');
+	await expect(tip).toContainText('kg');
+	await expect(tip).toContainText('Direct');
+	await expect(tip).toContainText('Withings');
+	await page.keyboard.press('Tab');
+	await expect(tip).toBeHidden();
+	// Bars (steps) show the providers too; a click pins the card with its action.
+	await tile(page, 'Steps').click();
+	const bars = hero(page).getByRole('group', { name: /^Steps, daily values/ });
+	await expect(bars.locator('rect.bar').first()).toBeVisible();
+	await bars.scrollIntoViewIfNeeded();
+	const box = (await bars.boundingBox())!;
+	await page.mouse.click(box.x + box.width - 30, box.y + box.height / 2);
+	await expect(tip).toContainText('Apple Health');
+	await tip.getByRole('button', { name: 'All sources of this day' }).click();
+	await expect(page).toHaveURL(/\/explore\/steps\/day\/\d{4}-\d{2}-\d{2}$/);
+});
+
+test('last night: time asleep, bed and wake, stages and the source', async ({ page }) => {
+	await page.goto('/');
+	const night = page.getByRole('region', { name: 'Last night' });
+	await expect(night.getByText(/^\d+h \d{2}m/).first()).toBeVisible();
+	await expect(night.getByText(/(23:10|11:10).*(06:40|6:40)/)).toBeVisible();
+	await expect(night.getByText('WHOOP')).toBeVisible();
+	await expect(night.getByRole('group', { name: /Sleep stages of last night/ })).toBeVisible();
+	await expect(night.getByRole('img', { name: 'Time in each sleep stage last night' })).toBeVisible();
+	await expect(night.getByText(/^30-night mean \d+h \d{2}m$/)).toBeVisible();
+	await expect(night.getByRole('link', { name: /Sleep view/ })).toHaveAttribute('href', '/explore/sleep');
+});
+
+test('customize the hero tiles: up to four, saved with the layout', async ({ page, dash }) => {
+	await page.goto('/');
+	await page.getByRole('button', { name: 'Customize' }).click();
+	const pick = page.getByRole('group', { name: /Hero tiles/ });
+	await expect(pick.getByRole('checkbox', { name: 'Steps' })).toBeChecked();
+	// Four are chosen: the others wait until one is removed. Families are not offered.
+	await expect(pick.getByRole('checkbox', { name: 'SpO₂' })).toBeDisabled();
+	await expect(pick.getByRole('checkbox', { name: 'Sleep' })).toHaveCount(0);
+	await pick.getByRole('checkbox', { name: 'Weight' }).uncheck();
+	await pick.getByRole('checkbox', { name: 'SpO₂' }).check();
+	await expect(tile(page, 'SpO₂')).toBeVisible();
+	await expect(tile(page, 'Weight')).toHaveCount(0);
+	await page.getByRole('button', { name: 'Save' }).click();
+	await expect.poll(() => dash.puts.length).toBe(1);
+	expect(dash.puts[0].hero).toEqual(['steps', 'resting_heart_rate', 'hrv_rmssd_nightly', 'spo2']);
+	await page.reload();
+	await expect(page.getByRole('region', { name: 'Highlights' }).getByRole('button').nth(3)).toContainText('SpO₂');
+});
+
+test('on a phone the tiles scroll sideways and the cards stack', async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.goto('/');
+	const strip = page.getByRole('region', { name: 'Highlights' });
+	await expect(tile(page, 'Steps')).toBeVisible();
+	const scroll = await strip.evaluate((el) => ({ sw: el.scrollWidth, cw: el.clientWidth }));
+	expect(scroll.sw).toBeGreaterThan(scroll.cw);
+	const [a, b] = await Promise.all([card(page, 'VO₂ max').boundingBox(), card(page, 'Weight').boundingBox()]);
+	expect(b!.y).toBeGreaterThan(a!.y + a!.height - 1);
+	expect(Math.abs(a!.x - b!.x)).toBeLessThan(1);
+	const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+	expect(overflow).toBeLessThanOrEqual(0);
+});

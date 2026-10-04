@@ -71,7 +71,7 @@
 			{#each alerts as a, i (i)}
 				<li class={a.status}>
 					<StatusIcon status={a.status} />
-					<span>{a.text}</span>
+					<span class="text">{a.text}</span>
 					{#if a.href && a.action}<a href={a.href}>{a.action}</a>{/if}
 				</li>
 			{/each}
@@ -82,9 +82,9 @@
 </section>
 
 <style>
+	/* One row per alert: what happened, then where it is handled. Tinted by state, never alarming. */
 	ul {
-		display: flex;
-		flex-wrap: wrap;
+		display: grid;
 		gap: var(--space-2);
 		margin: 0;
 		padding: 0;
@@ -93,21 +93,25 @@
 	li {
 		display: flex;
 		flex-wrap: wrap;
-		gap: var(--space-2);
+		gap: var(--space-2) var(--space-3);
 		align-items: center;
 		min-height: var(--control-h);
 		padding: var(--space-2) var(--space-4);
 		font-size: var(--text-sm);
 		background: var(--color-warn-bg);
-		border: 1px solid color-mix(in srgb, var(--color-warn) 40%, transparent);
-		border-radius: var(--radius-pill);
+		border: 1px solid color-mix(in srgb, var(--color-warn) 30%, transparent);
+		border-radius: var(--radius-lg);
 	}
 	li.error {
 		background: var(--color-error-bg);
-		border-color: color-mix(in srgb, var(--color-error) 40%, transparent);
+		border-color: color-mix(in srgb, var(--color-error) 30%, transparent);
+	}
+	.text {
+		flex: 1 1 14rem;
 	}
 	li a {
-		font-weight: 600;
+		font-weight: 500;
+		text-decoration: none;
 	}
 	.quiet {
 		display: flex;

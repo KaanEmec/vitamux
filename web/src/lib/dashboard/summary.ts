@@ -28,14 +28,14 @@ export interface CardView {
 
 const perRequest = 20; // the endpoint's cap
 
-/** Summaries of `metrics` on `date` (the owner's today when omitted). */
-export async function loadSummaries(metrics: string[], date?: string) {
+/** Summaries of `metrics` on `date` (the owner's today when omitted); `compare` adds the period comparisons. */
+export async function loadSummaries(metrics: string[], date?: string, compare = false) {
 	const chunks: string[][] = [];
 	for (let i = 0; i < metrics.length; i += perRequest) chunks.push(metrics.slice(i, i + perRequest));
 	const answers = await Promise.all(
 		chunks.map((c) =>
 			api.GET('/api/v1/resolved/summary', {
-				params: { query: { metrics: c, date } },
+				params: { query: { metrics: c, date, compare: compare || undefined } },
 				querySerializer: { array: { style: 'form', explode: false } } // metrics=a,b (spec: explode false)
 			})
 		)
@@ -71,7 +71,7 @@ const stages = [
 ] as const;
 
 /** The code whose daily values draw a family's sparkline. */
-const lead: Record<string, string> = { sleep: 'sleep_total', blood_pressure: 'bp_systolic' };
+export const lead: Record<string, string> = { sleep: 'sleep_total', blood_pressure: 'bp_systolic' };
 
 export function cardView(code: string, s: Summary, additive: boolean): CardView {
 	const v = s.value;
@@ -141,6 +141,70 @@ export function cardView(code: string, s: Summary, additive: boolean): CardView 
 
 /** "+4", "−1", "±0": the delta rounded the way it is shown. */
 function sign(d: number): string {
-	const r = Math.round(d * 10) / 10;
+	const r = Math.abs(d) >= 100 ? Math.round(d) : Math.round(d * 10) / 10;
 	return `${r > 0 ? '+' : r < 0 ? '−' : '±'}${number.format(Math.abs(r))}`;
 }
+
+// ---- hero tiles and chart: periods and their neutral comparisons --------------------------------
+
+export const periods = { '7D': 7, '30D': 30, '90D': 90, '1Y': 365 } as const;
+export type Period = keyof typeof periods;
+
+/** "30-day", "1-year": the adjective of a period. */
+export const periodWord = (p: Period) => (p === '1Y' ? '1-year' : `${periods[p]}-day`);
+
+/** A value as the hero shows it: seconds as "7h 19m", else the number. */
+export const show = (v: number, unit?: string) => (unit === 's' ? hoursMinutes(v) : fmt(v));
+
+/** The unit shown beside a number (counts and seconds need none). */
+export const unitText = (unit?: string) => (unit === 'count' || unit === 's' ? '' : (unit ?? ''));
+
+export interface PeriodView {
+	mean?: number;
+	min?: number;
+	max?: number;
+	/** "+312 vs previous 30 days": the period mean against the one before it; empty without both. */
+	delta: string;
+}
+
+/** The period's plain statistics (`comparisons`, else the 7/30/90-day `stats`) and its neutral delta. */
+export function periodView(code: string, s: Summary, p: Period): PeriodView {
+	const days = periods[p];
+	const pick = (r?: Schemas['Rollup']) => (r && code in lead ? r.components?.[lead[code]] : r);
+	const c = s.comparisons?.find((x) => x.days === days);
+	const cur = pick(c?.current ?? s.stats.find((r) => r.days === days));
+	const prev = pick(c?.previous)?.mean;
+	const out: PeriodView = { mean: cur?.mean, min: cur?.min, max: cur?.max, delta: '' };
+	if (cur?.mean != null && prev != null) {
+		const d = cur.mean - prev;
+		const text = s.unit === 's' || code === 'sleep' ? `${d < 0 ? '−' : '+'}${hoursMinutes(Math.abs(d))}` : sign(d);
+		out.delta = `${text} vs previous ${p === '1Y' ? 'year' : `${days} days`}`;
+	}
+	return out;
+}
+
+export interface TileView {
+	value: string;
+	unit: string;
+	/** "30-day mean 8,412". */
+	sub: string;
+	ys: (number | null)[];
+	bars: boolean;
+}
+
+/** A hero stat tile: the latest value (the day's, else the last in the sparkline) and the period mean. */
+export function tileView(code: string, s: Summary, additive: boolean, p: Period): TileView {
+	const card = cardView(code, s, additive);
+	const unit = code === 'sleep' ? 's' : s.unit;
+	const last = card.ys.findLast((y) => y != null);
+	const latest = card.value === '–' && last != null;
+	const { mean } = periodView(code, s, p);
+	return {
+		value: latest ? show(last, unit) : card.value,
+		unit: latest ? unitText(unit) : card.unit,
+		sub: mean == null ? '' : `${periodWord(p)} mean ${show(mean, unit)}`,
+		ys: card.ys,
+		bars: card.bars
+	};
+}
+
