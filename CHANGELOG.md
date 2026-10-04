@@ -2,6 +2,27 @@
 
 Newest first. Before a final release, `scripts/release-notes.sh --changelog vX.Y.Z` adds its section from the Conventional Commits since the previous final tag; edit it and add upgrade notes under "Breaking changes" before tagging. The release workflow refuses a final tag without its section and uses it as the release notes. Release candidates are described on their GitHub releases only.
 
+## v0.2.3 (2026-10-04)
+
+WHOOP now matches the responses of a live account.
+
+### Connectors
+
+- WHOOP cycles and sleep follow WHOOP's real response shapes:
+  - recovery, day strain, resting heart rate, nightly RMSSD, and sleep performance and respiratory rate come from cycles;
+  - sleep sessions and stages come from each sleep's stage events, naps included.
+  - `whoop.cycles` and `whoop.sleep` are now normalizer version 2.
+- WHOOP steps are removed: WHOOP's metrics endpoint now serves heart rate only.
+- WHOOP strain deep dive is stored raw only and no longer shows as a failed normalization.
+- When a connector drops a stream, its schedules are disabled instead of failing the whole connection.
+
+### Breaking changes
+
+None. After upgrading a WHOOP connection made with v0.2.2:
+
+1. Run a `whoop.sleep` backfill over your history. Sleep stored by v0.2.2 lacks the nap flag and normalizes only after it is fetched again.
+2. Run `vitamux reprocess --stream whoop.cycles`, `--stream whoop.sleep` and `--stream whoop.strain_deep_dive`.
+
 ## v0.2.2 (2026-10-04)
 
 Fixes for the Garmin and WHOOP connectors.
