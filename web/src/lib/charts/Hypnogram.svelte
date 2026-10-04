@@ -15,7 +15,8 @@
 		from,
 		to,
 		label,
-		timezone
+		timezone,
+		rowHeight = 22
 	}: {
 		stages: Schemas['SleepStage'][];
 		/** Stage rows to draw, top to bottom (the same for every session compared). */
@@ -25,6 +26,8 @@
 		to: number;
 		label: string;
 		timezone?: string;
+		/** Pixels per stage row (larger for a hero chart). */
+		rowHeight?: number;
 	} = $props();
 
 	const bars = $derived(
@@ -57,7 +60,7 @@
 	x={[from, to]}
 	y={[0, n]}
 	{timezone}
-	height={n * 22 + 38}
+	height={n * rowHeight + 38}
 	padding={{ left: 56 }}
 	crosshair={false}
 	{pick}

@@ -1,18 +1,38 @@
 import { expect, test } from './views-fake';
 
-test('sleep: stages and bed times per night, and one night across three sources', async ({ page }) => {
+test('sleep: last night, stage stacks, bed and wake, the average night and the nights list', async ({ page }) => {
 	await page.goto('/explore/sleep');
 	await expect(page).toHaveTitle('Sleep · Vitamux');
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sleep');
-	await expect(page.getByText('30 / 30')).toBeVisible();
+	await expect(page.getByRole('button', { name: '30 nights' })).toHaveAttribute('aria-pressed', 'true');
+
+	// Last night: duration, time in bed, efficiency, bedtime and wake from the episode, minutes per stage and the sources.
+	const hero = page.getByRole('region', { name: /^Last night · .*14 Sep/ });
+	await expect(hero.locator('.big')).toHaveText('7h 19m');
+	const facts = hero.locator('dl.facts');
+	await expect(facts.locator('div').filter({ hasText: 'In bed' })).toContainText('7h 44m');
+	await expect(facts.locator('div').filter({ hasText: 'Efficiency' })).toContainText('95%');
+	await expect(facts.locator('div').filter({ hasText: 'Bedtime' })).toContainText('23:23');
+	await expect(facts.locator('div').filter({ hasText: 'Wake' })).toContainText('07:07');
+	await expect(hero.locator('.stages li').filter({ hasText: 'Deep' })).toContainText('1h 30m');
+	await expect(hero.locator('.stages li').filter({ hasText: 'Awake' })).toContainText('0h 25m');
+	await expect(hero.getByText('Apple Health · Apple Watch · used')).toBeVisible();
+	await expect(hero.getByText(/WHOOP · Band · \d+h \d{2}m/)).toBeVisible();
+	await expect(hero.getByRole('group', { name: /Sleep stages of Apple Health · Apple Watch/ })).toBeVisible();
+
 	await expect(page.getByRole('group', { name: /Sleep stages per night, stacked/ })).toBeVisible();
 	await expect(page.getByRole('group', { name: /Bed and wake time per night/ })).toBeVisible();
+	await expect(page.getByText(/Median bedtime\s*\d\d:\d\d/)).toBeVisible();
+	await expect(page.getByText(/Median wake\s*\d\d:\d\d/)).toBeVisible();
+	const average = page.getByRole('region', { name: 'Average night' });
+	await expect(average).toContainText('29 of 30 nights'); // one night has no episode
+	await expect(average.getByRole('img', { name: 'Average night by stage' })).toBeVisible();
+	await expect(average.getByRole('listitem')).toHaveCount(4);
 
-	// Last night: every source on one axis, with where each stands under the rule.
-	const across = page.getByRole('region', { name: /Night of .*14.*2026/ });
+	// Every source of last night, with where each stands under the rule; the selected one is the hero.
+	const across = page.getByRole('region', { name: /Sources for the night of .*14.*2026/ });
 	const watch = across.getByRole('article', { name: 'Apple Health · Apple Watch' });
 	await expect(watch.getByText('Selected')).toBeVisible();
-	await expect(watch.getByRole('group', { name: /Sleep stages of Apple Health · Apple Watch/ })).toBeVisible();
 	const band = across.getByRole('article', { name: 'WHOOP · Band' });
 	await expect(band.getByText('In the rule')).toBeVisible();
 	await expect(band.getByRole('group', { name: /Sleep stages of WHOOP · Band/ })).toBeVisible();
@@ -29,44 +49,79 @@ test('sleep: stages and bed times per night, and one night across three sources'
 	await expect(dialog).toBeHidden();
 	await expect(opener).toBeFocused(); // focus returns to the button that opened it
 
-	// The previous night has a nap; the chart is reachable from the keyboard.
-	await page.getByRole('group', { name: /Sleep stages per night, stacked/ }).focus();
-	await page.keyboard.press('ArrowLeft');
-	await page.keyboard.press('Enter');
-	const napped = page.getByRole('region', { name: /Night of .*13.*2026/ });
+	// The list: the newest nights first; a row opens to the time per stage and every source, and shows that night above.
+	const list = page.getByRole('region', { name: 'Nights' });
+	await expect(list.locator('summary')).toHaveCount(7);
+	await list.getByRole('button', { name: /Show more \(22 left\)/ }).click();
+	await expect(list.locator('summary')).toHaveCount(14);
+	const row = list.locator('details').nth(1);
+	await row.locator('summary').click();
+	await expect(row.getByText(/Selected · 7h/)).toBeVisible();
+	await expect(row.getByText(/In the rule · /)).toBeVisible();
+	await row.getByRole('button', { name: /Show this night/ }).click();
+	await expect(page.getByRole('region', { name: /^Night · Sat 12 → Sun 13 Sep/ })).toBeVisible();
+	const napped = page.getByRole('region', { name: /Sources for the night of .*13.*2026/ });
 	await expect(napped.getByRole('heading', { name: 'Naps' })).toBeVisible();
 	await expect(napped.getByRole('listitem').filter({ hasText: '14:10 to 14:50' })).toContainText('0:40');
 	await expect(napped.getByRole('article')).toHaveCount(2);
 
-	await page.getByRole('button', { name: '1W' }).click();
-	await expect(page.getByText('7 / 7')).toBeVisible();
+	// A chart picks a night from the keyboard: back to last night.
+	const stacks = page.getByRole('group', { name: /Sleep stages per night, stacked/ });
+	await stacks.focus();
+	await page.keyboard.press('End');
+	await page.keyboard.press('Enter');
+	await expect(page.getByRole('region', { name: /^Last night/ })).toBeVisible();
+
+	await page.getByRole('button', { name: '7 nights' }).click();
+	await expect(average).toContainText('7 of 7 nights');
 });
 
-test('blood pressure: readings keep systolic, diastolic and pulse together', async ({ page }) => {
+test('blood pressure: sessions of readings, a morning and evening filter, and the readings table', async ({ page }) => {
 	await page.goto('/explore/blood-pressure');
 	await expect(page).toHaveTitle('Blood pressure · Vitamux');
-	await expect(page.locator('dl > div').filter({ hasText: '7-day mean' })).toContainText('121/76');
+	await expect(page.getByRole('button', { name: '90D' })).toHaveAttribute('aria-pressed', 'true');
+	const stats = page.locator('dl');
+	await expect(stats.locator('div').filter({ hasText: '90-day mean' })).toContainText(/\d+\/\d+\s*mmHg/);
+	await expect(stats.locator('div').filter({ hasText: 'Readings' })).toContainText('22');
 	await expect(page.getByRole('group', { name: /Systolic and diastolic readings/ })).toBeVisible();
-	await expect(page.getByRole('group', { name: /Pulse of the same readings/ })).toBeVisible();
+	await expect(page.getByRole('group', { name: /Pulse of the same readings/ })).toBeHidden(); // pulse is in the tooltip
+	await expect(page.getByText(/Morning is before 12:00 and evening from 17:00/)).toBeVisible();
 
 	const table = page.getByRole('table').last();
-	await expect(table.getByRole('row')).toHaveCount(21);
+	await expect(table.getByRole('row')).toHaveCount(23);
 	const newest = table.getByRole('row').nth(1);
-	await expect(newest).toContainText('2026-09-14 07:10');
+	await expect(newest).toContainText('2026-09-14 07:20');
 	await expect(newest).toContainText('Position seated');
 	await expect(newest).toContainText('Withings');
 	await expect(table.getByRole('row', { name: /Manual entry/ })).toHaveCount(1);
 
-	await page.getByRole('button', { name: '1W' }).click();
-	await expect(table.getByRole('row')).toHaveCount(8);
+	await page.getByRole('group', { name: 'Time of day' }).getByRole('button', { name: 'Evening' }).click();
+	await expect(stats.locator('div').filter({ hasText: 'Readings' })).toContainText('1');
+	await expect(table.getByRole('row')).toHaveCount(2);
+	await expect(table.getByRole('row').nth(1)).toContainText('2026-09-10 19:30');
+	await page.getByRole('group', { name: 'Time of day' }).getByRole('button', { name: 'Morning' }).click();
+	await expect(table.getByRole('row')).toHaveCount(22);
+	await page.getByRole('button', { name: '30D' }).click();
+	await expect(page.getByText('30-day mean')).toBeVisible();
 });
 
-test('body composition: weight per source and the parts of each weigh-in', async ({ page }) => {
+test('body composition: weight with its 7-day average, and a tile for each other part', async ({ page }) => {
 	await page.goto('/explore/body-composition');
 	await expect(page).toHaveTitle('Body composition · Vitamux');
-	await expect(page.getByText('Latest weight · 2026-09-14')).toBeVisible();
+	await expect(page.getByText('Latest · 2026-09-14')).toBeVisible();
+	await expect(page.locator('dl div').filter({ hasText: 'Latest ·' })).toContainText('78.2');
+	await expect(page.locator('dl div').filter({ hasText: 'Change in range' })).toContainText('−1.8');
 	await expect(page.getByRole('group', { name: /Weight per weigh-in/ })).toBeVisible();
-	await expect(page.getByRole('group', { name: /Fat-free mass and fat mass per day, stacked/ })).toBeVisible();
+
+	const tiles = page.getByRole('region', { name: 'Body composition' }).getByRole('listitem');
+	await expect(tiles).toHaveCount(4);
+	const fat = tiles.filter({ hasText: 'Fat mass' });
+	await expect(fat).toContainText('−0.9 kg since 2026-08-18');
+	await expect(fat.locator('svg.spark')).toBeVisible();
+	await expect(fat.getByText('Withings · Scale')).toBeVisible();
+	await expect(tiles.filter({ hasText: 'Bone mass' })).toContainText('No change since 2026-08-18');
+	await expect(page.getByText(/\b(BMI|underweight|overweight|obese)\b/i)).toHaveCount(0); // no classes
+
 	await expect(page.getByRole('columnheader', { name: 'Fat-free mass (kg)' })).toBeVisible();
 	await expect(page.getByRole('columnheader', { name: 'Bone mass (kg)' })).toBeVisible();
 	await expect(page.getByRole('table').last().getByRole('row')).toHaveCount(12);
@@ -163,8 +218,8 @@ test('no page of the views contains a judgement word', async ({ page }) => {
 	}
 });
 
-test('the views fit a phone: no sideways scrolling at 375 px', async ({ page }) => {
-	await page.setViewportSize({ width: 375, height: 812 });
+test('the views fit a phone: no sideways scrolling at 390 px', async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
 	for (const path of pages) {
 		await page.goto(path);
 		await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

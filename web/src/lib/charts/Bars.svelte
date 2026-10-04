@@ -21,6 +21,7 @@
 		baseline,
 		status,
 		format = (v: number) => `${formatNumber(v)}${unit ? ` ${unit}` : ''}`,
+		picked = -1,
 		actions,
 		onselect
 	}: {
@@ -34,6 +35,8 @@
 		/** Per window, for the tooltip of a single stack. */
 		status?: (DataStatus | null)[];
 		format?: (v: number) => string;
+		/** Index of the outlined window. */
+		picked?: number;
 		actions?: TipAction[];
 		onselect?: (i: number) => void;
 	} = $props();
@@ -95,6 +98,9 @@
 					/>
 				{/if}
 			{/each}
+			{#if i === picked && totals[i]}
+				<rect class="picked" x={cx - 2} y={f.sy(totals[i] ?? 0) - 2} width={w + 4} height={f.sy(0) - f.sy(totals[i] ?? 0) + 4} rx={r + 2} />
+			{/if}
 		{/each}
 		{#if baseline}
 			<line class="baseline" x1={f.left} x2={f.right} y1={f.sy(baseline.value)} y2={f.sy(baseline.value)} />
@@ -146,6 +152,11 @@
 	.info {
 		fill: var(--color-info);
 		background: var(--color-info);
+	}
+	.picked {
+		fill: none;
+		stroke: var(--color-text);
+		stroke-width: 1.5;
 	}
 	.baseline {
 		stroke: var(--color-text-muted);

@@ -18,6 +18,8 @@
 		hiLabel = 'End',
 		picked = -1,
 		means = true,
+		bands = [],
+		bandLabel = 'Middle half of the windows',
 		timezone,
 		height = 300,
 		tickStep = 2,
@@ -36,6 +38,9 @@
 		picked?: number;
 		/** Draw the mean of the starts and of the ends. */
 		means?: boolean;
+		/** Shaded value ranges (e.g. the middle half of the starts and of the ends). */
+		bands?: [number, number][];
+		bandLabel?: string;
 		timezone?: string;
 		height?: number;
 		/** Y tick every this many units (2 clock hours). */
@@ -76,10 +81,14 @@
 <ChartFrame {label} {xs} {x} {y} {timezone} {height} {tip} {table} {actions} {onselect} crosshair={false} yFormat={(v) => format(-v)} {yTicks}>
 	{#snippet legend()}
 		<span class="key"><span class="swatch"></span>{loLabel} to {hiLabel.toLowerCase()}</span>
+		{#if bands.length}<span class="key"><span class="band-key"></span>{bandLabel}</span>{/if}
 		{#if means}<span class="key"><svg width="16" height="8" aria-hidden="true"><line x1="0" x2="16" y1="4" y2="4" /></svg>Mean {loLabel.toLowerCase()} and {hiLabel.toLowerCase()}</span>{/if}
 	{/snippet}
 	{#snippet marks(f)}
 		{@const w = Math.max(2, (f.sx(x[0] + step) - f.sx(x[0])) * 0.6)}
+		{#each bands as [a, b], k (k)}
+			<rect class="band" x={f.left} width={f.right - f.left} y={f.sy(-b)} height={Math.max(0, f.sy(-a) - f.sy(-b))} />
+		{/each}
 		{#each xs as t, i (t)}
 			{#if has(i)}
 				<rect
@@ -110,6 +119,18 @@
 	.bar.picked {
 		stroke: var(--color-text);
 		stroke-width: 1.5;
+	}
+	.band {
+		fill: color-mix(in srgb, var(--metric, var(--stage-light)) 10%, transparent);
+		stroke: color-mix(in srgb, var(--metric, var(--stage-light)) 40%, transparent);
+		stroke-dasharray: 4 4;
+	}
+	.band-key {
+		width: 1rem;
+		height: 0.5rem;
+		background: color-mix(in srgb, var(--metric, var(--stage-light)) 14%, transparent);
+		border: 1px dashed color-mix(in srgb, var(--metric, var(--stage-light)) 50%, transparent);
+		border-radius: 2px;
 	}
 	.mean {
 		stroke: var(--color-text-muted);

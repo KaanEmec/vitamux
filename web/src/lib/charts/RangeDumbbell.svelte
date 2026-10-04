@@ -17,6 +17,7 @@
 		unit = '',
 		timezone,
 		height,
+		details,
 		actions,
 		onselect
 	}: {
@@ -29,6 +30,8 @@
 		unit?: string;
 		timezone?: string;
 		height?: number;
+		/** Extra tooltip rows and note of one point (pulse, posture, device). */
+		details?: (i: number) => { rows?: Tip['rows']; note?: string };
 		actions?: TipAction[];
 		onselect?: (i: number) => void;
 	} = $props();
@@ -43,8 +46,10 @@
 		lead: hi[i] == null && lo[i] == null ? { value: 'No data' } : { value: `${hi[i] == null ? '–' : formatNumber(hi[i] ?? 0)}/${lo[i] == null ? '–' : formatNumber(lo[i] ?? 0)}`, unit },
 		rows: [
 			{ label: hiLabel, value: fmt(hi[i]) },
-			{ label: loLabel, value: fmt(lo[i]) }
-		]
+			{ label: loLabel, value: fmt(lo[i]) },
+			...(details?.(i).rows ?? [])
+		],
+		note: details?.(i).note
 	});
 	const table = (): TableData => ({
 		columns: ['Time', hiLabel, loLabel],

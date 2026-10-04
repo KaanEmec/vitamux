@@ -133,4 +133,11 @@ viewsTest('Specialised views: sleep, blood pressure, body composition, workouts,
 		await page.goto(path);
 		await scan(page, path);
 	}
+	// A phone (390 px), with a night of the list opened.
+	await page.setViewportSize({ width: 390, height: 844 });
+	for (const path of ['/explore/sleep', '/explore/blood-pressure', '/explore/body-composition', '/explore/workouts', '/explore/events']) {
+		await page.goto(path);
+		if (path.endsWith('sleep')) await page.getByRole('region', { name: 'Nights' }).locator('summary').first().click();
+		await scan(page, `${path} (390 px)`);
+	}
 });

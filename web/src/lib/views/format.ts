@@ -57,3 +57,12 @@ const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'n
 
 /** "Sun, 4 Oct 2026" for a local date. */
 export const dayLabel = (date: string) => dayFormat.format(dayMs(date));
+
+/** The p-quantile (0 to 1) of the values, interpolated; null when there are none. */
+export function quantile(values: number[], p: number): number | null {
+	if (!values.length) return null;
+	const s = values.toSorted((a, b) => a - b);
+	const i = (s.length - 1) * p;
+	const lo = Math.floor(i);
+	return s[lo] + (s[Math.ceil(i)] - s[lo]) * (i - lo);
+}

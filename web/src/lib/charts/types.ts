@@ -30,8 +30,8 @@ export interface Series {
 	ys: (number | null)[];
 	/** Provider code: picks the stable source colour. Without it the series uses the metric hue. */
 	source?: string;
-	/** line (default), ghost (a draft overlay, dashed) or dots (readings without a line, e.g. lab results). */
-	style?: 'line' | 'ghost' | 'dots';
+	/** line (default), ghost (a draft overlay, dashed), dots (readings without a line, e.g. lab results) or trend (a solid line in the metric hue over the readings, e.g. a moving average). */
+	style?: 'line' | 'ghost' | 'dots' | 'trend';
 	/** Per point; non-direct statuses get a marker (shape + colour). */
 	status?: (DataStatus | null)[];
 	/** Per point: the providers behind the value (GET /resolved/series `providers`), for the tooltip. */
