@@ -106,7 +106,7 @@ func (r *Rule) ResolveWindows(ws []Window, s Series, opt Options) ([]WindowResul
 	if err != nil {
 		return nil, err
 	}
-	wear := r.newWear(s)
+	wear := r.newWear(sp, s)
 	out := make([]WindowResult, 0, len(ws))
 	for _, w := range ws {
 		res, err := r.resolve(sp, w, s, opt, wear)
@@ -128,7 +128,7 @@ func (r *Rule) ResolveWindow(w Window, s Series, opt Options) (WindowResult, err
 	if err != nil {
 		return WindowResult{}, err
 	}
-	return r.resolve(sp, w, s, opt, r.newWear(s))
+	return r.resolve(sp, w, s, opt, r.newWear(sp, s))
 }
 
 func (r *Rule) resolve(sp spec, w Window, s Series, opt Options, wear *wearIndex) (WindowResult, error) {

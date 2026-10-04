@@ -42,7 +42,8 @@ const (
 )
 
 // cacheDeps returns what results of metric under rule r (window kind) read, for resolved_cache
-// deps: the metric and its rule metric, the codes it loads and its overrides mark, the wear code,
+// deps: the metric and its rule metric, the codes it loads and its overrides mark (their rows in
+// the wear lookback also decide which devices report the metric, Series[Reporting]), the wear code,
 // sleep for night windows and sleep contexts, "workouts" for workout contexts and the follow
 // leader's deps; and how many days before a date they reach.
 func cacheDeps(ctx context.Context, d *db.DB, userID uuid.UUID, metric string, r *Rule, kind catalog.Window) ([]string, int, error) {

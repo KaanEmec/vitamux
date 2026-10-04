@@ -288,7 +288,8 @@ func TestScenarioSpO2NightMin(t *testing.T) {
 // E3 + E9: hourly steps from watch, ring and phone. The watch is off 12:00-15:00 (one stray
 // interval while on the table), worn only 20 minutes of 17:00, and worn without steps in the
 // evening; the ring counts 80 % of the watch and is off from 20:00; the phone never reports
-// heart rate, so it is exempt from the wear gate.
+// heart rate, so it is exempt from the wear gate. Watch and ring report steps (J24.3), so their
+// worn hours without steps stay a measured 0 rather than falling through.
 func TestScenarioHourlyStepsWithWear(t *testing.T) {
 	const day = "2026-06-15"
 	r := exRule(t, "e9-steps-compose.json")
@@ -359,6 +360,74 @@ func TestScenarioHourlyStepsWithWear(t *testing.T) {
 	}
 	res, _ = r.ResolveWindow(w, Series{"steps": steps, "heart_rate": ringHR}, Options{})
 	exCheck(t, "exempt watch hour 13", res.Hours[13], "direct 7 sel=watch | watch:selected ring:fallback_unused phone:fallback_unused")
+}
+
+// J24.3: a band worn all day that reports heart rate but no steps (or only a daily total) never
+// stands for steps with a measured 0, and its daily total is never added to hours.
+func TestScenarioNoPhantomValues(t *testing.T) {
+	const day = "2026-06-15"
+	r := exRule(t, "e9-steps-compose.json")
+	r.Groups[1] = Group{ID: "band", Match: []Selector{{DeviceType: "band"}}}
+	band := Source{Provider: "whoop", DeviceType: "band", DeviceID: uuid.MustParse("00000000-0000-4000-8000-000000000006")}
+	at := func(hhmm string) time.Time { return exT(day, hhmm) }
+	var hr, phone []Input
+	exEvery(at("00:00"), at("24:00"), 5*time.Minute, func(b time.Time) { hr = append(hr, exSample(band, b.Add(time.Minute), 60)) })
+	exEvery(at("10:00"), at("18:00"), time.Hour, func(h time.Time) { phone = append(phone, exInterval(exPhone, h, time.Hour, 500)) })
+	w, err := LocalDay(date(day), berlin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolve := func(s Series) WindowResult {
+		t.Helper()
+		res, err := r.ResolveWindow(w, s, Options{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return res
+	}
+	explanation := func(res WindowResult) string {
+		return BuildResult("steps", testVersion(r), Resolved{WindowResult: res}, time.Time{}).Explanation
+	}
+
+	// Worn band, no steps: the band is no_data (not_reported), so the phone's hours make the day.
+	res := resolve(Series{"steps": phone, "heart_rate": hr})
+	exCheck(t, "silent band hour 03", res.Hours[3], "no_data 0 | watch:no_data:no_inputs band:no_data:not_reported phone:no_data:no_inputs")
+	exCheck(t, "silent band day", res,
+		"fallback 4000 sel=phone | watch:no_data:no_inputs band:no_data:not_reported phone:selected !preferred_source_unavailable(watch) !preferred_source_unavailable(band)")
+	if x := explanation(res); !strings.Contains(x, "band does not report steps") {
+		t.Errorf("silent band explanation: %s", x)
+	}
+	// Steps from the band within the lookback (Series[Reporting]) make its worn hours a measured 0.
+	res = resolve(Series{"steps": phone, "heart_rate": hr, Reporting: {{Source: band, Start: at("00:00").AddDate(0, 0, -10)}}})
+	exCheck(t, "reporting band hour 03", res.Hours[3], "fallback 0 sel=band | watch:no_data:no_inputs band:selected phone:no_data:no_inputs !preferred_source_unavailable(watch)")
+
+	// Daily-only band above the phone: the day is the band's daily total, not hours of zeros.
+	daily := append([]Input{exDaily(band, day, 9000)}, phone...)
+	res = resolve(Series{"steps": daily, "heart_rate": hr})
+	exCheck(t, "daily band day", res,
+		"fallback 9000 sel=band | watch:no_data:no_inputs band:selected phone:fallback_unused !preferred_source_unavailable(watch)")
+	if g := exGroup(res, "band"); g.Basis != BasisDailyValue || len(res.Hours) != 0 {
+		t.Errorf("daily band: %+v, %d hours", g, len(res.Hours))
+	}
+
+	// Watch until noon (steps 08-12) above the daily-only band: the watch's hours, then the
+	// phone's; the band's total is never added.
+	var watch []Input
+	exEvery(at("00:00"), at("12:00"), 5*time.Minute, func(b time.Time) {
+		hr = append(hr, exSample(exWatch, b.Add(2*time.Minute), 70))
+		if !b.Before(at("08:00")) {
+			watch = append(watch, exInterval(exWatch, b, 5*time.Minute, 50))
+		}
+	})
+	res = resolve(Series{"steps": append(watch, daily...), "heart_rate": hr})
+	exCheck(t, "half day hour 03", res.Hours[3], "direct 0 sel=watch | watch:selected band:no_data:no_inputs phone:no_data:no_inputs")
+	exCheck(t, "half day hour 12", res.Hours[12],
+		"fallback 500 sel=phone | watch:no_data:no_inputs band:no_data:no_inputs phone:selected !preferred_source_unavailable(watch) !preferred_source_unavailable(band)")
+	// 2400 (watch 08-12) + 3000 (phone 12-18).
+	exCheck(t, "half day", res, "calculated 5400 | watch:selected band:no_data:only_daily_total phone:selected !preferred_source_unavailable(watch) !preferred_source_unavailable(band) !composite_exceeds_any_source")
+	if x := explanation(res); !strings.Contains(x, "band sent only a daily total, which cannot fill hours") {
+		t.Errorf("half day explanation: %s", x)
+	}
 }
 
 // E9 with op max: each hour takes the largest group and names it.

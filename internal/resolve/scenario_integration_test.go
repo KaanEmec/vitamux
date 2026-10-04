@@ -334,7 +334,8 @@ func TestScenariosPartialWear(t *testing.T) {
 	}
 	golden(t, "scenario-08-partial-wear", days...)
 
-	// 4. A day built from hourly picks (E9) warns when it exceeds every single source.
+	// 4. A day built from hourly picks (E9) warns when it exceeds every single source. The
+	// Garmin watch reports steps, so its worn hours without steps are a measured 0 (J24.3).
 	steps := parseRule(t, `{"schema":"vitamux.rule/1","metric":"steps","window":{"kind":"local_day"},
 		"groups":[{"id":"garmin","match":[{"provider":"garmin"}]},{"id":"iphone","match":[{"device_type":"phone"}]}],
 		"strategy":{"op":"first_available"},"compose":{"from":"hour","op":"first_available"},

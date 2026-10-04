@@ -259,7 +259,12 @@ func (e explainer) reason(g GroupValue) string {
 	}
 	switch g.Reason {
 	case ReasonOnlyDailyTotal:
+		if e.r.Compose != nil {
+			return "sent only a daily total, which cannot fill hours"
+		}
 		return "sent only a daily total, which this rule does not use"
+	case ReasonNotReported:
+		return "does not report " + e.r.Metric
 	case ReasonImplausible:
 		return "had only values outside the plausible range"
 	case ReasonFlagged:

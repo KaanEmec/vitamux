@@ -53,9 +53,11 @@
 //   - E2: within_source.statistic min / min_rolling_mean (GroupValue.SpanStart/SpanEnd); derived
 //     catalogue codes (catalog.Metric.DerivedFrom) read the source metric's series.
 //   - E3: quality.require_wear gates rows per base bucket by the wear series in the same Series
-//     (load WearLookback of it); GroupValue.WearExempt, WornBuckets, Gated; reason not_worn.
+//     (load WearLookback of it and of Series[Reporting], the sources that report the metric);
+//     GroupValue.WearExempt, WornBuckets, Gated; reasons not_worn, not_reported.
 //   - E5: Options.Leader (LeaderSelections of the leader's results) by window key.
-//   - E9: a compose rule's local_day sums its hours; WindowResult.Hours keeps them.
+//   - E9: a compose rule's local_day sums its hours; WindowResult.Hours keeps them. A daily-only
+//     group ranked above every hour's group gives the day its daily value instead.
 //
 // Results and loading (J09.8):
 //   - BuildResult renders a Resolved window as Result, the documented result shape: value,
