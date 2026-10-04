@@ -74,21 +74,21 @@ func TestBrandSelectors(t *testing.T) {
 	}
 
 	// A manufacturer change clears the owner's cache; a change selectors never read does not.
-	s.run(t, "heart_rate", "", "2025-02-15", "2025-02-19", nil, sliceANow)
-	if len(s.cached(t, "heart_rate")) == 0 {
-		t.Fatal("heart_rate not cached")
+	s.run(t, "resting_heart_rate_nocturnal", "", "2025-02-15", "2025-02-19", nil, sliceANow)
+	if len(s.cached(t, "resting_heart_rate_nocturnal")) == 0 {
+		t.Fatal("resting_heart_rate_nocturnal not cached")
 	}
 	if err := s.owner(`UPDATE devices SET hardware_version = 'Watch0,0' WHERE user_id = $1 AND fingerprint = 'synthetic-apple-watch-01'`, s.user); err != nil {
 		t.Fatal(err)
 	}
-	if len(s.cached(t, "heart_rate")) == 0 {
+	if len(s.cached(t, "resting_heart_rate_nocturnal")) == 0 {
 		t.Error("a hardware version change cleared the cache")
 	}
 	if err := s.owner(`UPDATE devices SET manufacturer = 'Apple' WHERE user_id = $1 AND fingerprint = 'synthetic-apple-watch-01'`, s.user); err != nil {
 		t.Fatal(err)
 	}
-	if got := s.cached(t, "heart_rate"); got != nil {
-		t.Errorf("a manufacturer change left heart_rate cached on %v", got)
+	if got := s.cached(t, "resting_heart_rate_nocturnal"); got != nil {
+		t.Errorf("a manufacturer change left resting_heart_rate_nocturnal cached on %v", got)
 	}
 }
 
