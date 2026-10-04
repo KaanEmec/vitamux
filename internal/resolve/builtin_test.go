@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -56,6 +57,18 @@ func TestEveryMetricHasBuiltinOrIsExempt(t *testing.T) {
 	for code := range NoBuiltin {
 		if _, ok := catalog.Lookup(code); !ok {
 			t.Errorf("NoBuiltin names %s, which is not in the catalogue", code)
+		}
+	}
+}
+
+func TestBuiltinDeviceTypesAreInVocabulary(t *testing.T) {
+	for _, b := range Builtins() {
+		for _, g := range b.Rule.Groups {
+			for _, s := range g.Match {
+				if s.DeviceType != "" && !slices.Contains(DeviceTypes, s.DeviceType) {
+					t.Errorf("%s: group %s matches device type %q, which is not in DeviceTypes", b.Ref(), g.ID, s.DeviceType)
+				}
+			}
 		}
 	}
 }

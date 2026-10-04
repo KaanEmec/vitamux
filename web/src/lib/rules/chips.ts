@@ -18,7 +18,7 @@ export function selectorChips(origins: Schemas['DataOrigin'][], devices: Schemas
 		add({ provider: p, relayed: true });
 	}
 	for (const d of devices) {
-		if (!d.device_type) continue;
+		if (!d.device_type || d.merged_into) continue; // a merged device's records carry its target's type
 		add(transports.has(d.provider) ? { provider: d.provider, device_type: d.device_type, relayed: false } : { provider: d.provider, device_type: d.device_type });
 	}
 	for (const o of origins) add({ provider: o.provider, origin_key: o.origin_key });

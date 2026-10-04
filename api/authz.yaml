@@ -87,6 +87,8 @@ routes:
   GET /api/v1/origins: {allow: read:config}
   PATCH /api/v1/origins/{id}: {allow: write:config, csrf: true}
   GET /api/v1/source-devices: {allow: read:config}
+  PATCH /api/v1/source-devices/{id}: {allow: session, csrf: true}
+  POST /api/v1/source-devices/{id}/merge: {allow: session, csrf: true}
   GET /api/v1/documents: {allow: read:health}
   POST /api/v1/documents: {allow: write:documents, csrf: true}
   GET /api/v1/documents/{id}: {allow: read:health}

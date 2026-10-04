@@ -174,6 +174,12 @@ type Device struct {
 	HardwareVersion *string
 	SoftwareVersion *string
 	CreatedAt       time.Time
+	// The owner's label; null shows the model or fingerprint.
+	Name *string
+	// The owner set device_type; normalizers no longer change it.
+	DeviceTypeByOwner bool
+	// The device this one was merged into (same owner and provider, never itself merged). Records of this fingerprint are written to that device.
+	MergedInto *uuid.UUID
 }
 
 // Uploaded lab PDFs. A deleted document stays as a tombstone (no hash, blob or filename) so kept lab results still name their source.

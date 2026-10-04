@@ -244,6 +244,15 @@ LEFT JOIN ins i ON i.id = (r->>'id')::uuid
 LEFT JOIN devices t ON t.id = (r->>'id')::uuid
   OR (t.user_id = (r->>'user_id')::uuid AND t.provider_id = (r->>'provider_id')::smallint AND t.fingerprint = r->>'fingerprint');
 
+-- name: LinkImportedDevices :exec
+-- Sets merged_into of imported devices; a target that is itself merged or belongs to another
+-- provider leaves the device unmerged.
+UPDATE devices t SET merged_into = v.into_id
+FROM (SELECT unnest(@ids::uuid[]) AS id, unnest(@into_ids::uuid[]) AS into_id) v
+JOIN devices x ON x.id = v.into_id AND x.merged_into IS NULL
+WHERE t.id = v.id AND t.id <> v.into_id AND t.merged_into IS NULL
+  AND x.user_id = t.user_id AND x.provider_id = t.provider_id;
+
 -- name: ImportDataOrigins :many
 WITH ins AS (
   INSERT INTO data_origins

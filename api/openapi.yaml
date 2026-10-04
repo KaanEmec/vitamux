@@ -1909,8 +1909,18 @@ paths:
       tags: [devices]
       operationId: listSourceDevices
       summary: List the devices measurements were recorded on (not the paired apps)
-      description: The values the device_type and device_model rule selectors match.
+      description: >-
+        The values the device_type and device_model rule selectors match, the owner's names and merges, and the
+        device types the owner can set. `include=records` adds each device's active records per connection.
       security: [{session: []}, {apiKey: ['read:config']}]
+      parameters:
+        - name: include
+          in: query
+          required: false
+          description: Comma-separated expansions.
+          style: form
+          explode: false
+          schema: {type: array, items: {type: string, enum: [records]}}
       responses:
         '200':
           description: Devices.
@@ -1918,11 +1928,85 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [devices]
+                additionalProperties: false
+                required: [devices, device_types]
                 properties:
                   devices: {type: array, items: {$ref: '#/components/schemas/SourceDevice'}}
+                  device_types:
+                    type: array
+                    items: {type: string}
+                    description: The values PATCH accepts for device_type, which the built-in rules match.
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/source-devices/{id}:
+    patch:
+      tags: [devices]
+      operationId: updateSourceDevice
+      summary: Set a device's type or name (audited)
+      description: >-
+        Merge patch: a field present replaces the value, null clears it. A type set here wins over the one the
+        normalizer reports (null hands it back); rules that select by device type are recomputed. 409 for a merged
+        device: edit the device it was merged into.
+      security: [{session: [], csrf: []}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SourceDevicePatch'}
+      responses:
+        '204':
+          description: Updated.
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/source-devices/{id}/merge:
+    post:
+      tags: [devices]
+      operationId: mergeSourceDevice
+      summary: Merge a device into another device of the same provider (audited, irreversible)
+      description: >-
+        One transaction moves every record of the device (measurements, groups, sleep sessions, workouts, health
+        events, superseded versions included) to the target, points the device and those already merged into it at
+        the target, and marks the moved dates for recomputation. Later records of the device's fingerprint are written
+        to the target. Dedupe keys keep the fingerprint, so reprocessing changes nothing. Rules that name the merged
+        device by id stop matching it. 409 when either device is already merged; 422 for the device itself or a
+        device of another provider.
+      security: [{session: [], csrf: []}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [into]
+              properties:
+                into: {$ref: '#/components/schemas/DeviceID'}
+      responses:
+        '200':
+          description: Merged; the rows moved per table.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [moved]
+                properties:
+                  moved: {$ref: '#/components/schemas/DeviceRecords'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
 
   # ---------------------------------------------------------------- documents and labs
   /api/v1/documents:
@@ -4643,13 +4727,50 @@ components:
     SourceDevice:
       type: object
       additionalProperties: false
-      required: [id, provider, device_type, manufacturer, model]
+      required: [id, provider, fingerprint, name, device_type, manufacturer, model, merged_into]
       properties:
         id: {$ref: '#/components/schemas/DeviceID'}
         provider: {type: string}
+        fingerprint: {type: string, description: "The device's identity at the provider, as the normalizer reports it."}
+        name: {type: [string, 'null'], description: The owner's label.}
         device_type: {type: [string, 'null'], description: 'The `device_type` rule selector value, e.g. watch.'}
         manufacturer: {type: [string, 'null']}
         model: {type: [string, 'null'], description: 'The `device_model` rule selector value.'}
+        merged_into:
+          oneOf: [{$ref: '#/components/schemas/DeviceID'}, {type: 'null'}]
+          description: The device this one was merged into; its records live there.
+        connections:
+          type: array
+          description: 'With include=records: the connections with active records of the device, and how many.'
+          items: {$ref: '#/components/schemas/DeviceConnectionRecords'}
+    SourceDevicePatch:
+      type: object
+      description: Merge patch of a device; null clears a field.
+      additionalProperties: false
+      properties:
+        device_type: {type: [string, 'null'], description: One of device_types from GET /source-devices.}
+        name: {type: [string, 'null'], minLength: 1, maxLength: 100}
+      x-go-type: json.RawMessage
+    DeviceConnectionRecords:
+      type: object
+      additionalProperties: false
+      required: [connection_id, records]
+      properties:
+        connection_id: {type: string, pattern: '^conn_[0-9a-f]{32}$'}
+        records: {$ref: '#/components/schemas/DeviceRecords'}
+    DeviceRecords:
+      type: object
+      additionalProperties: false
+      description: >-
+        Rows per table. Measurements count hourly aggregate rows plus daily values in a listing (an interval once per
+        hour it touches, behind while aggregates rebuild), and rows in a merge.
+      required: [measurements, groups, sleep_sessions, workouts, events]
+      properties:
+        measurements: {type: integer, format: int64}
+        groups: {type: integer, format: int64}
+        sleep_sessions: {type: integer, format: int64}
+        workouts: {type: integer, format: int64}
+        events: {type: integer, format: int64}
     AnchorReset:
       type: object
       additionalProperties: false

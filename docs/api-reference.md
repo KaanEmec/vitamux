@@ -137,6 +137,8 @@ Paired devices such as the Apple Health bridge (docs/architecture/apple-health.m
 | `GET` | `/api/v1/origins` | `read:config` | List the apps (origins) data was recorded by, with their native or relayed state |
 | `PATCH` | `/api/v1/origins/{id}` | `write:config`, CSRF | Set or clear the vendor an origin relays |
 | `GET` | `/api/v1/source-devices` | `read:config` | List the devices measurements were recorded on (not the paired apps) |
+| `PATCH` | `/api/v1/source-devices/{id}` | `session`, CSRF | Set a device's type or name (audited) |
+| `POST` | `/api/v1/source-devices/{id}/merge` | `session`, CSRF | Merge a device into another device of the same provider (audited, irreversible) |
 
 ## documents
 

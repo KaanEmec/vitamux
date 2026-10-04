@@ -142,13 +142,40 @@ var tables = []table{
 				return e.q.ExportDevices(e.ctx, dbq.ExportDevicesParams{UserID: e.user, After: after, Lim: pageSize})
 			}, func(r dbq.ExportDevicesRow) (uuid.UUID, json.RawMessage) { return r.ID, r.Row })
 		},
-		patch: owned,
+		// merged_into may point at a device of a later page, or one the target already has under
+		// another id: it is cleared here and set by link.
+		patch: func(im *importer, r row) (bool, error) {
+			im.own(r)
+			if !r.null("merged_into") {
+				id, err1 := r.uuid("id")
+				into, err2 := r.uuid("merged_into")
+				if err := errors.Join(err1, err2); err != nil {
+					return false, err
+				}
+				im.merges[id] = into
+				r["merged_into"] = jsonNull
+			}
+			return true, nil
+		},
 		insert: func(im *importer, rows []byte) (n int64, err error) {
 			res, err := im.q.ImportDevices(im.ctx, rows)
 			for _, x := range res {
 				remapped(im.devices, x.SrcID, x.ID, x.Inserted, &n)
+				if !x.Inserted {
+					delete(im.merges, x.SrcID) // the target's own device keeps its state
+				}
 			}
 			return n, err
+		},
+		link: func(im *importer) error {
+			ids, into := make([]uuid.UUID, 0, len(im.merges)), make([]uuid.UUID, 0, len(im.merges))
+			for id, to := range im.merges {
+				if n, ok := im.devices[to]; ok {
+					to = n
+				}
+				ids, into = append(ids, id), append(into, to)
+			}
+			return im.q.LinkImportedDevices(im.ctx, dbq.LinkImportedDevicesParams{Ids: ids, IntoIds: into})
 		},
 	},
 	{

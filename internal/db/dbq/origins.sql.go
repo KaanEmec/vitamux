@@ -92,7 +92,7 @@ func (q *Queries) ListRelayTargets(ctx context.Context) ([]ListRelayTargetsRow, 
 }
 
 const listSourceDevices = `-- name: ListSourceDevices :many
-SELECT d.id, p.code AS provider, d.device_type, d.manufacturer, d.model
+SELECT d.id, p.code AS provider, d.fingerprint, d.name, d.device_type, d.manufacturer, d.model, d.merged_into
 FROM devices d JOIN providers p ON p.id = d.provider_id
 WHERE d.user_id = $1
 ORDER BY p.code, d.device_type, d.model, d.id
@@ -101,9 +101,12 @@ ORDER BY p.code, d.device_type, d.model, d.id
 type ListSourceDevicesRow struct {
 	ID           uuid.UUID
 	Provider     string
+	Fingerprint  string
+	Name         *string
 	DeviceType   *string
 	Manufacturer *string
 	Model        *string
+	MergedInto   *uuid.UUID
 }
 
 func (q *Queries) ListSourceDevices(ctx context.Context, userID uuid.UUID) ([]ListSourceDevicesRow, error) {
@@ -118,9 +121,12 @@ func (q *Queries) ListSourceDevices(ctx context.Context, userID uuid.UUID) ([]Li
 		if err := rows.Scan(
 			&i.ID,
 			&i.Provider,
+			&i.Fingerprint,
+			&i.Name,
 			&i.DeviceType,
 			&i.Manufacturer,
 			&i.Model,
+			&i.MergedInto,
 		); err != nil {
 			return nil, err
 		}
@@ -130,6 +136,122 @@ func (q *Queries) ListSourceDevices(ctx context.Context, userID uuid.UUID) ([]Li
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockDevicesForMerge = `-- name: LockDevicesForMerge :many
+SELECT id, provider_id, merged_into FROM devices
+WHERE user_id = $1 AND (id = ANY($2::uuid[]) OR merged_into = ANY($2::uuid[]))
+ORDER BY id FOR UPDATE
+`
+
+type LockDevicesForMergeParams struct {
+	UserID uuid.UUID
+	Ids    []uuid.UUID
+}
+
+type LockDevicesForMergeRow struct {
+	ID         uuid.UUID
+	ProviderID int16
+	MergedInto *uuid.UUID
+}
+
+// Locks both sides of a merge (and devices merged into the source), in id order.
+func (q *Queries) LockDevicesForMerge(ctx context.Context, arg LockDevicesForMergeParams) ([]LockDevicesForMergeRow, error) {
+	rows, err := q.db.Query(ctx, lockDevicesForMerge, arg.UserID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []LockDevicesForMergeRow
+	for rows.Next() {
+		var i LockDevicesForMergeRow
+		if err := rows.Scan(&i.ID, &i.ProviderID, &i.MergedInto); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markDeviceDirty = `-- name: MarkDeviceDirty :exec
+INSERT INTO resolution_dirty (user_id, metric_id, local_date)
+SELECT DISTINCT x.user_id, x.metric_id, x.local_date FROM measurements x
+WHERE x.device_id = $1 AND x.superseded_at IS NULL AND x.deleted_at IS NULL
+UNION
+SELECT s.user_id, mc.id, s.sleep_date FROM sleep_sessions s JOIN metric_catalog mc ON mc.code = ANY($2::text[])
+WHERE s.device_id = $1 AND s.superseded_at IS NULL AND s.deleted_at IS NULL
+ON CONFLICT (user_id, metric_id, local_date) DO UPDATE SET marked_at = EXCLUDED.marked_at
+`
+
+type MarkDeviceDirtyParams struct {
+	DeviceID   *uuid.UUID
+	SleepCodes []string
+}
+
+// Marks every metric and local date the device's active measurements (and its sleep sessions,
+// through the sleep-derived metrics) feed, as a write would: the resolved cache rows that read
+// them are deleted and the hourly aggregates rebuilt. Workouts invalidate through their trigger.
+func (q *Queries) MarkDeviceDirty(ctx context.Context, arg MarkDeviceDirtyParams) error {
+	_, err := q.db.Exec(ctx, markDeviceDirty, arg.DeviceID, arg.SleepCodes)
+	return err
+}
+
+const mergeDevice = `-- name: MergeDevice :exec
+UPDATE devices SET merged_into = $1 WHERE user_id = $2 AND (id = $3 OR merged_into = $3)
+`
+
+type MergeDeviceParams struct {
+	TargetID *uuid.UUID
+	UserID   uuid.UUID
+	DeviceID uuid.UUID
+}
+
+// Points the device, and the devices already merged into it, at the target.
+func (q *Queries) MergeDevice(ctx context.Context, arg MergeDeviceParams) error {
+	_, err := q.db.Exec(ctx, mergeDevice, arg.TargetID, arg.UserID, arg.DeviceID)
+	return err
+}
+
+const moveDeviceRecords = `-- name: MoveDeviceRecords :one
+WITH m AS (UPDATE measurements t SET device_id = $1 WHERE t.device_id = $2 RETURNING 1),
+g AS (UPDATE measurement_groups t SET device_id = $1 WHERE t.device_id = $2 RETURNING 1),
+s AS (UPDATE sleep_sessions t SET device_id = $1 WHERE t.device_id = $2 RETURNING 1),
+w AS (UPDATE workouts t SET device_id = $1 WHERE t.device_id = $2 RETURNING 1),
+e AS (UPDATE health_events t SET device_id = $1 WHERE t.device_id = $2 RETURNING 1)
+SELECT (SELECT count(*) FROM m)::bigint AS measurements, (SELECT count(*) FROM g)::bigint AS groups,
+  (SELECT count(*) FROM s)::bigint AS sleep_sessions, (SELECT count(*) FROM w)::bigint AS workouts,
+  (SELECT count(*) FROM e)::bigint AS events
+`
+
+type MoveDeviceRecordsParams struct {
+	TargetID *uuid.UUID
+	DeviceID *uuid.UUID
+}
+
+type MoveDeviceRecordsRow struct {
+	Measurements  int64
+	Groups        int64
+	SleepSessions int64
+	Workouts      int64
+	Events        int64
+}
+
+// Repoints every row of every canonical table with a device_id (superseded and deleted rows too,
+// so history stays on one device) and counts them per table.
+func (q *Queries) MoveDeviceRecords(ctx context.Context, arg MoveDeviceRecordsParams) (MoveDeviceRecordsRow, error) {
+	row := q.db.QueryRow(ctx, moveDeviceRecords, arg.TargetID, arg.DeviceID)
+	var i MoveDeviceRecordsRow
+	err := row.Scan(
+		&i.Measurements,
+		&i.Groups,
+		&i.SleepSessions,
+		&i.Workouts,
+		&i.Events,
+	)
+	return i, err
 }
 
 const setOriginRelay = `-- name: SetOriginRelay :execrows
@@ -147,6 +269,100 @@ type SetOriginRelayParams struct {
 // only seeds new origins (UpsertOrigin); a trigger clears the owner's resolved cache.
 func (q *Queries) SetOriginRelay(ctx context.Context, arg SetOriginRelayParams) (int64, error) {
 	result, err := q.db.Exec(ctx, setOriginRelay, arg.RelayedProvider, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const sourceDeviceRecords = `-- name: SourceDeviceRecords :many
+WITH r AS (
+  SELECT a.device_id, a.connection_id, 'measurements'::text AS kind, a.samples::bigint AS n
+  FROM source_hourly_aggregates a WHERE a.user_id = $1 AND a.device_id IS NOT NULL
+  UNION ALL
+  SELECT x.device_id, x.connection_id, 'measurements', 1 FROM measurements x
+  WHERE x.user_id = $1 AND x.kind = 'daily_value' AND x.device_id IS NOT NULL AND x.superseded_at IS NULL AND x.deleted_at IS NULL
+  UNION ALL
+  SELECT x.device_id, x.connection_id, 'groups', 1 FROM measurement_groups x
+  WHERE x.user_id = $1 AND x.device_id IS NOT NULL AND x.superseded_at IS NULL AND x.deleted_at IS NULL
+  UNION ALL
+  SELECT x.device_id, x.connection_id, 'sleep_sessions', 1 FROM sleep_sessions x
+  WHERE x.user_id = $1 AND x.device_id IS NOT NULL AND x.superseded_at IS NULL AND x.deleted_at IS NULL
+  UNION ALL
+  SELECT x.device_id, x.connection_id, 'workouts', 1 FROM workouts x
+  WHERE x.user_id = $1 AND x.device_id IS NOT NULL AND x.superseded_at IS NULL AND x.deleted_at IS NULL
+  UNION ALL
+  SELECT x.device_id, x.connection_id, 'events', 1 FROM health_events x
+  WHERE x.user_id = $1 AND x.device_id IS NOT NULL AND x.superseded_at IS NULL AND x.deleted_at IS NULL
+)
+SELECT r.device_id::uuid AS device_id, r.connection_id, r.kind, sum(r.n)::bigint AS n
+FROM r GROUP BY 1, 2, 3 ORDER BY 1, 2, 3
+`
+
+type SourceDeviceRecordsRow struct {
+	DeviceID     uuid.UUID
+	ConnectionID uuid.UUID
+	Kind         string
+	N            int64
+}
+
+// Active records per device and connection, by table. Measurements count as in the inventory:
+// hourly aggregate rows (an interval once per hour it touches) plus daily values, so a request
+// never scans the measurements of a whole history.
+func (q *Queries) SourceDeviceRecords(ctx context.Context, userID uuid.UUID) ([]SourceDeviceRecordsRow, error) {
+	rows, err := q.db.Query(ctx, sourceDeviceRecords, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SourceDeviceRecordsRow
+	for rows.Next() {
+		var i SourceDeviceRecordsRow
+		if err := rows.Scan(
+			&i.DeviceID,
+			&i.ConnectionID,
+			&i.Kind,
+			&i.N,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateSourceDevice = `-- name: UpdateSourceDevice :execrows
+UPDATE devices
+SET device_type = CASE WHEN $1::boolean THEN $2::text ELSE device_type END,
+    device_type_by_owner = CASE WHEN $1::boolean THEN $2::text IS NOT NULL ELSE device_type_by_owner END,
+    name = CASE WHEN $3::boolean THEN $4::text ELSE name END
+WHERE id = $5 AND user_id = $6 AND merged_into IS NULL
+`
+
+type UpdateSourceDeviceParams struct {
+	SetType    bool
+	DeviceType *string
+	SetName    bool
+	Name       *string
+	ID         uuid.UUID
+	UserID     uuid.UUID
+}
+
+// Sets the fields flagged set_*; a type set here wins over the normalizer's (UpsertDevice), a
+// cleared one lets it fill the type again. A trigger clears the owner's resolved cache when the
+// type changes. Merged devices are not edited: their records live on the target.
+func (q *Queries) UpdateSourceDevice(ctx context.Context, arg UpdateSourceDeviceParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateSourceDevice,
+		arg.SetType,
+		arg.DeviceType,
+		arg.SetName,
+		arg.Name,
+		arg.ID,
+		arg.UserID,
+	)
 	if err != nil {
 		return 0, err
 	}

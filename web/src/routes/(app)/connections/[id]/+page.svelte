@@ -1,5 +1,5 @@
 <!--
-	One connection: header with health and actions, then tabs (?tab=overview|streams|backfills|history|settings)
+	One connection: header with health and actions, then tabs (?tab=overview|streams|devices|backfills|history|settings)
 	as links, so each tab has its own URL. Each tab loads its own data.
 -->
 <script lang="ts">
@@ -10,6 +10,7 @@
 	import Tabs from '#lib/ui/Tabs.svelte';
 	import BackfillsTab from '#lib/connections/BackfillsTab.svelte';
 	import ConnectionActions from '#lib/connections/ConnectionActions.svelte';
+	import DevicesTab from '#lib/connections/DevicesTab.svelte';
 	import HistoryTab from '#lib/connections/HistoryTab.svelte';
 	import KindBadge from '#lib/connections/KindBadge.svelte';
 	import Monogram from '#lib/connections/Monogram.svelte';
@@ -22,6 +23,7 @@
 	const tabs = [
 		{ id: 'overview', label: 'Overview' },
 		{ id: 'streams', label: 'Streams' },
+		{ id: 'devices', label: 'Devices' },
 		{ id: 'backfills', label: 'Backfills' },
 		{ id: 'history', label: 'History' },
 		{ id: 'settings', label: 'Settings' }
@@ -82,6 +84,8 @@
 			<OverviewTab {connection} />
 		{:else if tab === 'streams'}
 			<StreamsTab {connection} />
+		{:else if tab === 'devices'}
+			<DevicesTab {connection} />
 		{:else if tab === 'backfills'}
 			<BackfillsTab {connection} />
 		{:else if tab === 'history'}

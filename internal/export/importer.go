@@ -83,7 +83,7 @@ func Import(ctx context.Context, d *db.DB, fsys fs.FS, o ImportOptions) (ImportS
 		im := &importer{ctx: ctx, q: q, fsys: fsys, man: man, opts: o, off: map[string]int64{},
 			conns: map[uuid.UUID]uuid.UUID{}, devices: map[uuid.UUID]uuid.UUID{}, origins: map[uuid.UUID]uuid.UUID{},
 			batches: map[uuid.UUID]uuid.UUID{}, nvs: map[int64]int64{}, raws: map[int64]int64{}, groups: map[int64]int64{},
-			sessions: map[uuid.UUID]bool{}, workouts: map[uuid.UUID]bool{}, provs: map[int64]int64{}}
+			sessions: map[uuid.UUID]bool{}, workouts: map[uuid.UUID]bool{}, provs: map[int64]int64{}, merges: map[uuid.UUID]uuid.UUID{}}
 		if err := im.run(); err != nil {
 			return err
 		}
@@ -129,6 +129,9 @@ type importer struct {
 	provs map[int64]int64
 	// Sleep sessions and workouts this import inserted; only their stages and segments follow.
 	sessions, workouts map[uuid.UUID]bool
+	// Devices this import inserted → the exported device they were merged into; set after the
+	// devices table, once every target exists.
+	merges map[uuid.UUID]uuid.UUID
 
 	blobRows [][]byte // blob rows of the raw payload or workout batch being built
 	stats    ImportStats

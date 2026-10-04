@@ -1783,6 +1783,26 @@ func (q *Queries) InsertExport(ctx context.Context, arg InsertExportParams) erro
 	return err
 }
 
+const linkImportedDevices = `-- name: LinkImportedDevices :exec
+UPDATE devices t SET merged_into = v.into_id
+FROM (SELECT unnest($1::uuid[]) AS id, unnest($2::uuid[]) AS into_id) v
+JOIN devices x ON x.id = v.into_id AND x.merged_into IS NULL
+WHERE t.id = v.id AND t.id <> v.into_id AND t.merged_into IS NULL
+  AND x.user_id = t.user_id AND x.provider_id = t.provider_id
+`
+
+type LinkImportedDevicesParams struct {
+	Ids     []uuid.UUID
+	IntoIds []uuid.UUID
+}
+
+// Sets merged_into of imported devices; a target that is itself merged or belongs to another
+// provider leaves the device unmerged.
+func (q *Queries) LinkImportedDevices(ctx context.Context, arg LinkImportedDevicesParams) error {
+	_, err := q.db.Exec(ctx, linkImportedDevices, arg.Ids, arg.IntoIds)
+	return err
+}
+
 const linkImportedHealthEvents = `-- name: LinkImportedHealthEvents :exec
 UPDATE health_events t SET superseded_by = v.new_id
 FROM (SELECT unnest($1::uuid[]) AS id, unnest($2::uuid[]) AS new_id) v

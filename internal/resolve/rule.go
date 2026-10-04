@@ -68,6 +68,11 @@ type Selector struct {
 	Entry           Entry  `json:"entry,omitempty"`
 }
 
+// DeviceTypes is the devices.device_type vocabulary that device_type selectors and the built-in
+// rules match (data-model.md#tables); the owner picks from it when typing a device.
+var DeviceTypes = []string{"watch", "band", "ring", "phone", "chest_strap", "arm_band", "scale", "bp_monitor",
+	"under_mattress", "sleep_monitor", "cgm", "glucose_meter", "other"}
+
 // Entry says whether a row was measured by a device or typed in by a person.
 type Entry string
 

@@ -173,8 +173,10 @@ func upsert[T any](fn func() (T, error)) (T, error) {
 	return v, err
 }
 
-// sources upserts the payload's devices and origins. A new origin matching known_relay_origins
-// is flagged as relaying another vendor; measurements from it get FlagRelayed.
+// sources upserts the payload's devices and origins. A fingerprint whose device the owner merged
+// resolves to the device it was merged into (devices.merged_into); its dedupe keys keep the
+// fingerprint, so replays stay no-ops. A new origin matching known_relay_origins is flagged as
+// relaying another vendor; measurements from it get FlagRelayed.
 func (w *writer) sources(out Output) error {
 	for _, d := range out.Devices {
 		id, err := newID()

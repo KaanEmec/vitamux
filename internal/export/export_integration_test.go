@@ -148,6 +148,10 @@ func (in *instance) addHistory() {
 		VALUES ($1, $2, 'heart_rate', 'local_day', '2025-03-02', '2025-03-02', 'exclude_input', (SELECT min(id) FROM measurements), 'owner')`,
 		uuid.Must(uuid.NewV7()), in.user)
 
+	// A device merged into another (J20.7), exported before its target: the import links it afterwards.
+	in.exec(`INSERT INTO devices (id, user_id, provider_id, fingerprint, name, merged_into)
+		SELECT '00000000-0000-7000-8000-000000000001', user_id, provider_id, 'synthetic-merged', 'Old entry', id FROM devices ORDER BY id LIMIT 1`)
+
 	// A correction of a measurement, of a group and of a sleep session; one upstream deletion.
 	in.exec(`UPDATE measurements SET superseded_at = now() WHERE id = (SELECT min(id) FROM measurements WHERE group_id IS NULL)`)
 	in.exec(`INSERT INTO measurements (user_id, metric_id, kind, start_at, end_at, tz_offset_min, local_date, value, source_value, source_unit_id,
