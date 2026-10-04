@@ -6,7 +6,7 @@ Vitamux is a standalone, open-source (MIT), self-hosted personal health data agg
 
 - Never put credentials, API keys, access or refresh tokens, passwords, MFA codes, private health payloads, or extracted medical values in source control, logs, prompts, fixtures, or docs. Fixtures are synthetic only.
 - Never diagnose, interpret, or advise. Blood-test extraction is structured data entry with provenance and mandatory human confirmation.
-- Vitamux is its own product. It is not an Open Wearables plugin, fork, or companion, and it is not specific to any VPS. Reference-environment facts (VPS, its Coolify instance, Open Wearables, existing Garmin collector, WHOOP plans) are only for the final migration epic E16: the owner-local, git-ignored `docs/architecture/migration-reference.md` (not in the repository). Do not read or design for them elsewhere.
+- Vitamux is its own product. It is not an Open Wearables plugin, fork, or companion, and it is not specific to any VPS. The owner's reference environment and the private migration of their existing installation live in the git-ignored `private/` folder (local only, not in the repository). Never commit or quote it, and never design product code around it.
 - Keep documentation lean: update the smallest relevant file and link instead of repeating. Do not create monolithic docs.
 - Precedence: this file > ADRs (`docs/adr/`) > `docs/architecture/` > `docs/plan/`.
 
@@ -32,7 +32,6 @@ Scope:
 - Apple Health bridge: required (epic E15).
 - Any source, including existing open-source collectors in other languages, plugs in through the connector contract: remote sidecars or push collectors (E17, v0.2.0).
 - Garmin Connect (unofficial, wraps `python-garminconnect`) and WHOOP (unofficial, wraps `@dofek/whoop`): sidecar epics E18 and E19 (v0.3.0). Wrapped upstreams follow their releases automatically, gated by tests ([J17.5](docs/plan/E17-sidecar-connectors/J17.5-upstream-tracking.md)).
-- The existing reference Garmin collector and the Open Wearables migration: deferred to E16.
 - Future sources (Ultrahuman, scales, BP devices, other official or unofficial adapters) must fit the same connector contract.
 - Single owner first. `user_id` exists on durable rows, but there are no orgs, billing, or role systems.
 - Not in scope: analytics suite, social, coaching, clinical portal.

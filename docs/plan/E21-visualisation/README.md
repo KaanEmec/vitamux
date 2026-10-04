@@ -6,7 +6,7 @@ Read first: [frontend](../../architecture/frontend.md), [resolution#result-shape
 **Objective:** Make the panel a sleek, modern place to look at your data and to change how it is resolved. Every existing screen is redesigned on one design system. A dashboard shows the mainstream metrics with neutral baselines. Explore lists everything Vitamux has stored, and every metric chart can change its own rule in place, with a preview.
 
 Owner decisions (2026-10-04):
-- E21 ships as v0.4.0, after E18–E20. E16 stays last and now depends on G7.
+- E21 ships as v0.4.0, after E18–E20.
 - The dashboard is curated by default; the owner can pin, reorder, resize (S/M/L) and hide cards. The layout is stored on the server.
 - A richer, efficient chart library may replace or join uPlot. This amends [ADR-0010](../../adr/0010-sveltekit-static-spa.md) ([J21.2](J21.2-chart-library-adr.md)). The backend stays Go.
 - Baselines are neutral: 7-, 30- and 90-day mean, delta, min–max band. No good/bad colouring or advice. Status colours describe data state only.

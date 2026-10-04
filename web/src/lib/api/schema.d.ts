@@ -3313,7 +3313,7 @@ export interface components {
             client: components["schemas"]["client"];
             items: components["schemas"]["item"][];
             provenance?: {
-                /** @description Set only by migration importers (E16), e.g. open_wearables. */
+                /** @description Set only by migration importers, e.g. open_wearables. */
                 migration_source?: string | null;
             };
             $defs: {
