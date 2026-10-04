@@ -32,8 +32,19 @@ export class DevicesApi {
 		{ id: '00000000-0000-4000-8000-0000000000e1', provider: 'apple_health', origin_key: 'com.example.synthetic.garmin', name: 'Synthetic Garmin app', is_native: false, relayed_provider: null, created_at: '2026-09-02T08:00:00Z' },
 		{ id: '00000000-0000-4000-8000-0000000000e2', provider: 'apple_health', origin_key: 'com.apple.health.synthetic', name: null, is_native: true, relayed_provider: null, created_at: '2026-09-02T08:00:00Z' }
 	];
+	// What GET /source-devices lists (J20.7): Apple's own devices, a Garmin watch relayed through Apple
+	// Health and the same watch direct (merged into it), a device the owner named, and a merged stand-in.
 	sourceDevices: Json[] = [
-		{ id: 'dev_00000000000000000000000000000001', provider: 'apple_health', device_type: 'watch', manufacturer: 'Synthetic', model: 'Watch 1' }
+		sourceDevice('1', 'apple_health', 'Apple Inc.', 'Watch', { device_type: 'watch' }),
+		sourceDevice('2', 'apple_health', 'Apple Inc.', 'iPhone', { device_type: 'phone' }),
+		sourceDevice('3', 'apple_health', 'Garmin', 'Forerunner 965', { device_type: 'watch' }),
+		sourceDevice('4', 'garmin', 'Garmin', 'Forerunner 965', { device_type: 'watch', name: 'My Forerunner' }),
+		sourceDevice('5', 'garmin', 'Garmin', 'Wearable stand-in', { merged_into: 'dev_00000000000000000000000000000004' })
+	];
+	/** GET /providers: names for the codes above (setup details are not used by the rule builder). */
+	providers: Json[] = [
+		{ code: 'apple_health', name: 'Apple Health', official: true, auth_kind: 'device_pairing', remote: false, available: true, setup_state: 'connected', callback_url: null, problems: [], app_credentials: null, sidecar: null, connections: 1 },
+		{ code: 'garmin', name: 'Garmin Connect', official: false, auth_kind: 'interactive_mfa', remote: true, available: true, setup_state: 'connected', callback_url: null, problems: [], app_credentials: null, sidecar: null, connections: 1 }
 	];
 	/** Bodies of request-anchor-reset (by device id) and of PATCH /origins/{id}, in order. */
 	resets: { id: string; body: Json }[] = [];
@@ -88,10 +99,16 @@ export class DevicesApi {
 			return r.fulfill({ status: 204 });
 		}
 		if (path === '/source-devices' && method === 'GET') return json(r, 200, { devices: this.sourceDevices });
+		if (path === '/providers' && method === 'GET') return json(r, 200, { providers: this.providers });
 		return r.fallback();
 	}
 }
 
+function sourceDevice(n: string, provider: string, manufacturer: string, model: string, over: Json): Json {
+	return {
+		id: `dev_${n.padStart(32, '0')}`, provider, fingerprint: `synthetic-${n}`, name: null, device_type: null, manufacturer, model, merged_into: null, ...over
+	};
+}
 function json(r: Route, status: number, body: unknown) {
 	return r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 }

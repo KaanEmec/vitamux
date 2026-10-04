@@ -9,6 +9,7 @@ export const selectorFields = [
 	'origin_key',
 	'origin_key_prefix',
 	'origin_name',
+	'device_manufacturer',
 	'device_model',
 	'device_id',
 	'connection_id',
@@ -24,6 +25,7 @@ export const selectorLabels: Record<SelectorField, string> = {
 	origin_key: 'Origin app id',
 	origin_key_prefix: 'Origin app id starts with',
 	origin_name: 'Origin app name',
+	device_manufacturer: 'Brand',
 	device_model: 'Device model',
 	device_id: 'Device id',
 	connection_id: 'Connection id',
@@ -254,14 +256,38 @@ export function toSpec(f: Form): Rule {
 /** "a › b › c": the group ids in ladder order. */
 export const ladder = (r: Rule) => r.groups.map((g) => g.id).join(' › ');
 
-/** One readable line per selector: "provider apple_health, device type watch, not relayed". */
-export function selectorText(s: Selector): string {
+/** A company name without its legal suffix: "Apple Inc." is "Apple". */
+export const brandName = (m: string) => m.replace(/(?:[\s,]+(?:inc|ltd|llc|gmbh|corp|corporation|co|limited)\.?)+$/i, '').trim() || m;
+
+/** A stable text for a selector, to tell whether two are the same. */
+export const selectorKey = (s: Selector) => JSON.stringify(Object.entries(s).sort(([a], [b]) => a.localeCompare(b)));
+
+/**
+ * One readable line per selector: "provider apple_health, device type watch, not relayed". A selector
+ * that is one of the named `choices` (chips.ts sourceChoices) reads as its label.
+ */
+export function selectorText(s: Selector, choices: { label: string; selector: Selector }[] = []): string {
+	const key = selectorKey(s);
+	const named = choices.find((c) => selectorKey(c.selector) === key);
+	if (named) return named.label;
 	return Object.entries(s)
 		.map(([k, v]) => {
 			if (k === 'relayed') return v ? 'relayed' : 'not relayed';
+			if (k === 'device_manufacturer') return `brand ${brandName(String(v))}`;
 			return `${selectorLabels[k as SelectorField]?.toLowerCase() ?? k} ${v}`;
 		})
 		.join(', ');
+}
+
+const brandNames: Record<string, string> = { whoop: 'WHOOP' };
+
+/** The built-in group ids by name: apple_watch is "Apple Watch", garmin_apple "Garmin via Apple Health". Other ids stay as written. */
+export function groupLabel(id: string): string {
+	if (id === 'apple_watch') return 'Apple Watch';
+	if (id === 'iphone') return 'iPhone';
+	const brand = id.match(/^([a-z0-9]+)_apple$/)?.[1];
+	if (!brand) return id;
+	return `${brandNames[brand] ?? brand.charAt(0).toUpperCase() + brand.slice(1)} via Apple Health`;
 }
 
 export interface Change {

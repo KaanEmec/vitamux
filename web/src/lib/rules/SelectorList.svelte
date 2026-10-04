@@ -12,7 +12,8 @@
 		errorPrefix,
 		errors,
 		suggestions,
-		chips = []
+		chips = [],
+		choices = []
 	}: {
 		list: Selector[];
 		kind: string;
@@ -21,6 +22,8 @@
 		suggestions: Partial<Record<SelectorField, string[]>>;
 		/** One-click selectors (origins, device types, relayed or direct). */
 		chips?: Chip[];
+		/** Named sources and devices (chips.ts sourceChoices); choosing one fills the selector. */
+		choices?: Chip[];
 	} = $props();
 
 	const uid = $props.id();
@@ -28,6 +31,11 @@
 	function errorFor(si: number, field?: string): string {
 		const base = `${errorPrefix}.${si}`;
 		return field ? (errors[`${base}.${field}`] ?? '') : (errors[base] ?? '');
+	}
+
+	function choose(si: number, at: string) {
+		const c = choices[Number(at)];
+		if (at !== '' && c) list[si] = { ...c.selector };
 	}
 
 	function addCondition(si: number) {
@@ -59,6 +67,21 @@
 	<fieldset class="selector">
 		<legend>{kind} {si + 1}</legend>
 		{#if errorFor(si)}<p class="error">{errorFor(si)}</p>{/if}
+		{#if choices.length}
+			<div class="condition">
+				<select
+					aria-label="Choose a source or device"
+					value=""
+					onchange={(e) => {
+						choose(si, e.currentTarget.value);
+						e.currentTarget.value = '';
+					}}
+				>
+					<option value="">Choose a source or device…</option>
+					{#each choices as c, i (i)}<option value={i}>{c.label}</option>{/each}
+				</select>
+			</div>
+		{/if}
 		{#each Object.keys(sel) as field, ci (field)}
 			<div class="condition">
 				<select

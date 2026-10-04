@@ -9,6 +9,7 @@
 
 <script lang="ts">
 	import { api, fieldErrors, type Problem, type Schemas } from '../api/client.ts';
+	import { groupLabel } from '../rules/rule.ts';
 	import Modal from './Modal.svelte';
 	import ProblemAlert from './ProblemAlert.svelte';
 	import TextField from './TextField.svelte';
@@ -97,7 +98,7 @@
 			<div class="field">
 				<label for="{noteId}-group">Source group</label>
 				<select id="{noteId}-group" name="group" bind:value={group} required aria-invalid={errors.group ? 'true' : undefined}>
-					{#each groups as g (g)}<option value={g}>{g}</option>{/each}
+					{#each groups as g (g)}<option value={g}>{groupLabel(g)}</option>{/each}
 				</select>
 				<span class="hint">Used if it has a value in this window.</span>
 				{#if errors.group}<span class="error">{errors.group}</span>{/if}
