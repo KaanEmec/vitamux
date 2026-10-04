@@ -9,7 +9,7 @@
 	import ProvenanceDialog from '../components/ProvenanceDialog.svelte';
 	import ResultStatus from '../components/ResultStatus.svelte';
 	import { formatValue } from '../data/format.ts';
-	import Icon from '../ui/Icon.svelte';
+	import Button from '../ui/Button.svelte';
 	import { icons } from '../ui/icons.ts';
 	import { dayLabel } from '../views/format.ts';
 	import { warningCodes } from './series.ts';
@@ -34,7 +34,7 @@
 <section class="card point" aria-labelledby={headingId}>
 	<div class="head">
 		<h2 id={headingId}>{dayLabel(date)}</h2>
-		<button class="btn ghost sm" type="button" aria-label="Close the selected window" onclick={onclose}><Icon d={icons.close} size={16} /></button>
+		<Button variant="ghost" size="sm" icon={icons.close} aria-label="Close the selected window" onclick={onclose} />
 	</div>
 	{#if value}
 		<p class="headline">
