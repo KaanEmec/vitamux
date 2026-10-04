@@ -31,7 +31,8 @@ Owner decisions (2026-10-04):
 - J23.1, J23.2 and J23.5 can start now.
 - J23.3 follows J23.1, and J23.4 follows J23.2 and J23.3.
 - Once J23.4 lands, J23.6, J23.7 and J23.8 run in parallel.
-- Connections, Rules, Lab and Settings only pick up the new tokens; they are not redesigned.
+- J23.10 and J23.11 run in parallel after J23.6.
+- J23.11 restyles the controls on every page; layouts stay.
 
 ## Jobs
 | Job | Title | Depends on | Gate |
@@ -44,10 +45,12 @@ Owner decisions (2026-10-04):
 | [J23.6](J23.6-dashboard.md) | Dashboard redesign | J23.4, J23.5 | None |
 | [J23.7](J23.7-metric-detail-explore.md) | Metric detail and Explore | J23.4, J23.5 | None |
 | [J23.8](J23.8-sleep-body-views.md) | Sleep, body and blood-pressure views | J23.4, J23.5 | None |
-| [J23.9](J23.9-quality-release.md) | Quality gates, docs and v0.3.0 | J23.6, J23.7, J23.8 | G9 |
+| [J23.9](J23.9-quality-release.md) | Quality gates, docs and v0.3.0 | J23.6–J23.8, J23.10, J23.11 | G9 |
+| [J23.10](J23.10-dismiss-alerts.md) | Dismissible dashboard alerts | J23.6 | None |
+| [J23.11](J23.11-ux-pass.md) | Controls and overall UX pass | J23.3 | None |
 
 ## Out of scope
-- Redesigning Connections, Rules, Lab or Settings beyond the token change.
+- New layouts for Connections, Rules, Lab or Settings (J23.11 restyles their controls only).
 - Scores computed by Vitamux, goals, insights, correlations or judgement labels.
 - New metrics, connectors or resolution behaviour.
 - Free-form widget grids and unit switching.
