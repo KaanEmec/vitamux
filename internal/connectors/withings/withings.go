@@ -54,7 +54,7 @@ func New(cfg Config) *Connector {
 // window, 30-day backfill units, and the 120 requests per minute of the standard plan.
 func (*Connector) Describe() connectors.Descriptor {
 	return connectors.Descriptor{
-		Provider: Provider, Version: "1", Official: true, AuthKind: connectors.AuthOAuth2,
+		Provider: Provider, Name: "Withings", Version: "1", Official: true, AuthKind: connectors.AuthOAuth2,
 		Streams: []connectors.StreamSpec{{
 			Name: StreamMeasures, Interval: time.Hour, Lookback: 7 * 24 * time.Hour,
 			MaxBackfill: 20 * 365 * 24 * time.Hour, UnitSize: 30 * 24 * time.Hour,

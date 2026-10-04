@@ -46,7 +46,7 @@ func New(cfg Config) *Connector {
 // Describe declares one hourly incremental stream without correction or backfill.
 func (*Connector) Describe() connectors.Descriptor {
 	return connectors.Descriptor{
-		Provider: Provider, Version: "1", Official: true, AuthKind: connectors.AuthNone,
+		Provider: Provider, Name: "Example", Version: "1", Official: true, AuthKind: connectors.AuthNone,
 		Streams:      []connectors.StreamSpec{{Name: Stream, Interval: time.Hour}},
 		RateLimits:   []connectors.RateLimitSpec{{Requests: 60, Per: time.Minute}},
 		Capabilities: connectors.Capabilities{Incremental: true, ManualSync: true},

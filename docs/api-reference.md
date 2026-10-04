@@ -90,8 +90,9 @@ Provider connections, syncs, backfills and streams (docs/architecture/connectors
 | `PATCH` | `/api/v1/connections/{id}` | `write:config`, CSRF | Update a connection |
 | `DELETE` | `/api/v1/connections/{id}` | `write:config`, CSRF | Delete a connection, keeping or deleting its data |
 | `POST` | `/api/v1/connections/{id}/auth/begin` | `session`, CSRF | Reauthorize a connection (OAuth redirect or credential prompt) |
-| `POST` | `/api/v1/providers/{provider}/auth/begin` | `session`, CSRF | Connect an account of a provider (OAuth redirect) |
-| `POST` | `/api/v1/connections/{id}/auth/continue` | `write:config`, CSRF, planned | Continue interactive authorization (e.g. an MFA code) |
+| `POST` | `/api/v1/providers/{provider}/auth/begin` | `session`, CSRF | Connect an account of a provider (OAuth redirect or credential prompt) |
+| `GET` | `/api/v1/providers` | `read:config` | List the providers a connector serves (in-process and sidecars) |
+| `POST` | `/api/v1/providers/{provider}/auth/continue` | `session`, CSRF | Answer an authorization prompt (credentials, an MFA code) |
 | `POST` | `/api/v1/connections/{id}/sync` | `write:config`, CSRF | Queue a manual sync (coalesced with a pending one) |
 | `GET` | `/api/v1/connections/{id}/backfills` | `read:config` | List a connection's backfills, newest first |
 | `POST` | `/api/v1/connections/{id}/backfills` | `write:config`, CSRF | Start a bounded, resumable backfill |

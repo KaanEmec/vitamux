@@ -155,9 +155,12 @@ func (rt *Runtime) HandleBackfillUnit(ctx context.Context, j jobs.Job) error {
 		return nil
 	}
 	r, err := rt.prepare(ctx, u.ConnectionID, u.Stream)
-	if errors.As(err, new(*classError)) { // the connection cannot sync: fail the unit now
+	switch {
+	case err != nil && r.c != nil: // an unreachable sidecar: retry the unit later
+		return rt.settle(ctx, r, u.Stream, err)
+	case errors.As(err, new(*classError)): // the connection cannot sync: fail the unit now
 		return cmp.Or(rt.endUnit(ctx, p, errorClassOf(err)), err)
-	} else if err != nil {
+	case err != nil:
 		return err
 	}
 	if until, err := rt.blockedUntil(ctx, r); err != nil {

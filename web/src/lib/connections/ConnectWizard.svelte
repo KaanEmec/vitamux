@@ -29,7 +29,8 @@
 			problem = error;
 			return;
 		}
-		goToProvider(data.redirect_url);
+		if ('redirect_url' in data) goToProvider(data.redirect_url);
+		else busy = false; // prompt steps are not rendered yet
 	}
 </script>
 

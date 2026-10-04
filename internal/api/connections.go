@@ -1,7 +1,9 @@
 package api
 
 import (
+	"cmp"
 	"context"
+	"encoding/json"
 	"errors"
 	"slices"
 	"strconv"
@@ -26,6 +28,7 @@ import (
 // begin and the callback are in oauth.go. Every mutation is audited.
 func (rt *router) connectionRoutes() {
 	read, write := scope(auth.ReadConfig), scope(auth.WriteConfig)
+	rt.handle("GET /api/v1/providers", read, rt.ops.ListProviders)
 	rt.handle("GET /api/v1/connections", read, rt.ops.ListConnections)
 	rt.handle("POST /api/v1/connections", write, rt.ops.CreateConnection)
 	rt.handle("GET /api/v1/connections/{id}", read, rt.ops.GetConnection)
@@ -98,12 +101,40 @@ func (o *owner) connectionBody(c dbq.ListOwnerConnectionsRow, scheds []dbq.Sched
 		Status: oapi.ConnectionStatus(c.Status), Health: oapi.Health(h.Health), HealthReason: optString(h.Reason),
 		LastSuccessAt: c.LastSuccessAt, LastErrorClass: c.LastErrorClass, ConsecutiveFailures: int(c.ConsecutiveFailures),
 		CreatedAt: c.CreatedAt, UpdatedAt: c.UpdatedAt}
+	if c.Upstream != nil {
+		var u oapi.Upstream
+		if json.Unmarshal(c.Upstream, &u) == nil {
+			out.Upstream = &u
+		}
+	}
 	if o.opts.Connectors != nil {
 		if d, ok := o.opts.Connectors.Describe(c.Provider); ok {
 			out.Official = &d.Official
 		}
 	}
 	return out
+}
+
+// ListProviders lists the registered connectors, in-process and sidecars.
+func (o *owner) ListProviders(context.Context, oapi.ListProvidersRequestObject) (oapi.ListProvidersResponseObject, error) {
+	rt, err := o.runtime()
+	if err != nil {
+		return nil, err
+	}
+	ds := rt.Providers()
+	out := oapi.ListProviders200JSONResponse{Providers: make([]oapi.Provider, len(ds))}
+	for i, d := range ds {
+		p := oapi.Provider{Code: d.Provider, Name: cmp.Or(d.Name, d.Provider), Official: d.Official, Remote: d.Remote, Available: d.Available()}
+		if d.AuthKind != "" {
+			k := oapi.ProviderAuthKind(d.AuthKind)
+			p.AuthKind = &k
+		}
+		if u := d.Upstream; u != nil {
+			p.Upstream = &oapi.Upstream{Package: u.Package, Version: u.Version, SourceURL: u.SourceURL}
+		}
+		out.Providers[i] = p
+	}
+	return out, nil
 }
 
 // schedulesOf returns the caller's schedules, of one connection when id is set.

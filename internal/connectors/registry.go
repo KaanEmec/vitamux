@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -35,7 +37,7 @@ func NewRegistry(cs ...Connector) (*Registry, error) {
 	r := &Registry{m: map[string]Connector{}}
 	for _, c := range cs {
 		d := c.Describe()
-		if err := validate(c, d); err != nil {
+		if err := Validate(c, d); err != nil {
 			return nil, err
 		}
 		if _, dup := r.m[d.Provider]; dup {
@@ -52,13 +54,27 @@ func (r *Registry) Get(provider string) (Connector, bool) {
 	return c, ok
 }
 
-func validate(c Connector, d Descriptor) error {
+// Descriptors returns every registered connector's current descriptor, by provider code.
+func (r *Registry) Descriptors() []Descriptor {
+	out := make([]Descriptor, 0, len(r.m))
+	for _, c := range r.m {
+		out = append(out, c.Describe())
+	}
+	slices.SortFunc(out, func(a, b Descriptor) int { return strings.Compare(a.Provider, b.Provider) })
+	return out
+}
+
+// Validate checks a descriptor as NewRegistry does; a sidecar connector checks the descriptor
+// its sidecar sends with it before using it.
+func Validate(c Connector, d Descriptor) error {
 	bad := func(format string, args ...any) error {
 		return fmt.Errorf("%w: %s: %s", ErrInvalidDescriptor, d.Provider, fmt.Sprintf(format, args...))
 	}
 	switch {
 	case !providerRe.MatchString(d.Provider):
 		return bad("provider code must match %s", providerRe)
+	case !d.Available():
+		return nil // sidecar placeholder: nothing is known yet
 	case d.Version == "":
 		return bad("version is required")
 	case len(d.Streams) == 0:

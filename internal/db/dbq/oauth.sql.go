@@ -17,7 +17,7 @@ DELETE FROM oauth_states o
 USING providers p, sessions s
 WHERE o.id = $1 AND p.id = o.provider_id AND p.code = $2 AND o.expires_at > now()
   AND s.id = o.session_id AND s.expires_at > now()
-RETURNING o.user_id, o.connection_id
+RETURNING o.user_id, o.session_id, o.connection_id, o.session
 `
 
 type ConsumeOAuthStateParams struct {
@@ -27,15 +27,22 @@ type ConsumeOAuthStateParams struct {
 
 type ConsumeOAuthStateRow struct {
 	UserID       uuid.UUID
+	SessionID    uuid.UUID
 	ConnectionID *uuid.UUID
+	Session      []byte
 }
 
-// Single use: the row is gone after the first callback, whatever happens next. A state of an
-// ended session or another provider is refused.
+// Single use: the row is gone after the first callback or continue, whatever happens next. A
+// state of an ended session or another provider is refused.
 func (q *Queries) ConsumeOAuthState(ctx context.Context, arg ConsumeOAuthStateParams) (ConsumeOAuthStateRow, error) {
 	row := q.db.QueryRow(ctx, consumeOAuthState, arg.ID, arg.Provider)
 	var i ConsumeOAuthStateRow
-	err := row.Scan(&i.UserID, &i.ConnectionID)
+	err := row.Scan(
+		&i.UserID,
+		&i.SessionID,
+		&i.ConnectionID,
+		&i.Session,
+	)
 	return i, err
 }
 
@@ -95,9 +102,9 @@ func (q *Queries) GetConnectionAccount(ctx context.Context, arg GetConnectionAcc
 
 const insertOAuthState = `-- name: InsertOAuthState :exec
 
-INSERT INTO oauth_states (id, user_id, session_id, provider_id, connection_id, expires_at)
-SELECT $1, $2, $3, p.id, $4, $5
-FROM providers p WHERE p.code = $6
+INSERT INTO oauth_states (id, user_id, session_id, provider_id, connection_id, expires_at, session)
+SELECT $1, $2, $3, p.id, $4, $5, $6
+FROM providers p WHERE p.code = $7
 `
 
 type InsertOAuthStateParams struct {
@@ -106,6 +113,7 @@ type InsertOAuthStateParams struct {
 	SessionID    uuid.UUID
 	ConnectionID *uuid.UUID
 	ExpiresAt    time.Time
+	Session      []byte
 	Provider     string
 }
 
@@ -117,6 +125,7 @@ func (q *Queries) InsertOAuthState(ctx context.Context, arg InsertOAuthStatePara
 		arg.SessionID,
 		arg.ConnectionID,
 		arg.ExpiresAt,
+		arg.Session,
 		arg.Provider,
 	)
 	return err
@@ -125,25 +134,27 @@ func (q *Queries) InsertOAuthState(ctx context.Context, arg InsertOAuthStatePara
 const reauthorizeConnection = `-- name: ReauthorizeConnection :exec
 UPDATE connections
 SET account_key = coalesce(account_key, $1), status = 'active', last_error_class = NULL,
-    consecutive_failures = 0, updated_at = now()
-WHERE id = $2
+    consecutive_failures = 0, upstream = coalesce($2, upstream), updated_at = now()
+WHERE id = $3
 `
 
 type ReauthorizeConnectionParams struct {
 	AccountKey []byte
+	Upstream   []byte
 	ID         uuid.UUID
 }
 
 func (q *Queries) ReauthorizeConnection(ctx context.Context, arg ReauthorizeConnectionParams) error {
-	_, err := q.db.Exec(ctx, reauthorizeConnection, arg.AccountKey, arg.ID)
+	_, err := q.db.Exec(ctx, reauthorizeConnection, arg.AccountKey, arg.Upstream, arg.ID)
 	return err
 }
 
 const upsertOAuthConnection = `-- name: UpsertOAuthConnection :one
-INSERT INTO connections (id, user_id, provider_id, account_key, mode, status)
-SELECT $1, $2, p.id, $3, 'in_process', 'active' FROM providers p WHERE p.code = $4
+INSERT INTO connections (id, user_id, provider_id, account_key, mode, status, upstream)
+SELECT $1, $2, p.id, $3, $4, $5, $6 FROM providers p WHERE p.code = $7
 ON CONFLICT (user_id, provider_id, account_key) DO UPDATE
-SET status = 'active', last_error_class = NULL, consecutive_failures = 0, updated_at = now()
+SET status = 'active', last_error_class = NULL, consecutive_failures = 0,
+    upstream = coalesce(EXCLUDED.upstream, connections.upstream), updated_at = now()
 RETURNING id, (xmax = 0) AS created
 `
 
@@ -151,6 +162,9 @@ type UpsertOAuthConnectionParams struct {
 	ID         uuid.UUID
 	UserID     uuid.UUID
 	AccountKey []byte
+	Mode       string
+	Status     string
+	Upstream   []byte
 	Provider   string
 }
 
@@ -159,12 +173,16 @@ type UpsertOAuthConnectionRow struct {
 	Created bool
 }
 
-// Reconnecting the same provider account reuses its connection (UNIQUE user, provider, account_key).
+// Reconnecting the same provider account reuses its connection (UNIQUE user, provider, account_key)
+// and makes it active; @status applies to a new connection only.
 func (q *Queries) UpsertOAuthConnection(ctx context.Context, arg UpsertOAuthConnectionParams) (UpsertOAuthConnectionRow, error) {
 	row := q.db.QueryRow(ctx, upsertOAuthConnection,
 		arg.ID,
 		arg.UserID,
 		arg.AccountKey,
+		arg.Mode,
+		arg.Status,
+		arg.Upstream,
 		arg.Provider,
 	)
 	var i UpsertOAuthConnectionRow

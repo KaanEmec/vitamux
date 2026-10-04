@@ -946,9 +946,11 @@ paths:
       operationId: beginConnectionAuth
       summary: Reauthorize a connection (OAuth redirect or credential prompt)
       description: >
-        OAuth: answers {"redirect_url"} and sets the short-lived browser-binding cookie that the
-        provider callback needs (docs/architecture/connectors.md#oauth-connection-flow). Owner
-        session only, since the state is bound to it.
+        Answers the first step: {"redirect_url"} to send the browser to the provider, or
+        {"state", "prompt"} to ask the owner for values and send them to continueProviderAuth.
+        Sets the short-lived browser-binding cookie that the callback and continue need
+        (docs/architecture/connectors.md#oauth-connection-flow). Owner session only, since the
+        state is bound to it.
       security: [{session: [], csrf: []}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
@@ -968,10 +970,11 @@ paths:
     post:
       tags: [connections]
       operationId: beginProviderAuth
-      summary: Connect an account of a provider (OAuth redirect)
+      summary: Connect an account of a provider (OAuth redirect or credential prompt)
       description: >
-        Like beginConnectionAuth, for an account not connected yet. The callback creates the
+        Like beginConnectionAuth, for an account not connected yet. The last step creates the
         connection, or reuses the existing one when the same provider account connects again.
+        A new connection of an unofficial connector starts paused.
       security: [{session: [], csrf: []}]
       parameters:
         - name: provider
@@ -988,14 +991,41 @@ paths:
         '403': {$ref: '#/components/responses/Problem'}
         '503': {$ref: '#/components/responses/Problem'}
 
-  /api/v1/connections/{id}/auth/continue:
+  /api/v1/providers:
+    get:
+      tags: [connections]
+      operationId: listProviders
+      summary: List the providers a connector serves (in-process and sidecars)
+      security: [{session: []}, {apiKey: ['read:config']}]
+      responses:
+        '200':
+          description: Every registered connector, by provider code.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [providers]
+                properties:
+                  providers: {type: array, items: {$ref: '#/components/schemas/Provider'}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/providers/{provider}/auth/continue:
     post:
       tags: [connections]
-      operationId: continueConnectionAuth
-      summary: Continue interactive authorization (e.g. an MFA code)
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      operationId: continueProviderAuth
+      summary: Answer an authorization prompt (credentials, an MFA code)
+      description: >
+        Sends the owner's values for the prompt the state names. The state is single use: the
+        answer is the next step with a new state, or the connection once authorized. Any error
+        ends the flow; begin again. Owner session only, with the binding cookie of begin.
+      security: [{session: [], csrf: []}]
       parameters:
-        - $ref: '#/components/parameters/ConnectionIDPath'
+        - name: provider
+          in: path
+          required: true
+          schema: {type: string, pattern: '^[a-z][a-z0-9_]*$'}
       requestBody:
         required: true
         content:
@@ -1006,12 +1036,16 @@ paths:
           description: Next step, or done.
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/AuthStep'}
+              schema:
+                oneOf:
+                  - {$ref: '#/components/schemas/AuthRedirect'}
+                  - {$ref: '#/components/schemas/AuthPromptStep'}
+                  - {$ref: '#/components/schemas/AuthDone'}
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
-        '404': {$ref: '#/components/responses/Problem'}
         '409': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
 
   /api/v1/connections/{id}/sync:
     post:
@@ -3422,13 +3456,14 @@ components:
       type: object
       description: A connection with its derived health; never credentials.
       additionalProperties: false
-      required: [id, provider, mode, status, official, health, health_reason, last_success_at, last_error_class, consecutive_failures, created_at, updated_at]
+      required: [id, provider, mode, status, official, upstream, health, health_reason, last_success_at, last_error_class, consecutive_failures, created_at, updated_at]
       properties:
         id: {$ref: '#/components/schemas/ConnectionID'}
         provider: {type: string, description: Provider code.}
         mode: {type: string, enum: [in_process, push, remote]}
         status: {type: string, enum: [active, degraded, needs_reauth, paused, error, disabled]}
         official: {type: [boolean, 'null'], description: False for an unofficial API; null when no connector is registered (push sources).}
+        upstream: {oneOf: [{$ref: '#/components/schemas/Upstream'}, {type: 'null'}], description: The third-party package a sidecar connector wraps; null for in-process and push connections.}
         health: {$ref: '#/components/schemas/Health'}
         health_reason: {type: [string, 'null']}
         last_success_at: {type: [string, 'null'], format: date-time}
@@ -3452,13 +3487,82 @@ components:
       additionalProperties: false
       properties:
         status: {type: string, enum: [active, paused], description: Pause or resume; only between active/degraded and paused.}
-    AuthStep:
+    Provider:
       type: object
+      description: A provider served by a registered connector.
+      additionalProperties: false
+      required: [code, name, official, auth_kind, remote, available]
+      properties:
+        code: {type: string}
+        name: {type: string}
+        official: {type: boolean, description: False for an unofficial API; its new connections start paused.}
+        auth_kind: {type: [string, 'null'], enum: [none, oauth2, interactive_mfa, device_pairing, null], description: Null while a sidecar has not described itself.}
+        remote: {type: boolean, description: Served by a sidecar.}
+        available: {type: boolean, description: False while a sidecar is unreachable or has not described itself.}
+        upstream: {$ref: '#/components/schemas/Upstream'}
+    Upstream:
+      type: object
+      description: The third-party package a sidecar connector wraps.
+      additionalProperties: false
+      required: [package, version, source_url]
+      properties:
+        package: {type: string}
+        version: {type: string}
+        source_url: {type: string}
+    AuthStep:
       description: Next interactive auth step.
+      oneOf:
+        - {$ref: '#/components/schemas/AuthRedirect'}
+        - {$ref: '#/components/schemas/AuthPromptStep'}
+    AuthRedirect:
+      type: object
+      description: Send the browser to the provider; its callback continues the flow.
+      additionalProperties: false
       required: [redirect_url]
       properties:
         redirect_url: {type: string}
-    AuthContinueInput: {type: object, description: Open object.}
+    AuthPromptStep:
+      type: object
+      description: Ask the owner for the prompt's fields and send them with the state to continueProviderAuth.
+      additionalProperties: false
+      required: [state, prompt]
+      properties:
+        state: {type: string}
+        prompt:
+          type: object
+          additionalProperties: false
+          required: [message, fields]
+          properties:
+            message: {type: string}
+            fields:
+              type: array
+              minItems: 1
+              items:
+                type: object
+                additionalProperties: false
+                required: [name, label, kind]
+                properties:
+                  name: {type: string}
+                  label: {type: string}
+                  kind: {type: string, enum: [text, password, code]}
+    AuthDone:
+      type: object
+      description: Authorized; the connection was created or updated.
+      additionalProperties: false
+      required: [connection_id]
+      properties:
+        connection_id: {$ref: '#/components/schemas/ConnectionID'}
+    AuthContinueInput:
+      type: object
+      additionalProperties: false
+      required: [state, values]
+      properties:
+        state: {type: string, maxLength: 512}
+        values:
+          type: object
+          description: The prompt's field values by name; never stored or logged.
+          maxProperties: 16
+          additionalProperties: {type: string, maxLength: 4096}
     BackfillInput:
       type: object
       additionalProperties: false

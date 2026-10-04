@@ -10,3 +10,7 @@ func CredentialsAAD(connectionID uuid.UUID) []byte {
 
 // TOTPAAD binds a sealed users.totp_ciphertext to its user (purpose Credentials).
 func TOTPAAD(userID uuid.UUID) []byte { return []byte("users.totp:" + userID.String()) }
+
+// AuthSessionAAD binds a sealed oauth_states.session to its pending authorization step
+// (purpose Credentials).
+func AuthSessionAAD(stateID uuid.UUID) []byte { return []byte("auth-session:" + stateID.String()) }

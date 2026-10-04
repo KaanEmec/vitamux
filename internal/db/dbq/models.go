@@ -132,6 +132,8 @@ type Connection struct {
 	UpdatedAt           time.Time
 	// SHA-256 of the random token in the notification callback URL /webhooks/<provider>/<token>; null while not subscribed. The token itself is only sent to the provider.
 	HookTokenHash []byte
+	// Upstream package a sidecar connector wraps: {package, version, source_url}; null for in-process connectors.
+	Upstream []byte
 }
 
 // Provider tokens, sealed by internal/crypto (purpose credentials, AAD bound to the connection).
@@ -551,7 +553,7 @@ type NormalizerVersion struct {
 	RegisteredAt time.Time
 }
 
-// One row per started authorization; the callback deletes it (single use). Logging out deletes it with the session.
+// One row per pending authorization step; the callback or the next continue deletes it (single use). Logging out deletes it with the session.
 type OauthState struct {
 	ID         uuid.UUID
 	UserID     uuid.UUID
@@ -561,6 +563,8 @@ type OauthState struct {
 	ConnectionID *uuid.UUID
 	ExpiresAt    time.Time
 	CreatedAt    time.Time
+	// Opaque connector continuation (e.g. a PKCE verifier or a login session), sealed by internal/crypto (purpose credentials, AAD auth-session:<id>). Never sent to the browser; rows live minutes, so key rotation skips them.
+	Session []byte
 }
 
 // Data vendors and transports. Seeded by migrations; read-only for the app role.
