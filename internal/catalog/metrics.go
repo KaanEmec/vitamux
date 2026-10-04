@@ -8,6 +8,7 @@ const (
 	secRespiration = "Respiration and oxygen"
 	secTemperature = "Temperature"
 	secBody        = "Body composition"
+	secUrine       = "Urine"
 	secGlucose     = "Glucose and metabolism"
 	secNutrition   = "Nutrition and intake"
 	secMobility    = "Mobility"
@@ -17,7 +18,7 @@ const (
 )
 
 // sections is the docs/metrics.md order; seed order is append-only, so the doc groups by section.
-var sections = []string{secActivity, secHeart, secBP, secRespiration, secTemperature, secBody, secGlucose,
+var sections = []string{secActivity, secHeart, secBP, secRespiration, secTemperature, secBody, secUrine, secGlucose,
 	secNutrition, secMobility, secEnvironment, secSleep, secDerived}
 
 var (
@@ -273,4 +274,15 @@ var metrics = []Metric{
 	{Code: "garmin_achievable_fitness_age", Section: secBody, Unit: "years", Kinds: sample, Agg: Latest, Min: 10, Max: 120, ProviderScoped: true, Since: SeedGarmin},
 	{Code: "garmin_sweat_loss", Section: secNutrition, Unit: "mL", Kinds: interval, Agg: Additive, Min: 0, Max: 20000, ProviderScoped: true, Since: SeedGarmin},
 	{Code: "garmin_sleep_movement", Section: secSleep, Unit: "index", Kinds: sample, Agg: Intensive, Min: 0, Max: 100, ProviderScoped: true, Since: SeedGarmin},
+
+	// Withings (J25.2, J25.3): the U-Scan urine analytes and the core body temperature estimate.
+	{Code: "urine_ph", Section: secUrine, Unit: "pH", Kinds: sample, Agg: Latest, Min: 3, Max: 10, Withings: "147", Since: SeedWithings},
+	{Code: "urine_specific_gravity", Section: secUrine, Unit: "ratio", Kinds: sample, Agg: Latest, Min: 1, Max: 1.1, Withings: "148", Since: SeedWithings},
+	{Code: "urine_nitrites", Section: secUrine, Unit: "µmol/L", Kinds: sample, Agg: Latest, Min: 0, Max: 5000, Withings: "151", Since: SeedWithings},
+	{Code: "urine_ketones", Section: secUrine, Unit: "mmol/L", Kinds: sample, Agg: Latest, Min: 0, Max: 50, Withings: "204", Since: SeedWithings},
+	{Code: "urine_vitamin_c", Section: secUrine, Unit: "mmol/L", Kinds: sample, Agg: Latest, Min: 0, Max: 50, Withings: "205", Since: SeedWithings},
+	{Code: "urine_calcium", Section: secUrine, Unit: "mmol/L", Kinds: sample, Agg: Latest, Min: 0, Max: 50, Withings: "248", Since: SeedWithings},
+	{Code: "urine_creatinine", Section: secUrine, Unit: "mmol/L", Kinds: sample, Agg: Latest, Min: 0, Max: 100, Withings: "249", Since: SeedWithings},
+	{Code: "urine_calcium_creatinine_ratio", Section: secUrine, Unit: "mmol/mmol", Kinds: sample, Agg: Latest, Min: 0, Max: 10, Withings: "251", Since: SeedWithings},
+	{Code: "core_body_temperature_estimated", Section: secTemperature, Unit: "°C", Kinds: sample, Agg: Intensive, Min: 30, Max: 45, Since: SeedWithings},
 }

@@ -139,6 +139,7 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `basal_body_temperature` | °C | sample | latest | 30 to 45 | local_day, latest | - |  | BasalBodyTemperature |  |
 | `skin_temperature_nightly` | °C | daily_value | daily_summary | 20 to 45 | local_day, latest | - |  |  |  |
 | `sleep_temperature_deviation` | °C | daily_value | daily_summary | -10 to 10 | local_day, latest | - |  |  |  |
+| `core_body_temperature_estimated` | °C | sample | intensive | 30 to 45 | bucket, hour, local_day, local_night, sleep_episode, latest | 5m → raw |  |  |  |
 
 ## Body composition
 
@@ -183,6 +184,19 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `garmin_metabolic_age` | years | sample | latest | 10 to 120 | local_day, latest, reading | - | body_composition |  |  |
 | `garmin_physique_rating` | index | sample | latest | 1 to 9 | local_day, latest, reading | - | body_composition |  |  |
 | `garmin_achievable_fitness_age` | years | sample | latest | 10 to 120 | local_day, latest | - |  |  |  |
+
+## Urine
+
+| Code | Unit | Kinds | Aggregation | Plausible | Windows | Intraday | Group | Apple HK | Withings |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `urine_ph` | pH | sample | latest | 3 to 10 | local_day, latest | - |  |  | 147 |
+| `urine_specific_gravity` | ratio | sample | latest | 1 to 1.1 | local_day, latest | - |  |  | 148 |
+| `urine_nitrites` | µmol/L | sample | latest | 0 to 5000 | local_day, latest | - |  |  | 151 |
+| `urine_ketones` | mmol/L | sample | latest | 0 to 50 | local_day, latest | - |  |  | 204 |
+| `urine_vitamin_c` | mmol/L | sample | latest | 0 to 50 | local_day, latest | - |  |  | 205 |
+| `urine_calcium` | mmol/L | sample | latest | 0 to 50 | local_day, latest | - |  |  | 248 |
+| `urine_creatinine` | mmol/L | sample | latest | 0 to 100 | local_day, latest | - |  |  | 249 |
+| `urine_calcium_creatinine_ratio` | mmol/mmol | sample | latest | 0 to 10 | local_day, latest | - |  |  | 251 |
 
 ## Glucose and metabolism
 
@@ -289,6 +303,8 @@ Typed events in `health_events`, never resolved like metrics ([metric-catalog](a
 | `walking_steadiness_alert` | initial_low, initial_very_low, repeat_low, repeat_very_low | AppleWalkingSteadinessEvent |
 | `environment_audio_alert` | momentary_limit | AudioExposureEvent |
 | `headphone_audio_alert` | seven_day_limit | HeadphoneAudioExposureEvent |
+| `afib_ecg_result` | negative, positive, inconclusive, no_signal, other, noise, low_heart_rate, high_heart_rate, inconclusive_us, negative_normal_hr, negative_high_hr, positive_normal_hr, positive_high_hr, no_diagnosis |  |
+| `afib_ppg_result` | negative, positive, inconclusive, no_signal, other, noise, low_heart_rate, high_heart_rate, inconclusive_us, negative_normal_hr, negative_high_hr, positive_normal_hr, positive_high_hr, no_diagnosis |  |
 
 ## Windows and strategies by aggregation
 
@@ -358,3 +374,7 @@ A value converts to the base unit as `value * factor + offset`.
 | L/min | L/min | 1 | 0 |
 | IU | IU | 1 | 0 |
 | µS | µS | 1 | 0 |
+| pH | pH | 1 | 0 |
+| ratio | ratio | 1 | 0 |
+| mmol/mmol | mmol/mmol | 1 | 0 |
+| µmol/L | mmol/L | 0.001 | 0 |

@@ -165,6 +165,7 @@ var wantBase = map[string]struct{ in, want float64 }{
 	"mg/dL glucose": {90, 4.99567},
 	"mg":            {2500, 0.0025},
 	"mL":            {250, 0.25},
+	"µmol/L":        {12, 0.012},
 }
 
 func close(a, b float64) bool { return math.Abs(a-b) <= 1e-6*math.Max(1, math.Abs(b)) }

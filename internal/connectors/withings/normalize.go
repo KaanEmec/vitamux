@@ -29,14 +29,17 @@ var meastypes = map[int]struct{ metric, unit string }{
 	169: {"intracellular_water", "kg"}, 170: {"visceral_fat_index", "index"}, 173: {"fat_free_mass", "kg"},
 	174: {"fat_mass", "kg"}, 175: {"muscle_mass", "kg"}, 196: {"withings_nerve_response_score", "index"},
 	226: {"basal_metabolic_rate", "kcal/day"}, 227: {"withings_metabolic_age", "years"}, 229: {"withings_esc", "µS"},
+	147: {"urine_ph", "pH"}, 148: {"urine_specific_gravity", "ratio"}, 151: {"urine_nitrites", "µmol/L"},
+	204: {"urine_ketones", "mmol/L"}, 205: {"urine_vitamin_c", "mmol/L"}, 248: {"urine_calcium", "mmol/L"},
+	249: {"urine_creatinine", "mmol/L"}, 251: {"urine_calcium_creatinine_ratio", "mmol/mmol"},
 }
 
 // segments maps the position of a segmental measure (173–175) to its code suffix.
 var segments = map[int]string{2: "_right_arm", 3: "_left_arm", 10: "_left_leg", 11: "_right_leg", 12: "_trunk"}
 
-// rawMeastypes are documented types kept in raw only (docs/providers/withings.md#measures-getmeas):
-// 130 and 139 are AFib classifications, and no catalogue event fits them yet.
-var rawMeastypes = map[int]bool{130: true, 139: true}
+// afibEvents maps the AFib classification types to their events: the value is a category 0 to 13
+// (catalog.AfibCategories), not a quantity.
+var afibEvents = map[int]string{130: "afib_ecg_result", 139: "afib_ppg_result"}
 
 // maxMeasureDate is 9999-12-31T23:59:59Z: later instants do not marshal as RFC 3339 and
 // eventually overflow timestamptz, so a record dated past it is refused, not written.
@@ -49,7 +52,7 @@ var groupKinds = []string{"bp_reading", "body_composition"}
 func Normalizers() []normalize.Normalizer {
 	return []normalize.Normalizer{Normalizer{},
 		streamNormalizer{StreamActivity, 1, normalizeActivity},
-		streamNormalizer{StreamIntraday, 1, normalizeIntraday},
+		streamNormalizer{StreamIntraday, 2, normalizeIntraday},
 		streamNormalizer{StreamSleep, 1, normalizeSleep}}
 }
 
@@ -78,7 +81,7 @@ func (n streamNormalizer) Normalize(_ context.Context, raw normalize.RawPayload,
 type Normalizer struct{}
 
 func (Normalizer) ID() string                    { return StreamMeasures }
-func (Normalizer) Version() int                  { return 2 }
+func (Normalizer) Version() int                  { return 3 }
 func (Normalizer) Accepts(stream, _ string) bool { return stream == StreamMeasures }
 
 type rawGroup struct {
@@ -182,7 +185,17 @@ func (Normalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ norma
 			out.Warnings = append(out.Warnings, normalize.Warning{Code: code, Detail: "type " + strconv.Itoa(m.Type)})
 		}
 		switch {
-		case rawMeastypes[m.Type]:
+		case afibEvents[m.Type] != "":
+			code := afibEvents[m.Type]
+			cat := int(decimal(m.Value, m.Unit))
+			if cat < 0 || cat >= len(catalog.AfibCategories) || seen[code] {
+				warn("unknown_afib_category")
+				continue
+			}
+			seen[code] = true
+			ectx, _ := json.Marshal(map[string]int{"category": cat})
+			out.Events = append(out.Events, normalize.Event{Code: code, Start: at, Level: catalog.AfibCategories[cat], Context: ectx,
+				Flags: flags, Device: dev, Origin: origin, Key: normalize.Key{RecordType: "measuregrp", ExternalID: ext, Component: code}})
 			continue
 		case !ok:
 			warn("unknown_meastype")

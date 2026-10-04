@@ -20,7 +20,7 @@ import (
 const (
 	activityFields = "steps,distance,elevation,soft,moderate,intense,active,calories,totalcalories," +
 		"hr_average,hr_min,hr_max,hr_zone_0,hr_zone_1,hr_zone_2,hr_zone_3"
-	intradayFields = "steps,elevation,calories,distance,stroke,pool_lap,duration,heart_rate,spo2_auto,rr,rmssd,sdnn1,hrv_quality"
+	intradayFields = "steps,elevation,calories,distance,stroke,pool_lap,duration,heart_rate,spo2_auto,rr,rmssd,sdnn1,hrv_quality,core_body_temperature"
 
 	intradayFirst   = 7 * 24 * time.Hour // the first intraday sync; older days are a backfill
 	intradayOverlap = 6 * time.Hour      // re-fetched each run: devices upload late
@@ -226,7 +226,8 @@ func localDay(date, tz string) (start, end time.Time, z normalize.Zone, err erro
 }
 
 // intradayValues maps getintradayactivity fields: interval fields cover [t, t+duration), the
-// others are samples at t. RMSSD and SDNN are Withings' few-second and 1-minute windows.
+// others are samples at t. RMSSD and SDNN are Withings' few-second and 1-minute windows; the
+// core body temperature is an estimate, never body_temperature.
 var intradayValues = []struct {
 	field, metric, unit string
 	interval            bool
@@ -236,6 +237,7 @@ var intradayValues = []struct {
 	{"stroke", "swim_strokes", "count", true}, {"heart_rate", "heart_rate", "bpm", false},
 	{"spo2_auto", "spo2", "%", false}, {"rr", "respiratory_rate", "breaths/min", false},
 	{"rmssd", "hrv_rmssd", "ms", false}, {"sdnn1", "hrv_sdnn", "ms", false},
+	{"core_body_temperature", "core_body_temperature_estimated", "°C", false},
 }
 
 // normalizeIntraday turns one hour record into intervals and samples, keyed by timestamp.

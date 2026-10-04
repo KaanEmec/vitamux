@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "withings.intraday",
-  "version": 1,
+  "version": 2,
   "output": {
     "devices": [
       {
@@ -145,6 +145,19 @@
           "record_type": "intraday",
           "external_id": "1735714920",
           "component": "swim_strokes"
+        }
+      },
+      {
+        "metric": "core_body_temperature_estimated",
+        "kind": "sample",
+        "start": "2025-01-01T07:02:30Z",
+        "value": 36.8,
+        "unit": "°C",
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "intraday",
+          "external_id": "1735714950",
+          "component": "core_body_temperature_estimated"
         }
       }
     ],

@@ -86,6 +86,11 @@ var NoBuiltin = func() map[string]string {
 		"garmin_sweat_loss", "garmin_sleep_movement"} {
 		m[code] = "a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone"
 	}
+	// The Withings U-Scan and core body temperature codes of J25.2 and J25.3.
+	for _, code := range []string{"urine_ph", "urine_specific_gravity", "urine_nitrites", "urine_ketones", "urine_vitamin_c",
+		"urine_calcium", "urine_creatinine", "urine_calcium_creatinine_ratio", "core_body_temperature_estimated"} {
+		m[code] = "added with the Withings mappings; no researched ladder: uses the default rule"
+	}
 	return m
 }()
 

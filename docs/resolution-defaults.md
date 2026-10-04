@@ -117,6 +117,7 @@ A catalogue code with neither a built-in nor an owner rule resolves through its 
 - No built-in for `blood_glucose`: added with the Apple Health bridge (J15.2); no researched ladder: uses the default rule.
 - No built-in for `breathing_disturbances`: added with the Apple Health bridge (J15.2); no researched ladder: uses the default rule.
 - No built-in for `cadence_cycling`: added with the mapping corrections (J25.1); no researched ladder: uses the default rule.
+- No built-in for `core_body_temperature_estimated`: added with the Withings mappings; no researched ladder: uses the default rule.
 - No built-in for `daylight_time`: added with the mapping corrections (J25.1); no researched ladder: uses the default rule.
 - No built-in for `diet_caffeine`: added with the Apple Health bridge (J15.2); no researched ladder: uses the default rule.
 - No built-in for `diet_carbohydrate`: added with the Apple Health bridge (J15.2); no researched ladder: uses the default rule.
@@ -221,6 +222,14 @@ A catalogue code with neither a built-in nor an owner rule resolves through its 
 - No built-in for `stand_time`: added with the Apple Health bridge (J15.2); no researched ladder: uses the default rule.
 - No built-in for `swim_strokes`: added with the mapping corrections (J25.1); no researched ladder: uses the default rule.
 - No built-in for `underwater_depth`: added with the mapping corrections (J25.1); no researched ladder: uses the default rule.
+- No built-in for `urine_calcium`: added with the Withings mappings; no researched ladder: uses the default rule.
+- No built-in for `urine_calcium_creatinine_ratio`: added with the Withings mappings; no researched ladder: uses the default rule.
+- No built-in for `urine_creatinine`: added with the Withings mappings; no researched ladder: uses the default rule.
+- No built-in for `urine_ketones`: added with the Withings mappings; no researched ladder: uses the default rule.
+- No built-in for `urine_nitrites`: added with the Withings mappings; no researched ladder: uses the default rule.
+- No built-in for `urine_ph`: added with the Withings mappings; no researched ladder: uses the default rule.
+- No built-in for `urine_specific_gravity`: added with the Withings mappings; no researched ladder: uses the default rule.
+- No built-in for `urine_vitamin_c`: added with the Withings mappings; no researched ladder: uses the default rule.
 - No built-in for `uv_exposure`: added with the mapping corrections (J25.1); no researched ladder: uses the default rule.
 - No built-in for `waist_circumference`: added with the Apple Health bridge (J15.2); no researched ladder: uses the default rule.
 - No built-in for `walking_asymmetry`: added with the Apple Health bridge (J15.2); no researched ladder: uses the default rule.

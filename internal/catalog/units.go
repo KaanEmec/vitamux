@@ -39,11 +39,16 @@ var units = []Unit{
 	// E25 (J25.1): units of the Apple Health activity, audio and insulin types and of the Withings skin conductance.
 	mapped(base("W")), mapped(base("rpm")), mapped(base("kcal/kg/h")), mapped(base("dBA")), mapped(base("dB")),
 	mapped(base("L/min")), mapped(base("IU")), mapped(base("µS")),
+
+	// J25.2: units of the Withings U-Scan.
+	withings(base("pH")), withings(base("ratio")), withings(base("mmol/mmol")), withings(conv("µmol/L", "mmol/L", 0.001, 0)),
 }
 
 func hk(u Unit) Unit { u.Since = SeedHealthKit; return u }
 
 func mapped(u Unit) Unit { u.Since = SeedMappings; return u }
+
+func withings(u Unit) Unit { u.Since = SeedWithings; return u }
 
 func base(code string) Unit { return Unit{Code: code, Base: code, Factor: 1} }
 

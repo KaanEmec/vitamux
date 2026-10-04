@@ -1,0 +1,120 @@
+{
+  "synthetic": true,
+  "normalizer": "withings.measures",
+  "version": 3,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "synthetic-uscan-01",
+        "manufacturer": "Withings",
+        "model": "U-Scan"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "urine_ph",
+        "kind": "sample",
+        "start": "2025-01-03T10:26:40Z",
+        "value": 6.5,
+        "unit": "pH",
+        "device": "synthetic-uscan-01",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000020",
+          "component": "urine_ph"
+        }
+      },
+      {
+        "metric": "urine_specific_gravity",
+        "kind": "sample",
+        "start": "2025-01-03T10:26:40Z",
+        "value": 1.018,
+        "unit": "ratio",
+        "device": "synthetic-uscan-01",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000020",
+          "component": "urine_specific_gravity"
+        }
+      },
+      {
+        "metric": "urine_nitrites",
+        "kind": "sample",
+        "start": "2025-01-03T10:26:40Z",
+        "value": 12,
+        "unit": "µmol/L",
+        "device": "synthetic-uscan-01",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000020",
+          "component": "urine_nitrites"
+        }
+      },
+      {
+        "metric": "urine_ketones",
+        "kind": "sample",
+        "start": "2025-01-03T10:26:40Z",
+        "value": 0.8,
+        "unit": "mmol/L",
+        "device": "synthetic-uscan-01",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000020",
+          "component": "urine_ketones"
+        }
+      },
+      {
+        "metric": "urine_vitamin_c",
+        "kind": "sample",
+        "start": "2025-01-03T10:26:40Z",
+        "value": 0.05,
+        "unit": "mmol/L",
+        "device": "synthetic-uscan-01",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000020",
+          "component": "urine_vitamin_c"
+        }
+      },
+      {
+        "metric": "urine_calcium",
+        "kind": "sample",
+        "start": "2025-01-03T10:26:40Z",
+        "value": 3.5,
+        "unit": "mmol/L",
+        "device": "synthetic-uscan-01",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000020",
+          "component": "urine_calcium"
+        }
+      },
+      {
+        "metric": "urine_creatinine",
+        "kind": "sample",
+        "start": "2025-01-03T10:26:40Z",
+        "value": 9,
+        "unit": "mmol/L",
+        "device": "synthetic-uscan-01",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000020",
+          "component": "urine_creatinine"
+        }
+      },
+      {
+        "metric": "urine_calcium_creatinine_ratio",
+        "kind": "sample",
+        "start": "2025-01-03T10:26:40Z",
+        "value": 0.39,
+        "unit": "mmol/mmol",
+        "device": "synthetic-uscan-01",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000020",
+          "component": "urine_calcium_creatinine_ratio"
+        }
+      }
+    ]
+  }
+}

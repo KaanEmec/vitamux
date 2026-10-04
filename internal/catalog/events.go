@@ -21,7 +21,14 @@ var events = []Event{
 		Levels: []string{"initial_low", "initial_very_low", "repeat_low", "repeat_very_low"}},
 	{Code: "environment_audio_alert", HK: "AudioExposureEvent", Levels: []string{"momentary_limit"}},
 	{Code: "headphone_audio_alert", HK: "HeadphoneAudioExposureEvent", Levels: []string{"seven_day_limit"}},
+	{Code: "afib_ecg_result", Levels: AfibCategories},
+	{Code: "afib_ppg_result", Levels: AfibCategories},
 }
+
+// AfibCategories are the words of the Withings atrial fibrillation categories 0 to 13, the levels
+// of afib_ecg_result and afib_ppg_result.
+var AfibCategories = []string{"negative", "positive", "inconclusive", "no_signal", "other", "noise", "low_heart_rate",
+	"high_heart_rate", "inconclusive_us", "negative_normal_hr", "negative_high_hr", "positive_normal_hr", "positive_high_hr", "no_diagnosis"}
 
 // Events returns every event in docs order.
 func Events() []Event { return slices.Clone(events) }

@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "withings.intraday",
-  "version": 1,
+  "version": 2,
   "output": {
     "origins": [
       {

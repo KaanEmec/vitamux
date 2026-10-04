@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "withings.measures",
-  "version": 2,
+  "version": 3,
   "output": {
     "devices": [
       {
@@ -26,7 +26,27 @@
         }
       }
     ],
+    "events": [
+      {
+        "code": "afib_ecg_result",
+        "start": "2025-01-01T16:46:40Z",
+        "level": "positive",
+        "context": {
+          "category": 1
+        },
+        "device": "synthetic-watch-01",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000002",
+          "component": "afib_ecg_result"
+        }
+      }
+    ],
     "warnings": [
+      {
+        "code": "unknown_afib_category",
+        "detail": "type 139"
+      },
       {
         "code": "unknown_meastype",
         "detail": "type 9999"

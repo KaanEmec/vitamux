@@ -2,6 +2,7 @@
   "synthetic": true,
   "fields": {
     "entries[].data.calories": "active_energy",
+    "entries[].data.core_body_temperature": "core_body_temperature_estimated",
     "entries[].data.deviceid": "raw: device fingerprint",
     "entries[].data.distance": "distance_walk_run",
     "entries[].data.duration": "raw: length of the entry's interval in seconds",

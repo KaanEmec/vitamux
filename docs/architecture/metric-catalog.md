@@ -83,13 +83,13 @@ Home urine analysers such as the Withings U-Scan produce time series. These are 
 
 | Code | Unit | W | Phase |
 | --- | --- | --- | --- |
-| `urine_ph` | pH | 147 | later |
-| `urine_specific_gravity` | ratio | 148 | later |
-| `urine_nitrites` | µmol/L | 151 | later |
-| `urine_ketones` | mmol/L | 204 | later |
-| `urine_vitamin_c` | mmol/L | 205 | later |
-| `urine_calcium`, `urine_creatinine` | mmol/L | 248, 249 | later |
-| `urine_calcium_creatinine_ratio` | mmol/mmol | 251 | later |
+| `urine_ph` | pH | 147 | J25.2 |
+| `urine_specific_gravity` | ratio | 148 | J25.2 |
+| `urine_nitrites` | µmol/L | 151 | J25.2 |
+| `urine_ketones` | mmol/L | 204 | J25.2 |
+| `urine_vitamin_c` | mmol/L | 205 | J25.2 |
+| `urine_calcium`, `urine_creatinine` | mmol/L | 248, 249 | J25.2 |
+| `urine_calcium_creatinine_ratio` | mmol/mmol | 251 | J25.2 |
 
 ## Sleep (tables `sleep_sessions`, `sleep_stages`)
 
@@ -132,12 +132,12 @@ Implemented with their connectors ([J18.4](../plan/E18-garmin/J18.4-normalizers.
 
 ## Events
 
-These are typed events with a value or level, not numbers that can be resolved. **Decided in [ADR-0014](../adr/0014-healthkit-contract.md): one `health_events` table** (code, start/end, level or value, context), not one table per family. Implemented codes are in [metrics.md](../metrics.md#events) (`internal/catalog/events.go`); the rows below are not implemented yet.
+These are typed events with a value or level, not numbers that can be resolved. **Decided in [ADR-0014](../adr/0014-healthkit-contract.md): one `health_events` table** (code, start/end, level or value, context), not one table per family. Implemented codes are in [metrics.md](../metrics.md#events) (`internal/catalog/events.go`); the rows below are not implemented yet. Implemented ([J25.2](../plan/E25-catalogue-mappings/J25.2-withings-measures.md)): `afib_ecg_result` (W 130) and `afib_ppg_result` (W 139), the Withings AFib category (0 to 13) as level.
 
 | Family | Codes | Sources | Phase |
 | --- | --- | --- | --- |
 | ECG recording | `ecg_recording` (waveform blob, classification, average HR) | HKElectrocardiogram; Withings heart list (no job yet) | later |
-| Rhythm results | `afib_ecg_result` (W 130), `afib_ppg_result` (W 139), `irregular_rhythm_alert` | Withings; HK IrregularHeartRhythmEvent | later |
+| Rhythm results | `irregular_rhythm_alert` | HK IrregularHeartRhythmEvent | later |
 | Cycle tracking | `menstrual_flow`, `intermenstrual_bleeding`, `ovulation_test`, `pregnancy_test`, `progesterone_test`, `cervical_mucus`, `sexual_activity`, `contraceptive`, `pregnancy`, `lactation`, cycle-deviation alerts | HK categories with the same names | later |
 | Mind | `mindful_session`, `state_of_mind` (valence, labels) | HK MindfulSession, HKStateOfMind | later |
 | Hygiene | `handwashing`, `toothbrushing` | HK HandwashingEvent, ToothbrushingEvent | later |
