@@ -1,0 +1,61 @@
+{
+  "synthetic": true,
+  "normalizer": "whoop.sleep",
+  "version": 3,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "whoop:strap",
+        "type": "band",
+        "manufacturer": "WHOOP"
+      }
+    ],
+    "sleep": [
+      {
+        "start": "2026-03-02T20:00:00Z",
+        "end": "2026-03-03T03:30:00Z",
+        "zone": {
+          "offset_min": 180
+        },
+        "stages": [
+          {
+            "stage": "light",
+            "start": "2026-03-02T20:08:00Z",
+            "end": "2026-03-02T21:30:00Z"
+          },
+          {
+            "stage": "deep",
+            "start": "2026-03-02T21:30:00Z",
+            "end": "2026-03-02T22:40:00Z"
+          },
+          {
+            "stage": "awake",
+            "start": "2026-03-02T22:40:00Z",
+            "end": "2026-03-02T22:50:00Z"
+          },
+          {
+            "stage": "rem",
+            "start": "2026-03-02T22:50:00Z",
+            "end": "2026-03-02T23:40:00Z"
+          },
+          {
+            "stage": "awake",
+            "start": "2026-03-02T23:40:00Z",
+            "end": "2026-03-02T23:45:00Z"
+          },
+          {
+            "stage": "light",
+            "start": "2026-03-02T23:45:00Z",
+            "end": "2026-03-03T03:30:00Z"
+          }
+        ],
+        "latency_s": 480,
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "sleep",
+          "external_id": "00000000-0000-4000-8000-000000000004"
+        }
+      }
+    ]
+  }
+}

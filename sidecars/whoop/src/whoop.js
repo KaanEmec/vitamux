@@ -475,7 +475,7 @@ const STREAM_PAGES = {
     const c = take();
     if (!c || body === null || typeof body !== "object") throw drift("strain deep dive");
     const last = to >= end;
-    return { items: [item(`whoop.strain_deep_dive:${iso(from)}`, { start: iso(from), end: iso(to) }, c)], next_cursor: last ? null : { next: upto }, done: last, high_watermark: last ? iso(Math.min(to, end)) : null };
+    return { items: [item(`whoop.strain_deep_dive:${iso(from)}`, { start: iso(from), end: iso(to), date }, c)], next_cursor: last ? null : { next: upto }, done: last, high_watermark: last ? iso(Math.min(to, end)) : null };
   },
 
 };

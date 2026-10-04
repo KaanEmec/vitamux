@@ -531,6 +531,7 @@ func sleepTotals(s SleepSession) (basis string, t SleepTotals) {
 	if s.Totals != nil {
 		return "provider", *s.Totals
 	}
+	t.Latency = s.Latency
 	if len(s.Stages) == 0 {
 		return "stages", t
 	}
@@ -540,7 +541,9 @@ func sleepTotals(s SleepSession) (basis string, t SleepTotals) {
 	}
 	has := func(k string) bool { _, ok := sum[k]; return ok }
 	val := func(k string) *int32 { v := sum[k]; return &v }
-	t.Awake = val("awake")
+	if has("awake") {
+		t.Awake = val("awake")
+	}
 	if has("deep") || has("light") || has("rem") {
 		t.Deep, t.Light, t.REM = val("deep"), val("light"), val("rem")
 	}

@@ -120,16 +120,18 @@ type Group struct {
 }
 
 // SleepSession is one sleep episode. Totals are provider-reported; nil means sum the stages.
+// Latency (seconds in bed before sleep onset) is reported either way; nil means not reported.
 type SleepSession struct {
-	Start  time.Time    `json:"start"`
-	End    time.Time    `json:"end"`
-	Zone   Zone         `json:"zone,omitzero"`
-	Nap    bool         `json:"nap,omitempty"`
-	Stages []SleepStage `json:"stages,omitempty"`
-	Totals *SleepTotals `json:"totals,omitempty"`
-	Device string       `json:"device,omitempty"`
-	Origin string       `json:"origin,omitempty"`
-	Key    Key          `json:"key,omitzero"`
+	Start   time.Time    `json:"start"`
+	End     time.Time    `json:"end"`
+	Zone    Zone         `json:"zone,omitzero"`
+	Nap     bool         `json:"nap,omitempty"`
+	Stages  []SleepStage `json:"stages,omitempty"`
+	Totals  *SleepTotals `json:"totals,omitempty"`
+	Latency *int32       `json:"latency_s,omitempty"`
+	Device  string       `json:"device,omitempty"`
+	Origin  string       `json:"origin,omitempty"`
+	Key     Key          `json:"key,omitzero"`
 }
 
 // SleepStage is one stage interval; Stage is a sleep_stages.stage value.
