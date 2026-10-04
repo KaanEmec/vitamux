@@ -1,6 +1,8 @@
 // Explore (J21.8) on top of data-fake.ts: the inventory, catalogue, summary, trend, per-source
 // series, coverage and dashboard layout endpoints. Resolved days come from DataApi (with its
-// override scenario on 2026-09-14), plus synthetic steps. All values are synthetic.
+// override scenario on 2026-09-14), plus synthetic steps. The Day view (J26.3) reads intraday
+// buckets and raw rows (heart rate: WHOOP every 6 s, Garmin every 2 min; steps: Apple Health per
+// minute, Garmin per 15 min), one night and one workout. All values are synthetic.
 import type { Page, Route } from '@playwright/test';
 import { expect, fallbackDay, test as dataTest, type DataApi } from './data-fake';
 
@@ -8,14 +10,14 @@ export { fallbackDay };
 
 type Json = Record<string, unknown>;
 
-const metric = (code: string, section: string, unit: string, aggregation: string, group?: string) => ({
+const metric = (code: string, section: string, unit: string, aggregation: string, group?: string, intraday?: { default: string; finest: string }) => ({
 	code, section, unit, aggregation, group, kinds: ['sample'], windows: ['local_day'], strategies: ['first_available'],
-	plausible_range: [0, 1000], provider_scoped: false, selection_only: false
+	plausible_range: [0, 1000], provider_scoped: false, selection_only: false, intraday
 });
 
 export const catalogue = [
-	metric('steps', 'Activity', 'count', 'additive'),
-	metric('heart_rate', 'Heart and circulation', 'bpm', 'intensive'),
+	metric('steps', 'Activity', 'count', 'additive', undefined, { default: '30m', finest: '1m' }),
+	metric('heart_rate', 'Heart and circulation', 'bpm', 'intensive', undefined, { default: '1m', finest: 'raw' }),
 	metric('resting_heart_rate', 'Heart and circulation', 'bpm', 'daily_summary'),
 	metric('bp_systolic', 'Blood pressure', 'mmHg', 'latest', 'bp_reading'),
 	metric('spo2', 'Respiration and oxygen', '%', 'intensive'),
@@ -53,6 +55,8 @@ export class ExploreApi {
 	saved: Json[] = [];
 	/** GET /sources/series answers no sources. */
 	noSources = false;
+	/** Day view reads, in order: `resolved <window>` and `sources <grain>`. */
+	intraday: string[] = [];
 
 	constructor(
 		private page: Page,
@@ -81,7 +85,10 @@ export class ExploreApi {
 		}
 		if (path === '/resolved/summary') return this.summary(r, q);
 		if (path === '/resolved/trend') return this.trend(r, q);
-		if (path === '/sources/series') return this.sources(r, q);
+		if (path === '/sources/series') return intradayGrains.includes(q.get('grain') ?? '') ? this.fine(r, q) : this.sources(r, q);
+		if (path === '/resolved/series') return this.buckets(r, q);
+		if (path === '/resolved/sleep') return json(r, 200, { timezone: 'Europe/Amsterdam', nights: [night] });
+		if (path === '/resolved/workouts') return json(r, 200, { timezone: 'Europe/Amsterdam', rule: { ref: 'builtin:workouts:1', version: 1 }, workouts: [workout] });
 		if (path === '/coverage') return this.coverage(r, q);
 		if (path === '/settings/dashboard' && r.request().method() === 'PUT') {
 			const body = r.request().postDataJSON() as Json;
@@ -141,6 +148,45 @@ export class ExploreApi {
 		});
 	}
 
+	/** Resolved buckets of the requested size over [start, end). */
+	private buckets(r: Route, q: URLSearchParams) {
+		const size = q.get('window') ?? '1m';
+		this.intraday.push(`resolved ${size}`);
+		const steps = q.get('metric') === 'steps';
+		const ms = seconds[size] * 1000;
+		const points = [];
+		for (let t = Date.parse(q.get('start')!); t < Date.parse(q.get('end')!); t += ms) {
+			const v = steps ? 150 + (t / ms) % 7 * 20 : hr(t);
+			points.push({
+				key: new Date(t).toISOString(), start: new Date(t).toISOString(), end: new Date(t + ms).toISOString(), local_date: '2026-09-14', status: 'direct',
+				value: v, n: steps ? 1 : Math.max(1, ms / 6000), coverage: 1, sources: [steps ? 'apple_health' : 'whoop'], providers: [steps ? 'apple_health' : 'whoop'],
+				...(steps ? {} : { min: v - 4, max: v + 5 })
+			});
+		}
+		return json(r, 200, { metric: q.get('metric'), unit: steps ? 'count' : 'bpm', window: { kind: 'bucket', size }, rule: { ref: 'builtin:x:1', version: 1 }, timezone: 'Europe/Amsterdam', points, sources_used: [], has_more: false });
+	}
+
+	/** Each source at an intraday grain (never finer than it was sent) or its raw rows. */
+	private fine(r: Route, q: URLSearchParams) {
+		const grain = q.get('grain')!;
+		this.intraday.push(`sources ${grain}`);
+		const steps = q.get('metric') === 'steps';
+		const [from, to] = [Date.parse(q.get('start')!), Date.parse(q.get('end')!)];
+		const source = (provider: string, spacing: number, device: Json, origin?: Json) => {
+			const ms = grain === 'raw' ? spacing * 1000 : Math.max(seconds[grain], spacing) * 1000;
+			const points = [];
+			for (let t = Math.ceil(from / ms) * ms; t < to; t += ms) {
+				const v = steps ? 20 * (ms / 60000) : hr(t) + (provider === 'garmin' ? 3 : 0);
+				points.push({ start: new Date(t).toISOString(), local_date: '2026-09-14', n: 1, ...(grain === 'raw' ? { value: v } : steps ? { sum: v } : { mean: v, min: v - 2, max: v + 2 }) });
+			}
+			return { provider, connection_id: `conn_${provider}`, device, origin, group: provider, rule_status: 'used', spacing_s: spacing, points };
+		};
+		const sources = steps
+			? [source('apple_health', 60, watch, phoneApp), source('garmin', 900, watch)]
+			: [source('whoop', 6, { id: 'dev_3', type: 'band', model: 'Synthetic Band' }), source('garmin', 120, watch)];
+		return json(r, 200, { metric: q.get('metric'), unit: steps ? 'count' : 'bpm', aggregation: steps ? 'additive' : 'intensive', grain, timezone: 'Europe/Amsterdam', behind: false, sources, has_more: false });
+	}
+
 	private coverage(r: Route, q: URLSearchParams) {
 		const [start, end] = [q.get('start_date')!, q.get('end_date')!];
 		let n = 0;
@@ -149,6 +195,14 @@ export class ExploreApi {
 		return json(r, 200, { start_date: start, end_date: end, rows });
 	}
 }
+
+const intradayGrains = ['30s', '1m', '5m', '15m', '30m', 'raw'];
+const seconds: Record<string, number> = { '30s': 30, '1m': 60, '5m': 300, '15m': 900, '30m': 1800 };
+/** Synthetic heart rate at an instant. */
+const hr = (t: number) => Math.round(62 + 8 * Math.sin(t / 3_600_000));
+/** The night before 2026-09-14 (23:30–07:00 in Amsterdam) and an evening run (18:00–19:00). */
+const night = { local_date: '2026-09-14', result: { status: 'direct', explanation: '' }, episode: { start: '2026-09-13T21:30:00Z', end: '2026-09-14T05:00:00Z' }, members: [] };
+const workout = { local_date: '2026-09-14', start: '2026-09-14T16:00:00Z', end: '2026-09-14T17:00:00Z', sport: 'running', selected: null, explanation: 'Synthetic run.', members: [] };
 
 function addDays(d: string, n: number): string {
 	return new Date(Date.parse(`${d}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);

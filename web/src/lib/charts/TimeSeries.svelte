@@ -8,10 +8,11 @@
 	pointer, keyboard and the tooltip's value, status and providers; the others are listed under it.
 -->
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { Area, Spline } from 'layerchart/svg';
 	import { dataStatus, ringPath } from '../ui/status.ts';
 	import { sourceClass } from '../ui/source.ts';
-	import ChartFrame from './ChartFrame.svelte';
+	import ChartFrame, { type Frame } from './ChartFrame.svelte';
 	import { decimate, extent, formatInstant, formatNumber, nearest, stepRows, type Domain, type Row } from './scale.ts';
 	import type { Series, TableData, Tip, TipAction } from './types.ts';
 
@@ -29,7 +30,8 @@
 		view = $bindable(null),
 		withTime = true,
 		actions,
-		onselect
+		onselect,
+		overlay
 	}: {
 		series: Series[];
 		label: string;
@@ -50,6 +52,8 @@
 		withTime?: boolean;
 		actions?: TipAction[];
 		onselect?: (i: number) => void;
+		/** Drawn under the marks (the Day view's night, workout and now marks). */
+		overlay?: Snippet<[Frame]>;
 	} = $props();
 
 	// Sources differ by dash as well as colour; dense series (more points than pixels) stay solid.
@@ -145,6 +149,7 @@
 		{/if}
 	{/snippet}
 	{#snippet marks(f)}
+		{@render overlay?.(f)}
 		<g class="ts">
 			{#each holes as [a, b], k (k)}
 				{@const w = f.sx(b) - f.sx(a)}

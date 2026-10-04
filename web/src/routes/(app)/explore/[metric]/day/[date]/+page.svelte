@@ -1,7 +1,8 @@
 <!--
 	All-sources drilldown for one metric and local day (the day view of the metric page): the resolved result and why, an overlay
-	of every source's series, which sources the rule used, excluded or ignored, the rule's
-	inputs with their records (provenance chain, exclusion) and the day's overrides.
+	of every source's series (the Day chart for metrics with `intraday`, else each source's records),
+	which sources the rule used, excluded or ignored, the rule's inputs with their records
+	(provenance chain, exclusion) and the day's overrides.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
@@ -15,6 +16,7 @@
 	import { formatValue, metricLabel } from '#lib/data/format.ts';
 	import { readAll } from '#lib/data/paging.ts';
 	import type { Series } from '#lib/charts/types.ts';
+	import DayChart from '#lib/explore/DayChart.svelte';
 	import Skeleton from '#lib/ui/Skeleton.svelte';
 
 	type Source = Schemas['SourcesDrilldown']['sources'][number];
@@ -37,6 +39,8 @@
 	let recordIds = $state<(string | null)[]>([]);
 	let chartProblem = $state<Problem | null>(null);
 	let loadingChart = $state(true);
+	let meta = $state<Schemas['Metric'] | null>(null);
+	const intraday = $derived(meta?.intraday ? { ...meta, intraday: meta.intraday } : null);
 
 	let overrideDialog = $state<{ action: OverrideAction; inputId: string } | null>(null);
 	let provenance = $state<{ entity: ProvenanceEntity; id: string } | null>(null);
@@ -102,16 +106,19 @@
 		return parts.join(' · ');
 	}
 
+	/** Each source's records (only the first, for the provenance trace, when the Day chart draws the series). */
 	async function loadChart() {
 		loadingChart = true;
 		const series: Series[] = [];
 		const ids: (string | null)[] = [];
 		let unit = '';
+		const first = !!intraday;
 		const loaded = await Promise.all(
 			sources.map(async (s) => {
 				const q = recordsQuery(s);
 				return readAll(async (cursor) => {
-					const res = await api.GET('/api/v1/measurements', { params: { query: { ...q, cursor } } });
+					const res = await api.GET('/api/v1/measurements', { params: { query: { ...q, cursor, limit: first ? 1 : q.limit } } });
+					if (first) return { items: res.data?.measurements ?? [], problem: res.error };
 					if (res.error) return { items: [], problem: res.error };
 					return { items: res.data.measurements, next: res.data.has_more ? res.data.next_cursor : undefined };
 				});
@@ -141,7 +148,8 @@
 	}
 
 	onMount(async () => {
-		await Promise.all([loadResult(), loadSources()]);
+		const [m] = await Promise.all([api.GET('/api/v1/metrics/{code}', { params: { path: { code: metric } } }), loadResult(), loadSources()]);
+		meta = m.data ?? null;
 		await loadChart();
 	});
 
@@ -216,7 +224,9 @@
 <section class="card" aria-labelledby="chart-h">
 	<h2 id="chart-h">Every source over the day</h2>
 	<ProblemAlert problem={chartProblem} />
-	{#if loadingChart}
+	{#if intraday}
+		<DayChart {metric} meta={intraday} {date} drill={false} />
+	{:else if loadingChart}
 		<Skeleton variant="chart" label="Loading series" />
 	{:else if chart && chart.series.length}
 		{@const c = chart}

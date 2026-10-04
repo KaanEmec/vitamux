@@ -76,6 +76,20 @@ dataTest('Explore: inventory, metric detail, day view', async ({ page }) => {
 		await expect(page.getByRole('complementary', { name: 'How this is calculated' })).toBeVisible();
 		await scan(page, `/explore/[metric] (overlays and lens, ${width} px)`);
 	}
+	// The Day view with a bucket open, in both themes, wide and at 375 px.
+	for (const width of [1280, 375]) {
+		await page.setViewportSize({ width, height: 900 });
+		await page.goto('/explore/heart_rate?range=1D&end=2026-09-14');
+		const chart = page.getByRole('group', { name: /1-minute buckets/ });
+		await chart.focus();
+		await page.keyboard.press('Enter');
+		await expect(page.getByRole('region', { name: /^Bucket / })).toBeVisible();
+		await scan(page, `/explore/[metric]?range=1D (${width} px)`);
+		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+	}
+	await page.setViewportSize({ width: 1280, height: 900 });
+	await page.goto('/explore/heart_rate/day/2026-09-14');
+	await scan(page, '/explore/[metric]/day/[date] (Day chart)');
 	// The override dialog is part of the drilldown.
 	await page.goto(day);
 	await page.getByRole('button', { name: 'Set a value…' }).click();

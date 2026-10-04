@@ -9,7 +9,9 @@
 	overrides (PointPanel) and the all-sources day view, also from the chart's pinned tooltip.
 	The rule lens (lib/rules/RuleLens.svelte) is the side panel; it overlays a draft rule as a ghost.
 	When nothing resolved but sources have values, their own series are drawn with a note why.
-	Query: ?range=1W|1M|3M|1Y|All&end=YYYY-MM-DD (shareable).
+	Metrics with `intraday` add a Day range (1D) with a date stepper: the Day chart (DayChart) zooms
+	through the bucket ladder; a day on the longer ranges drills into it.
+	Query: ?range=1D|1W|1M|3M|1Y|All&end=YYYY-MM-DD (shareable).
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
@@ -22,6 +24,7 @@
 	import RangePicker, { rangeStart, type RangeKey } from '#lib/charts/RangePicker.svelte';
 	import type { Series } from '#lib/charts/types.ts';
 	import { addDays, datesDescending, isDate, metricLabel, today } from '#lib/data/format.ts';
+	import DayChart from '#lib/explore/DayChart.svelte';
 	import MetricStats from '#lib/explore/MetricStats.svelte';
 	import PointPanel from '#lib/explore/PointPanel.svelte';
 	import { Pins } from '#lib/explore/pins.svelte.ts';
@@ -43,13 +46,15 @@
 	type Days = Record<string, Resolved | undefined>;
 	type Draft = { local_date: string; value: number | null; changed: boolean }[];
 
-	const ranges: RangeKey[] = ['1W', '1M', '3M', '1Y', 'All'];
+	const longRanges: RangeKey[] = ['1W', '1M', '3M', '1Y', 'All'];
 	const rangeDays: Partial<Record<RangeKey, 7 | 30 | 90 | 365>> = { '1W': 7, '1M': 30, '3M': 90, '1Y': 365 };
 
 	const metric = $derived(page.params.metric ?? '');
+	/** 1D waits for the catalogue entry: only metrics with `intraday` have it. */
 	const range = $derived.by((): RangeKey => {
 		const r = page.url.searchParams.get('range') as RangeKey;
-		return ranges.includes(r) ? r : '3M';
+		if (r === '1D') return meta && !meta.intraday ? '3M' : '1D';
+		return longRanges.includes(r) ? r : '3M';
 	});
 	const end = $derived.by(() => {
 		const e = page.url.searchParams.get('end');
@@ -177,6 +182,8 @@
 	const label = $derived(metricLabel(metric));
 	const look = $derived(metricLook(metric, meta?.section));
 	const view = $derived(meta ? chartFor(meta) : 'line-baseline');
+	const intraday = $derived(meta?.intraday ? { ...meta, intraday: meta.intraday } : null);
+	const ranges = $derived<RangeKey[]>(intraday ? ['1D', ...longRanges] : longRanges);
 	const unit = $derived(meta?.unit ?? summary?.unit ?? trend?.unit ?? '');
 
 	const resolved = $derived.by((): Series | null => {
@@ -230,7 +237,7 @@
 	const fallbackSeries = $derived(
 		sources && from && !loading && !seriesProblem && !values.length ? sourceSeries(sources, from, end).filter((s) => s.ys.some((v) => v != null)) : []
 	);
-	const fallback = $derived(fallbackSeries.length > 0);
+	const fallback = $derived(range !== '1D' && fallbackSeries.length > 0);
 	const before = $derived.by((): Series[] => {
 		if (!previous || !span || trend) return [];
 		const p = previous;
@@ -266,12 +273,12 @@
 	});
 
 	const rule = $derived(summary?.rule ?? Object.values(daily ?? {}).find((v) => v?.rule)?.rule);
-	const spanText = $derived(from ? `${dayLabel(from)} – ${dayLabel(end)}` : '');
+	const spanText = $derived(range === '1D' ? '' : from ? `${dayLabel(from)} – ${dayLabel(end)}` : '');
 
-	function setRange(key: RangeKey) {
-		const q = new URLSearchParams({ ...Object.fromEntries(page.url.searchParams), range: key });
-		void goto(`?${q}`, { replace: true, reset: false });
+	function setQuery(q: Record<string, string>) {
+		void goto(`?${new URLSearchParams({ ...Object.fromEntries(page.url.searchParams), ...q })}`, { replace: true, reset: false });
 	}
+	const setRange = (key: RangeKey) => setQuery({ range: key });
 
 	function toggleSource(p: string) {
 		shownSources = shownSources.includes(p) ? shownSources.filter((x) => x !== p) : [...shownSources, p];
@@ -298,11 +305,12 @@
 		void goto(`?${q}`);
 	}
 
-	/** The tooltip's actions on a plotted day: its explanation and overrides (PointPanel), or its records. */
+	/** The tooltip's actions on a plotted day: its Day view, its explanation and overrides (PointPanel), or its records. */
 	const actions = $derived(
 		trend
 			? undefined
 			: [
+					...(intraday ? [{ label: 'Day view', run: (i: number) => void goto(`?${new URLSearchParams({ range: '1D', end: dates[i] })}`) }] : []),
 					{ label: 'Explain', run: select },
 					{ label: 'Override', run: select },
 					{ label: 'Raw records', run: (i: number) => void goto(`/explore/${encodeURIComponent(metric)}/day/${dates[i]}`) }
@@ -339,6 +347,13 @@
 		</div>
 		<div class="actions">
 			<RangePicker value={range} options={ranges} onchange={setRange} />
+			{#if range === '1D'}
+				<div class="stepper" role="group" aria-label="Day">
+					<button class="btn ghost" type="button" aria-label="Previous day" onclick={() => setQuery({ end: addDays(end, -1) })}>←</button>
+					<span>{dayLabel(end)}</span>
+					<button class="btn ghost" type="button" aria-label="Next day" disabled={end >= today()} onclick={() => setQuery({ end: addDays(end, 1) })}>→</button>
+				</div>
+			{/if}
 			<button class="btn" type="button" aria-pressed={compare} disabled={!span} onclick={() => (compare = !compare)}>
 				<Icon d={icons.metric} size={16} />Compare previous
 			</button>
@@ -366,7 +381,7 @@
 	<div class={['layout', lensOpen && 'with-lens']} style:--metric={look.color}>
 		<div class="main">
 			<section class="card chart" aria-label="{label} chart">
-				<MetricStats {metric} {summary} {trend} {values} days={dates.length} {span} {unit} {mean} previousMean={cmp?.previous.mean} />
+				<MetricStats {metric} {summary} {trend} {values} days={dates.length} span={range === '1D' ? 1 : span} {unit} {mean} previousMean={cmp?.previous.mean} />
 
 				<div class="toggles" role="group" aria-label="Series">
 					<span class="muted small">Show</span>
@@ -377,16 +392,22 @@
 							<span class="dot" aria-hidden="true"></span>{providerLabel(p)}
 						</button>
 					{/each}
-					<button type="button" class={['chip', !showBaseline && 'dashed']} aria-pressed={showBaseline} onclick={() => (showBaseline = !showBaseline)}>Range and mean</button>
+					<button type="button" class={['chip', !showBaseline && 'dashed']} aria-pressed={showBaseline} onclick={() => (showBaseline = !showBaseline)}>{range === '1D' ? 'Min–max band' : 'Range and mean'}</button>
 					{#if !fallback}
-						<button type="button" class={['chip', !prefs.sourceStrip && 'dashed']} aria-pressed={prefs.sourceStrip} onclick={toggleSourceStrip}>Source per day</button>
+						<button type="button" class={['chip', !prefs.sourceStrip && 'dashed']} aria-pressed={prefs.sourceStrip} onclick={toggleSourceStrip}>{range === '1D' ? 'Source per bucket' : 'Source per day'}</button>
 					{/if}
-					<span class="muted small span">{spanText}{resolved && !bars ? ' · drag on the chart to zoom' : ''}</span>
+					<span class="muted small span">{range === '1D' ? 'Drag on the chart to zoom in' : `${spanText}${resolved && !bars ? ' · drag on the chart to zoom' : ''}`}</span>
 				</div>
 
 				<ProblemAlert problem={seriesProblem} />
 				<ProblemAlert problem={sourcesProblem} />
-				{#if loading}
+				{#if range === '1D'}
+					{#if intraday}
+						<DayChart {metric} meta={intraday} date={end} shown={shownSources} band={showBaseline} strip={prefs.sourceStrip} />
+					{:else}
+						<Skeleton variant="chart" label="Loading values" />
+					{/if}
+				{:else if loading}
 					<Skeleton variant="chart" label="Loading values" />
 				{:else if resolved && values.length}
 					{#if bars}
@@ -529,6 +550,12 @@
 		flex-wrap: wrap;
 		align-items: center;
 		gap: var(--space-2);
+	}
+	.stepper {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-1);
+		font-size: var(--text-sm);
 	}
 	.lens-btn {
 		color: var(--color-link);

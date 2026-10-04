@@ -118,11 +118,14 @@
 	const tipLeft = $derived(active >= 0 ? m.left + sx(xs[active]) : 0);
 	const hint = $derived(actions.length ? 'Click to pin, Enter to open' : onselect ? 'Click or press Enter for details' : undefined);
 
-	// "vx-chart-render": from receiving data to the next paint, once the width is known.
+	// "vx-chart-render": from receiving data to the next paint, once the width is known. New
+	// points (a zoom that loads finer buckets) drop the active one: its index means another point.
 	let start = 0;
 	$effect.pre(() => {
 		void xs;
 		start = performance.now();
+		active = -1;
+		pinned = false;
 	});
 	$effect(() => {
 		void xs;

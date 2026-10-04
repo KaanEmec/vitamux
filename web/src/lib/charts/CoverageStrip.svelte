@@ -1,6 +1,6 @@
 <!--
 	Coverage per source and day: one row per source (its stable colour), one cell per day from
-	`start`, shaded by the share of hours with data (0–1). A row with `sources` is a source-per-window
+	`start` (or per `noun`, e.g. the Day view's buckets), shaded by the share of hours with data (0–1). A row with `sources` is a source-per-window
 	strip instead, as wide as its container: each cell takes the colour of the source behind that
 	day's value (null: none), with a key under it. Each row has a text summary and every cell a
 	tooltip, so the value never depends on colour alone.
@@ -11,7 +11,20 @@
 	import { addDays } from '../data/format.ts';
 
 	type Row = { label: string; days: number[]; sources?: (string | null)[] };
-	let { rows, start, caption }: { rows: Row[]; start: string; caption: string } = $props();
+	let {
+		rows,
+		start,
+		caption,
+		noun = 'days',
+		cellLabel = (i: number) => addDays(start, i)
+	}: {
+		rows: Row[];
+		start: string;
+		caption: string;
+		/** What a cell is ("buckets" on the Day view). */
+		noun?: string;
+		cellLabel?: (i: number) => string;
+	} = $props();
 
 	const cell = 6;
 	const gap = 1;
@@ -26,10 +39,10 @@
 	};
 	const summary = (r: Row) =>
 		r.sources
-			? `${r.label}: ${[...tally(r).map(([s, n]) => `${providerLabel(s)} ${n}`), `none ${r.sources.filter((s) => !s).length}`].join(', ')} of ${r.days.length} days`
-			: `${r.label}: data on ${daysWithData(r)} of ${r.days.length} days`;
+			? `${r.label}: ${[...tally(r).map(([s, n]) => `${providerLabel(s)} ${n}`), `none ${r.sources.filter((s) => !s).length}`].join(', ')} of ${r.days.length} ${noun}`
+			: `${r.label}: data on ${daysWithData(r)} of ${r.days.length} ${noun}`;
 	const cellTitle = (r: Row, i: number, c: number) =>
-		`${addDays(start, i)}: ${r.sources ? (r.sources[i] ? providerLabel(r.sources[i]) : 'no value') : `${Math.round((c || 0) * 100)}%`}`;
+		`${cellLabel(i)}: ${r.sources ? (r.sources[i] ? providerLabel(r.sources[i]) : 'no value') : `${Math.round((c || 0) * 100)}%`}`;
 </script>
 
 <figure class="coverage">
@@ -52,7 +65,7 @@
 					</rect>
 				{/each}
 			</svg>
-			<span class="summary muted">{daysWithData(r)}/{r.days.length} d</span>
+			<span class="summary muted">{daysWithData(r)}/{r.days.length}{noun === 'days' ? ' d' : ''}</span>
 			{#if r.sources}
 				<span class="key" aria-hidden="true">
 					{#each tally(r) as [s] (s)}<span class={sourceClass(s)}><i></i>{providerLabel(s)}</span>{/each}
