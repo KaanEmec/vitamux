@@ -1,0 +1,21 @@
+{
+  "synthetic": true,
+  "fields": {
+    "response.calendarDate": "raw: identifier (resting HR daily key)",
+    "response.endTimestampGMT": "raw: timestamp that sets the row end",
+    "response.endTimestampLocal": "raw: unused local time (offset comes from the start)",
+    "response.heartRateValueDescriptors[].index": "raw: column descriptor of the values array",
+    "response.heartRateValueDescriptors[].key": "raw: column descriptor of the values array",
+    "response.heartRateValues[][]": "heart_rate",
+    "response.lastSevenDaysAvgRestingHeartRate": "raw: derivable from stored rows",
+    "response.maxHeartRate": "raw: derivable from stored rows",
+    "response.minHeartRate": "raw: derivable from stored rows",
+    "response.restingHeartRate": "resting_heart_rate",
+    "response.startTimestampGMT": "raw: timestamp that sets the row time",
+    "response.startTimestampLocal": "raw: local time that sets the zone offset",
+    "response.syntheticNewSection.enabled": "raw: unknown new field (drift fixture)",
+    "response.syntheticNewSection.values[]": "raw: unknown new field (drift fixture)",
+    "response.userProfilePK": "raw: identifier",
+    "unit.date": "raw: identifier (request day)"
+  }
+}

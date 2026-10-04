@@ -1,0 +1,22 @@
+{
+  "synthetic": true,
+  "fields": {
+    "response.header.deep_dive_score_type": "raw: screen layout and display text",
+    "response.header.end_icon": "raw: screen layout and display text",
+    "response.header.end_item": "raw: screen layout and display text",
+    "response.header.title": "raw: screen layout and display text",
+    "response.metadata": "raw: screen layout and display text",
+    "response.sections": "raw: container, read through its fields",
+    "response.sections[].id": "raw: screen layout and display text",
+    "response.sections[].items[].content.metrics": "raw: container, read through its fields",
+    "response.sections[].items[].content.metrics[].id": "raw: identifier (selects the steps tile)",
+    "response.sections[].items[].content.metrics[].status": "steps",
+    "response.sections[].items[].content.metrics[].status_type": "raw: screen layout and display text",
+    "response.sections[].items[].content.metrics[].title": "raw: screen layout and display text",
+    "response.sections[].items[].content.score_display": "raw: screen layout and display text",
+    "response.sections[].items[].content.title": "raw: screen layout and display text",
+    "response.sections[].items[].type": "raw: screen layout and display text",
+    "unit.end": "raw: bounds the local day of the steps row",
+    "unit.start": "raw: bounds the local day of the steps row"
+  }
+}

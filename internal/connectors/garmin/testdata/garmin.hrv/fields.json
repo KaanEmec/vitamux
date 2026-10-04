@@ -1,0 +1,28 @@
+{
+  "synthetic": true,
+  "fields": {
+    "response": "raw: empty day (no data, no output)",
+    "response.endTimestampGMT": "raw: derivable from stored rows",
+    "response.endTimestampLocal": "raw: derivable from stored rows",
+    "response.hrvReadings[].hrvValue": "hrv_rmssd",
+    "response.hrvReadings[].readingTimeGMT": "raw: timestamp that sets the row time",
+    "response.hrvReadings[].readingTimeLocal": "raw: local time that sets the zone offset",
+    "response.hrvSummary.baseline.balancedLow": "raw: baseline range",
+    "response.hrvSummary.baseline.balancedUpper": "raw: baseline range",
+    "response.hrvSummary.baseline.lowUpper": "raw: baseline range",
+    "response.hrvSummary.baseline.markerValue": "raw: baseline range",
+    "response.hrvSummary.calendarDate": "raw: identifier (nightly value key)",
+    "response.hrvSummary.createTimeStamp": "raw: provider bookkeeping time",
+    "response.hrvSummary.feedbackPhrase": "raw: baseline/UI text",
+    "response.hrvSummary.lastNight5MinHigh": "raw: derivable from stored rows",
+    "response.hrvSummary.lastNightAvg": "hrv_rmssd_nightly",
+    "response.hrvSummary.status": "raw: baseline/UI text",
+    "response.hrvSummary.weeklyAvg": "raw: derivable from stored rows",
+    "response.sleepEndTimestampGMT": "raw: sleep window (stored in sleep_sessions by garmin.sleep)",
+    "response.sleepStartTimestampGMT": "raw: sleep window (stored in sleep_sessions by garmin.sleep)",
+    "response.startTimestampGMT": "raw: timestamp that sets the zone offset with the local start",
+    "response.startTimestampLocal": "raw: local time that sets the zone offset",
+    "response.userProfilePk": "raw: identifier",
+    "unit.date": "raw: identifier (request day)"
+  }
+}

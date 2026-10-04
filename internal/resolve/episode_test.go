@@ -326,3 +326,22 @@ func TestResolveEpisodeCodes(t *testing.T) {
 		t.Errorf("mean unstaged = %s %v missing %v", res.Status, res.Components, res.Missing)
 	}
 }
+
+// unknown, restless and out_of_bed stages are no sleep: unknown counts as neither asleep nor awake,
+// restless as in bed.
+func TestFragValueIgnoresNonSleepStages(t *testing.T) {
+	s := instant("2026-06-14T22:00:00Z")
+	at := func(min int) time.Time { return s.Add(time.Duration(min) * time.Minute) }
+	asleep, awake := int32(3600), int32(300)
+	f := SleepInput{Start: s, End: at(100), HasStages: true, Totals: normalize.SleepTotals{Asleep: &asleep, Awake: &awake},
+		Stages: []normalize.SleepStage{
+			{Stage: "unknown", Start: s, End: at(10)}, {Stage: "light", Start: at(10), End: at(70)},
+			{Stage: "restless", Start: at(70), End: at(80)}, {Stage: "awake", Start: at(80), End: at(85)},
+			{Stage: "out_of_bed", Start: at(85), End: at(100)}}}
+	for code, want := range map[string]float64{"sleep_total": 3600, "sleep_awake": 300, "sleep_in_bed": 6000,
+		"sleep_latency": 600, "sleep_waso": 0, "sleep_unspecified": 0} {
+		if got, st := fragValue(f, code); st != StatusValid || got != want {
+			t.Errorf("%s = %v (%s), want %v", code, got, st, want)
+		}
+	}
+}

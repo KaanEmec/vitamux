@@ -1189,7 +1189,10 @@ const (
 	Deep              SleepStageStage = "deep"
 	InBed             SleepStageStage = "in_bed"
 	Light             SleepStageStage = "light"
+	OutOfBed          SleepStageStage = "out_of_bed"
 	Rem               SleepStageStage = "rem"
+	Restless          SleepStageStage = "restless"
+	Unknown           SleepStageStage = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the SleepStageStage enum.
@@ -1205,7 +1208,13 @@ func (e SleepStageStage) Valid() bool {
 		return true
 	case Light:
 		return true
+	case OutOfBed:
+		return true
 	case Rem:
+		return true
+	case Restless:
+		return true
+	case Unknown:
 		return true
 	default:
 		return false

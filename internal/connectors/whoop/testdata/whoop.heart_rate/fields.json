@@ -1,0 +1,10 @@
+{
+  "synthetic": true,
+  "fields": {
+    "response.vals": "raw: unrecognised field, not read",
+    "response.values[].data": "heart_rate",
+    "response.values[].time": "raw: timestamp that sets the row time",
+    "unit.end": "raw: sync window bounds",
+    "unit.start": "raw: sync window bounds"
+  }
+}

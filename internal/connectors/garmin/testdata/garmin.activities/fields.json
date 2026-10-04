@@ -1,0 +1,30 @@
+{
+  "synthetic": true,
+  "fields": {
+    "response.activityId": "raw: identifier (workout key)",
+    "response.activityName": "raw: free-text name",
+    "response.activityType.isHidden": "raw: sport taxonomy flag",
+    "response.activityType.parentTypeId": "raw: sport taxonomy id",
+    "response.activityType.typeId": "raw: sport taxonomy id",
+    "response.activityType.typeKey": "raw: stored in workouts (provider sport and sport)",
+    "response.averageHR": "raw: stored in workouts",
+    "response.calories": "raw: stored in workouts",
+    "response.deviceId": "raw: stored in workouts (device)",
+    "response.distance": "raw: stored in workouts",
+    "response.duration": "raw: stored in workouts (workout end)",
+    "response.elapsedDuration": "raw: stored in workouts (workout end)",
+    "response.elevationGain": "raw: not mapped yet: J25.5 (elevation_gain)",
+    "response.eventType.typeId": "raw: activity event label id",
+    "response.eventType.typeKey": "raw: activity event label",
+    "response.hrTimeInZone_3": "raw: not stored (heart rate zone time)",
+    "response.lapCount": "raw: not stored (laps need activity details)",
+    "response.manualActivity": "raw: provider flag",
+    "response.manufacturer": "raw: unit or label text",
+    "response.maxHR": "raw: stored in workouts",
+    "response.movingDuration": "raw: not stored (moving time)",
+    "response.startTimeGMT": "raw: stored in workouts (workout start)",
+    "response.startTimeLocal": "raw: local time that sets the zone offset",
+    "response.steps": "raw: not stored (activity steps)",
+    "unit.activity_id": "raw: identifier"
+  }
+}

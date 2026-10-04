@@ -139,6 +139,17 @@ func TestSleepTotals(t *testing.T) {
 	if tt.Deep != nil || tt.Light != nil || tt.REM != nil || *tt.Asleep != 3600 {
 		t.Errorf("unspecified: %+v", tt)
 	}
+	// unknown is neither asleep nor awake; restless and out_of_bed are not asleep either.
+	_, tt = sleepTotals(SleepSession{Stages: []SleepStage{st("light", 0, 60), st("unknown", 60, 70), st("restless", 70, 80), st("out_of_bed", 80, 90), st("awake", 90, 95)}})
+	if *tt.Asleep != 3600 || *tt.Awake != 300 {
+		t.Errorf("unknown, restless, out_of_bed: %+v", tt)
+	}
+	for _, stage := range []string{"unknown", "restless", "out_of_bed"} {
+		o := Output{Sleep: []SleepSession{{Start: at, End: at.Add(time.Hour), Stages: []SleepStage{st(stage, 0, 60)}}}}
+		if err := o.Validate(); err != nil {
+			t.Errorf("stage %s is in the vocabulary: %v", stage, err)
+		}
+	}
 	p := int32(5)
 	if basis, tt := sleepTotals(SleepSession{Totals: &SleepTotals{Deep: &p}, Stages: []SleepStage{st("deep", 0, 60)}}); basis != "provider" || *tt.Deep != 5 {
 		t.Errorf("provider totals: %s %+v", basis, tt)

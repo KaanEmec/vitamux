@@ -1,0 +1,24 @@
+{
+  "synthetic": true,
+  "fields": {
+    "response.from": "raw: request window",
+    "response.measurementSummaries[].category": "raw: baseline/UI text",
+    "response.measurementSummaries[].endDate": "raw: derivable from stored rows",
+    "response.measurementSummaries[].highSystolic": "raw: derivable from stored rows",
+    "response.measurementSummaries[].lowDiastolic": "raw: derivable from stored rows",
+    "response.measurementSummaries[].measurements[].category": "raw: baseline/UI text",
+    "response.measurementSummaries[].measurements[].diastolic": "bp_diastolic",
+    "response.measurementSummaries[].measurements[].measurementTimestampGMT": "raw: timestamp that sets the row time",
+    "response.measurementSummaries[].measurements[].measurementTimestampLocal": "raw: local time that sets the zone offset",
+    "response.measurementSummaries[].measurements[].multiMeasurement": "raw: stored in group context",
+    "response.measurementSummaries[].measurements[].notes": "raw: free-text note",
+    "response.measurementSummaries[].measurements[].pulse": "bp_pulse",
+    "response.measurementSummaries[].measurements[].sourceType": "raw: stored in group context and manual flag",
+    "response.measurementSummaries[].measurements[].systolic": "bp_systolic",
+    "response.measurementSummaries[].measurements[].version": "raw: identifier (reading key)",
+    "response.measurementSummaries[].startDate": "raw: derivable from stored rows",
+    "response.until": "raw: request window",
+    "unit.end": "raw: request window",
+    "unit.start": "raw: request window"
+  }
+}

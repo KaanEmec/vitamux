@@ -1,0 +1,18 @@
+{
+  "synthetic": true,
+  "fields": {
+    "response.avgWakingRespirationValue": "raw: derivable from stored rows",
+    "response.calendarDate": "raw: identifier",
+    "response.endTimestampGMT": "raw: timestamp that sets the zone offset with the local end",
+    "response.endTimestampLocal": "raw: local time that sets the zone offset",
+    "response.highestRespirationValue": "raw: derivable from stored rows",
+    "response.lowestRespirationValue": "raw: derivable from stored rows",
+    "response.respirationValueDescriptorsDTOList[].index": "raw: column descriptor of the values array",
+    "response.respirationValueDescriptorsDTOList[].key": "raw: column descriptor of the values array",
+    "response.respirationValuesArray[][]": "respiratory_rate",
+    "response.startTimestampGMT": "raw: timestamp that sets the zone offset with the local start",
+    "response.startTimestampLocal": "raw: local time that sets the zone offset",
+    "response.userProfilePK": "raw: identifier",
+    "unit.date": "raw: identifier (request day)"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "synthetic": true,
+  "fields": {
+    "response": "raw: empty day (no data, no output)",
+    "response.activeKilocalories": "active_energy",
+    "response.averageStressLevel": "raw: derivable from stored rows",
+    "response.bmrKilocalories": "basal_energy",
+    "response.bodyBatteryHighestValue": "raw: derivable from stored rows",
+    "response.calendarDate": "raw: identifier (daily value key)",
+    "response.displayName": "raw: identifier",
+    "response.durationInMilliseconds": "raw: derivable from stored rows",
+    "response.floorsAscended": "floors_climbed",
+    "response.includesActivityData": "raw: provider flag",
+    "response.includesCalorieConsumedData": "raw: provider flag",
+    "response.includesWellnessData": "raw: flag that skips a day without wellness data",
+    "response.netRemainingKilocalories": "raw: derivable from stored rows",
+    "response.privacyProtected": "raw: provider flag",
+    "response.restingHeartRate": "raw: stored from garmin.heart_rate (resting_heart_rate)",
+    "response.source": "raw: unit or label text",
+    "response.totalDistanceMeters": "raw: not mapped yet: J25.5 (distance_walk_run)",
+    "response.totalKilocalories": "raw: not mapped yet: J25.5 (total_energy)",
+    "response.totalSteps": "steps",
+    "response.userProfileId": "raw: identifier",
+    "response.wellnessEndTimeGmt": "raw: timestamp that sets the row end",
+    "response.wellnessEndTimeLocal": "raw: unused local time (offset comes from the start)",
+    "response.wellnessStartTimeGmt": "raw: timestamp that sets the row time",
+    "response.wellnessStartTimeLocal": "raw: local time that sets the zone offset",
+    "unit.date": "raw: identifier (request day)"
+  }
+}

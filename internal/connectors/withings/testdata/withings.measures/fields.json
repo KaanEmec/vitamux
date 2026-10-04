@@ -1,0 +1,20 @@
+{
+  "synthetic": true,
+  "fields": {
+    "measuregrp.attrib": "raw: kept in the group context; a manual or unreliable entry sets the manual_entry flag",
+    "measuregrp.category": "raw: only real measurements (1) are stored, user objectives are skipped",
+    "measuregrp.comment": "raw: free text, not stored",
+    "measuregrp.created": "raw: provider bookkeeping time",
+    "measuregrp.date": "raw: timestamp that sets the row time",
+    "measuregrp.deviceid": "raw: device fingerprint",
+    "measuregrp.grpid": "raw: identifier (external id of the group)",
+    "measuregrp.hash_deviceid": "raw: device fingerprint",
+    "measuregrp.measures[].type": "raw: selects the code (meastype table in the normalizer)",
+    "measuregrp.measures[].unit": "raw: power of ten of the value",
+    "measuregrp.measures[].value": "weight, height, fat_free_mass, body_fat_ratio, fat_mass, bp_diastolic, bp_systolic, bp_pulse, heart_rate, body_temperature, spo2, skin_temperature, muscle_mass, hydration, bone_mass, pulse_wave_velocity, vo2max, vascular_age, extracellular_water, intracellular_water, visceral_fat_index, basal_metabolic_rate",
+    "measuregrp.model": "raw: device model text",
+    "measuregrp.model_id": "raw: device type derived from the model id",
+    "measuregrp.modified": "raw: provider bookkeeping time",
+    "timezone": "raw: not used yet; the owner timezone applies"
+  }
+}

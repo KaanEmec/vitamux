@@ -1,0 +1,12 @@
+{
+  "synthetic": true,
+  "fields": {
+    "response[].activityLevelConstant": "raw: activity level flag",
+    "response[].endGMT": "raw: timestamp that sets the interval end",
+    "response[].primaryActivityLevel": "raw: activity level label",
+    "response[].pushes": "raw: not mapped yet: J25.5 (wheelchair_pushes)",
+    "response[].startGMT": "raw: timestamp that sets the row time",
+    "response[].steps": "steps",
+    "unit.date": "raw: identifier (request day)"
+  }
+}
