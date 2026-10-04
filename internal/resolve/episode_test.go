@@ -265,3 +265,64 @@ func TestAlignSleepNeedsTimezone(t *testing.T) {
 		t.Fatal("want an error without a timeline or record zone")
 	}
 }
+
+// TestResolveEpisodeCodes pins how ResolveEpisode reads one or several codes: a selecting op
+// takes every code from the selected group, a pooling op pools each code over the groups that
+// have it.
+func TestResolveEpisodeCodes(t *testing.T) {
+	a0 := unstaged(slA, "2026-06-14T21:10:00Z", "2026-06-15T04:55:00Z")
+	b0 := staged(slB, "2026-06-14T21:40:00Z", "2026-06-15T05:05:00Z")
+	relay := staged(slRelay, "2026-06-14T21:10:00Z", "2026-06-15T04:55:00Z")
+	night, err := LocalNight(date("2026-06-15"), DefaultNightAnchor, berlin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolve := func(op Op, in []SleepInput, codes ...string) WindowResult {
+		t.Helper()
+		a := align(t, sleepRule(op, nil), "2026-06-15", in...)
+		e, _ := a.Main()
+		res, err := a.ResolveEpisode(night.WithEpisode(e), e, codes, Options{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return res
+	}
+	both := []SleepInput{a0, b0, relay}
+	totalA, totalB, deepB := float64(*a0.Totals.Asleep), float64(*b0.Totals.Asleep), float64(*b0.Totals.Deep)
+
+	// Selecting: A is preferred and lacks stages; B's stages are never taken.
+	res := resolve(OpEventPriority, both, "sleep_deep")
+	if res.Status != ResultNoData || res.Selected != "a" || res.Groups[0].Status != StatusNoStageData {
+		t.Errorf("priority deep = %s selected %q group %s", res.Status, res.Selected, res.Groups[0].Status)
+	}
+	if res.Inputs.Grouped != 2 || res.Inputs.Excluded != 1 {
+		t.Errorf("inputs = %+v, want 2 grouped and 1 excluded", res.Inputs)
+	}
+	res = resolve(OpEventPriority, both, "sleep_total", "sleep_deep")
+	if res.Status != ResultDirect || res.Components["sleep_total"] != totalA || res.Missing["sleep_deep"] != StatusNoStageData {
+		t.Errorf("priority total+deep = %s %v missing %v", res.Status, res.Components, res.Missing)
+	}
+
+	// Pooling: each code pools over the groups that have it.
+	res = resolve(OpMean, both, "sleep_total")
+	if res.Status != ResultCalculated || math.Abs(res.Value-(totalA+totalB)/2) > 1e-9 {
+		t.Errorf("mean total = %s %v", res.Status, res.Value)
+	}
+	res = resolve(OpMean, both, "sleep_deep")
+	if res.Status != ResultCalculated || res.Value != deepB || res.Groups[0].Status != StatusNoStageData {
+		t.Errorf("mean deep = %s %v group a %s", res.Status, res.Value, res.Groups[0].Status)
+	}
+	res = resolve(OpMean, both, "sleep_total", "sleep_deep", "sleep_latency")
+	if res.Status != ResultCalculated || res.Value != 0 || len(res.Missing) != 0 ||
+		math.Abs(res.Components["sleep_total"]-(totalA+totalB)/2) > 1e-9 ||
+		res.Components["sleep_deep"] != deepB || res.Components["sleep_latency"] != 600 {
+		t.Errorf("mean total+deep+latency = %s %v %v missing %v", res.Status, res.Value, res.Components, res.Missing)
+	}
+
+	// Pooling without a staged group: stage codes miss as no_stage_data, others as no_data.
+	res = resolve(OpMean, []SleepInput{a0}, "sleep_total", "sleep_deep", "sleep_latency")
+	if res.Status != ResultCalculated || res.Components["sleep_total"] != totalA || len(res.Components) != 1 ||
+		res.Missing["sleep_deep"] != StatusNoStageData || res.Missing["sleep_latency"] != StatusNoData {
+		t.Errorf("mean unstaged = %s %v missing %v", res.Status, res.Components, res.Missing)
+	}
+}
