@@ -1,18 +1,19 @@
 -- Resolution reads (J09.8, internal/resolve/load.go): active canonical rows with the selector
 -- identity rules match on (docs/architecture/resolution.md#selectors-and-validation).
 
+-- name: ResolveMetricIDs :many
+SELECT id, code FROM metric_catalog WHERE code = ANY(@codes::text[]);
+
 -- name: ResolveMeasurements :many
--- Active rows of the metrics starting from from_at and before to_at. Callers pad the range so
--- intervals crossing into a window and rows of its local dates are included. metric_idx is the
--- 1-based position of the row's code in metrics; the source ids resolve through
+-- Active rows of the metrics (metric_catalog ids, so the planner sees how dense each one is)
+-- starting from from_at and before to_at. Callers pad the range so intervals crossing into a
+-- window and rows of its local dates are included. The source ids resolve through
 -- ResolveSourceIdentities, which keeps a dense series small on the wire.
-SELECT x.id, array_position(@metrics::text[], mc.code)::integer AS metric_idx, x.kind, x.start_at, x.end_at,
-  x.local_date, x.value, x.quality_flags, COALESCE(x.group_id, 0)::bigint AS group_id, x.provider_id, x.connection_id,
-  x.device_id, x.origin_id
+SELECT x.id, x.metric_id, x.kind, x.start_at, x.end_at, x.local_date, x.value, x.quality_flags,
+  COALESCE(x.group_id, 0)::bigint AS group_id, x.provider_id, x.connection_id, x.device_id, x.origin_id
 FROM measurements x
-JOIN metric_catalog mc ON mc.id = x.metric_id
 WHERE x.user_id = @user_id
-  AND x.metric_id IN (SELECT id FROM metric_catalog WHERE code = ANY(@metrics::text[]))
+  AND x.metric_id = ANY(@metric_ids::smallint[])
   AND x.start_at >= @from_at AND x.start_at < @to_at
   AND x.superseded_at IS NULL AND x.deleted_at IS NULL
 ORDER BY x.start_at, x.id;

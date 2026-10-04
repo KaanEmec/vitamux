@@ -3,7 +3,7 @@ package resolve
 import (
 	"context"
 	"encoding/json"
-	"sort"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -27,8 +27,8 @@ const KindRebuildAggregates = "rebuild_aggregates"
 const MarkSettle = time.Minute
 
 const (
-	rebuildBatch    = 1000            // marks per transaction
-	aggregateBucket = 5 * time.Minute // buckets counted in source_hourly_aggregates
+	rebuildBatch = 1000 // marks per transaction
+	rebuildChunk = 31   // local days per aggregation statement
 )
 
 // Register adds the rebuild job to the runner and the daily schedule.
@@ -38,13 +38,29 @@ func Register(runner *jobs.Runner, sch *jobs.Scheduler, d *db.DB) {
 }
 
 // RebuildJob returns the KindRebuildAggregates handler: RebuildAggregates until no settled mark
-// is left.
+// is left. Each batch commits its rebuilt hours with the consumed marks, so a restarted job goes
+// on with the marks still left; the checkpoint counts the marks consumed across attempts.
 func RebuildJob(d *db.DB) jobs.Handler {
-	return func(ctx context.Context, _ jobs.Job) error {
+	return func(ctx context.Context, j jobs.Job) error {
+		var cp struct {
+			Consumed int `json:"consumed"`
+		}
+		if len(j.Checkpoint) > 0 {
+			if err := json.Unmarshal(j.Checkpoint, &cp); err != nil {
+				return fmt.Errorf("rebuild_aggregates: checkpoint: %w", err)
+			}
+		}
 		for {
 			n, err := RebuildAggregates(ctx, d, time.Now().Add(-MarkSettle))
-			if err != nil || n < rebuildBatch {
+			if err != nil || n == 0 {
 				return err
+			}
+			cp.Consumed += n
+			if err := j.SaveCheckpoint(ctx, cp); err != nil {
+				return err
+			}
+			if n < rebuildBatch {
+				return nil
 			}
 		}
 	}
@@ -60,6 +76,9 @@ func RebuildAggregates(ctx context.Context, d *db.DB, before time.Time) (int, er
 	err := d.Tx(ctx, func(q *dbq.Queries) error {
 		marks, err := q.ClaimDirtyMarks(ctx, dbq.ClaimDirtyMarksParams{Before: before, MaxRows: rebuildBatch})
 		if err != nil {
+			return err
+		}
+		if err := q.DisableJIT(ctx); err != nil {
 			return err
 		}
 		n = len(marks)
@@ -104,15 +123,17 @@ func RebuildAggregates(ctx context.Context, d *db.DB, before time.Time) (int, er
 }
 
 // rebuildDays rebuilds the aggregates of each run of consecutive marked dates, one day wider on
-// both sides. dates are sorted.
+// both sides, in chunks of rebuildChunk days. dates are sorted.
 func rebuildDays(ctx context.Context, q *dbq.Queries, userID uuid.UUID, metricID int16, dates []time.Time, tl normalize.Timeline) error {
 	for i := 0; i < len(dates); {
 		j := i + 1
 		for j < len(dates) && !dates[j].After(dates[j-1].AddDate(0, 0, 1)) {
 			j++
 		}
-		if err := rebuildHours(ctx, q, userID, metricID, dates[i].AddDate(0, 0, -1), dates[j-1].AddDate(0, 0, 1), tl); err != nil {
-			return err
+		for from, to := dates[i].AddDate(0, 0, -1), dates[j-1].AddDate(0, 0, 1); !from.After(to); from = from.AddDate(0, 0, rebuildChunk) {
+			if err := rebuildHours(ctx, q, userID, metricID, from, timeMin(to, from.AddDate(0, 0, rebuildChunk-1)), tl); err != nil {
+				return err
+			}
 		}
 		i = j
 	}
@@ -141,107 +162,33 @@ type HourlyAggregate struct {
 	IntervalSum   float64    `json:"interval_sum"`
 	FirstAt       time.Time  `json:"first_at"`
 	LastAt        time.Time  `json:"last_at"`
-
-	means map[int64][2]float64 // while building: bucket start -> sample sum, count
 }
 
 // rebuildHours replaces the aggregates of the owner's local hours on the dates from through to.
+// The database aggregates the rows (RebuildHourlyAggregates): those starting from a day before
+// the first hour, so intervals crossing into it count. Go only lists the hours, which follow the
+// owner's timeline (DST, travel).
 func rebuildHours(ctx context.Context, q *dbq.Queries, userID uuid.UUID, metricID int16, from, to time.Time, tl normalize.Timeline) error {
-	var hours []Window
+	p := dbq.RebuildHourlyAggregatesParams{UserID: userID, MetricID: metricID}
 	for d := from; !d.After(to); d = d.AddDate(0, 0, 1) {
 		hs, err := Buckets(d, time.Hour, tl)
 		if err != nil {
 			return err
 		}
-		hours = append(hours, hs...)
+		for _, h := range hs {
+			p.HourStarts, p.HourEnds, p.LocalDates = append(p.HourStarts, h.Start), append(p.HourEnds, h.End), append(p.LocalDates, h.Date)
+		}
 	}
-	start, end := hours[0].Start, hours[len(hours)-1].End
+	if len(p.HourStarts) == 0 {
+		return nil
+	}
+	start, end := p.HourStarts[0], p.HourEnds[len(p.HourEnds)-1]
 	if err := q.DeleteHourlyAggregates(ctx, dbq.DeleteHourlyAggregatesParams{UserID: userID, MetricID: metricID, FromAt: start, ToAt: end}); err != nil {
 		return err
 	}
-	rows, err := q.AggregateRows(ctx, dbq.AggregateRowsParams{UserID: userID, MetricID: metricID, FromAt: start.Add(-24 * time.Hour), ToAt: end})
-	if err != nil {
-		return err
-	}
-	aggs := map[[2]string]*HourlyAggregate{} // (source key, hour) -> row
-	var order []*HourlyAggregate
-	get := func(row dbq.AggregateRowsRow, h Window) *HourlyAggregate {
-		key := sourceKey(row.ConnectionID, row.DeviceID, row.OriginID)
-		k := [2]string{key, h.Key}
-		a, ok := aggs[k]
-		if !ok {
-			a = &HourlyAggregate{UserID: userID, MetricID: metricID, SourceKey: key, HourStart: h.Start, LocalDate: h.Date.Format(dateLayout),
-				ConnectionID: row.ConnectionID, DeviceID: row.DeviceID, OriginID: row.OriginID,
-				MinValue: row.Value, MaxValue: row.Value, FirstAt: h.End, LastAt: h.Start, means: map[int64][2]float64{}}
-			aggs[k] = a
-			order = append(order, a)
-		}
-		a.Samples++
-		a.MinValue, a.MaxValue = min(a.MinValue, row.Value), max(a.MaxValue, row.Value)
-		return a
-	}
-	hourAt := func(t time.Time) int { // index of the hour holding t, or len(hours)
-		i := sort.Search(len(hours), func(i int) bool { return hours[i].End.After(t) })
-		if i < len(hours) && hours[i].Start.After(t) {
-			return len(hours)
-		}
-		return i
-	}
-	for _, row := range rows {
-		if row.EndAt == nil || !row.EndAt.After(row.StartAt) { // a sample counts in the hour it starts
-			i := hourAt(row.StartAt)
-			if i == len(hours) {
-				continue
-			}
-			a := get(row, hours[i])
-			b := row.StartAt.Truncate(aggregateBucket).UnixNano()
-			m := a.means[b]
-			a.means[b] = [2]float64{m[0] + row.Value, m[1] + 1}
-			a.FirstAt, a.LastAt = timeMin(a.FirstAt, row.StartAt), timeMax(a.LastAt, row.StartAt)
-			continue
-		}
-		dur := float64(row.EndAt.Sub(row.StartAt))
-		for i := hourAt(timeMax(row.StartAt, start)); i < len(hours) && hours[i].Start.Before(*row.EndAt); i++ {
-			h := hours[i]
-			lo, hi := timeMax(row.StartAt, h.Start), timeMin(*row.EndAt, h.End)
-			a := get(row, h)
-			a.IntervalSum += row.Value * float64(hi.Sub(lo)) / dur
-			for b := lo.Truncate(aggregateBucket); b.Before(hi); b = b.Add(aggregateBucket) {
-				if _, ok := a.means[b.UnixNano()]; !ok {
-					a.means[b.UnixNano()] = [2]float64{}
-				}
-			}
-			a.FirstAt, a.LastAt = timeMin(a.FirstAt, lo), timeMax(a.LastAt, hi)
-		}
-	}
-	if len(order) == 0 {
-		return nil
-	}
-	for _, a := range order {
-		a.Buckets = len(a.means)
-		for _, b := range sortedKeys(a.means) { // in order, so the float sum is reproducible
-			if m := a.means[b]; m[1] > 0 {
-				a.BucketMeanSum += m[0] / m[1]
-			}
-		}
-	}
-	batch, err := json.Marshal(order)
-	if err != nil {
-		return err
-	}
-	_, err = q.InsertHourlyAggregates(ctx, batch)
+	p.FromAt, p.ToAt = start.Add(-24*time.Hour), end
+	_, err := q.RebuildHourlyAggregates(ctx, p)
 	return err
-}
-
-// sourceKey is source_hourly_aggregates.source_key: connection/device/origin, - when missing.
-func sourceKey(conn uuid.UUID, device, origin *uuid.UUID) string {
-	id := func(u *uuid.UUID) string {
-		if u == nil {
-			return "-"
-		}
-		return u.String()
-	}
-	return conn.String() + "/" + id(device) + "/" + id(origin)
 }
 
 // HourlyAggregates returns the stored hourly aggregates of metric whose hour starts in

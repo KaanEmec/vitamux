@@ -70,6 +70,8 @@
 //     periods, overrides, rows and wear series (queries/resolve.sql), sleep and workouts for
 //     night windows and contexts, and the follow leader's results. Each local date resolves from
 //     exactly the rows a request for that date alone loads, so results never depend on the range.
+//     Rows load as the dates advance (slider), so a request holds a few days of dense rows, and
+//     every loaded instant is in the owner's zone, never the process zone.
 //
 // Cache and aggregates (J09.9, docs/architecture/resolution.md#cache-and-materialization):
 //   - Run reads closed dates from resolved_cache and computes the span of the others
@@ -77,7 +79,8 @@
 //     what a date read; the triggers of the resolution_cache migration delete rows on dirty
 //     marks, rule activation, workouts and timezone, device or origin changes.
 //   - RebuildAggregates (the rebuild_aggregates job: Register, RebuildJob) consumes
-//     resolution_dirty into source_hourly_aggregates; HourlyAggregates reads them.
+//     resolution_dirty into source_hourly_aggregates, aggregating in SQL per chunk of local days
+//     (RebuildHourlyAggregates); HourlyAggregates reads them.
 //   - Verify compares cached and live results (`vitamux resolve verify`).
 //
 // Overrides (J09.7):

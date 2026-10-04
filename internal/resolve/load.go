@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -108,6 +109,15 @@ type loader struct {
 	sleepRule *Rule
 	sleepIn   []SleepInput
 	nights    map[time.Time]SleepAlignment
+	srcs      map[srcIDs]dbq.ResolveSourceIdentitiesRow // identities loadSeries looked up
+	ids       map[string]int16                          // metric_catalog ids by code
+	zone      zoneSpan                                  // loader.local's last period
+}
+
+// srcIDs is the (provider, device, origin) of a row; uuid.Nil stands for none.
+type srcIDs struct {
+	provider       int16
+	device, origin uuid.UUID
 }
 
 // results resolves a non-sleep metric, one local date at a time. Each date sees exactly the
@@ -143,16 +153,17 @@ func (l *loader) results(ctx context.Context, v Version, ovs []Override) ([][]Re
 	if req.Kind == catalog.WindowLatest {
 		back = LatestLookback
 	}
-	s, err := l.loadSeries(ctx, sp.codes, first.Start.Add(-back), last.End.Add(24*time.Hour))
-	if err != nil {
-		return nil, err
-	}
-	wearCode, wear := "", []Input(nil)
+	end := last.End.Add(24 * time.Hour)
+	rows := &slider{end: end, load: func(ctx context.Context, from, to time.Time) (Series, error) {
+		return l.loadSeries(ctx, sp.codes, from, to)
+	}}
+	wearCode, wear := "", (*slider)(nil)
 	if q := r.Quality; q != nil && q.RequireWear != "" && !slices.Contains(sp.codes, q.RequireWear) {
 		wearCode = q.RequireWear
-		if wear, err = l.loadWear(ctx, r, wearCode, first.Start.Add(-back-WearLookback), last.End.Add(24*time.Hour)); err != nil {
-			return nil, err
-		}
+		wear = &slider{end: end, load: func(ctx context.Context, from, to time.Time) (Series, error) {
+			in, err := l.loadWear(ctx, r, wearCode, from, to)
+			return Series{wearCode: in}, err
+		}}
 	}
 
 	opt := Options{Now: req.Now}
@@ -192,9 +203,16 @@ func (l *loader) results(ctx context.Context, v Version, ovs []Override) ([][]Re
 			return nil, err
 		}
 		lo, hi := day.Start.Add(-back), day.End.Add(24*time.Hour)
-		sub := s.between(lo, hi)
+		sub, err := rows.advance(ctx, lo, hi)
+		if err != nil {
+			return nil, err
+		}
 		if wearCode != "" {
-			sub[wearCode] = between(wear, lo.Add(-WearLookback), hi)
+			w, err := wear.advance(ctx, lo.Add(-WearLookback), hi)
+			if err != nil {
+				return nil, err
+			}
+			sub[wearCode] = w[wearCode]
 		}
 		ws, err := l.windows(r, sub, sp, d)
 		if err != nil {
@@ -223,6 +241,57 @@ func (l *loader) results(ctx context.Context, v Version, ovs []Override) ([][]Re
 		out = append(out, rs)
 	}
 	return out, nil
+}
+
+// slider holds the rows of a series while a request walks its dates forward: it loads ahead in
+// spans sized to about sliderRows rows and drops the rows before the current date's, so a request
+// holds a few days of dense rows (a year back for latest windows) instead of its whole range.
+// Consecutive loads concatenate to what one load of the union returns, so results do not change.
+type slider struct {
+	load  func(ctx context.Context, from, to time.Time) (Series, error)
+	end   time.Time // never load at or past end: the last date's hi
+	s     Series
+	hi    time.Time     // rows starting before hi are loaded
+	ahead time.Duration // how far past the asked hi a load reaches; adapts to the row density
+}
+
+const sliderRows = 50_000 // rows per load the slider aims at (about 25 MiB as Input)
+
+// advance returns the rows that start in [lo, hi); lo and hi never decrease between calls.
+func (w *slider) advance(ctx context.Context, lo, hi time.Time) (Series, error) {
+	if w.s == nil || lo.After(w.hi) {
+		w.hi = lo
+	}
+	if hi.After(w.hi) {
+		to := hi.Add(w.ahead)
+		if to.After(w.end) {
+			to = timeMax(hi, w.end)
+		}
+		more, err := w.load(ctx, w.hi, to)
+		if err != nil {
+			return nil, err
+		}
+		if w.s == nil {
+			w.s = Series{}
+		}
+		n := 0
+		for code, in := range more {
+			w.s[code] = append(w.s[code], in...)
+			n += len(in)
+		}
+		w.hi = to
+		switch {
+		case n < sliderRows/2:
+			w.ahead = max(2*w.ahead, 24*time.Hour)
+		case n > 2*sliderRows:
+			w.ahead /= 2
+		}
+	}
+	for code, in := range w.s { // the dropped head is freed when append next moves the slice
+		i, _ := slices.BinarySearchFunc(in, lo, func(x Input, t time.Time) int { return x.Start.Compare(t) })
+		w.s[code] = in[i:]
+	}
+	return w.s.between(lo, hi), nil
 }
 
 // between returns the rows of s that start in [lo, hi); s holds rows in start order.
@@ -385,11 +454,11 @@ func (l *loader) loadSleep(ctx context.Context) error {
 	}
 	bySession := map[uuid.UUID][]normalize.SleepStage{}
 	for _, st := range stages {
-		bySession[st.SessionID] = append(bySession[st.SessionID], normalize.SleepStage{Stage: st.Stage, Start: st.StartAt, End: st.EndAt})
+		bySession[st.SessionID] = append(bySession[st.SessionID], normalize.SleepStage{Stage: st.Stage, Start: l.local(st.StartAt), End: l.local(st.EndAt)})
 	}
 	l.sleepIn = make([]SleepInput, len(rows))
 	for i, row := range rows {
-		l.sleepIn[i] = SleepInput{ID: row.ID, Start: row.StartAt, End: row.EndAt, Zone: normalize.Zone{OffsetMin: row.TzOffsetMin},
+		l.sleepIn[i] = SleepInput{ID: row.ID, Start: l.local(row.StartAt), End: l.local(row.EndAt), Zone: normalize.Zone{OffsetMin: row.TzOffsetMin},
 			IsNap: row.IsNap, HasStages: row.HasStages, Stages: bySession[row.ID],
 			Source: sourceOf(row.Provider, row.ConnectionID, row.DeviceID, row.DeviceType, row.DeviceModel, row.OriginKey, row.OriginName, row.Relayed, 0),
 			Totals: normalize.SleepTotals{Asleep: row.AsleepS, Deep: row.DeepS, Light: row.LightS, REM: row.RemS, Awake: row.AwakeS, Latency: row.LatencyS}}
@@ -407,42 +476,43 @@ func (l *loader) loadSleep(ctx context.Context) error {
 
 // loadSeries loads the active rows of codes that start in [from, to).
 func (l *loader) loadSeries(ctx context.Context, codes []string, from, to time.Time) (Series, error) {
-	rows, err := l.q.ResolveMeasurements(ctx, dbq.ResolveMeasurementsParams{UserID: l.req.UserID, Metrics: codes, FromAt: from, ToAt: to})
+	ids, err := l.metricIDs(ctx, codes)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := l.q.ResolveMeasurements(ctx, dbq.ResolveMeasurementsParams{UserID: l.req.UserID, MetricIds: ids, FromAt: from, ToAt: to})
 	if err != nil {
 		return nil, db.MapErr(err)
 	}
-	// Rows carry source ids; their identities are looked up once per distinct triple.
-	type ids struct {
-		provider       int16
-		device, origin uuid.UUID
+	// Rows carry source ids; their identities are looked up once per distinct triple and Run.
+	if l.srcs == nil {
+		l.srcs = map[srcIDs]dbq.ResolveSourceIdentitiesRow{}
 	}
-	idx := map[ids]int{}
+	keys := make([]srcIDs, len(rows))
 	var p dbq.ResolveSourceIdentitiesParams
-	keys := make([]int, len(rows))
+	var missing []srcIDs
 	for i, row := range rows {
-		k := ids{provider: row.ProviderID}
+		k := srcIDs{provider: row.ProviderID}
 		if row.DeviceID != nil {
 			k.device = *row.DeviceID
 		}
 		if row.OriginID != nil {
 			k.origin = *row.OriginID
 		}
-		n, ok := idx[k]
-		if !ok {
-			n = len(idx)
-			idx[k] = n
+		if _, ok := l.srcs[k]; !ok {
+			l.srcs[k] = dbq.ResolveSourceIdentitiesRow{}
+			missing = append(missing, k)
 			p.ProviderIds, p.DeviceIds, p.OriginIds = append(p.ProviderIds, k.provider), append(p.DeviceIds, k.device), append(p.OriginIds, k.origin)
 		}
-		keys[i] = n
+		keys[i] = k
 	}
-	srcs := make([]dbq.ResolveSourceIdentitiesRow, len(idx))
-	if len(idx) > 0 {
+	if len(missing) > 0 {
 		found, err := l.q.ResolveSourceIdentities(ctx, p)
 		if err != nil {
 			return nil, db.MapErr(err)
 		}
 		for _, f := range found {
-			srcs[f.I-1] = f
+			l.srcs[missing[f.I-1]] = f
 		}
 	}
 	s := Series{}
@@ -450,18 +520,47 @@ func (l *loader) loadSeries(ctx context.Context, codes []string, from, to time.T
 		s[code] = nil
 	}
 	for i, row := range rows {
-		f := srcs[keys[i]]
+		f := l.srcs[keys[i]]
 		flags := normalize.Flags(row.QualityFlags)
-		in := Input{ID: row.ID, Kind: catalog.Kind(row.Kind), Start: row.StartAt, LocalDate: row.LocalDate,
+		in := Input{ID: row.ID, Kind: catalog.Kind(row.Kind), Start: l.local(row.StartAt), LocalDate: row.LocalDate,
 			Value: row.Value, Flags: flags, GroupID: row.GroupID,
 			Source: sourceOf(f.Provider, row.ConnectionID, row.DeviceID, f.DeviceType, f.DeviceModel, f.OriginKey, f.OriginName, f.Relayed, flags)}
 		if row.EndAt != nil {
-			in.End = *row.EndAt
+			in.End = l.local(*row.EndAt)
 		}
-		code := codes[row.MetricIdx-1]
+		code := codes[slices.Index(ids, row.MetricID)]
 		s[code] = append(s[code], in)
 	}
 	return s, nil
+}
+
+// metricIDs returns the metric_catalog ids of codes, in order; an unknown code gets -1, which
+// matches no row.
+func (l *loader) metricIDs(ctx context.Context, codes []string) ([]int16, error) {
+	if l.ids == nil {
+		l.ids = map[string]int16{}
+	}
+	var missing []string
+	for _, c := range codes {
+		if _, ok := l.ids[c]; !ok {
+			missing = append(missing, c)
+			l.ids[c] = -1
+		}
+	}
+	if len(missing) > 0 {
+		rows, err := l.q.ResolveMetricIDs(ctx, missing)
+		if err != nil {
+			return nil, db.MapErr(err)
+		}
+		for _, r := range rows {
+			l.ids[r.Code] = r.ID
+		}
+	}
+	out := make([]int16, len(codes))
+	for i, c := range codes {
+		out[i] = l.ids[c]
+	}
+	return out, nil
 }
 
 // loadWear loads the wear series of quality.require_wear from from to to. Where every base bucket
@@ -482,7 +581,7 @@ func (l *loader) loadWear(ctx context.Context, r *Rule, code string, from, to ti
 	}
 	out := make([]Input, len(rows))
 	for i, row := range rows {
-		out[i] = Input{Kind: catalog.Sample, Start: row.Bucket,
+		out[i] = Input{Kind: catalog.Sample, Start: l.local(row.Bucket),
 			Source: sourceOf(row.Provider, row.ConnectionID, row.DeviceID, row.DeviceType, row.DeviceModel, row.OriginKey, row.OriginName, row.Relayed, 0)}
 	}
 	return out, nil
@@ -496,12 +595,43 @@ func (l *loader) loadWorkouts(ctx context.Context, from, to time.Time) ([]Workou
 	}
 	out := make([]WorkoutInput, len(rows))
 	for i, row := range rows {
-		out[i] = WorkoutInput{ID: row.ID, Start: row.StartAt, End: row.EndAt, Sport: row.Sport, DistanceM: row.DistanceM,
+		out[i] = WorkoutInput{ID: row.ID, Start: l.local(row.StartAt), End: l.local(row.EndAt), Sport: row.Sport, DistanceM: row.DistanceM,
 			EnergyKcal: row.EnergyKcal, AvgHRBpm: row.AvgHrBpm, MaxHRBpm: row.MaxHrBpm,
 			Source: sourceOf(row.Provider, row.ConnectionID, row.DeviceID, row.DeviceType, row.DeviceModel, row.OriginKey, row.OriginName, row.Relayed, 0)}
 	}
 	return out, nil
 }
+
+// local returns the scanned instant t in the owner's zone at t (UTC without a timeline): pgx
+// scans timestamptz in the process zone, and windows and explanations built from loaded times
+// must not depend on it.
+func (l *loader) local(t time.Time) time.Time {
+	z := &l.zone
+	if z.loc == nil || t.Before(z.from) || !t.Before(z.to) {
+		*z = zoneSpan{loc: time.UTC, from: minTime, to: maxTime}
+		i := sort.Search(len(l.tl), func(i int) bool { return l.tl[i].ValidFrom.After(t) })
+		if i > 0 { // the first period also covers everything before it
+			z.from = l.tl[i-1].ValidFrom
+		}
+		if i < len(l.tl) {
+			z.to = l.tl[i].ValidFrom
+		}
+		if name, ok := l.tl.At(t); ok {
+			if loc, err := loadLocation(name); err == nil {
+				z.loc = loc
+			}
+		}
+	}
+	return t.In(z.loc)
+}
+
+// zoneSpan is the zone of the timeline period last used by loader.local, from through to.
+type zoneSpan struct {
+	loc      *time.Location
+	from, to time.Time
+}
+
+var minTime, maxTime = time.Unix(-1<<62, 0), time.Unix(1<<62, 0)
 
 // sourceOf builds the selector identity of a row; manual means provider manual or the
 // manual_entry quality flag.

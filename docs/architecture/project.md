@@ -42,7 +42,7 @@ Targets, verified in J04.4 and J14.3 ([measured results and deviations](../resou
 
 Compose limits: `vitamux` 512 MiB, `postgres` 1 GiB, sidecars 256 MiB.
 
-Memory stays bounded through batching: normalize 5,000 rows per transaction, COPY in chunks of 10,000, streaming exports. Measured exceptions (J14.3): a full-year `rebuild_aggregates` and a cold 90-day dashboard of ten metrics load every row of their range and need 1.4–2.1 GiB, more than the 512 MiB limit; they are open deviations (D1, D2 in the report), not part of the budget.
+Memory stays bounded through batching: normalize 5,000 rows per transaction, COPY in chunks of 10,000, streaming exports. Bulk work is bounded too: `rebuild_aggregates` aggregates in SQL (a full year: 27 MiB), and resolution reads rows as it walks the dates (ten parallel cold 90-day requests: 382 MiB). Both needed 1.4–2.1 GiB when J14.3 measured them; see D1, D2 in the report.
 
 ## Deferred features
 

@@ -13,29 +13,26 @@ import (
 )
 
 const resolveMeasurements = `-- name: ResolveMeasurements :many
-
-SELECT x.id, array_position($1::text[], mc.code)::integer AS metric_idx, x.kind, x.start_at, x.end_at,
-  x.local_date, x.value, x.quality_flags, COALESCE(x.group_id, 0)::bigint AS group_id, x.provider_id, x.connection_id,
-  x.device_id, x.origin_id
+SELECT x.id, x.metric_id, x.kind, x.start_at, x.end_at, x.local_date, x.value, x.quality_flags,
+  COALESCE(x.group_id, 0)::bigint AS group_id, x.provider_id, x.connection_id, x.device_id, x.origin_id
 FROM measurements x
-JOIN metric_catalog mc ON mc.id = x.metric_id
-WHERE x.user_id = $2
-  AND x.metric_id IN (SELECT id FROM metric_catalog WHERE code = ANY($1::text[]))
+WHERE x.user_id = $1
+  AND x.metric_id = ANY($2::smallint[])
   AND x.start_at >= $3 AND x.start_at < $4
   AND x.superseded_at IS NULL AND x.deleted_at IS NULL
 ORDER BY x.start_at, x.id
 `
 
 type ResolveMeasurementsParams struct {
-	Metrics []string
-	UserID  uuid.UUID
-	FromAt  time.Time
-	ToAt    time.Time
+	UserID    uuid.UUID
+	MetricIds []int16
+	FromAt    time.Time
+	ToAt      time.Time
 }
 
 type ResolveMeasurementsRow struct {
 	ID           int64
-	MetricIdx    int32
+	MetricID     int16
 	Kind         string
 	StartAt      time.Time
 	EndAt        *time.Time
@@ -49,16 +46,14 @@ type ResolveMeasurementsRow struct {
 	OriginID     *uuid.UUID
 }
 
-// Resolution reads (J09.8, internal/resolve/load.go): active canonical rows with the selector
-// identity rules match on (docs/architecture/resolution.md#selectors-and-validation).
-// Active rows of the metrics starting from from_at and before to_at. Callers pad the range so
-// intervals crossing into a window and rows of its local dates are included. metric_idx is the
-// 1-based position of the row's code in metrics; the source ids resolve through
+// Active rows of the metrics (metric_catalog ids, so the planner sees how dense each one is)
+// starting from from_at and before to_at. Callers pad the range so intervals crossing into a
+// window and rows of its local dates are included. The source ids resolve through
 // ResolveSourceIdentities, which keeps a dense series small on the wire.
 func (q *Queries) ResolveMeasurements(ctx context.Context, arg ResolveMeasurementsParams) ([]ResolveMeasurementsRow, error) {
 	rows, err := q.db.Query(ctx, resolveMeasurements,
-		arg.Metrics,
 		arg.UserID,
+		arg.MetricIds,
 		arg.FromAt,
 		arg.ToAt,
 	)
@@ -71,7 +66,7 @@ func (q *Queries) ResolveMeasurements(ctx context.Context, arg ResolveMeasuremen
 		var i ResolveMeasurementsRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.MetricIdx,
+			&i.MetricID,
 			&i.Kind,
 			&i.StartAt,
 			&i.EndAt,
@@ -84,6 +79,38 @@ func (q *Queries) ResolveMeasurements(ctx context.Context, arg ResolveMeasuremen
 			&i.DeviceID,
 			&i.OriginID,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const resolveMetricIDs = `-- name: ResolveMetricIDs :many
+
+SELECT id, code FROM metric_catalog WHERE code = ANY($1::text[])
+`
+
+type ResolveMetricIDsRow struct {
+	ID   int16
+	Code string
+}
+
+// Resolution reads (J09.8, internal/resolve/load.go): active canonical rows with the selector
+// identity rules match on (docs/architecture/resolution.md#selectors-and-validation).
+func (q *Queries) ResolveMetricIDs(ctx context.Context, codes []string) ([]ResolveMetricIDsRow, error) {
+	rows, err := q.db.Query(ctx, resolveMetricIDs, codes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ResolveMetricIDsRow
+	for rows.Next() {
+		var i ResolveMetricIDsRow
+		if err := rows.Scan(&i.ID, &i.Code); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

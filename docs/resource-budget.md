@@ -4,7 +4,7 @@ Measured by J14.3 on the one-year synthetic dataset ([fixtures/README.md](../fix
 
 ## Verdict
 
-Routine work is inside the budget. Two operations are far over it and are recorded as deviations, not fixed here: `rebuild_aggregates` after a whole year is marked dirty, and a cold 90-day dashboard of ten metrics (see [Deviations](#deviations)).
+Routine and bulk work are inside the budget for `vitamux`. The two operations J14.3 found far over it (D1 full-year `rebuild_aggregates`, D2 cold 90-day dashboard) were fixed afterwards and re-measured with the same harness on 2026-10-04 (rows marked "after the fix"); `postgres` still peaks slightly above its own target with ten parallel cold requests (D4). See [Deviations](#deviations).
 
 | Target (core profile) | Measured | Verdict |
 | --- | --- | --- |
@@ -13,9 +13,9 @@ Routine work is inside the budget. Two operations are far over it and are record
 | Idle total ≤ 350 MiB | 203 MiB fresh; 267 MiB after sign-in | Within |
 | Idle CPU < 2 % of a core | `vitamux` 0.0 % (under 1 % in any one second), `postgres` 0.2-0.5 % | Within |
 | Peak total ≤ 900 MiB, routine work | export of the year 326 MiB; one-week `rebuild_aggregates` 254 MiB; warm dashboard 228 MiB | Within |
-| Peak total ≤ 900 MiB, bulk work | full-year `rebuild_aggregates` 1.4-1.8 GiB, OOM-killed at the 512 MiB limit; cold dashboard 1.7-2.1 GiB | **Over** (D1, D2) |
-| `postgres` peak ≤ 270 MiB | 172-228 MiB in most phases; 316-328 MiB in the full-year rebuild (one of two runs) and with ten parallel cold requests | Over in bulk work (D4) |
-| Compose limits: `vitamux` 512 MiB, `postgres` 1 GiB | `postgres` working set reached 995-1,020 MiB of 1 GiB (page cache, reclaimable; no OOM kill); `vitamux` D1, D2 | See D1, D2 |
+| Peak total ≤ 900 MiB, bulk work | after the fix: full-year `rebuild_aggregates` 27 MiB + `postgres` 193 MiB; cold dashboard, ten in parallel, 382 MiB + 285 MiB (before: 1.4-1.8 GiB, OOM-killed at 512 MiB; 1.7-2.1 GiB) | Within (D1, D2 fixed) |
+| `postgres` peak ≤ 270 MiB | 172-228 MiB in most phases; 193 MiB in the full-year rebuild after the fix; 285 MiB with ten parallel cold requests (328 MiB before) | Slightly over with ten parallel cold requests (D4) |
+| Compose limits: `vitamux` 512 MiB, `postgres` 1 GiB | `postgres` working set reached 995-1,020 MiB of 1 GiB (page cache, reclaimable; no OOM kill); `vitamux` peaks at 382 MiB after the fix | Within |
 | 1 vCPU enough | Not measured: the test VM has 2 vCPUs. Bulk work used 1.3-1.9 cores for 6-8 s | Unverified |
 | Data 1-3 GB/yr | Database 2.04 GiB after the load, 2.07 GiB with aggregates and cache; see Disk | Within |
 | Images ≈ 0.5 GB | about 465 MB (computed, see Disk) | Within |
@@ -32,14 +32,17 @@ Routine work is inside the budget. Two operations are far over it and are record
 | (a) Load by COPY (`fixtureload`, test process) | 4 m 22 s-4 m 39 s | n/a (not `vitamux`) | n/a | 172-173 MiB | 96-97 % |
 | (a) Load by `vitamux import ndjson` of the export | 10 m 52 s | 30 MiB | 9 % / 101 % | 186 MiB | 90 % |
 | (b) `rebuild_aggregates`, one week marked (57 marks) | 0.3 s | 64-82 MiB | n/a | 190 MiB | n/a |
-| (b) `rebuild_aggregates`, whole year marked (3,229 marks) | 7.8-8.4 s | **1,433-1,757 MiB** | 132 % / 179 % | 203-316 MiB | 42 % |
-| (c) Dashboard, cold, ten requests in a row | 6.9-12.3 s per round | **2,024-2,148 MiB** | 0.6-0.8 cores / 1.9 | 198-228 MiB | 69-73 % |
-| (c) Dashboard, cold, ten in parallel | 6.1-13.7 s per round | **1,740-1,905 MiB** | 0.5-0.9 cores / 1.9 | 322-328 MiB | 99-111 % |
-| (c) Dashboard, warm, ten in parallel | 42-79 ms per round | 43 MiB | negligible | 182-185 MiB | negligible |
+| (b) `rebuild_aggregates`, whole year marked (3,229 marks), after the fix | 9.4 s | 27 MiB | 1.5 % / 11 % | 193 MiB | 92 % |
+| (b) the same before the fix | 7.8-8.4 s | 1,433-1,757 MiB | 132 % / 179 % | 203-316 MiB | 42 % |
+| (c) Dashboard, cold, ten requests in a row, after the fix | 5.6-6.4 s per round | 204 MiB | 0.6 cores / 1.0 (from rusage) | 236 MiB | 66 % |
+| (c) Dashboard, cold, ten in parallel, after the fix | 4.0-4.4 s per round | 382 MiB | 0.8 cores / 1.5 (from rusage) | 285 MiB | 150 % |
+| (c) Dashboard, cold, before the fix: in a row / in parallel | 6.9-12.3 / 6.1-13.7 s per round | 2,024-2,148 / 1,740-1,905 MiB | 0.5-0.9 cores / 1.9 | 198-228 / 322-328 MiB | 69-111 % |
+| (c) Dashboard, warm, ten in parallel | 42-87 ms per round | 43-44 MiB | negligible | 182-185 MiB | negligible |
 | (d) Export of the year with raw content, and download | 43-47 s | 143-144 MiB | 39-51 % / 46-59 % | 182 MiB | 69-85 % |
 
 - Load by COPY is the J04.4 method (23,000 rows/s here, 22,500 there). `vitamux import` is the only path that loads a whole year inside the `vitamux` process, so it is the figure for its memory; it is bounded (30 MiB) but takes 2.4 times as long as COPY.
 - Rebuild peaks are whole-process maximums from `getrusage`; so are the export and idle ones. The dashboard rows are the helper process's maximums (its own idle is 17 MiB).
+- "After the fix" rows come from one run of the same harness (`VITAMUX_BUDGET_SKIP_IMPORT=1`) on the same machine and VM; the other rows were not re-measured, nor was the 512 MiB container check. The dashboard helper runs with `GOMEMLIMIT=400MiB`, so its 382 MiB is partly garbage the collector is allowed to keep. The rebuild's CPU is now in `postgres` (one core for 9 s), not in `vitamux`.
 - Run-to-run spread in the cold dashboard wall times (6.1 s to 13.7 s in parallel) came from the Docker VM's page cache, not from the code: the VM has 3.8 GiB for a 2 GiB database plus the 1 GiB limit.
 
 ## Disk
@@ -70,9 +73,9 @@ Apple M5 Pro (18 cores), 64 GiB RAM, macOS 26.6 (Darwin 25.6.0); `vitamux` and t
 
 ## Deviations
 
-- **D1. Whole-year `rebuild_aggregates` needs 1.4-1.8 GiB and is OOM-killed under the Compose limit.** In the 512 MiB container the kernel killed the process (`OOMKilled=true`, exit 137) and the job stayed leased. Cause: `rebuildHours` (`internal/resolve/aggregates.go`) loads every row of a run of consecutive marked days for one (user, metric) into memory before aggregating, so the claim batch of 1,000 marks does not bound memory: a year of `heart_rate` is 6.1 M rows. A normal sync marks a few days (7 days: 64 MiB, 0.3 s). A year is marked after `vitamux import`, `reprocess` or a backfill of that size. Fix later (not here): rebuild in bounded date chunks or aggregate in SQL. Until then a large backfill can kill the process.
-- **D2. A cold 90-day dashboard of ten metrics peaks at 1.7-2.1 GiB and takes 6-7 s on 2 vCPUs.** It is the known J09.9 result (4.5 s on 18 cores; [baseline#resolution-and-cache](benchmarks/baseline.md#resolution-and-cache)) and now with memory: resolution materializes every row of a metric's range, and the dense heart-rate based metrics (`resting_heart_rate_nocturnal`, wear gate) hold 1.5 M rows each per 90 days. Ten parallel requests multiply it. Not run under a container limit (the endpoints are not routed), but it exceeds 512 MiB by 3-4 times. Warm, it is 42-79 ms and 43 MiB, so only the first view after new data or a rule change pays. The J09.9 note stands: load only the night windows' rows for night metrics, and bound memory per request.
+- **D1 (fixed). Whole-year `rebuild_aggregates` needed 1.4-1.8 GiB and was OOM-killed under the Compose limit.** `rebuildHours` (`internal/resolve/aggregates.go`) loaded every row of a run of consecutive marked days (a year of `heart_rate` is 6.1 M rows). It now aggregates in SQL (`RebuildHourlyAggregates` in `internal/db/queries/cache.sql`), 31 local days per statement, with JIT off for the transaction: 27 MiB RSS and 9.4 s for the year, `postgres` 193 MiB; the aggregates are bit-identical to the Go builder's on the whole year. Marks are still consumed 1,000 per transaction, and the job saves a checkpoint after each.
+- **D2 (fixed). A cold 90-day dashboard of ten metrics peaked at 1.7-2.1 GiB.** Resolution loaded every row of a metric's range before resolving its first date (`resting_heart_rate_nocturnal` held 1.5 M heart-rate rows). The loader now reads rows as it walks the dates (`slider` in `internal/resolve/load.go`, about 50,000 rows per read) and drops those behind the current date, and passes metric ids to the row query so PostgreSQL plans sparse metrics with an index scan instead of a parallel seq scan (the wear-bucket query keeps its code lookup: with the dense `heart_rate` id it picked a slower seq scan). Ten parallel cold requests: 382 MiB, 4.0-4.4 s on 2 vCPUs (in a row: 204 MiB); warm unchanged at 43-44 MiB and 42-87 ms. Results are unchanged: identical values and explanations for the ten metrics over the 90 days, `resolve verify` 0 diffs; only clock times in explanations now use the owner's zone instead of the process zone. Single cold requests and warm p95 are in [baseline#resolution-and-cache](benchmarks/baseline.md#resolution-and-cache).
 - **D3. Idle RSS after a sign-in is 89 MiB, not 80.** The Argon2id password hash allocates 64 MiB (`internal/auth/password.go`) and the Go runtime kept it for the two minutes measured. The target is raised to ≤ 100 MiB; the idle total stays well under 350 MiB.
-- **D4. `postgres` private memory reached 328 MiB with ten parallel cold requests**, ten backends at once, against 270 MiB. It follows D2 and goes away with it. Its working set ran at 995-1,020 MiB of the 1 GiB limit during bulk work; that is page cache and was reclaimed without an OOM kill.
+- **D4. `postgres` private memory reaches 285 MiB with ten parallel cold requests** (328 MiB before the D2 fix), ten backends at once, against 270 MiB; the full-year rebuild now stays at 193 MiB. Its working set ran at 995-1,020 MiB of the 1 GiB limit during bulk work; that is page cache and was reclaimed without an OOM kill.
 - **D5. `vitamux import ndjson` takes 10 m 52 s for the year**, 2.4 times the COPY load (about 9,500 rows/s); memory stays at 30 MiB. No target applies; noted for restore and migration planning.
 - The "Core + one optional sidecar" row and the 1-vCPU claim are not verified (no sidecar exists in the MVP; the test VM has 2 vCPUs).
