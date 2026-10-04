@@ -393,9 +393,12 @@ func (rt *Runtime) settle(ctx context.Context, r syncRun, stream string, err err
 	)
 	switch {
 	case errors.As(err, &rl):
-		until, berr := rt.block(ctx, r, rl.RetryAfter)
-		if berr != nil {
-			return berr
+		until := time.Now().Add(rl.RetryAfter)
+		if s, _ := r.c.Describe().stream(stream); s.Interval > 0 || s.Lookback > 0 {
+			var berr error // an on-demand stream only pauses itself, not the provider's other streams
+			if until, berr = rt.block(ctx, r, rl.RetryAfter); berr != nil {
+				return berr
+			}
 		}
 		class, failures, out = ClassRateLimited, 0, jobs.RescheduleAt(until, err)
 	case errors.Is(err, ErrReauthRequired):

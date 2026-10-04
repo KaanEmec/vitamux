@@ -40,6 +40,8 @@ var units = []Unit{
 	mapped(base("W")), mapped(base("rpm")), mapped(base("kcal/kg/h")), mapped(base("dBA")), mapped(base("dB")),
 	mapped(base("L/min")), mapped(base("IU")), mapped(base("µS")),
 
+	// J25.5: running cadence.
+	{Code: "steps/min", Base: "steps/min", Factor: 1, Since: SeedGarminAct},
 	// J25.2: units of the Withings U-Scan.
 	withings(base("pH")), withings(base("ratio")), withings(base("mmol/mmol")), withings(conv("µmol/L", "mmol/L", 0.001, 0)),
 }

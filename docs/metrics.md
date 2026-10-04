@@ -35,18 +35,18 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `daylight_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day | 30m → 1m |  | TimeInDaylight |  |
 | `wheelchair_pushes` | count | interval | additive | 0 to 50000 | bucket, hour, local_day | 30m → 1m |  | PushCount |  |
 | `swim_strokes` | count | interval | additive | 0 to 100000 | bucket, hour, local_day | 30m → 1m |  | SwimmingStrokeCount |  |
-| `speed_walking` | m/s | sample | intensive | 0 to 10 | bucket, hour, local_day, local_night, sleep_episode, latest | 5m → raw |  | WalkingSpeed |  |
-| `speed_running` | m/s | sample | intensive | 0 to 20 | bucket, hour, local_day, local_night, sleep_episode, latest | 1m → raw |  | RunningSpeed |  |
-| `speed_cycling` | m/s | sample | intensive | 0 to 40 | bucket, hour, local_day, local_night, sleep_episode, latest | 1m → raw |  | CyclingSpeed |  |
-| `speed_rowing` | m/s | sample | intensive | 0 to 15 | bucket, hour, local_day, local_night, sleep_episode, latest | 1m → raw |  | RowingSpeed |  |
+| `speed_walking` | m/s | sample, interval | intensive | 0 to 10 | bucket, hour, local_day, local_night, sleep_episode, latest | 5m → raw |  | WalkingSpeed |  |
+| `speed_running` | m/s | sample, interval | intensive | 0 to 20 | bucket, hour, local_day, local_night, sleep_episode, latest | 1m → raw |  | RunningSpeed |  |
+| `speed_cycling` | m/s | sample, interval | intensive | 0 to 40 | bucket, hour, local_day, local_night, sleep_episode, latest | 1m → raw |  | CyclingSpeed |  |
+| `speed_rowing` | m/s | sample, interval | intensive | 0 to 15 | bucket, hour, local_day, local_night, sleep_episode, latest | 1m → raw |  | RowingSpeed |  |
 | `speed_paddle` | m/s | sample | intensive | 0 to 15 | bucket, hour, local_day, local_night, sleep_episode, latest | 1m → raw |  | PaddleSportsSpeed |  |
-| `cadence_cycling` | rpm | sample | intensive | 0 to 300 | bucket, hour, local_day, local_night, sleep_episode, latest | 1m → raw |  | CyclingCadence |  |
-| `power_running` | W | sample | intensive | 0 to 2000 | bucket, hour, local_day, local_night, sleep_episode, latest | 1m → raw |  | RunningPower |  |
-| `power_cycling` | W | sample | intensive | 0 to 3000 | bucket, hour, local_day, local_night, sleep_episode, latest | 1m → raw |  | CyclingPower |  |
+| `cadence_cycling` | rpm | sample, interval | intensive | 0 to 300 | bucket, hour, local_day, local_night, sleep_episode, latest | 1m → raw |  | CyclingCadence |  |
+| `power_running` | W | sample, interval | intensive | 0 to 2000 | bucket, hour, local_day, local_night, sleep_episode, latest | 1m → raw |  | RunningPower |  |
+| `power_cycling` | W | sample, interval | intensive | 0 to 3000 | bucket, hour, local_day, local_night, sleep_episode, latest | 1m → raw |  | CyclingPower |  |
 | `ftp_cycling` | W | sample | latest | 0 to 1000 | local_day, latest | - |  | CyclingFunctionalThresholdPower |  |
-| `running_stride_length` | m | sample | intensive | 0.2 to 3 | bucket, hour, local_day, local_night, sleep_episode, latest | 1m → raw |  | RunningStrideLength |  |
-| `running_vertical_oscillation` | m | sample | intensive | 0.01 to 0.5 | bucket, hour, local_day, local_night, sleep_episode, latest | 1m → raw |  | RunningVerticalOscillation |  |
-| `running_ground_contact_time` | s | sample | intensive | 0.05 to 1 | bucket, hour, local_day, local_night, sleep_episode, latest | 1m → raw |  | RunningGroundContactTime |  |
+| `running_stride_length` | m | sample, interval | intensive | 0.2 to 3 | bucket, hour, local_day, local_night, sleep_episode, latest | 1m → raw |  | RunningStrideLength |  |
+| `running_vertical_oscillation` | m | sample, interval | intensive | 0.01 to 0.5 | bucket, hour, local_day, local_night, sleep_episode, latest | 1m → raw |  | RunningVerticalOscillation |  |
+| `running_ground_contact_time` | s | sample, interval | intensive | 0.05 to 1 | bucket, hour, local_day, local_night, sleep_episode, latest | 1m → raw |  | RunningGroundContactTime |  |
 | `physical_effort` | kcal/kg/h | sample | intensive | 0 to 100 | bucket, hour, local_day, local_night, sleep_episode, latest | 1m → raw |  | PhysicalEffort |  |
 | `garmin_acute_load` | index | daily_value | daily_summary | 0 to 10000 | local_day, latest | - |  |  |  |
 | `garmin_chronic_load` | index | daily_value | daily_summary | 0 to 10000 | local_day, latest | - |  |  |  |
@@ -71,6 +71,32 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `garmin_chronic_load_low` | index | daily_value | daily_summary | 0 to 10000 | local_day, latest | - |  |  |  |
 | `garmin_chronic_load_high` | index | daily_value | daily_summary | 0 to 10000 | local_day, latest | - |  |  |  |
 | `garmin_recovery_time` | min | sample | latest | 0 to 10000 | local_day, latest | - |  |  |  |
+| `garmin_activity_avg_speed` | m/s | interval | intensive | 0 to 100 | bucket, hour, local_day, local_night, sleep_episode, latest | 5m → raw |  |  |  |
+| `garmin_activity_max_speed` | m/s | interval | latest | 0 to 100 | local_day, latest | - |  |  |  |
+| `garmin_activity_avg_power` | W | interval | intensive | 0 to 3000 | bucket, hour, local_day, local_night, sleep_episode, latest | 5m → raw |  |  |  |
+| `garmin_activity_max_power` | W | interval | latest | 0 to 5000 | local_day, latest | - |  |  |  |
+| `garmin_activity_norm_power` | W | interval | intensive | 0 to 3000 | bucket, hour, local_day, local_night, sleep_episode, latest | 5m → raw |  |  |  |
+| `garmin_activity_running_cadence` | steps/min | interval | intensive | 0 to 300 | bucket, hour, local_day, local_night, sleep_episode, latest | 5m → raw |  |  |  |
+| `garmin_activity_running_cadence_max` | steps/min | interval | latest | 0 to 400 | local_day, latest | - |  |  |  |
+| `garmin_activity_cycling_cadence_max` | rpm | interval | latest | 0 to 300 | local_day, latest | - |  |  |  |
+| `garmin_activity_temperature_min` | °C | interval | latest | -60 to 70 | local_day, latest | - |  |  |  |
+| `garmin_activity_temperature_max` | °C | interval | latest | -60 to 70 | local_day, latest | - |  |  |  |
+| `garmin_activity_elevation_loss` | m | interval | additive | 0 to 20000 | bucket, hour, local_day | 30m → 1m |  |  |  |
+| `garmin_activity_elevation_min` | m | interval | latest | -500 to 9000 | local_day, latest | - |  |  |  |
+| `garmin_activity_elevation_max` | m | interval | latest | -500 to 9000 | local_day, latest | - |  |  |  |
+| `garmin_activity_vertical_speed_max` | m/s | interval | latest | 0 to 50 | local_day, latest | - |  |  |  |
+| `garmin_activity_vertical_ratio` | % | interval | intensive | 0 to 50 | bucket, hour, local_day, local_night, sleep_episode, latest | 5m → raw |  |  |  |
+| `garmin_activity_swolf` | index | interval | intensive | 0 to 300 | bucket, hour, local_day, local_night, sleep_episode, latest | 5m → raw |  |  |  |
+| `garmin_activity_body_battery_change` | index | interval | latest | -100 to 100 | local_day, latest | - |  |  |  |
+| `garmin_activity_power_zone_1_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day | 30m → 1m |  |  |  |
+| `garmin_activity_power_zone_2_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day | 30m → 1m |  |  |  |
+| `garmin_activity_power_zone_3_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day | 30m → 1m |  |  |  |
+| `garmin_activity_power_zone_4_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day | 30m → 1m |  |  |  |
+| `garmin_activity_power_zone_5_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day | 30m → 1m |  |  |  |
+| `garmin_activity_fastest_split_1000` | s | interval | latest | 0 to 86400 | local_day, latest | - |  |  |  |
+| `garmin_activity_fastest_split_1609` | s | interval | latest | 0 to 86400 | local_day, latest | - |  |  |  |
+| `garmin_activity_fastest_split_5000` | s | interval | latest | 0 to 86400 | local_day, latest | - |  |  |  |
+| `garmin_activity_fastest_split_10000` | s | interval | latest | 0 to 86400 | local_day, latest | - |  |  |  |
 
 ## Heart and circulation
 
@@ -118,7 +144,7 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | Code | Unit | Kinds | Aggregation | Plausible | Windows | Intraday | Group | Apple HK | Withings |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `spo2` | % | sample | intensive | 50 to 100 | bucket, hour, local_day, local_night, sleep_episode, latest | 5m → raw |  | OxygenSaturation | 54 |
-| `respiratory_rate` | breaths/min | sample | intensive | 4 to 60 | bucket, hour, local_day, local_night, sleep_episode, latest | 5m → raw |  | RespiratoryRate |  |
+| `respiratory_rate` | breaths/min | sample, interval | intensive | 4 to 60 | bucket, hour, local_day, local_night, sleep_episode, latest | 5m → raw |  | RespiratoryRate |  |
 | `breathing_disturbances` | events/h | daily_value | daily_summary | 0 to 150 | local_day, latest | - |  | AppleSleepingBreathingDisturbances |  |
 | `spo2_nightly` | % | daily_value | daily_summary | 50 to 100 | local_day, latest | - |  |  |  |
 | `respiratory_rate_nightly` | breaths/min | daily_value | daily_summary | 4 to 60 | local_day, latest | - |  |  |  |
@@ -128,6 +154,8 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `peak_expiratory_flow` | L/min | sample | latest | 0 to 1000 | local_day, latest | - |  | PeakExpiratoryFlowRate |  |
 | `inhaler_uses` | count | interval | additive | 0 to 200 | bucket, hour, local_day | 30m → 1m |  | InhalerUsage |  |
 | `withings_breathing_quality` | index | daily_value | daily_summary | 0 to 100 | local_day, latest | - |  |  |  |
+| `garmin_activity_respiration_min` | breaths/min | interval | latest | 0 to 120 | local_day, latest | - |  |  |  |
+| `garmin_activity_respiration_max` | breaths/min | interval | latest | 0 to 120 | local_day, latest | - |  |  |  |
 
 ## Temperature
 
@@ -374,6 +402,7 @@ A value converts to the base unit as `value * factor + offset`.
 | L/min | L/min | 1 | 0 |
 | IU | IU | 1 | 0 |
 | µS | µS | 1 | 0 |
+| steps/min | steps/min | 1 | 0 |
 | pH | pH | 1 | 0 |
 | ratio | ratio | 1 | 0 |
 | mmol/mmol | mmol/mmol | 1 | 0 |

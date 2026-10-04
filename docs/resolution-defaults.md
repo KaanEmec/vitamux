@@ -155,8 +155,36 @@ A catalogue code with neither a built-in nor an owner rule resolves through its 
 - No built-in for `ftp_cycling`: added with the mapping corrections (J25.1); no researched ladder: uses the default rule.
 - No built-in for `fvc`: added with the mapping corrections (J25.1); no researched ladder: uses the default rule.
 - No built-in for `garmin_achievable_fitness_age`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_avg_power`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_avg_speed`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_body_battery_change`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_cycling_cadence_max`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_elevation_loss`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_elevation_max`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_elevation_min`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_fastest_split_1000`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_fastest_split_10000`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_fastest_split_1609`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_fastest_split_5000`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_max_power`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_max_speed`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
 - No built-in for `garmin_activity_moving_time`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_norm_power`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_power_zone_1_time`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_power_zone_2_time`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_power_zone_3_time`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_power_zone_4_time`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_power_zone_5_time`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_respiration_max`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_respiration_min`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_running_cadence`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_running_cadence_max`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_swolf`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_temperature_max`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_temperature_min`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
 - No built-in for `garmin_activity_training_load`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_vertical_ratio`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `garmin_activity_vertical_speed_max`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
 - No built-in for `garmin_acute_load`: a provider-scoped score with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
 - No built-in for `garmin_body_battery`: a provider-scoped score with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
 - No built-in for `garmin_body_battery_charged`: a provider-scoped score with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.

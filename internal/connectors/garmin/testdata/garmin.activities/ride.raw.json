@@ -1,0 +1,41 @@
+{
+ "synthetic": true,
+ "unit": {
+  "activity_id": 90000000002
+ },
+ "response": {
+  "activityId": 90000000002,
+  "activityName": "Synthetic ride",
+  "startTimeLocal": "2026-06-16 18:00:00",
+  "startTimeGMT": "2026-06-16 16:00:00",
+  "activityType": {
+   "typeId": 2,
+   "typeKey": "road_biking",
+   "parentTypeId": 2,
+   "isHidden": false
+  },
+  "duration": 3600.0,
+  "elapsedDuration": 3650.0,
+  "movingDuration": 3580.0,
+  "calories": 600.0,
+  "deviceId": 1000000001,
+  "manufacturer": "GARMIN",
+  "manualActivity": false,
+  "distance": 28000.0,
+  "averageHR": 135.0,
+  "maxHR": 165.0,
+  "averageSpeed": 7.8,
+  "maxSpeed": 14.2,
+  "avgPower": 180.0,
+  "maxPower": 720.0,
+  "normPower": 195.0,
+  "averageBikingCadenceInRevPerMinute": 88.0,
+  "maxBikingCadenceInRevPerMinute": 112.0,
+  "powerTimeInZone_1": 300.0,
+  "powerTimeInZone_2": 1500.0,
+  "powerTimeInZone_3": 1200.0,
+  "powerTimeInZone_4": 500.0,
+  "powerTimeInZone_5": 80.0,
+  "vO2MaxValue": 49.0
+ }
+}
