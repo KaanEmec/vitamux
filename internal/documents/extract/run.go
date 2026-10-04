@@ -380,21 +380,9 @@ func (s *Service) finish(ctx context.Context, run dbq.ExtractionRun, resp *Respo
 				return err
 			}
 			if len(resp.Raw) > 0 {
-				sealed, err := s.docs.Seal(ctx, q, run.DocumentID, "extraction_response:"+run.ID.String(), resp.Raw)
-				if errors.Is(err, documents.ErrShredded) {
-					return errGone
-				}
-				if err != nil {
+				if params.ResponseBlobSha256, err = s.storeRawResponse(ctx, q, run, resp.Raw); err != nil {
 					return err
 				}
-				info, err := s.blobs.Put(ctx, q, bytes.NewReader(sealed), blob.Plain)
-				if err != nil {
-					return err
-				}
-				if err := blob.Retain(ctx, q, info.SHA256); err != nil {
-					return err
-				}
-				params.ResponseBlobSha256 = info.SHA256
 			}
 		}
 		if failure == nil {
@@ -422,6 +410,26 @@ func (s *Service) finish(ctx context.Context, run dbq.ExtractionRun, resp *Respo
 		}
 		return q.SetDocumentStatus(ctx, dbq.SetDocumentStatusParams{Status: status, ID: run.DocumentID})
 	})
+}
+
+// storeRawResponse seals the raw provider response under the document's key and keeps it in
+// the blob store. It returns the blob hash, or errGone when the document was shredded meanwhile.
+func (s *Service) storeRawResponse(ctx context.Context, q *dbq.Queries, run dbq.ExtractionRun, raw []byte) ([]byte, error) {
+	sealed, err := s.docs.Seal(ctx, q, run.DocumentID, "extraction_response:"+run.ID.String(), raw)
+	if errors.Is(err, documents.ErrShredded) {
+		return nil, errGone
+	}
+	if err != nil {
+		return nil, err
+	}
+	info, err := s.blobs.Put(ctx, q, bytes.NewReader(sealed), blob.Plain)
+	if err != nil {
+		return nil, err
+	}
+	if err := blob.Retain(ctx, q, info.SHA256); err != nil {
+		return nil, err
+	}
+	return info.SHA256, nil
 }
 
 func insertRows(ctx context.Context, q *dbq.Queries, runID uuid.UUID, rows []documents.Row) error {
