@@ -4,10 +4,12 @@
 //
 //	go run ./tools/notices          # regenerate THIRD_PARTY_NOTICES.md (make notices)
 //	go run ./tools/notices -check   # fail on a disallowed license or a stale file (make notices-check)
+//	go run ./tools/notices -sidecars-only # only the sidecars/*/UPSTREAM.md license gate (fast)
 //
 // Output is deterministic and platform independent: Go dependencies are resolved for linux/amd64,
 // and npm entries come from the lockfile (platform-specific optional packages are listed but
-// carry no license text). Findings print package and license, never file contents.
+// carry no license text). Each sidecars/<name>/ must also carry a reviewed UPSTREAM.md
+// (sidecars.go). Findings print package and license, never file contents.
 package main
 
 import (
@@ -51,7 +53,15 @@ var copyrightRe = regexp.MustCompile(`(?im)^[ \t>*#/-]*(copyright (\(c\)|©|\d|(
 
 func main() {
 	check := flag.Bool("check", false, "verify the committed file is current instead of writing it")
+	only := flag.Bool("sidecars-only", false, "only check sidecars/*/UPSTREAM.md (fast; used by scripts/sidecar-check.sh)")
 	flag.Parse()
+	if *only {
+		if err := runSidecars(); err != nil {
+			fmt.Fprintln(os.Stderr, "notices:", err)
+			os.Exit(1)
+		}
+		return
+	}
 	if err := run(*check); err != nil {
 		fmt.Fprintln(os.Stderr, "notices:", err)
 		os.Exit(1)
@@ -59,6 +69,9 @@ func main() {
 }
 
 func run(check bool) error {
+	if err := runSidecars(); err != nil {
+		return err
+	}
 	goDeps, err := goDeps()
 	if err != nil {
 		return err
@@ -231,12 +244,7 @@ func sortDeps(d []dep) {
 // covered by the allowlist. "A OR B" needs one allowed side, "A AND B" needs both; parentheses are
 // flattened, which is exact for the common (A OR B) and A AND B shapes.
 func disallowed(groups ...[]dep) []string {
-	allowed := map[string]bool{}
-	for l := range strings.SplitSeq(allowedFile, "\n") {
-		if l = strings.TrimSpace(l); l != "" && !strings.HasPrefix(l, "#") {
-			allowed[l] = true
-		}
-	}
+	allowed := allowedSet()
 	var bad []string
 	for _, g := range groups {
 		for _, d := range g {
@@ -248,6 +256,16 @@ func disallowed(groups ...[]dep) []string {
 		}
 	}
 	return bad
+}
+
+func allowedSet() map[string]bool {
+	allowed := map[string]bool{}
+	for l := range strings.SplitSeq(allowedFile, "\n") {
+		if l = strings.TrimSpace(l); l != "" && !strings.HasPrefix(l, "#") {
+			allowed[l] = true
+		}
+	}
+	return allowed
 }
 
 func exprAllowed(expr string, allowed map[string]bool) bool {
