@@ -91,6 +91,9 @@ func metricBody(m catalog.Metric) oapi.Metric {
 	if f := resolve.RuleMetric(m.Code); f != m.Code {
 		out.Family = &f
 	}
+	if in, ok := m.Intraday(); ok {
+		out.Intraday = &oapi.Intraday{Default: oapi.IntradayDefault(in.Default), Finest: oapi.IntradayFinest(in.Finest)}
+	}
 	return out
 }
 
@@ -520,7 +523,7 @@ func (o *owner) GetResolvedDaily(ctx context.Context, req oapi.GetResolvedDailyR
 
 // ---- series
 
-var bucketSizes = map[string]bool{"1m": true, "5m": true, "15m": true, "30m": true}
+var bucketSizes = map[string]bool{"30s": true, "1m": true, "5m": true, "15m": true, "30m": true}
 
 // seriesKey is a point's position: its window start (the as-of instant for latest windows).
 func seriesKey(w resolve.Window) time.Time {
@@ -560,6 +563,16 @@ func (o *owner) GetResolvedSeries(ctx context.Context, req oapi.GetResolvedSerie
 	kind, size, draft, err := seriesWindow(prm.Metric, v, ptrVal(prm.Window))
 	if err != nil {
 		return nil, err
+	}
+	if kind == catalog.WindowBucket {
+		days := 7
+		if resolve.Duration(size).Std() <= time.Minute {
+			days = 1
+		}
+		// A local day lasts 25 hours when DST ends.
+		if prm.End.Sub(prm.Start) > time.Duration(days)*24*time.Hour+time.Hour {
+			return nil, problemErr(CodeValidationFailed, "invalid range", FieldError{Pointer: "/end", Detail: fmt.Sprintf("a %s series spans at most %d day(s)", size, days)})
+		}
 	}
 
 	z, err := o.zones(ctx)
@@ -668,7 +681,7 @@ func seriesWindow(metric string, v resolve.Version, requested string) (catalog.W
 				size = ""
 			}
 		default:
-			return "", "", nil, problemErr(CodeValidationFailed, "invalid window", FieldError{Pointer: "/window", Detail: "must be a window kind or 1m, 5m, 15m, 30m"})
+			return "", "", nil, problemErr(CodeValidationFailed, "invalid window", FieldError{Pointer: "/window", Detail: "must be a window kind or 30s, 1m, 5m, 15m, 30m"})
 		}
 	}
 	if !allowsWindow(metric, kind) {
@@ -705,9 +718,19 @@ func resolvedPoint(z *zones, metric string, rule *resolve.Rule, r resolve.Result
 		pt.Coverage = round3(r.Coverage)
 	}
 	var providers []string
+	var n int
 	for _, in := range r.Inputs {
 		if in.Selected && in.Group != "" {
 			pt.Sources = append(pt.Sources, in.Group)
+			n += in.Count
+			if in.Basis == resolve.BasisBucketMeans {
+				if pt.Min == nil || in.Min < *pt.Min {
+					pt.Min = new(in.Min)
+				}
+				if pt.Max == nil || in.Max > *pt.Max {
+					pt.Max = new(in.Max)
+				}
+			}
 			for _, s := range in.Sources {
 				if !slices.Contains(providers, s.Provider) {
 					providers = append(providers, s.Provider)
@@ -717,6 +740,9 @@ func resolvedPoint(z *zones, metric string, rule *resolve.Rule, r resolve.Result
 	}
 	if len(providers) > 0 {
 		pt.Providers = &providers
+	}
+	if len(pt.Sources) > 0 {
+		pt.N = &n
 	}
 	if len(r.Warnings) > 0 {
 		ws := make([]string, len(r.Warnings))

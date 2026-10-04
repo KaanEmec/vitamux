@@ -72,8 +72,9 @@ type ResultInput struct {
 	Components map[string]float64
 	Basis      Basis
 	Coverage   float64
-	Count      int // contributing rows (sessions for sleep)
-	Readings   int // latest-type metrics: contributing readings
+	Count      int     // contributing rows (sessions for sleep)
+	Min, Max   float64 // bucket_means basis: the lowest and highest contributing sample
+	Readings   int     // latest-type metrics: contributing readings
 	Prorated   bool
 	At         time.Time // latest contributing instant
 	// E2: the span a min or min_rolling_mean statistic picked. E3: the group is exempt from the
@@ -134,7 +135,7 @@ func BuildResult(metric string, v Version, res Resolved, computedAt time.Time) R
 	setValue := slices.ContainsFunc(res.Overrides, func(o Override) bool { return o.Action == SetValue })
 	for _, g := range res.Groups {
 		in := ResultInput{Group: g.ID, Status: g.Status, Reason: g.Reason, Basis: g.Basis, Coverage: g.Coverage,
-			Count: g.Count, Readings: g.Readings, Prorated: g.Prorated, At: g.At, SpanStart: g.SpanStart, SpanEnd: g.SpanEnd,
+			Count: g.Count, Min: g.Min, Max: g.Max, Readings: g.Readings, Prorated: g.Prorated, At: g.At, SpanStart: g.SpanStart, SpanEnd: g.SpanEnd,
 			WearExempt: g.WearExempt, WornBuckets: g.WornBuckets, Sources: g.Sources, RecordRefs: g.Refs, Sessions: g.Sessions}
 		if g.Status == StatusSelected {
 			in.Status = StatusUsed

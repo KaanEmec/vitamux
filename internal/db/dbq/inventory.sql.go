@@ -659,3 +659,99 @@ func (q *Queries) SourceSeriesAggregates(ctx context.Context, arg SourceSeriesAg
 	}
 	return items, nil
 }
+
+const sourceSeriesMeasurements = `-- name: SourceSeriesMeasurements :many
+SELECT x.id, x.kind, x.start_at, x.end_at, x.local_date, x.value,
+  x.connection_id, x.device_id, x.origin_id, p.code AS provider,
+  COALESCE(d.device_type, '')::text AS device_type, COALESCE(d.model, '')::text AS device_model,
+  COALESCE(d.manufacturer, '')::text AS device_manufacturer,
+  COALESCE(o.origin_key, '')::text AS origin_key, COALESCE(o.name, '')::text AS origin_name,
+  (o.relayed_provider_id IS NOT NULL)::boolean AS relayed
+FROM measurements x
+JOIN providers p ON p.id = x.provider_id
+LEFT JOIN devices d ON d.id = x.device_id
+LEFT JOIN data_origins o ON o.id = x.origin_id
+WHERE x.user_id = $1 AND x.metric_id = (SELECT id FROM metric_catalog WHERE code = $2::text)
+  AND x.kind IN ('sample', 'interval')
+  AND x.start_at >= $3 AND x.start_at < $4
+  AND x.superseded_at IS NULL AND x.deleted_at IS NULL
+  AND (x.start_at, x.id) > ($5::timestamptz, $6::bigint)
+ORDER BY x.start_at, x.id
+LIMIT $7
+`
+
+type SourceSeriesMeasurementsParams struct {
+	UserID  uuid.UUID
+	Metric  string
+	FromAt  time.Time
+	ToAt    time.Time
+	AfterAt time.Time
+	AfterID int64
+	Lim     int32
+}
+
+type SourceSeriesMeasurementsRow struct {
+	ID                 int64
+	Kind               string
+	StartAt            time.Time
+	EndAt              *time.Time
+	LocalDate          time.Time
+	Value              float64
+	ConnectionID       uuid.UUID
+	DeviceID           *uuid.UUID
+	OriginID           *uuid.UUID
+	Provider           string
+	DeviceType         string
+	DeviceModel        string
+	DeviceManufacturer string
+	OriginKey          string
+	OriginName         string
+	Relayed            bool
+}
+
+// One metric's active sample and interval rows starting from from_at before to_at, with their
+// source identity, after the (after_at, after_id) cursor, at most lim rows, in time order.
+func (q *Queries) SourceSeriesMeasurements(ctx context.Context, arg SourceSeriesMeasurementsParams) ([]SourceSeriesMeasurementsRow, error) {
+	rows, err := q.db.Query(ctx, sourceSeriesMeasurements,
+		arg.UserID,
+		arg.Metric,
+		arg.FromAt,
+		arg.ToAt,
+		arg.AfterAt,
+		arg.AfterID,
+		arg.Lim,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SourceSeriesMeasurementsRow
+	for rows.Next() {
+		var i SourceSeriesMeasurementsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.StartAt,
+			&i.EndAt,
+			&i.LocalDate,
+			&i.Value,
+			&i.ConnectionID,
+			&i.DeviceID,
+			&i.OriginID,
+			&i.Provider,
+			&i.DeviceType,
+			&i.DeviceModel,
+			&i.DeviceManufacturer,
+			&i.OriginKey,
+			&i.OriginName,
+			&i.Relayed,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

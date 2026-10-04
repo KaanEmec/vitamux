@@ -113,7 +113,7 @@ func MetricsDoc() string {
 
 	for _, section := range sections {
 		b.WriteString("\n## " + section + "\n\n")
-		b.WriteString("| Code | Unit | Kinds | Aggregation | Plausible | Windows | Group | Apple HK | Withings |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n")
+		b.WriteString("| Code | Unit | Kinds | Aggregation | Plausible | Windows | Intraday | Group | Apple HK | Withings |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n")
 		for _, m := range metrics {
 			if m.Section == section {
 				metricRow(&b, m)
@@ -135,7 +135,8 @@ func MetricsDoc() string {
 		}
 	}
 	b.WriteString("Bucket size is 5 minutes for `intensive` and `additive`. Provider-scoped scores and selection-only metrics (" +
-		strings.Join(selection, ", ") + ") lose `mean`, `min` and `max`. Metrics in a group add the `reading` window.\n\n")
+		strings.Join(selection, ", ") + ") lose `mean`, `min` and `max`. Metrics in a group add the `reading` window. " +
+		"Intraday is the day view's default bucket (24-hour span) and finest step ([resolution](architecture/resolution.md#windows)); `-` means no day view.\n\n")
 	b.WriteString("| Aggregation | Windows | Strategies |\n| --- | --- | --- |\n")
 	for _, a := range []Aggregation{Intensive, Additive, Latest, DailySummary, SleepDerived} {
 		m := Metric{Agg: a}
@@ -159,6 +160,10 @@ func metricRow(b *strings.Builder, m Metric) {
 	if m.DerivedFrom != "" {
 		kinds = "- (from `" + m.DerivedFrom + "`)"
 	}
-	fmt.Fprintf(b, "| `%s` | %s | %s | %s | %s to %s | %s | %s | %s | %s |\n",
-		m.Code, m.Unit, kinds, m.Agg, num(m.Min), num(m.Max), join(m.Windows()), m.Group, m.HK, m.Withings)
+	intraday := "-"
+	if in, ok := m.Intraday(); ok {
+		intraday = in.Default + " → " + in.Finest
+	}
+	fmt.Fprintf(b, "| `%s` | %s | %s | %s | %s to %s | %s | %s | %s | %s | %s |\n",
+		m.Code, m.Unit, kinds, m.Agg, num(m.Min), num(m.Max), join(m.Windows()), intraday, m.Group, m.HK, m.Withings)
 }

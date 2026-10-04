@@ -50,6 +50,7 @@ type GroupValue struct {
 	Count      int         // contributing inputs
 	Readings   int         // latest-type metrics: contributing readings (one row, or one measurement group)
 	Buckets    int         // covered base buckets (intensive and additive interval values)
+	Min, Max   float64     // intensive: the lowest and highest contributing sample
 	First, At  time.Time   // earliest and latest contributing instants (Input.At)
 	Prorated   bool        // an interval was cut at the window bounds
 	Refs       []int64     // contributing Input.ID values, for record_refs
@@ -302,6 +303,12 @@ func (gv *GroupValue) aggIntensive(in []Input, w Window, base time.Duration, int
 		row[i].sum += x.Value
 		row[i].n++
 		buckets[b] = row
+		if gv.Count == 0 || x.Value < gv.Min {
+			gv.Min = x.Value
+		}
+		if gv.Count == 0 || x.Value > gv.Max {
+			gv.Max = x.Value
+		}
 		gv.use(x)
 	}
 	if gv.Count == 0 {

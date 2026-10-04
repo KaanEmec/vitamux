@@ -330,14 +330,16 @@ paths:
     get:
       tags: [source-data]
       operationId: getSourceSeries
-      summary: Per-source series of one metric from the hourly aggregates
+      summary: Per-source series of one metric
       description: >
-        Every source's own values per local hour or local day over [start, end), for the
-        all-sources overlay of long ranges. Built on the hourly aggregates (active sample and
-        interval rows) plus, per day, the source's reported daily values; nothing is resolved.
-        behind is true while days of the metric in the range wait for the rebuild job. Each source
-        carries its place in the rule in effect. At most 93 days per hour series and 3,660 per day
-        series. Sleep and derived codes have no aggregates (422).
+        Every source's own values over [start, end); nothing is resolved. Each source carries its
+        place in the rule in effect. hour and day read the hourly aggregates (active sample and
+        interval rows) plus, per day, the source's reported daily values; behind is true while
+        days of the metric in the range wait for the rebuild job. At most 93 days per hour series
+        and 3,660 per day series. The intraday grains (30s, 1m, 5m, 15m, 30m) and raw read the
+        active sample and interval rows for spans of at most a day (25 hours across a DST change),
+        and each source reports its native spacing; raw lists the rows in time order, at most
+        2,000 per page. Sleep and derived codes have no source series (422).
       security: [{session: []}, {apiKey: ['read:health']}]
       parameters:
         - name: metric
@@ -356,7 +358,9 @@ paths:
         - name: grain
           in: query
           required: false
-          schema: {type: string, enum: [hour, day], default: day}
+          schema: {type: string, enum: [30s, 1m, 5m, 15m, 30m, raw, hour, day], default: day}
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
       responses:
         '200':
           description: One series per source.
@@ -677,8 +681,9 @@ paths:
           required: false
           description: >
             Window kind (bucket, hour, local_day, local_night, sleep_episode, latest, reading) or a
-            bucket size (1m, 5m, 15m, 30m); the rule's window when omitted. A window the metric does
-            not allow is 422 unsupported_window.
+            bucket size (30s, 1m, 5m, 15m, 30m); the rule's window when omitted. A window the metric
+            does not allow is 422 unsupported_window. Bucket series of 30s or 1m span at most a day,
+            those of 5m or more at most 7 days (plus an hour for a DST change).
           schema: {type: string}
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
@@ -3409,6 +3414,9 @@ components:
         value: {description: Same shape as ResolvedValue.value.}
         partial: {type: boolean}
         coverage: {type: number, format: double, minimum: 0, maximum: 1}
+        min: {type: number, format: double, description: 'Intensive metrics: the lowest sample behind the value.'}
+        max: {type: number, format: double, description: 'Intensive metrics: the highest sample behind the value.'}
+        n: {type: integer, minimum: 0, description: The rows behind the value (0 for an additive zero without rows); absent without a source.}
         sources: {type: array, items: {type: string}, description: The groups the value came from (one for selecting strategies).}
         providers:
           type: array
@@ -3716,11 +3724,13 @@ components:
         metric: {type: string}
         unit: {type: string}
         aggregation: {type: string, enum: [intensive, additive, latest, daily_summary]}
-        grain: {type: string, enum: [hour, day]}
+        grain: {type: string, enum: [30s, 1m, 5m, 15m, 30m, raw, hour, day]}
         timezone: {type: string}
         rule: {$ref: '#/components/schemas/RuleRef'}
-        behind: {type: boolean, description: Days of the metric in the range wait for the rebuild job.}
+        behind: {type: boolean, description: Days of the metric in the range wait for the rebuild job (hour and day grains).}
         sources: {type: array, items: {$ref: '#/components/schemas/SourceSeriesSource'}}
+        has_more: {type: boolean, description: 'raw: more rows follow next_cursor.'}
+        next_cursor: {type: string}
     SourceSeriesSource:
       type: object
       additionalProperties: false
@@ -3732,16 +3742,20 @@ components:
         origin: {$ref: '#/components/schemas/OriginRef'}
         group: {type: [string, 'null'], description: The rule group the source belongs to; null when excluded or outside the rule.}
         rule_status: {type: string, enum: [used, excluded, not_in_rule]}
+        spacing_s: {type: number, format: double, description: 'Intraday and raw grains: the median gap in seconds between the starts of the source''s consecutive rows in the span; absent with fewer than two.'}
         points: {type: array, items: {$ref: '#/components/schemas/SourcePoint'}}
     SourcePoint:
       type: object
       description: >
-        One source's values in a local hour or day: additive metrics the intervals pro-rated to it
-        (sum), the others the mean of its 5-minute bucket means with min and max.
+        One source's values in a bucket, local hour or day: additive metrics the intervals
+        pro-rated to it (sum), the others the mean of its bucket means (5 minutes, or the bucket
+        when shorter) with min and max. A raw point is one row with its value (n 1).
       additionalProperties: false
       required: [local_date, n]
       properties:
-        start: {type: string, format: date-time, description: The hour's start (hour grain).}
+        start: {type: string, format: date-time, description: The bucket's, hour's or row's start (all grains but day).}
+        end: {type: string, format: date-time, description: 'raw: the end of an interval row.'}
+        value: {type: number, format: double, description: 'raw: the row''s value.'}
         local_date: {type: string, format: date}
         n: {type: integer, minimum: 0, description: 'Samples, plus intervals once per hour they touch.'}
         mean: {type: number, format: double}
@@ -4019,6 +4033,15 @@ components:
         provider_scoped: {type: boolean, description: A provider-namespaced score; never pooled.}
         selection_only: {type: boolean, description: Providers define it differently; rules select one source and never pool it.}
         derived_from: {type: string, description: The source metric of a derived code (rule extension E2).}
+        intraday: {$ref: '#/components/schemas/Intraday'}
+    Intraday:
+      type: object
+      description: A metric's day-view bucket ladder (resolution.md#windows); absent for metrics measured once a day or night.
+      additionalProperties: false
+      required: [default, finest]
+      properties:
+        default: {type: string, enum: [1m, 5m, 30m], description: Bucket for a 24-hour span.}
+        finest: {type: string, enum: [1m, raw], description: The finest step; raw means the stored rows.}
     Measurement:
       type: object
       description: Normalized measurement (docs/architecture/data-model.md#measurements).

@@ -555,6 +555,45 @@ func (e Health) Valid() bool {
 	}
 }
 
+// Defines values for IntradayDefault.
+const (
+	IntradayDefaultN1M  IntradayDefault = "1m"
+	IntradayDefaultN30M IntradayDefault = "30m"
+	IntradayDefaultN5M  IntradayDefault = "5m"
+)
+
+// Valid indicates whether the value is a known member of the IntradayDefault enum.
+func (e IntradayDefault) Valid() bool {
+	switch e {
+	case IntradayDefaultN1M:
+		return true
+	case IntradayDefaultN30M:
+		return true
+	case IntradayDefaultN5M:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IntradayFinest.
+const (
+	IntradayFinestN1M IntradayFinest = "1m"
+	IntradayFinestRaw IntradayFinest = "raw"
+)
+
+// Valid indicates whether the value is a known member of the IntradayFinest enum.
+func (e IntradayFinest) Valid() bool {
+	switch e {
+	case IntradayFinestN1M:
+		return true
+	case IntradayFinestRaw:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for InventoryItemKind.
 const (
 	InventoryItemKindAnalyte  InventoryItemKind = "analyte"
@@ -1249,6 +1288,12 @@ func (e SourceSeriesAggregation) Valid() bool {
 const (
 	SourceSeriesGrainDay  SourceSeriesGrain = "day"
 	SourceSeriesGrainHour SourceSeriesGrain = "hour"
+	SourceSeriesGrainN15M SourceSeriesGrain = "15m"
+	SourceSeriesGrainN1M  SourceSeriesGrain = "1m"
+	SourceSeriesGrainN30M SourceSeriesGrain = "30m"
+	SourceSeriesGrainN30S SourceSeriesGrain = "30s"
+	SourceSeriesGrainN5M  SourceSeriesGrain = "5m"
+	SourceSeriesGrainRaw  SourceSeriesGrain = "raw"
 )
 
 // Valid indicates whether the value is a known member of the SourceSeriesGrain enum.
@@ -1257,6 +1302,18 @@ func (e SourceSeriesGrain) Valid() bool {
 	case SourceSeriesGrainDay:
 		return true
 	case SourceSeriesGrainHour:
+		return true
+	case SourceSeriesGrainN15M:
+		return true
+	case SourceSeriesGrainN1M:
+		return true
+	case SourceSeriesGrainN30M:
+		return true
+	case SourceSeriesGrainN30S:
+		return true
+	case SourceSeriesGrainN5M:
+		return true
+	case SourceSeriesGrainRaw:
 		return true
 	default:
 		return false
@@ -1672,6 +1729,12 @@ func (e ListSourceDevicesParamsInclude) Valid() bool {
 const (
 	GetSourceSeriesParamsGrainDay  GetSourceSeriesParamsGrain = "day"
 	GetSourceSeriesParamsGrainHour GetSourceSeriesParamsGrain = "hour"
+	GetSourceSeriesParamsGrainN15M GetSourceSeriesParamsGrain = "15m"
+	GetSourceSeriesParamsGrainN1M  GetSourceSeriesParamsGrain = "1m"
+	GetSourceSeriesParamsGrainN30M GetSourceSeriesParamsGrain = "30m"
+	GetSourceSeriesParamsGrainN30S GetSourceSeriesParamsGrain = "30s"
+	GetSourceSeriesParamsGrainN5M  GetSourceSeriesParamsGrain = "5m"
+	GetSourceSeriesParamsGrainRaw  GetSourceSeriesParamsGrain = "raw"
 )
 
 // Valid indicates whether the value is a known member of the GetSourceSeriesParamsGrain enum.
@@ -1680,6 +1743,18 @@ func (e GetSourceSeriesParamsGrain) Valid() bool {
 	case GetSourceSeriesParamsGrainDay:
 		return true
 	case GetSourceSeriesParamsGrainHour:
+		return true
+	case GetSourceSeriesParamsGrainN15M:
+		return true
+	case GetSourceSeriesParamsGrainN1M:
+		return true
+	case GetSourceSeriesParamsGrainN30M:
+		return true
+	case GetSourceSeriesParamsGrainN30S:
+		return true
+	case GetSourceSeriesParamsGrainN5M:
+		return true
+	case GetSourceSeriesParamsGrainRaw:
 		return true
 	default:
 		return false
@@ -2485,6 +2560,21 @@ type HourPick struct {
 	Value  *float64  `json:"value,omitempty"`
 }
 
+// Intraday A metric's day-view bucket ladder (resolution.md#windows); absent for metrics measured once a day or night.
+type Intraday struct {
+	// Default Bucket for a 24-hour span.
+	Default IntradayDefault `json:"default"`
+
+	// Finest The finest step; raw means the stored rows.
+	Finest IntradayFinest `json:"finest"`
+}
+
+// IntradayDefault Bucket for a 24-hour span.
+type IntradayDefault string
+
+// IntradayFinest The finest step; raw means the stored rows.
+type IntradayFinest string
+
 // Inventory defines model for Inventory.
 type Inventory struct {
 	// AggregatesPending Days wait for the rebuild job, so metric counts, days and sources may lag.
@@ -2721,6 +2811,9 @@ type Metric struct {
 
 	// Group The measurement group the code belongs to (bp_reading
 	Group *string `json:"group,omitempty"`
+
+	// Intraday A metric's day-view bucket ladder (resolution.md#windows); absent for metrics measured once a day or night.
+	Intraday *Intraday `json:"intraday,omitempty"`
 
 	// Kinds Kinds a source may store; empty for derived and sleep codes.
 	Kinds          []MetricKinds `json:"kinds"`
@@ -3232,7 +3325,16 @@ type ResolvedPoint struct {
 	Key       string              `json:"key"`
 	Links     *ResolvedLinks      `json:"links,omitempty"`
 	LocalDate *openapi_types.Date `json:"local_date,omitempty"`
-	Partial   *bool               `json:"partial,omitempty"`
+
+	// Max Intensive metrics: the highest sample behind the value.
+	Max *float64 `json:"max,omitempty"`
+
+	// Min Intensive metrics: the lowest sample behind the value.
+	Min *float64 `json:"min,omitempty"`
+
+	// N The rows behind the value (0 for an additive zero without rows); absent without a source.
+	N       *int  `json:"n,omitempty"`
+	Partial *bool `json:"partial,omitempty"`
 
 	// Providers The providers of the records behind the value (those of the chosen groups' sources), distinct, in input order; absent without a value.
 	Providers *[]string `json:"providers,omitempty"`
@@ -3724,21 +3826,27 @@ type SourceDevice struct {
 // SourceDevicePatch Merge patch of a device; null clears a field.
 type SourceDevicePatch = json.RawMessage
 
-// SourcePoint One source's values in a local hour or day: additive metrics the intervals pro-rated to it (sum), the others the mean of its 5-minute bucket means with min and max.
+// SourcePoint One source's values in a bucket, local hour or day: additive metrics the intervals pro-rated to it (sum), the others the mean of its bucket means (5 minutes, or the bucket when shorter) with min and max. A raw point is one row with its value (n 1).
 type SourcePoint struct {
 	// DailyValue The value the source reported for the whole day (day grain).
-	DailyValue *float64           `json:"daily_value,omitempty"`
-	LocalDate  openapi_types.Date `json:"local_date"`
-	Max        *float64           `json:"max,omitempty"`
-	Mean       *float64           `json:"mean,omitempty"`
-	Min        *float64           `json:"min,omitempty"`
+	DailyValue *float64 `json:"daily_value,omitempty"`
+
+	// End raw: the end of an interval row.
+	End       *time.Time         `json:"end,omitempty"`
+	LocalDate openapi_types.Date `json:"local_date"`
+	Max       *float64           `json:"max,omitempty"`
+	Mean      *float64           `json:"mean,omitempty"`
+	Min       *float64           `json:"min,omitempty"`
 
 	// N Samples, plus intervals once per hour they touch.
 	N int `json:"n"`
 
-	// Start The hour's start (hour grain).
+	// Start The bucket's
 	Start *time.Time `json:"start,omitempty"`
 	Sum   *float64   `json:"sum,omitempty"`
+
+	// Value raw: the row's value.
+	Value *float64 `json:"value,omitempty"`
 }
 
 // SourceRef Where a canonical row came from. device and origin are the values the device and origin filters take.
@@ -3760,14 +3868,18 @@ type SourceRef struct {
 type SourceSeries struct {
 	Aggregation SourceSeriesAggregation `json:"aggregation"`
 
-	// Behind Days of the metric in the range wait for the rebuild job.
-	Behind   bool                 `json:"behind"`
-	Grain    SourceSeriesGrain    `json:"grain"`
-	Metric   string               `json:"metric"`
-	Rule     *RuleRef             `json:"rule,omitempty"`
-	Sources  []SourceSeriesSource `json:"sources"`
-	Timezone string               `json:"timezone"`
-	Unit     string               `json:"unit"`
+	// Behind Days of the metric in the range wait for the rebuild job (hour and day grains).
+	Behind bool              `json:"behind"`
+	Grain  SourceSeriesGrain `json:"grain"`
+
+	// HasMore raw: more rows follow next_cursor.
+	HasMore    *bool                `json:"has_more,omitempty"`
+	Metric     string               `json:"metric"`
+	NextCursor *string              `json:"next_cursor,omitempty"`
+	Rule       *RuleRef             `json:"rule,omitempty"`
+	Sources    []SourceSeriesSource `json:"sources"`
+	Timezone   string               `json:"timezone"`
+	Unit       string               `json:"unit"`
 }
 
 // SourceSeriesAggregation defines model for SourceSeries.Aggregation.
@@ -3787,6 +3899,9 @@ type SourceSeriesSource struct {
 	Points     []SourcePoint                `json:"points"`
 	Provider   string                       `json:"provider"`
 	RuleStatus SourceSeriesSourceRuleStatus `json:"rule_status"`
+
+	// SpacingS Intraday and raw grains: the median gap in seconds between the starts of the source's consecutive rows in the span; absent with fewer than two.
+	SpacingS *float64 `json:"spacing_s,omitempty"`
 }
 
 // SourceSeriesSourceRuleStatus defines model for SourceSeriesSource.RuleStatus.
@@ -4456,7 +4571,7 @@ type GetResolvedSeriesParams struct {
 	Start  time.Time `form:"start" json:"start"`
 	End    time.Time `form:"end" json:"end"`
 
-	// Window Window kind (bucket, hour, local_day, local_night, sleep_episode, latest, reading) or a bucket size (1m, 5m, 15m, 30m); the rule's window when omitted. A window the metric does not allow is 422 unsupported_window.
+	// Window Window kind (bucket, hour, local_day, local_night, sleep_episode, latest, reading) or a bucket size (30s, 1m, 5m, 15m, 30m); the rule's window when omitted. A window the metric does not allow is 422 unsupported_window. Bucket series of 30s or 1m span at most a day, those of 5m or more at most 7 days (plus an hour for a DST change).
 	Window *string `form:"window,omitempty" json:"window,omitempty"`
 
 	// Limit Page size. Endpoints may cap it lower than 10,000.
@@ -4608,6 +4723,12 @@ type GetSourceSeriesParams struct {
 	Start  time.Time                   `form:"start" json:"start"`
 	End    time.Time                   `form:"end" json:"end"`
 	Grain  *GetSourceSeriesParamsGrain `form:"grain,omitempty" json:"grain,omitempty"`
+
+	// Limit Page size. Endpoints may cap it lower than 10,000.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque next_cursor from the previous page of the same query.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // GetSourceSeriesParamsGrain defines parameters for GetSourceSeries.
@@ -5226,7 +5347,7 @@ type ServerInterface interface {
 	// MergeSourceDevice Merge a device into another device of the same provider (audited, irreversible)
 	// (POST /api/v1/source-devices/{id}/merge)
 	MergeSourceDevice(w http.ResponseWriter, r *http.Request, id ID)
-	// GetSourceSeries Per-source series of one metric from the hourly aggregates
+	// GetSourceSeries Per-source series of one metric
 	// (GET /api/v1/sources/series)
 	GetSourceSeries(w http.ResponseWriter, r *http.Request, params GetSourceSeriesParams)
 	// GetSystemStatus Instance diagnostics
@@ -9004,6 +9125,32 @@ func (siw *ServerInterfaceWrapper) GetSourceSeries(w http.ResponseWriter, r *htt
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "grain"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "grain", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
 		}
 		return
 	}
@@ -18343,7 +18490,7 @@ type StrictServerInterface interface {
 	// MergeSourceDevice Merge a device into another device of the same provider (audited, irreversible)
 	// (POST /api/v1/source-devices/{id}/merge)
 	MergeSourceDevice(ctx context.Context, request MergeSourceDeviceRequestObject) (MergeSourceDeviceResponseObject, error)
-	// GetSourceSeries Per-source series of one metric from the hourly aggregates
+	// GetSourceSeries Per-source series of one metric
 	// (GET /api/v1/sources/series)
 	GetSourceSeries(ctx context.Context, request GetSourceSeriesRequestObject) (GetSourceSeriesResponseObject, error)
 	// GetSystemStatus Instance diagnostics

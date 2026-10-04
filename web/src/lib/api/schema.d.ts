@@ -234,8 +234,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Per-source series of one metric from the hourly aggregates
-         * @description Every source's own values per local hour or local day over [start, end), for the all-sources overlay of long ranges. Built on the hourly aggregates (active sample and interval rows) plus, per day, the source's reported daily values; nothing is resolved. behind is true while days of the metric in the range wait for the rebuild job. Each source carries its place in the rule in effect. At most 93 days per hour series and 3,660 per day series. Sleep and derived codes have no aggregates (422).
+         * Per-source series of one metric
+         * @description Every source's own values over [start, end); nothing is resolved. Each source carries its place in the rule in effect. hour and day read the hourly aggregates (active sample and interval rows) plus, per day, the source's reported daily values; behind is true while days of the metric in the range wait for the rebuild job. At most 93 days per hour series and 3,660 per day series. The intraday grains (30s, 1m, 5m, 15m, 30m) and raw read the active sample and interval rows for spans of at most a day (25 hours across a DST change), and each source reports its native spacing; raw lists the rows in time order, at most 2,000 per page. Sleep and derived codes have no source series (422).
          */
         get: operations["getSourceSeries"];
         put?: never;
@@ -2218,6 +2218,18 @@ export interface components {
             partial?: boolean;
             /** Format: double */
             coverage?: number;
+            /**
+             * Format: double
+             * @description Intensive metrics: the lowest sample behind the value.
+             */
+            min?: number;
+            /**
+             * Format: double
+             * @description Intensive metrics: the highest sample behind the value.
+             */
+            max?: number;
+            /** @description The rows behind the value (0 for an additive zero without rows); absent without a source. */
+            n?: number;
             /** @description The groups the value came from (one for selecting strategies). */
             sources: string[];
             /** @description The providers of the records behind the value (those of the chosen groups' sources), distinct, in input order; absent without a value. */
@@ -2514,12 +2526,15 @@ export interface components {
             /** @enum {string} */
             aggregation: "intensive" | "additive" | "latest" | "daily_summary";
             /** @enum {string} */
-            grain: "hour" | "day";
+            grain: "30s" | "1m" | "5m" | "15m" | "30m" | "raw" | "hour" | "day";
             timezone: string;
             rule?: components["schemas"]["RuleRef"];
-            /** @description Days of the metric in the range wait for the rebuild job. */
+            /** @description Days of the metric in the range wait for the rebuild job (hour and day grains). */
             behind: boolean;
             sources: components["schemas"]["SourceSeriesSource"][];
+            /** @description raw: more rows follow next_cursor. */
+            has_more?: boolean;
+            next_cursor?: string;
         };
         SourceSeriesSource: {
             provider: string;
@@ -2530,15 +2545,30 @@ export interface components {
             group: string | null;
             /** @enum {string} */
             rule_status: "used" | "excluded" | "not_in_rule";
+            /**
+             * Format: double
+             * @description Intraday and raw grains: the median gap in seconds between the starts of the source's consecutive rows in the span; absent with fewer than two.
+             */
+            spacing_s?: number;
             points: components["schemas"]["SourcePoint"][];
         };
-        /** @description One source's values in a local hour or day: additive metrics the intervals pro-rated to it (sum), the others the mean of its 5-minute bucket means with min and max. */
+        /** @description One source's values in a bucket, local hour or day: additive metrics the intervals pro-rated to it (sum), the others the mean of its bucket means (5 minutes, or the bucket when shorter) with min and max. A raw point is one row with its value (n 1). */
         SourcePoint: {
             /**
              * Format: date-time
-             * @description The hour's start (hour grain).
+             * @description The bucket's
              */
             start?: string;
+            /**
+             * Format: date-time
+             * @description raw: the end of an interval row.
+             */
+            end?: string;
+            /**
+             * Format: double
+             * @description raw: the row's value.
+             */
+            value?: number;
             /** Format: date */
             local_date: string;
             /** @description Samples, plus intervals once per hour they touch. */
@@ -2792,6 +2822,20 @@ export interface components {
             selection_only: boolean;
             /** @description The source metric of a derived code (rule extension E2). */
             derived_from?: string;
+            intraday?: components["schemas"]["Intraday"];
+        };
+        /** @description A metric's day-view bucket ladder (resolution.md#windows); absent for metrics measured once a day or night. */
+        Intraday: {
+            /**
+             * @description Bucket for a 24-hour span.
+             * @enum {string}
+             */
+            default: "1m" | "5m" | "30m";
+            /**
+             * @description The finest step; raw means the stored rows.
+             * @enum {string}
+             */
+            finest: "1m" | "raw";
         };
         /** @description Normalized measurement (docs/architecture/data-model.md#measurements). */
         Measurement: {
@@ -4464,7 +4508,11 @@ export interface operations {
                 metric: string;
                 start: string;
                 end: string;
-                grain?: "hour" | "day";
+                grain?: "30s" | "1m" | "5m" | "15m" | "30m" | "raw" | "hour" | "day";
+                /** @description Page size. Endpoints may cap it lower than 10,000. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Opaque next_cursor from the previous page of the same query. */
+                cursor?: components["parameters"]["Cursor"];
             };
             header?: never;
             path?: never;
@@ -4871,7 +4919,7 @@ export interface operations {
                 metric: string;
                 start: string;
                 end: string;
-                /** @description Window kind (bucket, hour, local_day, local_night, sleep_episode, latest, reading) or a bucket size (1m, 5m, 15m, 30m); the rule's window when omitted. A window the metric does not allow is 422 unsupported_window. */
+                /** @description Window kind (bucket, hour, local_day, local_night, sleep_episode, latest, reading) or a bucket size (30s, 1m, 5m, 15m, 30m); the rule's window when omitted. A window the metric does not allow is 422 unsupported_window. Bucket series of 30s or 1m span at most a day, those of 5m or more at most 7 days (plus an hour for a DST change). */
                 window?: string;
                 /** @description Page size. Endpoints may cap it lower than 10,000. */
                 limit?: components["parameters"]["Limit"];

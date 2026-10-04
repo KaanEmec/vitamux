@@ -98,8 +98,8 @@ func LocalDay(date time.Time, tl normalize.Timeline) (Window, error) {
 	return Window{Kind: catalog.WindowLocalDay, Start: start, End: end, Date: d, Key: d.Format(dateLayout)}, nil
 }
 
-// Buckets splits a local date into windows of size (1, 5, 15, 30 or 60 minutes), aligned to
-// local midnight in the zone in effect at that midnight. Offsets change by whole hours in
+// Buckets splits a local date into windows of size (30 s, or 1, 5, 15, 30 or 60 minutes),
+// aligned to local midnight in the zone in effect at that midnight. Offsets change by whole hours in
 // almost every zone, so walking absolute time keeps the buckets on the wall clock: 23 or 25
 // hours on DST days. On a day that changes zone (travel) the walk continues in the starting
 // zone and the last bucket is cut at the next local midnight.
