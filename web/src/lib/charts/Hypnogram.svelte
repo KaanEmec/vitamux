@@ -1,12 +1,12 @@
 <!--
 	Stage bars of one sleep session on a shared time axis, so several sources line up. Rows
-	(awake on top) encode the stage, labelled on the left; colour is secondary. The stages are
-	also available as a table.
+	(awake on top) encode the stage, labelled on the left; colour is secondary. The arrow keys and
+	the pointer move from stage to stage; the stages are also available as a table.
 -->
 <script lang="ts">
 	import type { Schemas } from '../api/client.ts';
-	import ChartTable from './ChartTable.svelte';
-	import { formatInstant, measureRender } from './scale.ts';
+	import ChartFrame from './ChartFrame.svelte';
+	import { formatClock, formatInstant, nearest } from './scale.ts';
 	import { stageColor, stageLabels } from './sleep.ts';
 
 	let {
@@ -15,7 +15,8 @@
 		from,
 		to,
 		label,
-		timezone
+		timezone,
+		rowHeight = 22
 	}: {
 		stages: Schemas['SleepStage'][];
 		/** Stage rows to draw, top to bottom (the same for every session compared). */
@@ -25,85 +26,84 @@
 		to: number;
 		label: string;
 		timezone?: string;
+		/** Pixels per stage row (larger for a hero chart). */
+		rowHeight?: number;
 	} = $props();
 
-	const width = 1000;
-	const rowHeight = 20;
-	const span = $derived(Math.max(to - from, 1));
 	const bars = $derived(
-		stages.map((s) => {
-			const a = Date.parse(s.start_at);
-			const b = Date.parse(s.end_at);
-			return {
-				color: stageColor(s.stage),
-				x: ((a - from) / span) * width,
-				w: Math.max(((b - a) / span) * width, 0.5),
-				y: rows.indexOf(s.stage) * rowHeight + 3,
-				title: `${stageLabels[s.stage] ?? s.stage} ${Math.round((b - a) / 60000)} min`
-			};
-		})
+		stages
+			.map((s) => ({ stage: s.stage, a: Date.parse(s.start_at), b: Date.parse(s.end_at), row: rows.indexOf(s.stage) }))
+			.sort((p, q) => p.a - q.a)
 	);
+	const n = $derived(rows.length);
+	const mids = $derived(bars.map((s) => (s.a + s.b) / 2));
+	const name = (stage: string) => stageLabels[stage] ?? stage;
+	const minutes = (s: { a: number; b: number }) => Math.round((s.b - s.a) / 60_000);
+	const pick = (t: number) => {
+		const i = bars.findIndex((s) => s.a <= t && t < s.b);
+		return i >= 0 ? i : nearest(mids, t);
+	};
+	const tip = (i: number) => ({
+		title: `${formatClock(bars[i].a, timezone)} – ${formatClock(bars[i].b, timezone)}`,
+		lead: { value: name(bars[i].stage), unit: `${minutes(bars[i])} min` },
+		rows: []
+	});
 	const table = () => ({
 		columns: ['Start', 'End', 'Stage'],
-		rows: stages.map((s) => [formatInstant(Date.parse(s.start_at), timezone), formatInstant(Date.parse(s.end_at), timezone), stageLabels[s.stage] ?? s.stage])
+		rows: bars.map((s) => [formatInstant(s.a, timezone), formatInstant(s.b, timezone), name(s.stage)])
 	});
-
-	const start = performance.now();
-	$effect(() => measureRender(start));
 </script>
 
-<div class="hypnogram">
-	<ul class="labels" aria-hidden="true">
-		{#each rows as r (r)}<li>{stageLabels[r] ?? r}</li>{/each}
-	</ul>
-	<svg viewBox="0 0 {width} {rows.length * rowHeight}" preserveAspectRatio="none" height={rows.length * rowHeight} role="img" aria-label={label}>
-		{#each rows as r, i (r)}
-			<line x1="0" x2={width} y1={(i + 0.5) * rowHeight} y2={(i + 0.5) * rowHeight} class="rule" />
+<ChartFrame
+	{label}
+	xs={mids}
+	x={[from, to]}
+	y={[0, n]}
+	{timezone}
+	height={n * rowHeight + 38}
+	padding={{ left: 56 }}
+	crosshair={false}
+	{pick}
+	{tip}
+	{table}
+	yTicks={rows.map((_, i) => n - i - 0.5)}
+	yFormat={(v) => name(rows[Math.round(n - 0.5 - v)] ?? '')}
+>
+	{#snippet marks(f)}
+		{@const h = f.sy(0) - f.sy(1)}
+		{#each bars as s, i (i)}
+			{#if s.row >= 0}
+				<rect
+					class={['bar', stageColor(s.stage), f.active === i && 'active']}
+					x={f.sx(s.a)}
+					y={f.sy(n - s.row) + 3}
+					width={Math.max(f.sx(s.b) - f.sx(s.a), 0.75)}
+					height={Math.max(h - 6, 1)}
+					rx="2"
+				/>
+			{/if}
 		{/each}
-		{#each bars as b, i (i)}
-			<rect class={['bar', b.color]} x={b.x} y={b.y} width={b.w} height={rowHeight - 6} rx="2"><title>{b.title}</title></rect>
-		{/each}
-	</svg>
-</div>
-<ChartTable caption={label} data={table} />
+	{/snippet}
+</ChartFrame>
 
 <style>
-	.hypnogram {
-		display: grid;
-		grid-template-columns: 4rem minmax(0, 1fr);
-		gap: var(--space-2);
+	.bar.active {
+		stroke: var(--color-text);
+		stroke-width: 1.5;
 	}
-	.labels {
-		display: grid;
-		grid-auto-rows: 20px; /* rowHeight */
-		margin: 0;
-		padding: 0;
-		list-style: none;
-		font-size: var(--text-2xs);
-		line-height: 20px;
-		color: var(--color-text-muted);
-	}
-	svg {
-		display: block;
-		width: 100%;
-	}
-	.rule {
-		stroke: var(--chart-grid);
-		vector-effect: non-scaling-stroke;
-	}
-	.bar.deep {
+	.deep {
 		fill: var(--stage-deep);
 	}
-	.bar.light {
+	.light {
 		fill: var(--stage-light);
 	}
-	.bar.rem {
+	.rem {
 		fill: var(--stage-rem);
 	}
-	.bar.awake {
+	.awake {
 		fill: var(--stage-awake);
 	}
-	.bar.other {
+	.other {
 		fill: var(--stage-other);
 	}
 </style>

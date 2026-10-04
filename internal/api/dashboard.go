@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
+	"unicode/utf8"
 
 	"github.com/KaanEmec/vitamux/internal/api/oapi"
 	"github.com/KaanEmec/vitamux/internal/audit"
@@ -20,7 +22,13 @@ import (
 const (
 	settingDashboard  = "dashboard.layout"
 	maxDashboardCards = 50
+	maxDashboardHero  = 4
+	maxDismissed      = 100 // keys of dismissed alerts
+	maxDismissedKey   = 200
 )
+
+// defaultHero is the curated hero: steps, resting heart rate, HRV and weight.
+var defaultHero = []string{"steps", "resting_heart_rate", "hrv_rmssd_nightly", "weight"}
 
 // defaultDashboard is the curated layout: sleep as the hero, then the mainstream metrics. The
 // panel hides cards without data until a source provides it.
@@ -45,7 +53,7 @@ func (o *owner) GetDashboardLayout(ctx context.Context, _ oapi.GetDashboardLayou
 	}
 	raw, err := d.Q().GetUserSetting(ctx, dbq.GetUserSettingParams{UserID: auth.PrincipalFrom(ctx).UserID, Key: settingDashboard})
 	if err = db.MapErr(err); errors.Is(err, db.ErrNotFound) {
-		return oapi.GetDashboardLayout200JSONResponse{Version: 1, Cards: append([]oapi.DashboardCard{}, defaultDashboard...), IsDefault: true}, nil
+		return oapi.GetDashboardLayout200JSONResponse{Version: 1, Cards: append([]oapi.DashboardCard{}, defaultDashboard...), Hero: append([]string{}, defaultHero...), Dismissed: []string{}, IsDefault: true}, nil
 	} else if err != nil {
 		return nil, err
 	}
@@ -53,7 +61,18 @@ func (o *owner) GetDashboardLayout(ctx context.Context, _ oapi.GetDashboardLayou
 	if err := json.Unmarshal(raw, &stored); err != nil {
 		return nil, fmt.Errorf("dashboard layout: %w", err)
 	}
-	out := oapi.GetDashboardLayout200JSONResponse{Version: 1, Cards: []oapi.DashboardCard{}}
+	out := oapi.GetDashboardLayout200JSONResponse{Version: 1, Cards: []oapi.DashboardCard{}, Hero: append([]string{}, defaultHero...), Dismissed: []string{}}
+	if stored.Dismissed != nil { // keys of alerts that are gone are the panel's to prune
+		out.Dismissed = slices.Clone(*stored.Dismissed)
+	}
+	if stored.Hero != nil { // an empty list is the owner's choice of none
+		out.Hero = []string{}
+		for _, m := range *stored.Hero {
+			if resolvable(m) {
+				out.Hero = append(out.Hero, m)
+			}
+		}
+	}
 	for _, c := range stored.Cards {
 		if resolvable(c.Metric) { // a code removed from the catalogue since
 			out.Cards = append(out.Cards, c)
@@ -90,6 +109,38 @@ func (o *owner) PutDashboardLayout(ctx context.Context, req oapi.PutDashboardLay
 		}
 		seen[c.Metric] = true
 	}
+	if in.Hero != nil {
+		if len(*in.Hero) > maxDashboardHero {
+			errs = append(errs, FieldError{Pointer: "/hero", Detail: "at most 4 metrics"})
+		}
+		heroSeen := map[string]bool{}
+		for i, m := range *in.Hero {
+			at := fmt.Sprintf("/hero/%d", i)
+			switch {
+			case !resolvable(m):
+				errs = append(errs, FieldError{Pointer: at, Detail: "not a catalogue code or rule family"})
+			case heroSeen[m]:
+				errs = append(errs, FieldError{Pointer: at, Detail: "already a hero metric"})
+			}
+			heroSeen[m] = true
+		}
+	}
+	if in.Dismissed != nil {
+		if len(*in.Dismissed) > maxDismissed {
+			errs = append(errs, FieldError{Pointer: "/dismissed", Detail: "at most 100 keys"})
+		}
+		keySeen := map[string]bool{}
+		for i, k := range *in.Dismissed {
+			at := fmt.Sprintf("/dismissed/%d", i)
+			switch {
+			case k == "" || utf8.RuneCountInString(k) > maxDismissedKey:
+				errs = append(errs, FieldError{Pointer: at, Detail: "1 to 200 characters"})
+			case keySeen[k]:
+				errs = append(errs, FieldError{Pointer: at, Detail: "already dismissed"})
+			}
+			keySeen[k] = true
+		}
+	}
 	if len(errs) > 0 {
 		return nil, problemErr(CodeValidationFailed, "invalid layout", errs...)
 	}
@@ -111,5 +162,12 @@ func (o *owner) PutDashboardLayout(ctx context.Context, req oapi.PutDashboardLay
 	if err != nil {
 		return nil, err
 	}
-	return oapi.PutDashboardLayout200JSONResponse{Version: 1, Cards: in.Cards}, nil
+	out := oapi.PutDashboardLayout200JSONResponse{Version: 1, Cards: in.Cards, Hero: append([]string{}, defaultHero...), Dismissed: []string{}}
+	if in.Hero != nil {
+		out.Hero = slices.Clone(*in.Hero)
+	}
+	if in.Dismissed != nil {
+		out.Dismissed = slices.Clone(*in.Dismissed)
+	}
+	return out, nil
 }

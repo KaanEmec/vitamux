@@ -719,10 +719,19 @@ func resolvedPoint(z *zones, metric string, rule *resolve.Rule, r resolve.Result
 	if r.Status != resolve.ResultNoData {
 		pt.Coverage = round3(r.Coverage)
 	}
+	var providers []string
 	for _, in := range r.Inputs {
 		if in.Selected && in.Group != "" {
 			pt.Sources = append(pt.Sources, in.Group)
+			for _, s := range in.Sources {
+				if !slices.Contains(providers, s.Provider) {
+					providers = append(providers, s.Provider)
+				}
+			}
 		}
+	}
+	if len(providers) > 0 {
+		pt.Providers = &providers
 	}
 	if len(r.Warnings) > 0 {
 		ws := make([]string, len(r.Warnings))
@@ -774,6 +783,9 @@ func (o *owner) GetResolvedSleep(ctx context.Context, req oapi.GetResolvedSleepR
 	out := oapi.GetResolvedSleep200JSONResponse{Timezone: z.name(first.Start), Nights: make([]oapi.ResolvedNight, len(rs))}
 	for i, r := range rs {
 		n := oapi.ResolvedNight{LocalDate: apiDate(r.Window.Date), Result: resolvedValue(z, r, v.Rule), Members: make([]oapi.SleepMember, len(r.Sources))}
+		if r.Window.End.After(r.Window.Start) { // a night without an episode has an empty window
+			n.Episode = &oapi.Span{Start: z.at(r.Window.Start), End: z.at(r.Window.End)}
+		}
 		for j, s := range r.Sources {
 			n.Members[j] = oapi.SleepMember{Group: optString(s.Group), RuleStatus: oapi.SleepMemberRuleStatus(s.RuleStatus),
 				Reason: optString(s.Reason), Selected: s.Group != "" && s.Group == r.Selected, Provider: s.Source.Provider,

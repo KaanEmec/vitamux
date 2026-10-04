@@ -1,6 +1,6 @@
 # ADR-0020 Hand-written SVG chart kit, no chart library
 
-Status: Accepted · Date: 2026-10-04 · Deciders: owner · Amends [ADR-0010](0010-sveltekit-static-spa.md)
+Status: Superseded by [ADR-0022](0022-layerchart.md) · Date: 2026-10-04 · Deciders: owner · Amends [ADR-0010](0010-sveltekit-static-spa.md)
 
 ## Context
 E21 ([J21.2](../plan/E21-visualisation/J21.2-chart-library-adr.md)) needs line + band + markers + a draft series, bars and stacks, range dumbbells, step lines with readings, sparklines, event lanes, brush-to-zoom, a tooltip, keyboard focus per point and a table fallback, under the CSP `style-src 'self'` and the per-route JS budget ([frontend#technology](../architecture/frontend.md#technology)).

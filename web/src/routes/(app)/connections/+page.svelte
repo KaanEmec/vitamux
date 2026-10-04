@@ -17,6 +17,7 @@
 	import ProgressBar from '#lib/connections/ProgressBar.svelte';
 	import { known, loadProviders } from '#lib/connections/providers.svelte.ts';
 	import SourceSetup from '#lib/setup/SourceSetup.svelte';
+	import Notice from '#lib/settings/Notice.svelte';
 	import { alerting, authErrors, elapsed, providerLabel, when, type Connection } from '#lib/connections/connections.ts';
 	import { loadRuns, type Run } from '#lib/connections/runs.ts';
 	import Button from '#lib/ui/Button.svelte';
@@ -98,28 +99,30 @@
 		<h1>Connections</h1>
 		<p class="muted summary">{summary}</p>
 	</div>
-	{#if connections?.length}<Button variant="primary" onclick={() => (wizard = true)}><Icon d={plus} size={16} />Connect a source</Button>{/if}
+	{#if connections?.length}<Button variant="primary" icon={plus} onclick={() => (wizard = true)}>Connect a source</Button>{/if}
 </div>
 
 {#if connected}
-	<p class="banner" role="status">
+	<div class="inline-alert ok" role="status">
 		<StatusIcon status="ok" />
 		<span>{providerLabel(connected)} is connected. A first sync has been queued.</span>
-		<button class="btn link" type="button" onclick={dismiss}>Dismiss</button>
-	</p>
+		<div class="alert-actions"><Button variant="ghost" size="sm" onclick={dismiss}>Dismiss</Button></div>
+	</div>
 {:else if authError}
-	<div class="banner error" role="alert">
+	<div class="inline-alert error" role="alert">
 		<StatusIcon status="error" />
 		<span>
 			Connecting{failedProvider ? ` ${providerLabel(failedProvider)}` : ''} failed: {authErrors[authError] ?? `the provider answered ${authError}.`}
 			{#if appSetup}Check the client id, the secret and the callback URL of your {providerLabel(failedProvider ?? '')} app.{/if}
 		</span>
-		<button class="btn link" type="button" onclick={() => (wizard = failedProvider ? { provider: failedProvider, app: appSetup } : true)}>
-			{appSetup ? 'Review the app setup' : 'Try again'}
-		</button>
+		<div class="alert-actions">
+			<Button size="sm" onclick={() => (wizard = failedProvider ? { provider: failedProvider, app: appSetup } : true)}>
+				{appSetup ? 'Review the app setup' : 'Try again'}
+			</Button>
+		</div>
 	</div>
 {:else if removed}
-	<p class="banner" role="status"><StatusIcon status="ok" /> <span>The {providerLabel(removed)} connection was removed.</span></p>
+	<Notice>The {providerLabel(removed)} connection was removed.</Notice>
 {/if}
 
 <ProblemAlert {problem} />
@@ -206,21 +209,6 @@
 	}
 	.summary {
 		margin: var(--space-1) 0 0;
-	}
-	.banner {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-2);
-		align-items: center;
-		padding: var(--space-3) var(--space-4);
-		margin: 0 0 var(--space-4);
-		background: var(--color-surface);
-		border: 1px solid var(--color-ok);
-		border-radius: var(--radius-md);
-	}
-	.banner.error {
-		background: var(--color-error-bg);
-		border-color: var(--color-error);
 	}
 	.grid {
 		display: grid;

@@ -3,6 +3,7 @@
 	alternative to dragging), S/M/L size and hide.
 -->
 <script lang="ts">
+	import Button from '../ui/Button.svelte';
 	import Icon from '../ui/Icon.svelte';
 	import Segmented from '../ui/Segmented.svelte';
 	import { dashIcons } from './icons.ts';
@@ -35,18 +36,12 @@
 	<span class="grip" role="img" aria-label="Drag to reorder {label}" title="Drag to reorder" draggable="true" ondragstart={ondrag} {ondragend}>
 		<Icon d={dashIcons.grip} size={18} />
 	</span>
-	<button class="btn ghost sm" type="button" aria-label="Move {label} earlier" disabled={first} onclick={() => onmove(-1)}>
-		<Icon d={dashIcons.up} size={16} />
-	</button>
-	<button class="btn ghost sm" type="button" aria-label="Move {label} later" disabled={last} onclick={() => onmove(1)}>
-		<Icon d={dashIcons.down} size={16} />
-	</button>
+	<Button variant="ghost" size="sm" icon={dashIcons.up} aria-label="Move {label} earlier" disabled={first} onclick={() => onmove(-1)} />
+	<Button variant="ghost" size="sm" icon={dashIcons.down} aria-label="Move {label} later" disabled={last} onclick={() => onmove(1)} />
 	<span class="size">
 		<Segmented label="Size of {label}" options={sizes.map((s) => ({ value: s, label: s }))} value={size} onchange={onsize} />
 	</span>
-	<button class="btn ghost sm" type="button" aria-label="Hide {label}" title="Hide" onclick={onhide}>
-		<Icon d={dashIcons.hide} size={16} />
-	</button>
+	<Button variant="ghost" size="sm" icon={dashIcons.hide} aria-label="Hide {label}" title="Hide" onclick={onhide} />
 </div>
 
 <style>
@@ -66,18 +61,8 @@
 		color: var(--color-text-muted);
 		cursor: grab;
 	}
-	.btn {
-		width: 1.75rem;
-		padding: 0;
-		color: var(--color-text-muted);
-	}
 	.size {
 		margin-left: auto;
 		font-size: var(--text-xs);
-	}
-	.size :global(button) {
-		min-width: 1.75rem;
-		min-height: 1.5rem;
-		padding: 0 var(--space-2);
 	}
 </style>

@@ -1,11 +1,15 @@
-// A stateful stand-in for the Dashboard endpoints (J21.7), on top of fake-api.ts: the stored
-// layout (GET/PUT /settings/dashboard), the catalogue, GET /resolved/summary and the alert
-// sources (connections, jobs, system status). All values are synthetic and deterministic.
+// A stateful stand-in for the Dashboard endpoints (J21.7, J23.6), on top of fake-api.ts: the stored
+// layout and hero tiles (GET/PUT /settings/dashboard), the catalogue, GET /resolved/summary (with
+// comparisons), the hero chart's GET /resolved/series and /resolved/trend, last night
+// (GET /resolved/sleep, GET /sleep) and the alert sources (connections, jobs, system status).
+// All values are synthetic and deterministic.
 //
 // Seed: the curated default layout; sleep, resting heart rate, HRV (RMSSD), steps, VO2 max,
 // weight, blood pressure, SpO2 (a fallback), respiratory rate and active energy have data;
 // HRV (SDNN) has none, so its card stays hidden. Steps of today are partial. A Withings
-// connection needs reauthorization and the last backup is ten days old (two alerts).
+// connection needs reauthorization and the last backup is ten days old (two alerts). The
+// dismissed alert keys are stored with the layout; `reauthSince` dates the reauthorization
+// problem (the connection's last success), so changing it is a new occurrence.
 // `empty` removes all data and connections (a fresh install).
 import type { Page, Route } from '@playwright/test';
 import { test as base, expect } from './fake-api';
@@ -16,6 +20,8 @@ export interface Card {
 	size: 'S' | 'M' | 'L';
 	hidden: boolean;
 }
+
+export const defaultHero = ['steps', 'resting_heart_rate', 'hrv_rmssd_nightly', 'weight'];
 
 export const defaultLayout: Card[] = (
 	[
@@ -91,8 +97,22 @@ const connection = (id: string, provider: string, over: Json = {}) => ({
 export class DashboardApi {
 	/** The saved layout; null until a PUT, so GET answers the default. */
 	stored: Card[] | null = null;
+	/** The saved hero tiles; null keeps the default. */
+	storedHero: string[] | null = null;
 	/** Bodies of PUT /settings/dashboard, in order. */
-	puts: { version: number; cards: Card[] }[] = [];
+	puts: { version: number; cards: Card[]; hero?: string[]; dismissed?: string[] }[] = [];
+	/** The saved keys of dismissed alerts. */
+	dismissed: string[] = [];
+	/** The last success of the Withings connection that needs reauthorization (fixed, so its alert key is stable). */
+	reauthSince = '2026-09-20T10:00:00Z';
+	/** The newest backup (fixed, so its alert key is stable). */
+	backupAt = new Date(Date.now() - 10 * 24 * hour).toISOString();
+	/** Delay of PUT /settings/dashboard in ms, to observe the optimistic hide. */
+	putDelay = 0;
+	/** Status of PUT /settings/dashboard; 503 simulates a failed save. */
+	putStatus = 200;
+	/** Query strings of GET /resolved/series and /resolved/trend, in order. */
+	charts: string[] = [];
 	/** A fresh install: no data, no connections. */
 	empty = false;
 	/** Status of GET /settings/dashboard; 503 simulates the endpoint not being ready. */
@@ -112,23 +132,31 @@ export class DashboardApi {
 		const method = r.request().method();
 		if (path === '/settings/dashboard' && method === 'GET') {
 			if (this.layoutStatus !== 200) return problem(r, this.layoutStatus, 'unavailable', 'not ready');
-			return json(r, 200, { version: 1, cards: this.stored ?? defaultLayout, is_default: this.stored === null });
+			return json(r, 200, { version: 1, cards: this.stored ?? defaultLayout, hero: this.storedHero ?? defaultHero, dismissed: this.dismissed, is_default: this.stored === null });
 		}
 		if (path === '/settings/dashboard' && method === 'PUT') {
-			const body = r.request().postDataJSON() as { version: number; cards: Card[] };
+			const body = r.request().postDataJSON() as { version: number; cards: Card[]; hero?: string[]; dismissed?: string[] };
 			this.puts.push(body);
+			if (this.putStatus !== 200) return problem(r, this.putStatus, 'unavailable', 'not ready');
 			this.stored = body.cards;
-			return json(r, 200, { version: 1, cards: body.cards });
+			if (body.hero) this.storedHero = body.hero;
+			this.dismissed = body.dismissed ?? [];
+			const answer = { version: 1, cards: body.cards, hero: this.storedHero ?? defaultHero, dismissed: this.dismissed, is_default: false };
+			return this.putDelay ? new Promise<void>((done) => setTimeout(done, this.putDelay)).then(() => json(r, 200, answer)) : json(r, 200, answer);
 		}
+		if (path === '/resolved/series') return this.series(r, url.searchParams);
+		if (path === '/resolved/trend') return this.trend(r, url.searchParams);
+		if (path === '/resolved/sleep') return this.sleep(r, url.searchParams);
+		if (path === '/sleep') return this.sessions(r, url.searchParams);
 		if (path === '/metrics') return json(r, 200, { metrics: catalogue });
 		if (path === '/resolved/summary') return this.summary(r, url.searchParams);
 		if (path === '/providers') return json(r, 200, { providers });
 		if (path === '/connections') {
-			const list = this.empty ? [] : [connection('conn_' + 'a'.repeat(32), 'apple_health', { mode: 'push', official: null }), connection('conn_' + 'b'.repeat(32), 'withings', { status: 'needs_reauth', health: 'needs_reauth', consecutive_failures: 1 })];
+			const list = this.empty ? [] : [connection('conn_' + 'a'.repeat(32), 'apple_health', { mode: 'push', official: null }), connection('conn_' + 'b'.repeat(32), 'withings', { status: 'needs_reauth', health: 'needs_reauth', consecutive_failures: 1, last_success_at: this.reauthSince })];
 			return json(r, 200, { connections: list });
 		}
 		if (path === '/jobs') return json(r, 200, { jobs: [], has_more: false });
-		if (path === '/system/status') return json(r, 200, { last_backup_at: this.empty ? null : new Date(Date.now() - 10 * 24 * hour).toISOString() });
+		if (path === '/system/status') return json(r, 200, { last_backup_at: this.empty ? null : this.backupAt });
 		return r.fallback();
 	}
 
@@ -137,7 +165,90 @@ export class DashboardApi {
 		this.summaryDates.push(date);
 		const on = date ?? today();
 		const metrics = q.getAll('metrics').flatMap((m) => m.split(',')).filter(Boolean);
-		return json(r, 200, { date: on, timezone: 'Europe/Amsterdam', metrics: Object.fromEntries(metrics.map((m) => [m, this.metric(m, on)])) });
+		const compare = q.get('compare') === 'true';
+		return json(r, 200, {
+			date: on,
+			timezone: 'Europe/Amsterdam',
+			metrics: Object.fromEntries(metrics.map((m) => [m, { ...this.metric(m, on), ...(compare ? { comparisons: this.comparisons(m, on) } : {}) }]))
+		});
+	}
+
+	private has(code: string) {
+		return !this.empty && (code in specs || code === 'sleep');
+	}
+
+	/** The 7/30/90/365-day periods ending at `end` beside the ones before them. */
+	private comparisons(code: string, end: string) {
+		const period = (to: string, days: number) => {
+			const dates = Array.from({ length: days }, (_, i) => addDays(to, i - days + 1));
+			return rollup(code, dates.map((d) => point(code, d)), days, to, !this.has(code));
+		};
+		return [7, 30, 90, 365].map((days) => ({ days, current: period(end, days), previous: period(addDays(end, -days), days) }));
+	}
+
+	// One resolved value per local date; every 13th date of a non-additive metric is a gap.
+	private series(r: Route, q: URLSearchParams) {
+		this.charts.push(`series ${q.toString()}`);
+		const code = q.get('metric') ?? '';
+		const [from, to] = [q.get('start')!.slice(0, 10), q.get('end')!.slice(0, 10)];
+		const points = [];
+		for (let d = from; d <= to && d <= today(); d = addDays(d, 1)) {
+			if (!this.has(code)) continue;
+			const n = Number(d.slice(5, 7)) * 31 + Number(d.slice(8, 10));
+			const spec = specs[code];
+			const end = `${addDays(d, 1)}T00:00:00Z`;
+			if (spec?.agg !== 'additive' && n % 13 === 0) {
+				points.push({ key: d, start: `${d}T00:00:00Z`, end, local_date: d, status: 'no_data', sources: [] });
+				continue;
+			}
+			points.push({
+				key: d, start: `${d}T00:00:00Z`, end, local_date: d, status: spec?.status ?? 'direct', value: point(code, d),
+				...(d === today() && spec?.agg === 'additive' ? { partial: true } : {}),
+				sources: [spec?.group ?? 'whoop'], providers: [spec?.provider ?? 'whoop']
+			});
+		}
+		return json(r, 200, {
+			metric: code, unit: specs[code]?.unit, window: { kind: q.get('window') ?? 'local_day' }, rule: { ref: `builtin:${code}:3`, version: 3 },
+			timezone: 'Europe/Amsterdam', points, sources_used: points.length ? [specs[code]?.group ?? 'whoop'] : [], has_more: false
+		});
+	}
+
+	// Weekly rollups from start_date through end_date.
+	private trend(r: Route, q: URLSearchParams) {
+		this.charts.push(`trend ${q.toString()}`);
+		const code = q.get('metric') ?? '';
+		const [from, to] = [q.get('start_date')!, q.get('end_date')!];
+		const buckets = [];
+		for (let d = from; d <= to; d = addDays(d, 7)) {
+			const dates = Array.from({ length: 7 }, (_, i) => addDays(d, i)).filter((x) => x <= to);
+			buckets.push(rollup(code, dates.map((x) => point(code, x)), dates.length, dates.at(-1)!, !this.has(code)));
+		}
+		return json(r, 200, { metric: code, unit: specs[code]?.unit, grain: 'week', timezone: 'Europe/Amsterdam', start_date: from, end_date: to, buckets });
+	}
+
+	// Last night: 23:10 to 06:40 UTC on WHOOP, with stages.
+	private sleep(r: Route, q: URLSearchParams) {
+		const d = q.get('end_date')!;
+		if (this.empty) return json(r, 200, { timezone: 'UTC', nights: [] });
+		const value = point('sleep', d);
+		return json(r, 200, {
+			timezone: 'UTC',
+			nights: [{
+				local_date: d,
+				result: { status: 'direct', value, explanation: 'Synthetic night.' },
+				episode: { start: `${addDays(d, -1)}T23:10:00Z`, end: `${d}T06:40:00Z` },
+				members: [{ group: 'whoop', rule_status: 'used', selected: true, provider: 'whoop', session_refs: [`sleep-${d}`] }]
+			}]
+		});
+	}
+
+	private sessions(r: Route, q: URLSearchParams) {
+		const d = q.get('end_date')!;
+		const at = (h: number) => new Date(Date.parse(`${addDays(d, -1)}T23:10:00Z`) + h * hour).toISOString();
+		const cycle = ['light', 'deep', 'light', 'rem', 'awake', 'light', 'deep', 'rem', 'light', 'awake'];
+		const stages = cycle.map((stage, i) => ({ stage, start_at: at(i * 0.75), end_at: at((i + 1) * 0.75) }));
+		const session = { id: `sleep-${d}`, start_at: at(0), end_at: at(7.5), tz_offset_min: 0, sleep_date: d, is_nap: false, has_stages: true, stages };
+		return json(r, 200, { sleep: this.empty ? [] : [session], has_more: false });
 	}
 
 	private metric(code: string, date: string): Json {

@@ -3,6 +3,7 @@
 	resolution.md#selectors-and-validation. Field errors use keys like "spec.groups.0.match.1".
 -->
 <script lang="ts">
+	import Button from '../ui/Button.svelte';
 	import type { Chip } from './chips.ts';
 	import { selectorFields, selectorLabels, type Selector, type SelectorField } from './rule.ts';
 
@@ -122,15 +123,15 @@
 		{/each}
 		<div class="row">
 			{#if Object.keys(sel).length < selectorFields.length}
-				<button class="btn" type="button" onclick={() => addCondition(si)}>And…</button>
+				<Button size="sm" onclick={() => addCondition(si)}>And…</Button>
 			{/if}
 			<button class="btn link" type="button" onclick={() => list.splice(si, 1)}>Remove {kind.toLowerCase()} {si + 1}</button>
 		</div>
 	</fieldset>
 {/each}
-<button class="btn" type="button" onclick={() => list.push({ provider: '' })}>
+<Button size="sm" onclick={() => list.push({ provider: '' })}>
 	{list.length ? `Or ${kind.toLowerCase()}…` : `Add ${kind.toLowerCase()}`}
-</button>
+</Button>
 {#if chips.length}
 	<div class="chips" role="group" aria-label="Add a {kind.toLowerCase()} from your sources">
 		{#each chips as c (c.label)}
@@ -158,36 +159,11 @@
 		align-items: center;
 		margin-bottom: var(--space-2);
 	}
-	select,
-	input {
-		font: inherit;
-		padding: var(--space-1) var(--space-2);
-		color: var(--color-text);
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-sm);
-	}
-	input[aria-invalid='true'] {
-		border-color: var(--color-error);
-	}
 	.chips {
 		display: flex;
 		flex-wrap: wrap;
 		gap: var(--space-1);
 		margin-top: var(--space-2);
-	}
-	.chip {
-		padding: var(--space-1) var(--space-2);
-		font: inherit;
-		font-size: var(--text-sm);
-		color: var(--color-text);
-		background: var(--color-surface-2);
-		border: 1px solid var(--color-border);
-		border-radius: 999px;
-		cursor: pointer;
-	}
-	.chip:hover {
-		border-color: var(--color-accent);
 	}
 	.error {
 		margin: 0;

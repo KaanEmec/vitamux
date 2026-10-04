@@ -121,7 +121,8 @@
 		box-shadow: var(--shadow-2);
 	}
 	dialog::backdrop {
-		background: rgb(0 0 0 / 0.5);
+		background: var(--color-backdrop);
+		backdrop-filter: blur(6px);
 	}
 	.search {
 		display: flex;
@@ -134,17 +135,13 @@
 	input {
 		flex: 1;
 		min-height: 3.25rem;
-		font: inherit;
-		color: var(--color-text);
+		padding: 0;
 		background: transparent;
 		border: 0;
-		outline: none;
 	}
-	kbd {
-		padding: 1px var(--space-2);
-		font-size: var(--text-2xs);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-xs);
+	/* The palette's search row is borderless; the global field focus glow does not apply. */
+	.search input:focus {
+		box-shadow: none;
 	}
 	ul {
 		max-height: min(24rem, 60vh);

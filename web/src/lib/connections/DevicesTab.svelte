@@ -26,6 +26,7 @@
 	let merging = $state<Device | null>(null);
 	let target = $state('');
 	let confirmed = $state(false);
+	const formId = $props.id();
 
 	async function load() {
 		const { data, error } = await api.GET('/api/v1/source-devices', { params: { query: { include: ['records'] } } });
@@ -177,10 +178,10 @@
 {#if merging}
 	{@const into = listed.find((x) => x.id === target)}
 	<Modal title="Merge {label(merging)} into another device" onclose={() => (merging = null)}>
-		<form onsubmit={merge}>
+		<form id={formId} onsubmit={merge}>
 			<div class="field">
-				<label for="merge-target">Merge into</label>
-				<select id="merge-target" bind:value={target}>
+				<label for="{formId}-target">Merge into</label>
+				<select id="{formId}-target" bind:value={target}>
 					{#each listed.filter((x) => x.id !== merging!.id) as t (t.id)}<option value={t.id}>{label(t)} ({t.fingerprint})</option>{/each}
 				</select>
 			</div>
@@ -188,12 +189,14 @@
 				All records of {label(merging)} ({recordText(total(merging)).toLowerCase()}, older versions included) move to {into ? label(into) : 'the device you pick'},
 				and records it reports later are stored there too. Its own type and name no longer apply. Rules that name {label(merging)} by its id stop matching it.
 			</p>
-			<label class="confirm">
+			<label class="check">
 				<input type="checkbox" bind:checked={confirmed} />
 				<span>I understand that a merge cannot be undone here.</span>
 			</label>
-			<Button type="submit" variant="danger" disabled={busy || !confirmed || !target}>Merge devices</Button>
 		</form>
+		{#snippet footer()}
+			<Button variant="destructive" class="primary" type="submit" form={formId} disabled={busy || !confirmed || !target}>Merge devices</Button>
+		{/snippet}
 	</Modal>
 {/if}
 
@@ -202,16 +205,12 @@
 		font-size: var(--text-xs);
 		font-weight: 400;
 	}
-	td select,
-	td input {
-		min-height: var(--control-h-sm);
-		padding: 0 var(--space-2);
-		font: inherit;
-		color: var(--color-text);
-		background: var(--color-inset);
-		border: 1px solid var(--color-border-strong);
-		border-radius: var(--radius-sm);
+	/* Rows hold full-height controls, so their text centres beside them. */
+	tbody th,
+	tbody td {
+		vertical-align: middle;
 	}
+	/* The controls are base.css's; the name field only fills its column. */
 	td input {
 		width: 100%;
 		min-width: 10rem;
@@ -224,14 +223,5 @@
 	.hint {
 		margin: var(--space-3) 0 0;
 		font-size: var(--text-sm);
-	}
-	.confirm {
-		display: flex;
-		gap: var(--space-2);
-		align-items: flex-start;
-		margin-bottom: var(--space-3);
-	}
-	.confirm input {
-		margin-top: 0.3em;
 	}
 </style>

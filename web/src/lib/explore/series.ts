@@ -1,10 +1,11 @@
-// Turning resolved and per-source responses into chart series for the metric detail page.
+// Turning resolved and per-source responses into chart series for the metric detail page, and
+// the source behind each resolved day.
 // Local dates plot at their UTC midnight and the chart formats in UTC, so a date never shifts.
 import type { Schemas } from '../api/client.ts';
 import type { Series } from '../charts/types.ts';
 import { providerLabel } from '../connections/connections.ts';
-
-export const dayMs = (date: string) => Date.parse(`${date}T00:00:00Z`);
+import { groupLabel } from '../rules/rule.ts';
+import { dayMs } from '../views/format.ts';
 
 /** A resolved value as a number: itself, or the metric's entry of a family value. */
 export function num(value: unknown, code: string): number | null {
@@ -14,6 +15,21 @@ export function num(value: unknown, code: string): number | null {
 }
 
 type Source = Schemas['SourceSeriesSource'];
+type Resolved = Schemas['ResolvedValue'];
+
+/** The rule group a resolved day came from, or ''. */
+export const dayGroup = (v: Resolved | undefined) => v?.selected ?? v?.inputs?.find((i) => i.selected)?.group ?? '';
+
+/** The providers behind a resolved day (its selected inputs' sources), else its group; none without a value. */
+export function dayProviders(v: Resolved | undefined): string[] {
+	if (!v || v.status === 'no_data') return [];
+	const used = (v.inputs ?? []).filter((i) => i.selected).flatMap((i) => (i.sources ?? []).map((s) => s.provider));
+	if (used.length) return [...new Set(used)];
+	return dayGroup(v) ? [dayGroup(v)] : [];
+}
+
+/** A resolved value's warning codes, with the rule group they concern. */
+export const warningCodes = (v: Resolved | undefined) => (v?.warnings ?? []).map((w) => (w.group ? `${w.code} (${groupLabel(w.group)})` : w.code));
 
 export function sourceLabel(s: Source): string {
 	const parts = [providerLabel(s.provider)];

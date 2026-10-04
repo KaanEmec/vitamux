@@ -13,6 +13,8 @@
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import StatusIcon from '#lib/components/StatusIcon.svelte';
 	import TextField from '#lib/components/TextField.svelte';
+	import Notice from '#lib/settings/Notice.svelte';
+	import Button from '#lib/ui/Button.svelte';
 	import { selectorChips, seenValues, sourceChoices } from '#lib/rules/chips.ts';
 	import PreviewTable from '#lib/rules/PreviewTable.svelte';
 	import RuleDiff from '#lib/rules/RuleDiff.svelte';
@@ -260,7 +262,7 @@
 			</p>
 		{/if}
 	</div>
-	<a class="btn ghost" href={form ? `/rules/${form.metric}` : '/rules'}>Cancel</a>
+	<Button variant="ghost" href={form ? `/rules/${form.metric}` : '/rules'}>Cancel</Button>
 </div>
 
 <nav aria-label="Builder steps">
@@ -269,7 +271,7 @@
 			<li>
 				<button
 					type="button"
-					class={['step', form && i < step && 'done']}
+					class={['btn step', form && i < step && 'done']}
 					aria-current={step === i ? 'step' : undefined}
 					disabled={i > 0 && !form}
 					onclick={() => go(i)}
@@ -300,8 +302,8 @@
 		</div>
 		<fieldset class="choices">
 			<legend>Start from</legend>
-			<label><input type="radio" name="start" value="current" bind:group={startFrom} /> The rule in effect (reorder or adjust it)</label>
-			<label><input type="radio" name="start" value="blank" bind:group={startFrom} /> An empty rule (replace it)</label>
+			<label class="check"><input type="radio" name="start" value="current" bind:group={startFrom} /> The rule in effect (reorder or adjust it)</label>
+			<label class="check"><input type="radio" name="start" value="blank" bind:group={startFrom} /> An empty rule (replace it)</label>
 		</fieldset>
 		{#if metric && activeRule(metric)}
 			{@const r = activeRule(metric)}
@@ -322,25 +324,28 @@
 				<div class="group-head">
 					<TextField label="Group id" name="spec.groups.{i}.id" bind:value={g.id} error={errors[`spec.groups.${i}.id`]} hint="Lowercase letters, digits and _" />
 					<div class="order">
-						<button class="btn" type="button" disabled={i === 0} onclick={() => moveGroup(i, -1)} aria-label="Move group {i + 1} up">↑</button>
-						<button class="btn" type="button" disabled={i === form.groups.length - 1} onclick={() => moveGroup(i, 1)} aria-label="Move group {i + 1} down">↓</button>
-						<button class="btn" type="button" disabled={form.groups.length === 1} onclick={() => form?.groups.splice(i, 1)} aria-label="Remove group {i + 1}">Remove</button>
+						<Button disabled={i === 0} onclick={() => moveGroup(i, -1)} aria-label="Move group {i + 1} up">↑</Button>
+						<Button disabled={i === form.groups.length - 1} onclick={() => moveGroup(i, 1)} aria-label="Move group {i + 1} down">↓</Button>
+						<Button disabled={form.groups.length === 1} onclick={() => form?.groups.splice(i, 1)} aria-label="Remove group {i + 1}">Remove</Button>
 					</div>
 				</div>
 				{#if errors[`spec.groups.${i}`]}<p class="error">{errors[`spec.groups.${i}`]}</p>{/if}
 				<SelectorList bind:list={g.match} kind="Match" errorPrefix="spec.groups.{i}.match" {errors} {suggestions} {chips} {choices} />
 			</fieldset>
 		{/each}
-		<button class="btn add" type="button" onclick={() => form?.groups.push({ key: groupKey(), id: '', match: [{ provider: '' }] })}>Add group</button>
+		<p class="add"><Button onclick={() => form?.groups.push({ key: groupKey(), id: '', match: [{ provider: '' }] })}>Add group</Button></p>
 
 		<fieldset class="group">
 			<legend>Exclusions</legend>
 			<p class="muted">Inputs matching any exclusion are never used, whatever group they match.</p>
 			{#if relaySuggestion}
-				<p class="suggest">
-					<StatusIcon status="info" /> A group names a provider that may also relay into Apple Health.
-					<button class="btn" type="button" onclick={() => form?.exclude.push({ provider: 'apple_health', relayed: true })}>Exclude Apple Health relays</button>
-				</p>
+				<div class="inline-alert info">
+					<StatusIcon status="info" />
+					<span>A group names a provider that may also relay into Apple Health.</span>
+					<div class="alert-actions">
+						<Button size="sm" onclick={() => form?.exclude.push({ provider: 'apple_health', relayed: true })}>Exclude Apple Health relays</Button>
+					</div>
+				</div>
 			{/if}
 			<SelectorList bind:list={form.exclude} kind="Exclusion" errorPrefix="spec.exclude" {errors} {suggestions} {chips} {choices} />
 		</fieldset>
@@ -348,14 +353,14 @@
 		<fieldset class="ops">
 			<legend>How to combine the groups</legend>
 			{#each ops as o (o.op)}
-				<label class="op">
+				<label class="option-card">
 					<input type="radio" name="op" value={o.op} bind:group={form.op} />
 					<span><strong>{o.label}</strong><br /><span class="muted">{o.hint}</span></span>
 				</label>
 			{/each}
 		</fieldset>
 		{#if form.op === 'single_source' && form.groups.length > 1}
-			<p class="note"><StatusIcon status="warn" /> One source only needs exactly one group; remove the others in step 2.</p>
+			<Notice status="warn">One source only needs exactly one group; remove the others in step 2.</Notice>
 		{/if}
 		{#if ops.find((o) => o.op === form?.op)?.pooling}
 			<div class="row">
@@ -407,23 +412,26 @@
 			</div>
 		</fieldset>
 		{#if needsSumAck(form)}
-			<div class="ack" role="group" aria-labelledby="ack-title">
-				<p id="ack-title"><StatusIcon status="warn" /> <strong>Adding sources can count the same activity twice.</strong></p>
-				<p class="muted">
-					If two devices recorded the same steps, a sum doubles them. Every result will carry this warning.
-				</p>
-				<label>
-					<input
-						type="checkbox"
-						checked={form.acknowledged.includes(sumWarning)}
-						onchange={(e) => toggleAck(e.currentTarget.checked)}
-						aria-invalid={ackError || errors['spec.acknowledged_warnings'] ? 'true' : undefined}
-					/>
-					I understand the duplicate risk
-				</label>
-				{#if ackError || errors['spec.acknowledged_warnings']}
-					<p class="error">{ackError || errors['spec.acknowledged_warnings']}</p>
-				{/if}
+			<div class="inline-alert warn" role="group" aria-labelledby="ack-title">
+				<StatusIcon status="warn" />
+				<div class="ack">
+					<p id="ack-title"><strong>Adding sources can count the same activity twice.</strong></p>
+					<p class="muted">
+						If two devices recorded the same steps, a sum doubles them. Every result will carry this warning.
+					</p>
+					<label class="check">
+						<input
+							type="checkbox"
+							checked={form.acknowledged.includes(sumWarning)}
+							onchange={(e) => toggleAck(e.currentTarget.checked)}
+							aria-invalid={ackError || errors['spec.acknowledged_warnings'] ? 'true' : undefined}
+						/>
+						I understand the duplicate risk
+					</label>
+					{#if ackError || errors['spec.acknowledged_warnings']}
+						<p class="error">{ackError || errors['spec.acknowledged_warnings']}</p>
+					{/if}
+				</div>
 			</div>
 		{/if}
 	{:else if form && step === 3}
@@ -457,7 +465,7 @@
 			<fieldset class="choices">
 				<legend>Ignore inputs flagged as</legend>
 				{#each qualityFlags as f (f)}
-					<label><input type="checkbox" value={f} bind:group={form.excludeFlags} /> {f.replaceAll('_', ' ')}</label>
+					<label class="check"><input type="checkbox" value={f} bind:group={form.excludeFlags} /> {f.replaceAll('_', ' ')}</label>
 				{/each}
 			</fieldset>
 		</fieldset>
@@ -529,26 +537,24 @@
 		{:else if preview && 'preview' in preview}
 			<PreviewTable days={preview.preview.days} />
 		{:else if preview && 'unavailable' in preview}
-			<p class="note"><StatusIcon status="info" /> Preview unavailable: this server cannot resolve drafts yet. You can still save the rule.</p>
+			<Notice status="info">Preview unavailable: this server cannot resolve drafts yet. You can still save the rule.</Notice>
 		{:else if preview && 'problem' in preview}
 			<ProblemAlert problem={preview.problem} />
 		{/if}
-		<button class="btn" type="button" onclick={runPreview} disabled={preview === 'loading'}>Refresh preview</button>
+		<Button onclick={runPreview} disabled={preview === 'loading'}>Refresh preview</Button>
 
 		<div class="save">
 			<TextField label="Note (optional)" name="note" bind:value={note} maxlength={500} />
-			<label><input type="checkbox" bind:checked={activate} /> Make it the active rule</label>
+			<label class="check"><input type="checkbox" bind:checked={activate} /> Make it the active rule</label>
 		</div>
 	{/if}
 
 	<div class="nav">
-		{#if step > 0}<button class="btn" type="button" onclick={() => go(step - 1)}>Back</button>{/if}
+		{#if step > 0}<Button onclick={() => go(step - 1)}>Back</Button>{/if}
 		{#if step < 4}
-			<button class="btn primary" type="button" disabled={step === 0 && !metric} onclick={() => go(step + 1)}>
-				Next: {steps[step + 1].toLowerCase()}
-			</button>
+			<Button variant="primary" disabled={step === 0 && !metric} onclick={() => go(step + 1)}>Next: {steps[step + 1].toLowerCase()}</Button>
 		{:else}
-			<button class="btn primary" type="button" disabled={saving} onclick={save}>{saving ? 'Saving…' : 'Save version'}</button>
+			<Button variant="primary" disabled={saving} onclick={save}>{saving ? 'Saving…' : 'Save version'}</Button>
 		{/if}
 	</div>
 </section>
@@ -566,7 +572,7 @@
 			{:else if side === null || side === 'loading'}
 				<p class="muted small">Resolving the draft…</p>
 			{:else if 'unavailable' in side}
-				<p class="note"><StatusIcon status="info" /> Preview unavailable on this server; the review step still checks the rule.</p>
+				<Notice status="info">Preview unavailable on this server; the review step still checks the rule.</Notice>
 			{:else if 'problem' in side}
 				<p class="muted small">Not ready to preview: {side.problem.detail || side.problem.title}</p>
 			{:else if sideDays}
@@ -613,21 +619,12 @@
 		list-style: none;
 	}
 	.step {
-		display: flex;
-		gap: var(--space-2);
-		align-items: center;
+		justify-content: flex-start;
 		width: 100%;
-		min-height: var(--control-h);
-		padding: var(--space-2) var(--space-3);
-		font: inherit;
 		font-size: var(--text-sm);
-		font-weight: 500;
 		color: var(--color-text-muted);
-		text-align: left;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-md);
-		cursor: pointer;
+		white-space: normal;
+		box-shadow: none;
 	}
 	.step.done {
 		color: var(--color-text);
@@ -637,10 +634,6 @@
 		color: var(--color-text);
 		background: var(--color-accent-soft);
 		border-color: var(--color-accent);
-	}
-	.step:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
 	}
 	.num {
 		display: inline-grid;
@@ -714,7 +707,7 @@
 		margin-top: var(--space-5);
 	}
 	.add {
-		margin-bottom: var(--space-4);
+		margin: 0 0 var(--space-4);
 	}
 	fieldset {
 		margin: 0 0 var(--space-4);
@@ -751,48 +744,12 @@
 		grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
 		gap: var(--space-2);
 	}
-	.op {
-		display: flex;
-		gap: var(--space-2);
-		align-items: flex-start;
-		padding: var(--space-2) var(--space-3);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-sm);
-		cursor: pointer;
-	}
-	.op:has(input:checked) {
-		border-color: var(--color-accent);
-		box-shadow: inset 0 0 0 1px var(--color-accent);
-	}
-	.ack {
-		padding: var(--space-3) var(--space-4);
-		border: 1px solid var(--color-warn);
-		border-radius: var(--radius-sm);
-	}
 	.ack p {
 		margin: 0 0 var(--space-2);
-	}
-	.note,
-	.suggest {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-2);
-		align-items: center;
-		padding: var(--space-2) var(--space-3);
-		background: var(--color-info-bg);
-		border-radius: var(--radius-sm);
 	}
 	.error {
 		color: var(--color-error);
 		font-size: var(--text-sm);
-	}
-	select {
-		font: inherit;
-		padding: var(--space-2) var(--space-3);
-		color: var(--color-text);
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-sm);
 	}
 	.summary {
 		display: grid;

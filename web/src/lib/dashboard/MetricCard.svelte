@@ -1,19 +1,21 @@
 <!--
-	One dashboard card: the metric, its value for the day with status, a neutral delta against the
-	30-day mean, a sparkline and the sources behind it. The title links to the metric (a stretched
+	One pinned dashboard card: the metric's tile and source, its value for the day with status, a
+	neutral delta against the 30-day mean and a sparkline in the metric hue. The title links to the metric (a stretched
 	link, so the whole card opens it); with `tools` the card is being edited and does not link.
 -->
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import ResultStatus from '../components/ResultStatus.svelte';
-	import { stageColor } from '../charts/sleep.ts';
 	import { metricHref } from '../nav.ts';
 	import Chip from '../ui/Chip.svelte';
-	import { hoursMinutes, type CardView } from './summary.ts';
+	import { metricLook } from '../ui/metric.ts';
+	import MetricTile from '../ui/MetricTile.svelte';
+	import type { CardView } from './summary.ts';
 
 	let {
 		code,
+		section,
 		label,
 		size,
 		view,
@@ -24,6 +26,8 @@
 		...rest
 	}: {
 		code: string;
+		/** Catalogue section (GET /metrics), which picks the hue and icon. */
+		section?: string;
 		label: string;
 		size: 'S' | 'M' | 'L';
 		view: CardView | null;
@@ -34,39 +38,46 @@
 		tools?: Snippet;
 	} & HTMLAttributes<HTMLElement> = $props();
 
-	// The kit's sparkline is tiny, but it stays a lazy chunk like the other charts.
+	// The kit's sparkline and stage stack are tiny, but they stay lazy chunks like the other charts.
 	const kit = import('../charts/Sparkline.svelte');
+	const stack = import('../charts/StageStack.svelte');
 	const titleId = $props.id();
-	const stage = (s: string) => `var(--stage-${stageColor(s)})`;
-	const shown = $derived(view?.chips.slice(0, 3) ?? []);
+	const chip = $derived(view?.chips[0]);
+	const more = $derived(view?.chips.slice(1, 3) ?? []);
 </script>
 
-<article {...rest} class="card" class:m={size === 'M'} class:l={size === 'L'} class:edit class:over aria-labelledby={titleId}>
+<article
+	{...rest}
+	class="card"
+	class:m={size === 'M'}
+	class:l={size === 'L'}
+	class:edit
+	class:over
+	style:--metric={metricLook(code, section).color}
+	aria-labelledby={titleId}
+>
 	{#if edit}{@render tools?.()}{/if}
 	<header>
+		<MetricTile {code} {section} size="sm" />
 		<h3 id={titleId}>
 			{#if edit}{label}{:else}<a href={metricHref(code)}>{label}</a>{/if}
 		</h3>
-		{#if view}<span class="status"><ResultStatus status={view.status} partial={view.partial} /></span>{/if}
+		{#if chip}<Chip source={chip.provider}>{chip.label}</Chip>{/if}
 	</header>
 
 	{#if !view}
 		<p class="value muted" role="status">Loading…</p>
 	{:else}
-		<p class="value">{view.value}{#if view.unit}<span class="unit">{view.unit}</span>{/if}</p>
+		<div class="reading">
+			<p class="value">{view.value}{#if view.unit}<span class="unit">{view.unit}</span>{/if}</p>
+			<span class="status"><ResultStatus status={view.status} partial={view.partial} /></span>
+		</div>
 		{#if view.sub}<p class="sub">{view.sub}</p>{/if}
 
 		{#if view.stages}
-			<div class="stages" role="img" aria-label="Time in each sleep stage">
-				{#each view.stages as s (s.stage)}
-					<span style:flex={s.seconds} style:background={stage(s.stage)}></span>
-				{/each}
-			</div>
-			<ul class="legend">
-				{#each view.stages as s (s.stage)}
-					<li><span class="swatch" style:background={stage(s.stage)}></span>{s.label} <b>{hoursMinutes(s.seconds)}</b></li>
-				{/each}
-			</ul>
+			{#await stack then { default: StageStack }}
+				<StageStack stages={view.stages} label="Time in each sleep stage" />
+			{/await}
 		{/if}
 
 		{#if view.ys.some((y) => y != null)}
@@ -78,9 +89,9 @@
 		{/if}
 
 		<footer>
-			{#each shown as c (c.label)}<Chip source={c.provider}>{c.label}</Chip>{/each}
-			{#if view.chips.length > shown.length}<span class="muted">+{view.chips.length - shown.length}</span>{/if}
 			{#if view.delta}<span class="delta">{view.delta}</span>{/if}
+			{#each more as c (c.label)}<Chip source={c.provider}>{c.label}</Chip>{/each}
+			{#if view.chips.length > more.length + 1}<span class="muted">+{view.chips.length - more.length - 1}</span>{/if}
 			{#if !edit && view.hasData && view.status !== 'no_data' && date}
 				<a class="all" href="/explore/{code}/day/{date}">All sources<span class="visually-hidden"> for {label}</span></a>
 			{/if}
@@ -98,9 +109,11 @@
 		min-height: 11.5rem;
 		padding: var(--space-4);
 	}
-	.m,
-	.l {
-		grid-column: span 2;
+	@media (min-width: 36rem) {
+		.m,
+		.l {
+			grid-column: span 2;
+		}
 	}
 	.edit {
 		padding-top: var(--space-3);
@@ -112,7 +125,7 @@
 	header {
 		display: flex;
 		align-items: center;
-		gap: var(--space-2);
+		gap: var(--space-3);
 	}
 	h3 {
 		flex: 1;
@@ -134,7 +147,7 @@
 		border-radius: inherit;
 	}
 	article:has(h3 a:hover) {
-		border-color: var(--color-border-strong);
+		border-color: color-mix(in srgb, var(--metric) 55%, var(--color-border));
 	}
 	h3 a:focus-visible {
 		outline: none;
@@ -142,6 +155,13 @@
 	article:has(h3 a:focus-visible) {
 		outline: 2px solid var(--color-focus);
 		outline-offset: 2px;
+	}
+	.reading {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: var(--space-2);
 	}
 	.status {
 		font-size: var(--text-xs);
@@ -154,13 +174,13 @@
 		display: flex;
 		align-items: baseline;
 		gap: var(--space-2);
-		font-size: var(--text-xl);
+		font-size: var(--text-2xl);
 		font-weight: 600;
 		letter-spacing: var(--tracking-tight);
+		font-variant-numeric: tabular-nums;
 	}
-	.l .value,
-	.m .value {
-		font-size: var(--text-2xl);
+	.delta {
+		font-variant-numeric: tabular-nums;
 	}
 	.unit,
 	.sub {
@@ -173,37 +193,6 @@
 	}
 	.l .spark :global(.spark) {
 		height: 5rem;
-	}
-	.stages {
-		display: flex;
-		gap: 2px;
-		height: 0.75rem;
-		overflow: hidden;
-		border-radius: var(--radius-xs);
-	}
-	.stages span {
-		min-width: 2px;
-	}
-	.legend {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-1) var(--space-4);
-		margin: 0;
-		padding: 0;
-		font-size: var(--text-xs);
-		color: var(--color-text-muted);
-		list-style: none;
-	}
-	.legend b {
-		font-weight: 600;
-		color: var(--color-text);
-	}
-	.swatch {
-		display: inline-block;
-		width: 0.5rem;
-		height: 0.5rem;
-		margin-right: var(--space-1);
-		border-radius: 2px;
 	}
 	footer {
 		display: flex;

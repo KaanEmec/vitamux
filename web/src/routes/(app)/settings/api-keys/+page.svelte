@@ -104,13 +104,16 @@
 
 <Card title="Your keys" id="keys">
 	{#if created}
-		<div class="callout" role="status">
-			<strong>Key "{created.name}" created.</strong>
-			<p>Copy the secret now. It is shown once and cannot be retrieved later.</p>
-			<code class="secret" aria-label="API key secret">{created.token}</code>
-			<div class="actions">
-				<button class="btn" type="button" onclick={copy}>{copied ? 'Copied' : 'Copy secret'}</button>
-				<button class="btn primary" type="button" onclick={() => (created = null)}>I have saved it</button>
+		<div class="inline-alert ok" role="status">
+			<StatusIcon status="ok" />
+			<div>
+				<strong>Key "{created.name}" created.</strong>
+				<p>Copy the secret now. It is shown once and cannot be retrieved later.</p>
+				<code class="secret" aria-label="API key secret">{created.token}</code>
+				<div class="actions">
+					<button class="btn" type="button" onclick={copy}>{copied ? 'Copied' : 'Copy secret'}</button>
+					<button class="btn primary" type="button" onclick={() => (created = null)}>I have saved it</button>
+				</div>
 			</div>
 		</div>
 	{/if}
@@ -149,11 +152,11 @@
 								{#if st !== 'revoked'}
 									{#if revoking === k.id}
 										<div class="actions">
-											<button class="btn sm" type="button" disabled={busy} onclick={() => revoke(k)}>Confirm revoke</button>
+											<button class="btn sm destructive primary" type="button" disabled={busy} onclick={() => revoke(k)}>Confirm revoke</button>
 											<button class="btn sm" type="button" onclick={() => (revoking = null)}>Keep</button>
 										</div>
 									{:else}
-										<button class="btn sm" type="button" onclick={() => (revoking = k.id)} aria-label="Revoke key {k.name}">Revoke</button>
+										<button class="btn sm destructive" type="button" onclick={() => (revoking = k.id)} aria-label="Revoke key {k.name}">Revoke</button>
 									{/if}
 								{/if}
 							</td>

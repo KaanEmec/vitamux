@@ -87,7 +87,13 @@ const member = (id: string, provider: string, over: Json) => {
 	return { group: provider, rule_status: 'used', selected: false, provider, values: { sessions: 1, sleep_in_bed: seconds, sleep_total: s.asleep_s }, session_refs: [id], ...over };
 };
 
+/** The night with no episode in any source: a gap in every chart. */
+export const gapNight = dates[9];
+
 function resolvedNight(date: string): Json {
+	if (date === gapNight) {
+		return { local_date: date, result: { status: 'no_data', window: { kind: 'local_night', local_date: date }, explanation: 'No source recorded this night.' }, members: [] };
+	}
 	const main = sessions.find((s) => s.id === `sleep-${date}-watch`) as SleepFixture;
 	const watch = member(main.id, 'apple_watch', { selected: true, provider: 'apple_health', device: { type: 'watch', model: 'Apple Watch' } });
 	const members: Json[] = [watch];
@@ -101,6 +107,7 @@ function resolvedNight(date: string): Json {
 	};
 	return {
 		local_date: date,
+		episode: { start: main.start_at, end: main.end_at },
 		result: { status: 'direct', value, window: { kind: 'local_night', local_date: date }, rule: { ref: 'builtin:sleep:1', version: 1, strategy: 'event_priority' }, selected: 'apple_watch', explanation: 'Used apple_watch, the first source in the rule with an episode on this night.' },
 		members
 	};
@@ -116,6 +123,13 @@ const readings = Array.from({ length: 20 }, (_, i) => {
 		source: manual ? source('manual') : source('withings', { device_type: 'bp_monitor' }), provenance
 	};
 });
+
+// A second reading ten minutes after the newest (one session) and an evening reading.
+readings.push(
+	{ ...readings[19], id: `bp-${lastNight}-b`, measured_at: at(lastNight, 7, 20), systolic: 124, diastolic: 80, pulse: 61 },
+	{ ...readings[15], id: `bp-${addDay(lastNight, -4)}-eve`, measured_at: at(addDay(lastNight, -4), 19, 30), systolic: 126, diastolic: 82, pulse: 66 }
+);
+readings.sort((a, b) => a.measured_at.localeCompare(b.measured_at));
 
 // ---- body composition -----------------------------------------------------------------
 const comp = (id: string, metric: string, value: number, unit = 'kg') => ({ id: `${id}-${metric}`, metric, value, unit, source_value: null, source_unit: null, quality_flags: 0 });

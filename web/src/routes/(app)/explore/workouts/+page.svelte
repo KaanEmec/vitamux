@@ -12,6 +12,7 @@
 	import Chip from '#lib/ui/Chip.svelte';
 	import EmptyState from '#lib/ui/EmptyState.svelte';
 	import { icons } from '#lib/ui/icons.ts';
+	import MetricTile from '#lib/ui/MetricTile.svelte';
 	import Skeleton from '#lib/ui/Skeleton.svelte';
 	import Calendar, { monthRange } from '#lib/views/Calendar.svelte';
 	import { memberLabel, ruleTag } from '#lib/views/format.ts';
@@ -53,7 +54,7 @@
 
 <svelte:head><title>Workouts · Vitamux</title></svelte:head>
 
-<ViewHead title="Workouts" text="Workouts that overlap in time are listed together, one row per source, so duplicates across sources are visible." />
+<ViewHead title="Workouts" text="Workouts that overlap in time are listed together, one row per source, so duplicates across sources are visible." tile={{ code: 'workouts', section: 'Activity' }} />
 
 <ProblemAlert {problem} />
 
@@ -73,6 +74,7 @@
 				{#each listed as c (c.start + c.sport + c.members[0]?.id)}
 					<li class="card">
 						<h2>
+							<MetricTile code="workouts" section="Activity" size="sm" />
 							{metricLabel(c.sport)}
 							<span class="muted">· {c.local_date} {clock(c.start)}–{clock(c.end)}</span>
 							{#if c.members.length > 1}<Badge tone="accent">{c.members.length} sources</Badge>{/if}
@@ -87,7 +89,7 @@
 								</thead>
 								<tbody>
 									{#each c.members as m (m.id)}
-										<tr>
+										<tr class={[m.selected && 'selected']}>
 											<th scope="row"><Chip source={m.provider}>{memberLabel(m)}</Chip></th>
 											<td>{duration(seconds(m))}</td>
 											<td class="num">{m.distance_m == null ? '–' : formatValue(m.distance_m / 1000, 'km')}</td>
@@ -168,6 +170,9 @@
 	}
 	tbody th {
 		font-weight: 400;
+	}
+	tr.selected {
+		background: var(--metric-activity-tint);
 	}
 	.num {
 		text-align: right;

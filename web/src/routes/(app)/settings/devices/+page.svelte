@@ -117,13 +117,13 @@
 								{#if !d.revoked_at}
 									{#if revoking === d.id}
 										<div class="actions">
-											<button class="btn sm" type="button" disabled={busy} onclick={() => revoke(d)}>Confirm revoke</button>
+											<button class="btn sm destructive primary" type="button" disabled={busy} onclick={() => revoke(d)}>Confirm revoke</button>
 											<button class="btn sm" type="button" onclick={() => (revoking = null)}>Keep</button>
 										</div>
 									{:else}
 										<div class="actions">
 											<button class="btn sm" type="button" onclick={() => (resetting = d)} aria-label="Resync {d.name}">Resync…</button>
-											<button class="btn sm" type="button" onclick={() => (revoking = d.id)} aria-label="Revoke {d.name}">Revoke</button>
+											<button class="btn sm destructive" type="button" onclick={() => (revoking = d.id)} aria-label="Revoke {d.name}">Revoke</button>
 										</div>
 									{/if}
 								{/if}

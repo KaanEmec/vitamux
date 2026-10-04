@@ -26,6 +26,10 @@ export const defaultCards: Card[] = (
 	] as [string, Size][]
 ).map(([metric, size]) => ({ metric, size, hidden: false }));
 
+/** The hero stat tiles the server serves until the owner picks others (at most `heroMax`). */
+export const defaultHero = ['steps', 'resting_heart_rate', 'hrv_rmssd_nightly', 'weight'];
+export const heroMax = 4;
+
 const labels: Record<string, string> = {
 	sleep: 'Sleep',
 	blood_pressure: 'Blood pressure',

@@ -14,6 +14,7 @@
 	import Card from '../settings/Card.svelte';
 	import Notice from '../settings/Notice.svelte';
 	import { when } from '../settings/format.ts';
+	import Button from '../ui/Button.svelte';
 	import { updateProvider, type Provider } from './setup.ts';
 
 	let loaded = $state(false);
@@ -138,14 +139,14 @@
 									<span class="muted">Read-only</span>
 								{:else if removing === p.code}
 									<div class="actions">
-										<button class="btn sm danger" type="button" disabled={busy} onclick={() => remove(p)}>{force ? 'Remove anyway' : 'Confirm remove'}</button>
-										<button class="btn sm" type="button" onclick={reset}>Keep</button>
+										<Button size="sm" variant="destructive" class="primary" disabled={busy} onclick={() => remove(p)}>{force ? 'Remove anyway' : 'Confirm remove'}</Button>
+										<Button size="sm" onclick={reset}>Keep</Button>
 									</div>
 								{:else}
 									<div class="actions">
-										<button class="btn sm" type="button" onclick={() => edit(p)} aria-label="{a.set ? 'Replace' : 'Set'} the {p.name} app credentials">{a.set ? 'Replace' : 'Set'}</button>
+										<Button size="sm" onclick={() => edit(p)} aria-label="{a.set ? 'Replace' : 'Set'} the {p.name} app credentials">{a.set ? 'Replace' : 'Set'}</Button>
 										{#if a.set}
-											<button class="btn sm" type="button" onclick={() => ((removing = p.code), (force = false))} aria-label="Remove the {p.name} app credentials">Remove</button>
+											<Button size="sm" variant="destructive" onclick={() => ((removing = p.code), (force = false))} aria-label="Remove the {p.name} app credentials">Remove</Button>
 										{/if}
 									</div>
 								{/if}
@@ -173,8 +174,8 @@
 				required
 			/>
 			<div class="actions">
-				<button class="btn primary" type="submit" disabled={busy}>Save and check</button>
-				<button class="btn" type="button" onclick={() => (editing = null)}>Cancel</button>
+				<Button variant="primary" type="submit" disabled={busy}>Save and check</Button>
+				<Button onclick={() => (editing = null)}>Cancel</Button>
 			</div>
 		</form>
 	{/if}

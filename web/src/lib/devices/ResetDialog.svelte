@@ -14,6 +14,7 @@
 	let chosen = $state<string[]>([]);
 	let problem = $state<Problem | null>(null);
 	let busy = $state(false);
+	const formId = $props.id();
 
 	async function submit(e: SubmitEvent) {
 		e.preventDefault();
@@ -35,9 +36,12 @@
 </script>
 
 <Modal title="Resync {device.name}" {onclose}>
+	{#snippet footer()}
+		<button class="btn primary" type="submit" form={formId} disabled={busy || (scope === 'some' && chosen.length === 0)}>Request resync</button>
+	{/snippet}
 	<p class="muted">The device pulls the chosen types again from the start the next time it contacts Vitamux. Samples already stored are not duplicated.</p>
 	<ProblemAlert {problem} />
-	<form onsubmit={submit}>
+	<form id={formId} onsubmit={submit}>
 		<label class="check"><input type="radio" name="scope" value="all" bind:group={scope} /> <span>Every type</span></label>
 		<label class="check">
 			<input type="radio" name="scope" value="some" bind:group={scope} disabled={device.types.length === 0} />
@@ -51,6 +55,5 @@
 				{/each}
 			</fieldset>
 		{/if}
-		<button class="btn primary" type="submit" disabled={busy || (scope === 'some' && chosen.length === 0)}>Request resync</button>
 	</form>
 </Modal>

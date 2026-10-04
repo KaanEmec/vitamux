@@ -91,7 +91,7 @@
 	</label>
 </div>
 <ProblemAlert {problem} />
-{#if notice}<p class="notice" role="status"><StatusIcon status="ok" /> {notice}</p>{/if}
+{#if notice}<p class="inline-alert ok" role="status"><StatusIcon status="ok" /> <span>{notice}</span></p>{/if}
 
 <style>
 	.zone {
@@ -135,10 +135,5 @@
 	.zone label:focus-within {
 		outline: 2px solid var(--color-focus);
 		outline-offset: 2px;
-	}
-	.notice {
-		display: flex;
-		gap: var(--space-2);
-		align-items: center;
 	}
 </style>

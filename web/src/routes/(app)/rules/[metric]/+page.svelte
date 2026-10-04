@@ -7,13 +7,14 @@
 	import { page } from '$app/state';
 	import { api, type Problem, type Schemas } from '#lib/api/client.ts';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
-	import StatusIcon from '#lib/components/StatusIcon.svelte';
 	import RuleDiff from '#lib/rules/RuleDiff.svelte';
 	import RuleLens from '#lib/rules/RuleLens.svelte';
 	import { groupLabel, lastDays, selectorText, type Rule } from '#lib/rules/rule.ts';
 	import { ruleSentence } from '#lib/rules/sentence.ts';
 	import { getCoverage, type Coverage } from '#lib/rules/stubs.ts';
+	import Notice from '#lib/settings/Notice.svelte';
 	import Badge from '#lib/ui/Badge.svelte';
+	import Button from '#lib/ui/Button.svelte';
 	import Chip from '#lib/ui/Chip.svelte';
 
 	type Version = Schemas['RuleVersion'];
@@ -101,12 +102,8 @@
 
 <div class="layout">
 	<div class="main">
-		{#if saved}
-			<p class="ok" role="status"><StatusIcon status="ok" /> Saved version {saved}.</p>
-		{/if}
-		{#if activated}
-			<p class="ok" role="status"><StatusIcon status="ok" /> Version {activated} is now active.</p>
-		{/if}
+		{#if saved}<Notice>Saved version {saved}.</Notice>{/if}
+		{#if activated}<Notice>Version {activated} is now active.</Notice>{/if}
 		<ProblemAlert {problem} />
 
 		{#if versions === null}
@@ -132,8 +129,8 @@
 						</p>
 					{/if}
 					<div class="actions">
-						<a class="btn" href="/rules/new?metric={metric}">Edit in builder</a>
-						<a class="btn ghost" href="/rules/new?metric={metric}&amp;blank=1">Replace with a new rule</a>
+						<Button href="/rules/new?metric={metric}">Edit in builder</Button>
+						<Button variant="ghost" href="/rules/new?metric={metric}&amp;blank=1">Replace with a new rule</Button>
 					</div>
 				</section>
 			{/if}
@@ -181,9 +178,9 @@
 								</div>
 								<div class="row-actions">
 									{#if !v.active && !v.builtin}
-										<button class="btn sm" type="button" disabled={busy} onclick={() => activate(v)}>Activate version {v.version}</button>
+										<Button size="sm" disabled={busy} onclick={() => activate(v)}>Activate version {v.version}</Button>
 									{/if}
-									<a class="btn ghost sm" href="/rules/new?metric={metric}&amp;from={v.version}">Edit a copy</a>
+									<Button variant="ghost" size="sm" href="/rules/new?metric={metric}&amp;from={v.version}">Edit a copy</Button>
 								</div>
 							</li>
 						{/each}
@@ -274,12 +271,6 @@
 	.sentence {
 		line-height: 1.55;
 	}
-	.ok {
-		display: flex;
-		gap: var(--space-2);
-		align-items: center;
-		margin: 0;
-	}
 	.groups {
 		display: grid;
 		gap: var(--space-2);
@@ -305,10 +296,6 @@
 		align-items: center;
 		gap: var(--space-2);
 		margin: 0;
-	}
-	.field.inline select {
-		min-height: var(--control-h-sm);
-		padding: 0 var(--space-2);
 	}
 	.actions,
 	.compare,

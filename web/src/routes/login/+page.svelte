@@ -71,16 +71,16 @@
 <svelte:head><title>Sign in · Vitamux</title></svelte:head>
 
 <main class="login">
-	<p class="brand"><Logo size={34} /> Vitamux</p>
+	<p class="brand"><Logo size={36} /> Vitamux</p>
 
 	<form class="card" onsubmit={submit}>
-		<div>
+		<header>
 			<h1>Sign in</h1>
 			<p class="muted">{step === 'password' ? 'Your self-hosted health data.' : useRecovery ? 'Enter one of your recovery codes.' : 'Enter the code from your authenticator app.'}</p>
-		</div>
+		</header>
 
 		{#if expired}
-			<p class="notice" role="status"><StatusIcon status="info" /> Your session has expired. Sign in again to continue.</p>
+			<p class="inline-alert info" role="status"><StatusIcon status="info" /> <span>Your session has expired. Sign in again to continue.</span></p>
 		{/if}
 
 		<ProblemAlert {problem} fields={['username', 'password', 'totp_code', 'recovery_code']} />
@@ -135,7 +135,7 @@
 			/>
 		{/if}
 
-		<Button variant="primary" type="submit" loading={busy}>{step === 'password' ? 'Sign in' : 'Verify'}</Button>
+		<Button variant="primary" size="lg" type="submit" loading={busy}>{step === 'password' ? 'Sign in' : 'Verify'}</Button>
 		{#if step === 'code'}
 			<div class="links">
 				<button class="btn link" type="button" onclick={() => showCodeStep(!useRecovery)}>
@@ -156,6 +156,7 @@
 		gap: var(--space-5);
 		min-height: 100vh;
 		padding: var(--space-8) var(--space-4);
+		background: radial-gradient(48rem 24rem at 50% 0, color-mix(in srgb, var(--color-accent) 12%, transparent), transparent);
 	}
 	.brand {
 		display: flex;
@@ -173,30 +174,24 @@
 		width: 100%;
 		max-width: 25rem;
 		padding: var(--space-6);
+		box-shadow: var(--shadow-2);
 	}
-	form :global(.field) {
+	form :global(.field),
+	form :global(.inline-alert) {
 		margin-bottom: 0;
 	}
 	h1 {
-		margin: 0;
+		margin: 0 0 var(--space-1);
 		font-size: var(--text-xl);
 	}
-	form p {
-		margin: var(--space-1) 0 0;
+	header p {
+		margin: 0;
 		font-size: var(--text-sm);
 	}
 	form :global(input.code) {
 		font-family: var(--font-mono);
 		font-size: var(--text-lg);
 		letter-spacing: 0.3em;
-	}
-	.notice {
-		display: flex;
-		gap: var(--space-2);
-		align-items: center;
-		padding: var(--space-3);
-		background: var(--color-info-bg);
-		border-radius: var(--radius-md);
 	}
 	.links {
 		display: flex;

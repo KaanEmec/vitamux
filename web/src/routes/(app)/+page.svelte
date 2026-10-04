@@ -1,9 +1,11 @@
 <!--
-	Dashboard (E21, J21.7): the day at a glance. The owner's cards (GET /settings/dashboard) with
-	their resolved value, a neutral delta against the 30-day mean, a sparkline and sources
-	(GET /resolved/summary), for today or a past day (?date=). Alerts and connection health stay
-	on it. Customize reorders, resizes, hides and adds cards and saves the layout on the server.
-	Endpoints that are not available yet (404/503) leave their section empty.
+	Dashboard (E21 J21.7, E23 J23.6): the day at a glance. Hero stat tiles (the layout's `hero`)
+	drive one large chart (7D/30D/90D/1Y); beside it last night. Below, the owner's pinned cards
+	(GET /settings/dashboard) with their resolved value, a neutral delta against the 30-day mean, a
+	sparkline and sources (GET /resolved/summary), for today or a past day (?date=). Alerts and
+	connection health stay on it. Customize picks the hero tiles and reorders, resizes, hides and
+	adds cards, and saves the layout on the server. Endpoints that are not available yet (404/503)
+	leave their section empty.
 -->
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
@@ -17,11 +19,14 @@
 	import AddMetric from '#lib/dashboard/AddMetric.svelte';
 	import Alerts from '#lib/dashboard/Alerts.svelte';
 	import EditTools from '#lib/dashboard/EditTools.svelte';
+	import HeroChart from '#lib/dashboard/HeroChart.svelte';
+	import HeroTile from '#lib/dashboard/HeroTile.svelte';
+	import LastNight from '#lib/dashboard/LastNight.svelte';
 	import { dashIcons } from '#lib/dashboard/icons.ts';
-	import { cardLabel, defaultCards, move, moveTo, patch, type Card, type Catalogue } from '#lib/dashboard/layout.ts';
+	import { cardLabel, defaultCards, defaultHero, heroMax, move, moveTo, patch, type Card, type Catalogue } from '#lib/dashboard/layout.ts';
 	import MetricCard from '#lib/dashboard/MetricCard.svelte';
 	import Sources from '#lib/dashboard/Sources.svelte';
-	import { cardView, loadSummaries, type Summary } from '#lib/dashboard/summary.ts';
+	import { cardView, lead, loadSummaries, tileView, type Period, type Summary } from '#lib/dashboard/summary.ts';
 	import Button from '#lib/ui/Button.svelte';
 	import EmptyState from '#lib/ui/EmptyState.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
@@ -32,9 +37,11 @@
 
 	// ---- what the owner sees: layout, catalogue, summaries of the chosen day ------------------
 	let layout = $state<Card[] | null>(null);
+	let hero = $state<string[]>([]);
 	let layoutMissing = $state(false);
 	let layoutProblem = $state<Problem | null>(null);
 	let catalogue = $state<Catalogue[]>([]);
+	let catalogueLoaded = $state(false);
 	let summaries = $state<Record<string, Summary>>({});
 	let summaryMissing = $state(false);
 	let summaryProblem = $state<Problem | null>(null);
@@ -44,12 +51,18 @@
 	// ---- alerts and connection health ------------------------------------------------------------
 	let connections = $state<Connection[] | null>(null);
 	let connectionsProblem = $state<Problem | null>(null);
-	let jobs = $state<Schemas['Job'][]>([]);
+	let jobs = $state<Schemas['Job'][] | null>(null);
 	let lastBackup = $state<string | null>(null);
+	let statusLoaded = $state(false);
+	// Keys of the dismissed alerts (the layout's `dismissed`), saved on each change.
+	let dismissed = $state<string[]>([]);
+	let dismissProblem = $state<Problem | null>(null);
+	let dismissSaves = Promise.resolve();
 
 	// ---- edit mode -----------------------------------------------------------------------------
 	let editing = $state(false);
 	let draft = $state<Card[]>([]);
+	let heroDraft = $state<string[]>([]);
 	let saving = $state(false);
 	let saveProblem = $state<Problem | null>(null);
 	let adding = $state(false);
@@ -57,12 +70,23 @@
 	let dragging = $state<string | null>(null);
 	let over = $state<string | null>(null);
 
+	// ---- the hero: the selected tile and the period it shows ----------------------------------
+	let picked = $state<string | null>(null);
+	let period = $state<Period>('30D');
+
 	const requested = $derived(isDate(page.url.searchParams.get('date')) ? page.url.searchParams.get('date')! : undefined);
 	const additive = $derived(new Set(catalogue.filter((m) => m.aggregation === 'additive').map((m) => m.code)));
+	const sections = $derived(new Map(catalogue.map((m) => [m.code, m.section])));
 	const cards = $derived(editing ? draft : (layout ?? []));
 	const visible = $derived(cards.filter((c) => !c.hidden));
 	const hidden = $derived(draft.filter((c) => c.hidden));
 	const views = $derived(Object.fromEntries(Object.entries(summaries).map(([m, s]) => [m, cardView(m, s, additive.has(m))])));
+	const heroCodes = $derived(editing ? heroDraft : hero);
+	// Like cards, a tile with no data waits (outside edit mode) until a source provides it.
+	const tiles = $derived(heroCodes.filter((m) => m in summaries && (editing || views[m]?.hasData)));
+	const selected = $derived(picked && tiles.includes(picked) ? picked : tiles[0]);
+	// Codes the hero picker offers: the chosen ones, then the pinned cards (rule families excepted).
+	const heroOptions = $derived([...new Set([...heroDraft, ...draft.map((c) => c.metric).filter((m) => !(m in lead))])]);
 	const ready = $derived(visible.every((c) => c.metric in summaries));
 	// Outside edit mode a card with no data waits (hidden) until a source provides it.
 	const shown = $derived(editing ? visible : visible.filter((c) => !ready || views[c.metric]?.hasData));
@@ -80,9 +104,16 @@
 				if (unavailable(error)) layoutMissing = true;
 				else layoutProblem = error;
 				layout = [];
-			} else layout = data.cards;
+			} else {
+				layout = data.cards;
+				hero = data.hero ?? defaultHero;
+				dismissed = data.dismissed ?? [];
+			}
 		});
-		void api.GET('/api/v1/metrics').then(({ data }) => (catalogue = data?.metrics ?? []));
+		void api.GET('/api/v1/metrics').then(({ data }) => {
+			catalogue = data?.metrics ?? [];
+			catalogueLoaded = true;
+		});
 		void api.GET('/api/v1/connections').then(({ data, error }) => {
 			connectionsProblem = error ?? null;
 			connections = data?.connections ?? [];
@@ -91,32 +122,43 @@
 			const since = Date.now() - week;
 			jobs = (data?.jobs ?? []).filter((j) => Date.parse(j.finished_at ?? j.created_at) >= since);
 		});
-		void api.GET('/api/v1/system/status').then(({ data }) => (lastBackup = data?.last_backup_at ?? null));
+		void api.GET('/api/v1/system/status').then(({ data }) => {
+			lastBackup = data?.last_backup_at ?? null;
+			statusLoaded = true;
+		});
 	});
 
-	// Summaries are fetched for the cards on screen, and again for a card shown or pinned later.
+	// Summaries are fetched for the tiles and cards on screen, and again for one shown or pinned
+	// later. The hero's come with their period comparisons, which also serve a card of that metric.
 	let loadedDay: string | undefined;
 	let started = false;
 	let asked: string[] = [];
+	let compared: string[] = [];
 	$effect(() => {
+		const tileMetrics = layout ? [...heroCodes] : [];
 		const metrics = visible.map((c) => c.metric);
 		const d = requested;
-		untrack(() => void ensure(metrics, d));
+		untrack(() => {
+			void ensure(tileMetrics, d, true);
+			void ensure(metrics, d, false);
+		});
 	});
 
-	async function ensure(metrics: string[], d: string | undefined) {
+	async function ensure(metrics: string[], d: string | undefined, compare: boolean) {
 		if (!started || d !== loadedDay) {
 			started = true;
 			loadedDay = d;
 			asked = [];
+			compared = [];
 			summaries = {};
 			summaryMissing = false;
 			summaryProblem = null;
 		}
-		const need = metrics.filter((m) => !asked.includes(m));
+		const need = metrics.filter((m) => !(compare ? compared : asked).includes(m));
 		if (!need.length) return;
 		asked.push(...need);
-		const r = await loadSummaries(need, d);
+		if (compare) compared.push(...need);
+		const r = await loadSummaries(need, d, compare);
 		if (d !== loadedDay) return; // another day was chosen meanwhile
 		if (r.error) {
 			summaryMissing = unavailable(r.error);
@@ -134,6 +176,7 @@
 	// ---- editing ---------------------------------------------------------------------------------
 	function customize() {
 		draft = (layout ?? []).map((c) => ({ ...c }));
+		heroDraft = [...hero];
 		saveProblem = null;
 		announce = '';
 		editing = true;
@@ -142,13 +185,30 @@
 	async function save() {
 		saving = true;
 		saveProblem = null;
-		const { data, error } = await api.PUT('/api/v1/settings/dashboard', { body: { version: 1, cards: draft } });
+		const { data, error } = await api.PUT('/api/v1/settings/dashboard', { body: { version: 1, cards: draft, hero: heroDraft, dismissed } });
 		saving = false;
 		if (error) saveProblem = error;
 		else {
 			layout = data.cards;
+			hero = data.hero ?? heroDraft;
+			dismissed = data.dismissed ?? dismissed;
 			editing = false;
 		}
+	}
+
+	// Dismissing hides at once and saves the layout with the new keys (one save after another);
+	// a failed save brings the alerts back.
+	function dismiss(next: string[]) {
+		const before = dismissed;
+		dismissed = next;
+		dismissProblem = null;
+		dismissSaves = dismissSaves.then(async () => {
+			const { error } = await api.PUT('/api/v1/settings/dashboard', { body: { version: 1, cards: layout ?? [], hero, dismissed: next } });
+			if (error) {
+				dismissed = before;
+				dismissProblem = error;
+			}
+		});
 	}
 
 	const change = (metric: string, c: Partial<Card>) => (draft = patch(draft, metric, c));
@@ -173,6 +233,11 @@
 		dragging = over = null;
 	}
 
+	function toggleHero(metric: string, on: boolean) {
+		heroDraft = on ? [...heroDraft, metric] : heroDraft.filter((m) => m !== metric);
+		announce = `${cardLabel(metric)} ${on ? 'added to' : 'removed from'} the hero tiles.`;
+	}
+
 	function pin(metric: string) {
 		draft = [...draft, { metric, size: 'S', hidden: false }];
 		announce = `${cardLabel(metric)} added.`;
@@ -188,27 +253,30 @@
 	</div>
 	<div class="actions">
 		<div class="date" role="group" aria-label="Day shown">
-			<button class="btn sm" type="button" aria-label="Previous day" onclick={() => chooseDay(addDays(day, -1))}>
-				<Icon d={dashIcons.left} size={16} />
-			</button>
+			<Button size="lg" icon={dashIcons.left} aria-label="Previous day" onclick={() => chooseDay(addDays(day, -1))} />
 			<input type="date" aria-label="Date" value={day} max={today()} onchange={(e) => chooseDay(e.currentTarget.value === today() ? undefined : e.currentTarget.value || undefined)} />
-			<button class="btn sm" type="button" aria-label="Next day" disabled={isToday || day >= today()} onclick={() => chooseDay(addDays(day, 1) >= today() ? undefined : addDays(day, 1))}>
-				<Icon d={dashIcons.right} size={16} />
-			</button>
-			{#if !isToday}<Button size="sm" onclick={() => chooseDay(undefined)}>Today</Button>{/if}
+			<Button
+				size="lg"
+				icon={dashIcons.right}
+				aria-label="Next day"
+				disabled={isToday || day >= today()}
+				onclick={() => chooseDay(addDays(day, 1) >= today() ? undefined : addDays(day, 1))}
+			/>
+			{#if !isToday}<Button size="lg" onclick={() => chooseDay(undefined)}>Today</Button>{/if}
 		</div>
 		{#if !editing}
-			<Button onclick={customize} disabled={layout === null || layoutMissing || summaryMissing || !!layoutProblem || !!summaryProblem}>
-				<Icon d={dashIcons.edit} size={16} /> Customize
+			<Button size="lg" icon={dashIcons.edit} onclick={customize} disabled={layout === null || layoutMissing || summaryMissing || !!layoutProblem || !!summaryProblem}>
+				Customize
 			</Button>
 		{/if}
 	</div>
 </div>
 
-{#if connections === null}
+{#if connections === null || jobs === null || !statusLoaded || layout === null}
 	<p class="muted" role="status">Loading…</p>
 {:else}
-	<Alerts {connections} {jobs} {lastBackup} />
+	<Alerts {connections} {jobs} {lastBackup} {dismissed} ondismiss={layoutMissing || layoutProblem ? undefined : dismiss} />
+	<ProblemAlert problem={dismissProblem} />
 {/if}
 
 {#if editing}
@@ -217,18 +285,58 @@
 		<strong>Editing dashboard</strong>
 		<span class="muted hint">Drag cards, or use the arrows, to reorder. Pick a size, hide what you do not need. The layout is saved on the server.</span>
 		<div class="bar-actions">
-			<Button variant="ghost" onclick={() => (draft = defaultCards.map((c) => ({ ...c })))}>Reset to default</Button>
-			<Button onclick={() => (adding = true)}><Icon d={dashIcons.plus} size={16} /> Add metric</Button>
+			<Button
+				variant="ghost"
+				onclick={() => {
+					draft = defaultCards.map((c) => ({ ...c }));
+					heroDraft = [...defaultHero];
+				}}>Reset to default</Button
+			>
+			<Button icon={dashIcons.plus} onclick={() => (adding = true)}>Add metric</Button>
 			<Button onclick={() => (editing = false)}>Cancel</Button>
 			<Button variant="primary" loading={saving} onclick={save}>Save</Button>
 		</div>
 	</div>
+	<fieldset class="hero-pick">
+		<legend>Hero tiles · up to {heroMax}</legend>
+		{#each heroOptions as m (m)}
+			{@const on = heroDraft.includes(m)}
+			<label class="option-card pick">
+				<input type="checkbox" checked={on} disabled={!on && heroDraft.length >= heroMax} onchange={(e) => toggleHero(m, e.currentTarget.checked)} />
+				{cardLabel(m)}
+			</label>
+		{/each}
+	</fieldset>
 	<ProblemAlert problem={saveProblem} />
 	<p class="visually-hidden" role="status">{announce}</p>
 {/if}
 
+{#if tiles.length && !layoutMissing && !summaryMissing}
+	<section class="hero-tiles" aria-label="Highlights">
+		{#each tiles as m (m)}
+			<HeroTile
+				code={m}
+				section={sections.get(m)}
+				label={cardLabel(m)}
+				view={tileView(m, summaries[m], additive.has(m), period)}
+				pressed={m === selected}
+				onclick={() => (picked = m)}
+			/>
+		{/each}
+	</section>
+{/if}
+
+{#if layout && !layoutMissing}
+	<div class="hero-row">
+		{#if selected && catalogueLoaded}
+			<HeroChart code={selected} meta={catalogue.find((c) => c.code === selected)} summary={summaries[selected]} {day} bind:period />
+		{/if}
+		<LastNight {day} mean={summaries.sleep?.stats[1]?.components?.sleep_total?.mean} />
+	</div>
+{/if}
+
 <section aria-labelledby="metrics">
-	<h2 id="metrics">Metrics</h2>
+	<h2 id="metrics">Pinned</h2>
 	<ProblemAlert problem={layoutProblem ?? summaryProblem} />
 	{#if layout === null}
 		<Skeleton variant="block" />
@@ -251,6 +359,7 @@
 			{#each shown as c, i (c.metric)}
 				<MetricCard
 					code={c.metric}
+					section={sections.get(c.metric)}
 					label={cardLabel(c.metric)}
 					size={c.size}
 					view={views[c.metric] ?? null}
@@ -335,20 +444,6 @@
 		align-items: center;
 		gap: var(--space-2);
 	}
-	.date input {
-		min-height: var(--control-h-sm);
-		padding: 0 var(--space-2);
-		font: inherit;
-		font-size: var(--text-sm);
-		color: var(--color-text);
-		background: var(--color-inset);
-		border: 1px solid var(--color-border-strong);
-		border-radius: var(--radius-md);
-	}
-	.date .btn {
-		width: var(--control-h-sm);
-		padding: 0;
-	}
 	.edit-bar {
 		display: flex;
 		flex-wrap: wrap;
@@ -375,10 +470,62 @@
 	section h2 {
 		font-size: var(--text-lg);
 	}
+	.hero-pick {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-2);
+		margin: 0 0 var(--space-4);
+		padding: var(--space-3) var(--space-4);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-lg);
+	}
+	.hero-pick legend {
+		padding: 0 var(--space-1);
+		font-size: var(--text-sm);
+		font-weight: 600;
+	}
+	.pick {
+		align-items: center;
+		padding: var(--space-1) var(--space-3);
+		font-size: var(--text-sm);
+		border-radius: var(--radius-pill);
+	}
+	.hero-tiles {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+		gap: var(--space-4);
+		margin: var(--space-5) 0;
+	}
+	/* On a phone the tiles scroll sideways; the cards below stack. */
+	@media (max-width: 47.99rem) {
+		.hero-tiles {
+			display: flex;
+			overflow-x: auto;
+			padding: 3px 3px var(--space-2);
+			scroll-snap-type: x mandatory;
+		}
+		.hero-tiles > :global(*) {
+			flex: none;
+			width: 10rem;
+			scroll-snap-align: start;
+		}
+	}
+	.hero-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: stretch;
+		gap: var(--space-5);
+		margin: var(--space-5) 0;
+	}
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
+		grid-template-columns: minmax(0, 1fr);
 		gap: var(--space-4);
+	}
+	@media (min-width: 36rem) {
+		.grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
 	}
 	@media (min-width: 64rem) {
 		.grid {

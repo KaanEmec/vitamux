@@ -8,6 +8,7 @@
 	import type { Problem } from '#lib/api/client.ts';
 	import Modal from '#lib/components/Modal.svelte';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
+	import StatusIcon from '#lib/components/StatusIcon.svelte';
 	import { listExtractors, startRun, type Document, type Extraction, type Extractor } from './api.ts';
 	import { providerName } from './format.ts';
 
@@ -18,6 +19,7 @@
 	let consent = $state(false);
 	let busy = $state(false);
 	let problem = $state<Problem | null>(null);
+	const formId = $props.id();
 
 	const selected = $derived(extractors?.find((e) => e.id === chosen) ?? null);
 	const label = $derived(doc.filename ?? 'this document');
@@ -51,92 +53,71 @@
 </script>
 
 <Modal title="Extract results" {onclose}>
+	{#snippet footer()}
+		<button class="btn" type="button" onclick={onclose}>Cancel</button>
+		<button class="btn primary" type="submit" form={formId} disabled={busy || !selected || (selected.external && !consent)}>
+			{selected?.external ? 'Send and extract' : 'Extract'}
+		</button>
+	{/snippet}
 	<p class="muted">Read the printed rows of {label} into a table that you then review. Nothing is saved as a result until you confirm.</p>
 	<ProblemAlert {problem} />
 	{#if extractors === null && !problem}
 		<p class="muted" role="status">Loading providers…</p>
 	{:else if extractors}
-		<form onsubmit={start}>
+		<form id={formId} onsubmit={start}>
 			<fieldset>
 				<legend>Extractor</legend>
-				{#each extractors as ex (ex.id)}
-					<label class={['choice', !ex.enabled && 'off']}>
-						<input type="radio" name="provider" value={ex.id} bind:group={chosen} disabled={!ex.enabled} onchange={() => (consent = false)} />
-						<span>
-							<strong>{providerName(ex.id)}</strong>{#if ex.model}, model <code>{ex.model}</code>{/if}
-							<span class="hint">
-								{#if !ex.external}
-									Runs on this server; reads only the synthetic test PDFs.
-								{:else if ex.enabled}
-									Sends the PDF to {providerName(ex.id)}.
-								{:else}
-									Disabled. Enable it under <a href="/settings/ai">Settings → AI providers</a>.
-								{/if}
+				<div class="options">
+					{#each extractors as ex (ex.id)}
+						<label class="option-card check">
+							<input type="radio" name="provider" value={ex.id} bind:group={chosen} disabled={!ex.enabled} onchange={() => (consent = false)} />
+							<span>
+								<strong>{providerName(ex.id)}</strong>{#if ex.model}, model <code>{ex.model}</code>{/if}
+								<span class="hint">
+									{#if !ex.external}
+										Runs on this server; reads only the synthetic test PDFs.
+									{:else if ex.enabled}
+										Sends the PDF to {providerName(ex.id)}.
+									{:else}
+										Disabled. Enable it under <a href="/settings/ai">Settings → AI providers</a>.
+									{/if}
+								</span>
 							</span>
-						</span>
-					</label>
-				{/each}
+						</label>
+					{/each}
+				</div>
 			</fieldset>
 
 			{#if selected?.external}
-				<div class="consent" role="group" aria-labelledby="consent-title">
-					<h3 id="consent-title">Consent for this document</h3>
-					<p>
-						Extracting with <strong>{providerName(selected.id)}</strong> sends the whole PDF of {label} to that provider, using
-						the model <strong><code>{selected.model}</code></strong>. It leaves this server and is handled under the provider's
-						terms. The answer is stored encrypted with the document.
-					</p>
-					<label class="check">
-						<input type="checkbox" bind:checked={consent} />
-						<span>I consent to send this PDF to {providerName(selected.id)}, model {selected.model}.</span>
-					</label>
+				<div class="inline-alert info" role="group" aria-labelledby="consent-title">
+					<StatusIcon status="info" />
+					<div>
+						<h3 id="consent-title">Consent for this document</h3>
+						<p>
+							Extracting with <strong>{providerName(selected.id)}</strong> sends the whole PDF of {label} to that provider, using
+							the model <strong><code>{selected.model}</code></strong>. It leaves this server and is handled under the provider's
+							terms. The answer is stored encrypted with the document.
+						</p>
+						<label class="check">
+							<input type="checkbox" bind:checked={consent} />
+							<span>I consent to send this PDF to {providerName(selected.id)}, model {selected.model}.</span>
+						</label>
+					</div>
 				</div>
 			{/if}
-
-			<div class="actions">
-				<button class="btn primary" type="submit" disabled={busy || !selected || (selected.external && !consent)}>
-					{selected?.external ? 'Send and extract' : 'Extract'}
-				</button>
-				<button class="btn" type="button" onclick={onclose}>Cancel</button>
-			</div>
 		</form>
 	{/if}
 </Modal>
 
 <style>
-	fieldset {
-		margin: 0 0 var(--space-4);
-		padding: 0;
-		border: 0;
-	}
-	legend {
-		margin-bottom: var(--space-2);
-		font-weight: 600;
-	}
-	.choice,
-	.check {
-		display: flex;
+	.options {
+		display: grid;
 		gap: var(--space-2);
-		align-items: flex-start;
-		margin-bottom: var(--space-3);
 	}
-	.choice.off {
-		color: var(--color-text-muted);
+	.inline-alert p {
+		margin: 0 0 var(--space-3);
 	}
-	.hint {
-		display: block;
-		font-size: var(--text-sm);
-		color: var(--color-text-muted);
-	}
-	.consent {
-		padding: var(--space-4);
-		margin-bottom: var(--space-4);
-		background: var(--color-info-bg);
-		border: 1px solid var(--color-info);
-		border-radius: var(--radius-sm);
-	}
-	.actions {
-		display: flex;
-		gap: var(--space-2);
+	.inline-alert h3 {
+		margin-bottom: var(--space-1);
 	}
 </style>

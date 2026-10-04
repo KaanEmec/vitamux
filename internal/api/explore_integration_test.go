@@ -295,12 +295,47 @@ func TestResolvedSummaryAndTrend(t *testing.T) {
 	if q := st.Stats[2]; q.Days != 90 || q.N != 4 || *round3(4.0 / 90) != q.Coverage {
 		t.Errorf("90 days: %+v", q)
 	}
+	if st.Comparisons != nil {
+		t.Errorf("comparisons without compare=true: %+v", st.Comparisons)
+	}
 	if bp := s.Metrics["blood_pressure"]; bp.Unit != nil || bp.Stats[0].Components == nil {
 		t.Errorf("blood pressure: %+v", bp)
 	}
 	if sk := s.Metrics["skin_temperature"]; sk.Rule != nil || sk.Value.Status != "no_data" || sk.Stats[1].N != 0 {
 		t.Errorf("metric without a rule: %+v", sk)
 	}
+
+	// compare=true: each of 7, 30, 90 and 365 dates beside the equally long period before it
+	// (2025-11-02: the 7 dates before 10-27 hold the first three days, the last seven the fourth).
+	s = oapi.ResolvedSummary{}
+	e.call(summary, "/api/v1/resolved/summary?date=2025-11-02&metrics=steps&compare=true", "", http.StatusOK, &s)
+	cs := s.Metrics["steps"].Comparisons
+	if cs == nil || len(*cs) != 4 {
+		t.Fatalf("comparisons: %+v", cs)
+	}
+	for i, days := range []int{7, 30, 90, 365} {
+		c := (*cs)[i]
+		if int(c.Days) != days || c.Current.Days != days || c.Previous.Days != days || c.Current.EndDate.String() != "2025-11-02" ||
+			c.Previous.EndDate.Time != c.Current.StartDate.AddDate(0, 0, -1) {
+			t.Errorf("%d days: %+v", days, c)
+		}
+	}
+	if c := (*cs)[0]; c.Current.N != 1 || !near(steps[3], c.Current.Mean) || c.Previous.N != 3 || !near(sum(steps[:3])/3, c.Previous.Mean) ||
+		c.Previous.StartDate.String() != "2025-10-20" {
+		t.Errorf("7 days: %+v", c)
+	}
+	if c := (*cs)[1]; c.Current.N != 4 || !near(sum(steps)/4, c.Current.Mean) || c.Previous.N != 0 || c.Previous.Mean != nil {
+		t.Errorf("30 days: %+v", c)
+	}
+	if c := (*cs)[3]; c.Current.N != 4 || c.Previous.N != 0 || c.Previous.Days != 365 {
+		t.Errorf("365 days: %+v", c)
+	}
+	// A family compares each component's statistics.
+	e.call(summary, "/api/v1/resolved/summary?date=2025-10-27&metrics=blood_pressure&compare=true", "", http.StatusOK, &s)
+	if bpc := s.Metrics["blood_pressure"].Comparisons; bpc == nil || (*bpc)[0].Current.Components == nil {
+		t.Errorf("blood pressure comparisons: %+v", bpc)
+	}
+	e.call(summary, "/api/v1/resolved/summary?metrics=steps&compare=maybe", "", http.StatusUnprocessableEntity, nil)
 	for _, target := range []string{
 		"/api/v1/resolved/summary?metrics=nope",
 		"/api/v1/resolved/summary?metrics=steps,heart_rate,spo2,weight,vo2max,sleep,hrv_sdnn,bp_systolic,bp_diastolic,height,active_energy," +
@@ -409,11 +444,38 @@ func TestDashboardLayout(t *testing.T) {
 			t.Errorf("default card %s is not a catalogue code or family", c.Metric)
 		}
 	}
+	if !slices.Equal(l.Hero, defaultHero) {
+		t.Fatalf("default hero: %v", l.Hero)
+	}
+	for _, m := range l.Hero {
+		if !resolvable(m) {
+			t.Errorf("default hero %s is not a catalogue code or family", m)
+		}
+	}
 	body := `{"version": 1, "cards": [{"metric": "steps", "size": "L", "hidden": false}, {"metric": "blood_pressure", "size": "S", "hidden": true}]}`
 	e.audited(1, func() { e.call(e.user, put, "/api/v1/settings/dashboard", body, http.StatusOK, &l) })
 	if l.IsDefault || len(l.Cards) != 2 || l.Cards[1].Metric != "blood_pressure" || !l.Cards[1].Hidden {
 		t.Fatalf("stored: %+v", l)
 	}
+	if !slices.Equal(l.Hero, defaultHero) { // a layout without hero keeps the default
+		t.Fatalf("hero without a choice: %v", l.Hero)
+	}
+	// A hero list is stored in order; an empty one is the choice of none.
+	hero := `{"version": 1, "cards": [], "hero": ["weight", "sleep", "steps"]}`
+	e.call(e.user, put, "/api/v1/settings/dashboard", hero, http.StatusOK, &l)
+	e.call(e.user, get, "/api/v1/settings/dashboard", "", http.StatusOK, &l)
+	if !slices.Equal(l.Hero, []string{"weight", "sleep", "steps"}) {
+		t.Fatalf("hero read back: %v", l.Hero)
+	}
+	e.call(e.user, put, "/api/v1/settings/dashboard", `{"version": 1, "cards": [], "hero": []}`, http.StatusOK, &l)
+	e.call(e.user, get, "/api/v1/settings/dashboard", "", http.StatusOK, &l)
+	if l.Hero == nil || len(l.Hero) != 0 {
+		t.Fatalf("no hero: %#v", l.Hero)
+	}
+	e.call(e.user, put, "/api/v1/settings/dashboard", `{"version": 1, "cards": [], "hero": ["steps", "retired_code"]}`, http.StatusUnprocessableEntity, nil)
+	e.call(e.user, put, "/api/v1/settings/dashboard", `{"version": 1, "cards": [], "hero": ["steps", "weight", "spo2", "vo2max", "sleep"]}`, http.StatusUnprocessableEntity, nil)
+	e.call(e.user, put, "/api/v1/settings/dashboard", `{"version": 1, "cards": [], "hero": ["steps", "steps"]}`, http.StatusUnprocessableEntity, nil)
+	e.call(e.user, put, "/api/v1/settings/dashboard", body, http.StatusOK, &l)
 	e.call(e.user, get, "/api/v1/settings/dashboard", "", http.StatusOK, &l)
 	if l.IsDefault || len(l.Cards) != 2 || l.Cards[0].Size != oapi.L {
 		t.Fatalf("read back: %+v", l)
@@ -441,5 +503,67 @@ func TestDashboardLayout(t *testing.T) {
 	e.call(e.user, get, "/api/v1/settings/dashboard", "", http.StatusOK, &l)
 	if l.IsDefault || len(l.Cards) != 0 {
 		t.Fatalf("empty layout: %+v", l)
+	}
+}
+
+// Dismissed alert keys (J23.10) ride in the layout: always listed, optional on write, bounded.
+func TestDashboardDismissed(t *testing.T) {
+	e := newCfgEnv(t)
+	const get, put, path = "GET /api/v1/settings/dashboard", "PUT /api/v1/settings/dashboard", "/api/v1/settings/dashboard"
+	body := func(dismissed any) string {
+		b, err := json.Marshal(map[string]any{"version": 1, "cards": []any{}, "dismissed": dismissed})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	var l oapi.DashboardLayout
+	e.call(e.user, get, path, "", http.StatusOK, &l)
+	if l.Dismissed == nil || len(l.Dismissed) != 0 {
+		t.Fatalf("default dismissed: %#v", l.Dismissed)
+	}
+	keys := []string{"reauth:conn_a:2026-09-01T08:00:00Z", "backup:2026-09-20T03:00:00Z"}
+	e.call(e.user, put, path, body(keys), http.StatusOK, &l)
+	if !slices.Equal(l.Dismissed, keys) {
+		t.Fatalf("put answer: %v", l.Dismissed)
+	}
+	e.call(e.user, get, path, "", http.StatusOK, &l)
+	if !slices.Equal(l.Dismissed, keys) {
+		t.Fatalf("read back: %v", l.Dismissed)
+	}
+	e.call(e.other, get, path, "", http.StatusOK, &l)
+	if len(l.Dismissed) != 0 {
+		t.Fatalf("another owner's keys: %v", l.Dismissed)
+	}
+	// Omitting the list stores none; the server prunes nothing on its own.
+	e.call(e.user, put, path, `{"version": 1, "cards": []}`, http.StatusOK, &l)
+	e.call(e.user, get, path, "", http.StatusOK, &l)
+	if l.Dismissed == nil || len(l.Dismissed) != 0 {
+		t.Fatalf("omitted: %#v", l.Dismissed)
+	}
+
+	many := make([]string, 101)
+	for i := range many {
+		many[i] = strings.Repeat("x", i+1)
+	}
+	for _, c := range []struct {
+		dismissed any
+		pointer   string
+	}{
+		{many, "/dismissed"},
+		{[]string{"a", ""}, "/dismissed/1"},
+		{[]string{strings.Repeat("x", 201)}, "/dismissed/0"},
+		{[]string{"a", "a"}, "/dismissed/1"},
+	} {
+		var p problem
+		e.call(e.user, put, path, body(c.dismissed), http.StatusUnprocessableEntity, &p)
+		if len(p.Errors) == 0 || p.Errors[0].Pointer != c.pointer {
+			t.Errorf("pointer for %s: %+v", c.pointer, p.Errors)
+		}
+	}
+	// A list at the limit passes.
+	e.call(e.user, put, path, body(many[:100]), http.StatusOK, &l)
+	if len(l.Dismissed) != 100 {
+		t.Fatalf("limit: %d", len(l.Dismissed))
 	}
 }

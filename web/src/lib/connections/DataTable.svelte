@@ -15,6 +15,7 @@
 
 <style>
 	.scroll {
+		position: relative; /* holds the cells' .visually-hidden text, so it cannot widen the page */
 		overflow-x: auto;
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);

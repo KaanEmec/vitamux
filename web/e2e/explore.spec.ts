@@ -1,4 +1,8 @@
+import { mergeTests } from '@playwright/test';
 import { expect, fallbackDay, test } from './explore-fake';
+import { test as rulesTest } from './rules-fake';
+
+const lensTest = mergeTests(test, rulesTest);
 
 const detail = `/explore/resting_heart_rate?range=1M&end=2026-09-16`;
 
@@ -73,37 +77,119 @@ test('pin a metric to the dashboard', async ({ page, explore }) => {
 	});
 });
 
-test('metric detail: range, rollups, sources overlay, coverage and the rule lens', async ({ page }) => {
+test('metric detail: stats header, range, overlays, compare, source strip and the lens', async ({ page }) => {
 	await page.goto(detail);
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Resting heart rate');
-	await expect(page.getByText('Built-in rule')).toBeVisible();
+	await expect(page.getByRole('link', { name: /^Built-in rule/ })).toHaveAttribute('href', '/rules/resting_heart_rate');
+
+	// Latest with its delta to the 30-day mean, the period mean against the period before, range and coverage.
+	const stats = page.getByRole('list', { name: 'Statistics' }).getByRole('listitem');
+	await expect(stats).toHaveCount(4);
+	await expect(stats.nth(0)).toContainText(/Latest\s*50\s*bpm.*Sep 16, 2026 · −1 vs 30-day mean/);
+	await expect(stats.nth(1)).toContainText(/30-day mean\s*51\s*bpm\s*\+2 vs previous 30 days/);
+	await expect(stats.nth(2)).toContainText('50–52');
+	await expect(stats.nth(3)).toContainText(/30\s*\/ 30/);
+
 	const chart = page.getByRole('group', { name: /Resting heart rate, resolved per day/ });
 	await expect(chart).toBeVisible();
+	const region = page.getByRole('region', { name: 'Resting heart rate chart' });
+	await expect(region.getByText('7-day range')).toBeVisible();
+	// The source behind each day, coloured by provider, summarised in words.
+	await expect(page.getByRole('img', { name: 'Source per day: Whoop 29, Garmin 1, none 0 of 30 days' })).toBeVisible();
 	const values = page.getByRole('region', { name: 'Values' });
 	await expect(values.getByRole('row')).toHaveCount(31); // header + first 30 days
-	await expect(page.getByRole('list', { name: 'Statistics' }).getByText('30-day mean')).toBeVisible();
-	await expect(page.getByRole('img', { name: /^garmin: data on/ })).toBeVisible(); // coverage strip
+	await expect(values.getByRole('row', { name: /Sep 14, 2026/ })).toContainText(/52 bpm\s*Fallback\s*Garmin\s*Built-in/);
 
 	await page.getByRole('group', { name: 'Range' }).getByRole('button', { name: '1W' }).click();
 	await expect(page).toHaveURL(/range=1W/);
 	await expect(values.getByRole('row')).toHaveCount(8);
+	await expect(stats.nth(1)).toContainText('7-day mean');
 
-	// Each source's own values join the chart (legend and table fallback).
-	await page.getByLabel('Show sources').check();
-	await expect(page.getByText('Garmin · watch')).toBeVisible();
-	await page.getByText('Show as a table').click();
-	await expect(page.getByRole('table', { name: /Resting heart rate/ }).getByRole('columnheader')).toHaveCount(4); // date + resolved + 2 sources
+	// Source overlays are toggles, one per provider; the previous period is a dashed overlay.
+	const toggles = page.getByRole('group', { name: 'Series' });
+	const garmin = toggles.getByRole('button', { name: 'Garmin' });
+	await expect(garmin).toHaveAttribute('aria-pressed', 'false');
+	await garmin.click();
+	await expect(garmin).toHaveAttribute('aria-pressed', 'true');
+	await expect(region.getByText('Garmin · watch')).toBeVisible();
+	await page.getByRole('button', { name: 'Compare previous' }).click();
+	await expect(region.getByText('Previous 7 days', { exact: true })).toBeVisible(); // not the stat's "vs previous 7 days"
+	await region.getByText('Show as a table').click();
+	const table = page.getByRole('table', { name: /Resting heart rate/ });
+	await expect(table.getByRole('columnheader')).toHaveCount(4); // date + resolved + previous + garmin
+	await toggles.getByRole('button', { name: 'Apple Health' }).click();
+	await expect(table.getByRole('columnheader')).toHaveCount(5);
+	await garmin.click();
+	await expect(region.getByText('Garmin · watch')).toBeHidden();
 
 	await page.getByRole('button', { name: 'How it’s calculated' }).click();
 	await expect(page.getByRole('complementary', { name: 'How this is calculated' })).toBeVisible();
 
-	// All: weekly rollups; a week opens its days.
+	// All: weekly rollups; a week opens its days. Compare previous needs a fixed range.
 	await page.getByRole('group', { name: 'Range' }).getByRole('button', { name: 'All' }).click();
 	await expect(page.getByRole('group', { name: /weekly mean/ })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Compare previous' })).toBeDisabled();
 	await expect(values.getByRole('columnheader', { name: 'Week of' })).toBeVisible();
 	await page.getByRole('group', { name: /weekly mean/ }).focus();
 	await page.keyboard.press('Enter');
 	await expect(page).toHaveURL(/range=1W&end=2026-09-16/);
+});
+
+lensTest('the rule lens beside the chart: window counts, draft preview, save and revert', async ({ page, rules }) => {
+	rules.preview = 'ok';
+	await page.goto('/explore/resting_heart_rate?range=1W&end=2026-09-16');
+	await page.getByRole('button', { name: 'How it’s calculated' }).click();
+	const lens = page.getByRole('complementary', { name: 'How this is calculated' });
+	await expect(lens.getByText('Built-in · active')).toBeVisible();
+	await expect(lens.getByText(/^For each day, use the first source in order with data/)).toBeVisible();
+	const items = lens.getByRole('list', { name: 'Source priority' }).getByRole('listitem');
+	await expect(items.filter({ hasText: 'garmin' })).toContainText('1 day');
+	await expect(items.filter({ hasText: 'oura' })).toContainText('0 days');
+
+	// A draft previews in the lens (mini chart and summary) and on the chart as a ghost.
+	await items.filter({ hasText: 'garmin' }).dragTo(items.filter({ hasText: 'oura' }));
+	await expect(items).toContainText(['garmin', 'oura']);
+	await expect(lens.getByText('3 of 14 days change')).toBeVisible();
+	await expect(lens.getByRole('img', { name: /Active rule \(solid\) and draft \(dashed\)/ })).toBeVisible();
+	await lens.locator('summary', { hasText: 'Days that change' }).click();
+	await expect(lens.getByRole('table', { name: 'Days that change' }).getByRole('row')).toHaveCount(4);
+	await expect(page.getByRole('region', { name: 'Resting heart rate chart' }).getByText('Draft rule')).toBeVisible();
+
+	await lens.getByRole('button', { name: 'Discard' }).click();
+	await expect(items).toContainText(['oura', 'garmin']);
+	await expect(page.getByRole('region', { name: 'Resting heart rate chart' }).getByText('Draft rule')).toBeHidden();
+
+	// Only what the metric allows is offered.
+	await expect(lens.getByLabel('Strategy').locator('option')).toHaveText(['First available']);
+	await lens.getByRole('button', { name: 'Move garmin up' }).click();
+	await lens.getByRole('button', { name: 'Save and activate' }).click();
+	await expect(lens.getByRole('status')).toContainText('Version 2 is now active.');
+	expect((rules.posted.at(-1)?.groups as { id: string }[]).map((g) => g.id)).toEqual(['garmin', 'oura']);
+	await expect(lens.getByText('Rule v2 · active')).toBeVisible();
+
+	// The history reverts to the earlier version.
+	const history = lens.getByRole('region', { name: 'History' });
+	await history.getByRole('button', { name: 'Revert to version 1' }).click();
+	await expect(lens.getByRole('status')).toContainText('Reverted: version 1 is active again.');
+	await expect(lens.getByText('Rule v1 · active')).toBeVisible();
+	await expect(history.getByRole('button', { name: 'Activate version 2' })).toBeVisible();
+});
+
+test('metric detail at 390 px: no page scroll, the lens stacks under the chart', async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.goto(detail);
+	await expect(page.getByRole('group', { name: /resolved per day/ })).toBeVisible();
+	await expect(page.getByRole('img', { name: /^Source per day/ })).toBeVisible();
+	await page.getByRole('button', { name: 'How it’s calculated' }).click();
+	const lens = page.getByRole('complementary', { name: 'How this is calculated' });
+	await expect(lens).toBeVisible(); // inline, not a sheet
+	const chart = await page.getByRole('region', { name: 'Resting heart rate chart' }).boundingBox();
+	const panel = await lens.boundingBox();
+	expect(panel!.y).toBeGreaterThan(chart!.y + chart!.height);
+	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+	await page.goto('/explore');
+	await expect(page.getByRole('link', { name: 'Resting heart rate', exact: true })).toBeVisible();
+	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 
 test('a point opens its explanation, provenance and override', async ({ page, data }) => {
@@ -143,7 +229,7 @@ test('a point opens its explanation, provenance and override', async ({ page, da
 test('additive metrics are bars; unknown codes say so', async ({ page }) => {
 	await page.goto('/explore/steps?range=1W&end=2026-09-16');
 	await expect(page.getByRole('group', { name: 'Steps, resolved per day' })).toBeVisible();
-	await expect(page.locator('rect.bar')).toHaveCount(7);
+	await expect(page.getByRole('group', { name: 'Steps, resolved per day' }).locator('rect.bar')).toHaveCount(7);
 	await page.goto('/explore/not_a_metric');
 	await expect(page.getByText('No metric with the code not_a_metric')).toBeVisible();
 });

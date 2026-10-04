@@ -156,18 +156,7 @@
 		align-items: center;
 	}
 	.settings :global(.check) {
-		display: flex;
-		gap: var(--space-2);
-		align-items: flex-start;
 		margin-bottom: var(--space-3);
-	}
-	.settings :global(.check input) {
-		margin-top: 0.35em;
-	}
-	.settings :global(.check .hint) {
-		display: block;
-		font-size: var(--text-sm);
-		color: var(--color-text-muted);
 	}
 	.settings :global(.secret) {
 		display: block;

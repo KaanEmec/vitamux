@@ -12,6 +12,7 @@
 	import { session } from '#lib/session.svelte.ts';
 	import { loadSettings, patchSettings } from '#lib/settings/api.ts';
 	import Notice from '#lib/settings/Notice.svelte';
+	import Switch from '#lib/ui/Switch.svelte';
 	import { validZone, zoneNames, zonedInstant, zonedLabel, zonedLocal } from '#lib/settings/tz.ts';
 
 	type Period = Schemas['TimezonePeriod'];
@@ -154,11 +155,11 @@
 								<div class="actions">
 									{#if removing === p.id}
 										<span>Remove {p.tz}?</span>
-										<button class="btn sm" type="button" disabled={busy} onclick={() => remove(p)}>Confirm remove</button>
+										<button class="btn sm destructive primary" type="button" disabled={busy} onclick={() => remove(p)}>Confirm remove</button>
 										<button class="btn sm" type="button" onclick={() => (removing = null)}>Keep</button>
 									{:else}
 										<button class="btn sm" type="button" onclick={() => edit(p)} aria-label="Edit {p.tz} period">Edit</button>
-										<button class="btn sm" type="button" onclick={() => (removing = p.id)} aria-label="Remove {p.tz} period">Remove</button>
+										<button class="btn sm destructive" type="button" onclick={() => (removing = p.id)} aria-label="Remove {p.tz} period">Remove</button>
 									{/if}
 								</div>
 							</td>
@@ -172,7 +173,7 @@
 	<form class="callout" onsubmit={submit} aria-labelledby="period-form">
 		<h4 id="period-form">{editing ? 'Change period' : 'Add a period'}</h4>
 		<div class="row-form">
-			<TextField label="Timezone" name="tz" bind:value={tz} error={errors.tz} list="zone-names" autocomplete="off" required />
+			<TextField label="Timezone" name="tz" bind:value={tz} error={errors.tz} hint="An IANA name, like Europe/Berlin." list="zone-names" autocomplete="off" required />
 			<TextField
 				label="Starts at"
 				name="valid_from"
@@ -197,13 +198,13 @@
 	<form onsubmit={saveWithings}>
 		<ProblemAlert problem={withingsProblem} />
 		{#if withingsSaved}<Notice>Saved.</Notice>{/if}
-		<label class="check">
-			<input type="checkbox" name="withings_notifications" bind:checked={withings} onchange={() => (withingsSaved = false)} />
-			<span>
-				Subscribe to Withings notifications
-				<span class="hint">New measurements arrive sooner. Polling runs either way. Needs the public URL configured for the server.</span>
-			</span>
-		</label>
+		<Switch
+			label="Subscribe to Withings notifications"
+			hint="New measurements arrive sooner. Polling runs either way. Needs the public URL configured for the server."
+			name="withings_notifications"
+			bind:checked={withings}
+			onchange={() => (withingsSaved = false)}
+		/>
 		<button class="btn primary" type="submit">Save</button>
 	</form>
 </Card>

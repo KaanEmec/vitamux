@@ -103,8 +103,10 @@ export class ExploreApi {
 					const v = this.data.resolve(code, d) as Json;
 					return { local_date: d, status: v.status, value: v.value };
 				});
-				const rollup = (n: number) => ({ start_date: addDays(date, 1 - n), end_date: date, days: n, n: n - 1, coverage: (n - 1) / n, mean: 51, min: 48, max: 55 });
-				return [code, { metric: code, unit: meta(code)?.unit, rule: value.rule, value, sparkline, stats: [rollup(7), rollup(30), rollup(90)] }];
+				const rollup = (n: number, to = date, mean = 51) => ({ start_date: addDays(to, 1 - n), end_date: to, days: n, n: n - 1, coverage: (n - 1) / n, mean, min: 48, max: 55 });
+				// With compare=true: each period beside the one before it (previous mean 49).
+				const comparisons = q.get('compare') === 'true' ? [7, 30, 90, 365].map((n) => ({ days: n, current: rollup(n), previous: rollup(n, addDays(date, -n), 49) })) : undefined;
+				return [code, { metric: code, unit: meta(code)?.unit, rule: value.rule, value, sparkline, stats: [rollup(7), rollup(30), rollup(90)], comparisons }];
 			})
 		);
 		return json(r, 200, { date, timezone: 'Europe/Amsterdam', metrics });

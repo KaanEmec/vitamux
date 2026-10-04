@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -258,6 +259,18 @@ func TestResolvedSeries(t *testing.T) {
 	if len(s.Points) != 24 || s.HasMore || s.Window.Kind != "hour" || len(s.SourcesUsed) == 0 || s.Points[0].Start.Format(time.RFC3339) != "2025-09-14T00:00:00+02:00" {
 		t.Fatalf("hours: %d points, %+v", len(s.Points), s.Window)
 	}
+	// Each point carries its status and the providers of the chosen sources.
+	for _, pt := range s.Points {
+		if pt.Status == "no_data" {
+			if pt.Providers != nil {
+				t.Errorf("empty point with providers: %+v", pt)
+			}
+			continue
+		}
+		if pt.Status == "" || len(pt.Sources) == 0 || pt.Providers == nil || len(*pt.Providers) == 0 || slices.Contains(*pt.Providers, "") {
+			t.Fatalf("point without status or provider: %+v", pt)
+		}
+	}
 	all := s.Points
 	// Pages of 10 add up to the same points.
 	var paged []oapi.ResolvedPoint
@@ -310,6 +323,22 @@ func TestResolvedSleepAndDrilldown(t *testing.T) {
 	}
 	if n.Result.Status == "no_data" || selected != 1 || len(n.Members) < 2 {
 		t.Errorf("night: %+v", n)
+	}
+	// The main episode's bed and wake times, and the stage durations in seconds.
+	if n.Episode == nil || !n.Episode.End.After(n.Episode.Start) || n.Episode.End.Sub(n.Episode.Start) > 24*time.Hour ||
+		!n.Episode.End.Equal(*n.Result.Window.End) || !n.Episode.Start.Equal(*n.Result.Window.Start) {
+		t.Errorf("episode: %+v window %+v", n.Episode, n.Result.Window)
+	}
+	if vals, ok := n.Result.Value.(map[string]any); !ok || vals["sleep_in_bed"] == nil || vals["sleep_total"] == nil {
+		t.Errorf("sleep value: %#v", n.Result.Value)
+	} else if _, ok := vals["sleep_deep"].(float64); !ok && (*n.Result.Missing)["sleep_deep"] == "" {
+		t.Errorf("sleep_deep neither a value nor missing: %#v", vals)
+	}
+
+	// A night without an episode has no bed or wake time.
+	e.call("GET /api/v1/resolved/sleep", "/api/v1/resolved/sleep?start_date=2025-09-28&end_date=2025-09-30", "", http.StatusOK, &s)
+	if last := s.Nights[len(s.Nights)-1]; last.Result.Status != "no_data" || last.Episode != nil {
+		t.Errorf("night without data: %+v", last)
 	}
 
 	// Drilldowns: a day, an hour, a night; the sources match the result's inputs.

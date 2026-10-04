@@ -823,6 +823,14 @@ paths:
           required: false
           description: Local date; today in the owner's timezone when omitted.
           schema: {type: string, format: date}
+        - name: compare
+          in: query
+          required: false
+          description: >
+            true adds comparisons to every metric: the rollups of the 7, 30, 90 and 365 local dates
+            ending at date beside those of the equally long period before them. Resolves up to 730
+            dates per metric, so it is off by default.
+          schema: {type: boolean, default: false}
       responses:
         '200':
           description: One summary per metric.
@@ -3402,6 +3410,10 @@ components:
         partial: {type: boolean}
         coverage: {type: number, format: double, minimum: 0, maximum: 1}
         sources: {type: array, items: {type: string}, description: The groups the value came from (one for selecting strategies).}
+        providers:
+          type: array
+          items: {type: string}
+          description: The providers of the records behind the value (those of the chosen groups' sources), distinct, in input order; absent without a value.
         warnings: {type: array, items: {type: string}}
         links: {$ref: '#/components/schemas/ResolvedLinks'}
     ResolvedSleep:
@@ -3412,10 +3424,15 @@ components:
         nights: {type: array, items: {$ref: '#/components/schemas/ResolvedNight'}}
     ResolvedNight:
       type: object
+      description: >
+        episode is the bed (start) and wake (end) time of the night's main episode, the union span
+        of its sessions in the owner's timezone; absent when the night has no episode. Time per
+        stage is result.value.sleep_awake, sleep_light, sleep_deep and sleep_rem, in seconds.
       required: [local_date, result, members]
       properties:
         local_date: {type: string, format: date}
         result: {$ref: '#/components/schemas/ResolvedValue'}
+        episode: {$ref: '#/components/schemas/Span'}
         members:
           type: array
           description: Every source with a session in the main episode, inside the rule or not.
@@ -3565,6 +3582,21 @@ components:
           type: array
           description: Rollups of the 7, 30 and 90 local dates ending at date, in that order.
           items: {$ref: '#/components/schemas/Rollup'}
+        comparisons:
+          type: array
+          description: 'With compare=true, the 7, 30, 90 and 365 day periods, in that order.'
+          items: {$ref: '#/components/schemas/PeriodComparison'}
+    PeriodComparison:
+      type: object
+      description: >
+        A period and the one before it, for a neutral delta. Both are plain rollups; compare
+        mean, or for a family each component's mean.
+      additionalProperties: false
+      required: [days, current, previous]
+      properties:
+        days: {type: integer, enum: [7, 30, 90, 365]}
+        current: {$ref: '#/components/schemas/Rollup'}
+        previous: {$ref: '#/components/schemas/Rollup'}
     SummaryPoint:
       type: object
       additionalProperties: false
@@ -3734,13 +3766,37 @@ components:
       properties:
         version: {type: integer, enum: [1], description: Layout schema version.}
         cards: {type: array, maxItems: 50, items: {$ref: '#/components/schemas/DashboardCard'}, description: In display order; a metric at most once.}
+        hero:
+          type: array
+          maxItems: 4
+          items: {type: string}
+          description: Hero stat-tile metrics in order, a metric at most once, each a catalogue code or rule family. Omit to keep the default; an empty list shows none.
+        dismissed:
+          type: array
+          maxItems: 100
+          uniqueItems: true
+          items: {type: string, minLength: 1, maxLength: 200}
+          description: Keys of the dashboard alerts the owner dismissed (opaque to the server; the panel builds them from an alert's kind, subject and start). Omit for none; the panel drops keys whose alert is gone when it next saves.
     DashboardLayout:
       type: object
       additionalProperties: false
-      required: [version, cards, is_default]
+      required: [version, cards, hero, dismissed, is_default]
       properties:
         version: {type: integer, enum: [1]}
         cards: {type: array, items: {$ref: '#/components/schemas/DashboardCard'}}
+        hero:
+          type: array
+          maxItems: 4
+          items: {type: string}
+          description: >
+            The metrics of the hero stat tiles, in order (catalogue codes or rule families). The
+            curated default (steps, resting_heart_rate, hrv_rmssd_nightly, weight) while the stored
+            layout has none; an empty list when the owner chose none. Codes no longer in the catalogue are dropped.
+        dismissed:
+          type: array
+          maxItems: 100
+          items: {type: string}
+          description: Keys of the dismissed dashboard alerts; empty until one is dismissed.
         is_default: {type: boolean, description: No layout is stored; this is the curated default.}
 
     # ------------------------------------------------ system

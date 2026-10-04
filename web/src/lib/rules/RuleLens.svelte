@@ -1,14 +1,17 @@
 <!--
-	Rule lens (J21.10): change how a metric is resolved while looking at its data. Shows the rule
-	in effect as a sentence, lets the owner reorder its source groups (drag, or the up and down
-	buttons), edit exclusions, the strategy, the window and the minimum coverage (only what
-	GET /metrics/{code} allows), and acknowledge the sum warning. Every change previews the draft
-	over start..end (POST /resolution/preview, debounced) and hands the per-day draft to `ondraft`
-	so the page can draw it as a ghost series. Save, save and activate, revert and history use
-	/rules/{metric}/versions and /activate. A side panel; a bottom sheet under 48rem.
+	Rule lens (J21.10, restyled in J23.7): change how a metric is resolved while looking at its data.
+	Shows the rule in effect as a sentence, lets the owner reorder its source groups (drag, or the
+	up and down buttons; with the windows each supplied when the page passes `counts`), edit
+	exclusions, the strategy, the window and the minimum coverage (only what GET /metrics/{code}
+	allows), and acknowledge the sum warning. Every change previews the draft over start..end
+	(POST /resolution/preview, debounced): a draft-vs-active mini chart and the change summary, and
+	the per-day draft goes to `ondraft` so the page can draw it as a ghost series. Save, save and
+	activate, revert and history use /rules/{metric}/versions and /activate. A side panel; a bottom
+	sheet under 48rem unless `inline` (the page stacks it instead).
 -->
 <script lang="ts">
 	import { tick, untrack } from 'svelte';
+	import { MediaQuery } from 'svelte/reactivity';
 	import { api, fieldErrors, type Problem, type Schemas } from '../api/client.ts';
 	import Modal from '../components/Modal.svelte';
 	import ProblemAlert from '../components/ProblemAlert.svelte';
@@ -46,6 +49,8 @@
 		end,
 		ondraft,
 		history = true,
+		inline = false,
+		counts,
 		onsaved
 	}: {
 		metric: string;
@@ -55,6 +60,10 @@
 		ondraft: (draft: Draft) => void;
 		/** Show the version timeline (off where the page lists versions itself). */
 		history?: boolean;
+		/** Always a panel, never a bottom sheet (the page stacks it on small screens). */
+		inline?: boolean;
+		/** Windows each rule group supplied in the page's range, by group id. */
+		counts?: Record<string, number>;
 		/** After a save or an activation. */
 		onsaved?: () => void;
 	} = $props();
@@ -84,15 +93,8 @@
 	let root = $state<HTMLElement>();
 	let ackInput = $state<HTMLInputElement>();
 
-	let narrow = $state(false);
+	const narrow = new MediaQuery('max-width: 48rem');
 	let open = $state(false);
-	$effect(() => {
-		const mq = matchMedia('(max-width: 48rem)');
-		narrow = mq.matches;
-		const on = () => (narrow = mq.matches);
-		mq.addEventListener('change', on);
-		return () => mq.removeEventListener('change', on);
-	});
 
 	const spec = (v: Version) => v.spec as unknown as Rule;
 	const draft = $derived(form ? toSpec(form) : null);
@@ -270,6 +272,14 @@
 		const p = g.match.find((s) => typeof s.provider === 'string' && s.provider)?.provider;
 		return sourceClass(typeof p === 'string' ? p : g.id);
 	};
+	const sheet = $derived(narrow.current && !inline);
+	const activeVersion = $derived(versions?.find((v) => v.active));
+	const previewDays = $derived(preview && preview !== 'loading' && 'preview' in preview ? preview.preview.days : []);
+	const hint = $derived(
+		[ops.find((o) => o.op === form?.op)?.hint, def && !def.strategies.includes('sum_across_sources') && "Sum isn't offered: this metric isn't additive."]
+			.filter(Boolean)
+			.join(' ')
+	);
 </script>
 
 {#snippet body()}
@@ -291,7 +301,7 @@
 
 			<section class="part" aria-labelledby="{uid}-order">
 				<div class="part-head">
-					<h3 id="{uid}-order">Source priority</h3>
+					<h3 id="{uid}-order" class="lbl">Source priority</h3>
 					<span class="muted small">Drag, or use the arrows</span>
 				</div>
 				<ol class="groups" aria-labelledby="{uid}-order" aria-describedby={errorFor('spec.groups') ? `${uid}-groups-err` : undefined}>
@@ -313,13 +323,15 @@
 						>
 							<span class="grip" aria-hidden="true">⋮⋮</span>
 							<span class="rank">{i + 1}</span>
+							<span class="dot" aria-hidden="true"></span>
 							<span class="who">
-								<span class="name"><span class="dot" aria-hidden="true"></span>{groupLabel(g.id)}{#if baseIds.indexOf(g.id) !== i}<Badge tone="draft">moved</Badge>{/if}</span>
+								<span class="name">{groupLabel(g.id)}{#if baseIds.indexOf(g.id) !== i}<Badge tone="draft">moved</Badge>{/if}</span>
 								<span class="muted small">{g.match.map((s) => selectorText(s, choices)).join(' or ')}</span>
 							</span>
+							{#if counts}<span class="count muted small">{counts[g.id] ?? 0} {counts[g.id] === 1 ? 'day' : 'days'}</span>{/if}
 							<span class="arrows">
-								<button id="{uid}-up-{g.key}" class="btn ghost sm" type="button" disabled={i === 0} aria-label="Move {groupLabel(g.id)} up" onclick={() => move(i, i - 1, 'up')}>↑</button>
-								<button id="{uid}-down-{g.key}" class="btn ghost sm" type="button" disabled={i === form.groups.length - 1} aria-label="Move {groupLabel(g.id)} down" onclick={() => move(i, i + 1, 'down')}>↓</button>
+								<button id="{uid}-up-{g.key}" class="btn ghost sm icon-btn" type="button" disabled={i === 0} aria-label="Move {groupLabel(g.id)} up" onclick={() => move(i, i - 1, 'up')}>↑</button>
+								<button id="{uid}-down-{g.key}" class="btn ghost sm icon-btn" type="button" disabled={i === form.groups.length - 1} aria-label="Move {groupLabel(g.id)} down" onclick={() => move(i, i + 1, 'down')}>↓</button>
 							</span>
 						</li>
 					{/each}
@@ -330,7 +342,7 @@
 				<div class="excludes" role="group" aria-label="Never use">
 					<span class="muted small">Never use:</span>
 					{#each form.exclude as s, i (i)}
-						<span class="exclusion">
+						<span class="chip">
 							{selectorText(s, choices) || 'empty exclusion'}
 							<button type="button" class="x" aria-label="Remove exclusion {selectorText(s, choices)}" onclick={() => form?.exclude.splice(i, 1)}>×</button>
 						</span>
@@ -348,60 +360,27 @@
 							}}
 						>
 							<option value="">+ Exclude a source…</option>
-							{#each exclusionChips as c (c.label)}<option value={c.label}>{c.label}</option>{/each}
+							{#each exclusionChips as c, i (i)}<option value={c.label}>{c.label}</option>{/each}
 						</select>
 					{/if}
 				</div>
 				{#if errorFor('spec.exclude')}<p class="error">{errorFor('spec.exclude')}</p>{/if}
 			</section>
 
-			<fieldset
-				class={['part', errorFor('spec.strategy') && 'invalid']}
-				aria-describedby={errorFor('spec.strategy') ? `${uid}-op-err` : undefined}
-			>
-				<legend>Combine sources by</legend>
-				<div class="pills">
-					{#each allowedOps as o (o.op)}
-						<label class="pill" title={o.hint}>
-							<input
-								type="radio"
-								name="{uid}-op"
-								value={o.op}
-								bind:group={form.op}
-							/>
-							{opShort[o.op]}
-						</label>
-					{/each}
-				</div>
-				{#if def && !def.strategies.includes('sum_across_sources')}
-					<p class="muted small">Sum isn't offered: this metric isn't additive.</p>
-				{/if}
-				{#if errorFor('spec.strategy')}<p class="error" id="{uid}-op-err">{errorFor('spec.strategy')}</p>{/if}
-			</fieldset>
-
-			{#if needsSumAck(form)}
-				<div class="ack" role="group" aria-labelledby="{uid}-ack">
-					<p id="{uid}-ack"><StatusIcon status="warn" /> <strong>Adding sources can count the same activity twice.</strong></p>
-					<label>
-						<input
-							type="checkbox"
-							bind:this={ackInput}
-							checked={form.acknowledged.includes(sumWarning)}
-							onchange={(e) => toggleAck(e.currentTarget.checked)}
-							aria-invalid={ackError || errorFor('spec.acknowledged_warnings') ? 'true' : undefined}
-							aria-describedby={ackError || errorFor('spec.acknowledged_warnings') ? `${uid}-ack-err` : undefined}
-						/>
-						I understand the duplicate risk
-					</label>
-					{#if ackError || errorFor('spec.acknowledged_warnings')}
-						<p class="error" id="{uid}-ack-err">{ackError || errorFor('spec.acknowledged_warnings')}</p>
-					{/if}
-				</div>
-			{/if}
-
 			<div class="row">
 				<div class="field">
-					<label for="{uid}-window">Window</label>
+					<label class="lbl" for="{uid}-op">Strategy</label>
+					<select
+						id="{uid}-op"
+						bind:value={form.op}
+						aria-invalid={errorFor('spec.strategy') ? 'true' : undefined}
+						aria-describedby="{uid}-op-hint{errorFor('spec.strategy') ? ` ${uid}-op-err` : ''}"
+					>
+						{#each allowedOps as o (o.op)}<option value={o.op}>{opShort[o.op]}</option>{/each}
+					</select>
+				</div>
+				<div class="field">
+					<label class="lbl" for="{uid}-window">Window</label>
 					<select
 						id="{uid}-window"
 						bind:value={form.windowKind}
@@ -410,18 +389,22 @@
 					>
 						{#each allowedWindows as w (w.kind)}<option value={w.kind}>{w.label}</option>{/each}
 					</select>
-					{#if errorFor('spec.window')}<span class="error" id="{uid}-window-err">{errorFor('spec.window')}</span>{/if}
 				</div>
+				<p class="muted small wide" id="{uid}-op-hint">
+					{hint}
+				</p>
+				{#if errorFor('spec.strategy')}<p class="error wide" id="{uid}-op-err">{errorFor('spec.strategy')}</p>{/if}
+				{#if errorFor('spec.window')}<p class="error wide" id="{uid}-window-err">{errorFor('spec.window')}</p>{/if}
 				{#if form.windowKind === 'bucket'}
 					<div class="field">
-						<label for="{uid}-size">Bucket size</label>
+						<label class="lbl" for="{uid}-size">Bucket size</label>
 						<select id="{uid}-size" bind:value={form.bucketSize}>
 							{#each bucketSizes as s (s)}<option value={s}>{s}</option>{/each}
 						</select>
 					</div>
 				{/if}
 				<div class="field wide">
-					<label for="{uid}-cov">Minimum coverage · {coverage ? `${coverage}%` : 'none'}</label>
+					<label class="lbl" for="{uid}-cov">Minimum coverage · {coverage ? `${coverage}%` : 'none'}</label>
 					<input
 						id="{uid}-cov"
 						type="range"
@@ -437,39 +420,75 @@
 				</div>
 			</div>
 
+			{#if needsSumAck(form)}
+				<div class="inline-alert warn" role="group" aria-labelledby="{uid}-ack">
+					<StatusIcon status="warn" />
+					<div class="ack">
+						<strong id="{uid}-ack">Adding sources can count the same activity twice.</strong>
+						<label class="check">
+							<input
+								type="checkbox"
+								bind:this={ackInput}
+								checked={form.acknowledged.includes(sumWarning)}
+								onchange={(e) => toggleAck(e.currentTarget.checked)}
+								aria-invalid={ackError || errorFor('spec.acknowledged_warnings') ? 'true' : undefined}
+								aria-describedby={ackError || errorFor('spec.acknowledged_warnings') ? `${uid}-ack-err` : undefined}
+							/>
+							I understand the duplicate risk
+						</label>
+						{#if ackError || errorFor('spec.acknowledged_warnings')}
+							<p class="error" id="{uid}-ack-err">{ackError || errorFor('spec.acknowledged_warnings')}</p>
+						{/if}
+						</div>
+				</div>
+			{/if}
+
 			<a class="small" href="/rules/new?metric={metric}">Plausible range, flags, staleness… open full builder</a>
 
-			<section class="part" aria-labelledby="{uid}-preview" aria-live="polite">
-				<h3 id="{uid}-preview" class="visually-hidden">Draft preview</h3>
+			<section class={['preview', dirty && 'on']} aria-labelledby="{uid}-preview" aria-live="polite">
+				<div class="part-head">
+					<h3 id="{uid}-preview">Draft preview</h3>
+					{#if dirty}<span class="muted small">vs active</span>{/if}
+				</div>
 				{#if !dirty}
 					<p class="muted small">Change the rule to preview it on {range.start} to {range.end}.</p>
 				{:else if preview === 'loading' || preview === null}
 					<p class="muted small">Resolving the draft…</p>
 				{:else if 'unavailable' in preview}
-					<p class="note"><StatusIcon status="info" /> Preview unavailable: this server cannot resolve drafts yet. You can still save the rule.</p>
-				{:else if summary && 'preview' in preview}
+					<p class="inline-alert info"><StatusIcon status="info" /><span>Preview unavailable: this server cannot resolve drafts yet. You can still save the rule.</span></p>
+				{:else if summary}
+					{#await import('../charts/Sparkline.svelte') then { default: Sparkline }}
+						<Sparkline
+							ys={previewDays.map((d) => numeric(d.active.value))}
+							ghost={previewDays.map((d) => numeric(d.draft.value))}
+							label="Active rule (solid) and draft (dashed) over {previewDays.length} days"
+						/>
+					{/await}
 					<p class="summary">
-						<strong>{summary.changed.length} of {preview.preview.days.length} days change</strong>
+						<strong>{summary.changed.length} of {previewDays.length} days change</strong>
 						{#if summary.shift !== null}· mean {signed(summary.shift, summary.unit)}{/if}
 						· {summary.newGaps ? `${summary.newGaps} new ${summary.newGaps === 1 ? 'gap' : 'gaps'}` : 'no new gaps'}
 					</p>
 					{#if summary.changed.length}
-						<div class="scroll">
-							<table class="changes">
-								<caption class="visually-hidden">Days that change</caption>
-								<thead><tr><th scope="col">Day</th><th scope="col">Active</th><th scope="col">Draft</th><th scope="col">Why</th></tr></thead>
-								<tbody>
-									{#each summary.changed as d (d.local_date)}
-										<tr>
-											<th scope="row">{d.local_date}</th>
-											<td>{showResolved(d.active)}{#if selectedGroup(d.active)}<span class="muted">{` · ${selectedGroup(d.active)}`}</span>{/if}</td>
-											<td class="draft">{showResolved(d.draft)}{#if selectedGroup(d.draft)}<span class="muted">{` · ${selectedGroup(d.draft)}`}</span>{/if}</td>
-											<td class="muted">{d.draft.explanation}</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
+						<details>
+							<summary class="small">Days that change</summary>
+							<div class="scroll">
+								<table class="changes">
+									<caption class="visually-hidden">Days that change</caption>
+									<thead><tr><th scope="col">Day</th><th scope="col">Active</th><th scope="col">Draft</th><th scope="col">Why</th></tr></thead>
+									<tbody>
+										{#each summary.changed as d (d.local_date)}
+											<tr>
+												<th scope="row">{d.local_date}</th>
+												<td>{showResolved(d.active)}{#if selectedGroup(d.active)}<span class="muted">{` · ${selectedGroup(d.active)}`}</span>{/if}</td>
+												<td class="draft">{showResolved(d.draft)}{#if selectedGroup(d.draft)}<span class="muted">{` · ${selectedGroup(d.draft)}`}</span>{/if}</td>
+												<td class="muted">{d.draft.explanation}</td>
+											</tr>
+										{/each}
+									</tbody>
+								</table>
+							</div>
+						</details>
 					{/if}
 				{/if}
 			</section>
@@ -477,38 +496,41 @@
 			<div class="save">
 				<TextField label="Note (optional)" name="note" bind:value={note} maxlength={500} />
 				<div class="buttons">
-					<button class="btn ghost" type="button" disabled={!dirty || busy} onclick={rebase}>Discard</button>
-					<span class="grow"></span>
-					<button class="btn" type="button" disabled={!dirty || busy} onclick={() => save(false)}>Save as version {nextVersion}</button>
 					<button class="btn primary" type="button" disabled={!dirty || busy} onclick={() => save(true)}>Save and activate</button>
+					<button class="btn" type="button" disabled={!dirty || busy} onclick={() => save(false)}>Save as version {nextVersion}</button>
+					<button class="btn ghost" type="button" disabled={!dirty || busy} onclick={rebase}>Discard</button>
 				</div>
 			</div>
 		{/if}
 
 		{#if message}
-			<p class="ok" role="status">
+			<div class="inline-alert ok" role="status">
 				<StatusIcon status="ok" />
-				{message}
-				{#if revertTo}<button class="btn sm" type="button" disabled={busy} onclick={() => revertTo && activate(revertTo, true)}>Revert to version {revertTo}</button>{/if}
-			</p>
+				<span>{message}</span>
+				{#if revertTo && !history}
+					<div class="alert-actions">
+						<button class="btn sm" type="button" disabled={busy} onclick={() => revertTo && activate(revertTo, true)}>Revert to version {revertTo}</button>
+					</div>
+				{/if}
+			</div>
 		{/if}
 
 		{#if history && versions?.length}
-			<section class="part" aria-labelledby="{uid}-history">
-				<h3 id="{uid}-history">History</h3>
+			<section class="part history" aria-labelledby="{uid}-history">
+				<h3 id="{uid}-history" class="lbl">History</h3>
 				<ol class="timeline">
 					{#each versions as v (v.ref)}
 						<li class={{ active: v.active }}>
 							<span class="mark" aria-hidden="true"></span>
 							<span class="who">
-								<strong>{v.builtin ? 'Built-in' : `Version ${v.version}`}</strong>
-								{#if when(v)}<span class="muted small">{when(v)}</span>{/if}
-								{#if v.note}<span class="muted small">{v.note}</span>{/if}
+								<span>{v.builtin ? 'Built-in' : `Version ${v.version}`}{v.note ? ` · ${v.note}` : ''}</span>
+								<span class="muted small">{v.active ? 'Active' : ''}{v.active && when(v) ? ' · ' : ''}{when(v)}</span>
 							</span>
-							{#if v.active}
-								<Badge tone="accent">Active</Badge>
-							{:else if !v.builtin}
-								<button class="btn sm" type="button" disabled={busy} aria-label="Activate version {v.version}" onclick={() => activate(v.version)}>Activate</button>
+							{#if !v.active && !v.builtin}
+								{@const older = !!activeVersion && !activeVersion.builtin && v.version < activeVersion.version}
+								<button class="btn link sm" type="button" disabled={busy} aria-label="{older ? 'Revert to' : 'Activate'} version {v.version}" onclick={() => activate(v.version, older)}>
+									{older ? 'Revert' : 'Activate'}
+								</button>
 							{/if}
 						</li>
 					{/each}
@@ -518,7 +540,7 @@
 	</div>
 {/snippet}
 
-{#if narrow}
+{#if sheet}
 	<button class="btn open" type="button" onclick={() => (open = true)}>
 		{title}{#if dirty}<Badge tone="draft">Draft</Badge>{/if}
 	</button>
@@ -526,21 +548,31 @@
 		<Modal {title} drawer="right" onclose={() => (open = false)}>{@render body()}</Modal>
 	{/if}
 {:else}
-	<aside class="lens" aria-labelledby="{uid}-title">
-		<h2 id="{uid}-title">{title}</h2>
+	<aside class="lens card" aria-labelledby="{uid}-title">
+		<div class="lens-head">
+			<h2 id="{uid}-title">{title}</h2>
+			{#if activeVersion}<span class="chip">{activeVersion.builtin ? 'Built-in' : `Rule v${activeVersion.version}`} · active</span>{/if}
+		</div>
 		{@render body()}
 	</aside>
 {/if}
 
 <style>
 	.lens {
-		padding: var(--space-5);
-		background: var(--color-inset);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-lg);
+		display: grid;
+		gap: var(--space-4);
+		min-width: 0;
+	}
+	.lens-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-2);
 	}
 	.lens h2 {
-		font-size: var(--text-lg);
+		margin: 0;
+		font-size: var(--text-md);
 	}
 	.open {
 		width: 100%;
@@ -555,28 +587,21 @@
 		margin: 0;
 	}
 	.sentence {
-		padding: var(--space-3) var(--space-4);
-		line-height: 1.55;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-md);
-	}
-	.sentence {
 		display: grid;
 		justify-items: start;
 		gap: var(--space-2);
 	}
 	.sentence p {
 		margin: 0;
+		font-size: var(--text-sm);
+		line-height: 1.55;
+		color: var(--color-text);
 	}
 	.part {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr);
 		gap: var(--space-2);
 		min-width: 0;
-		margin: 0;
-		padding: 0;
-		border: 0;
 	}
 	.part-head {
 		display: flex;
@@ -585,15 +610,18 @@
 		justify-content: space-between;
 		gap: var(--space-2);
 	}
-	h3,
-	legend {
+	h3 {
 		margin: 0;
 		padding: 0;
 		font-size: var(--text-sm);
 		font-weight: 600;
 	}
-	legend {
-		margin-bottom: var(--space-2);
+	.lbl {
+		font-size: var(--text-2xs);
+		font-weight: 500;
+		letter-spacing: var(--tracking-label);
+		text-transform: uppercase;
+		color: var(--color-text-muted);
 	}
 	.small {
 		font-size: var(--text-xs);
@@ -610,8 +638,8 @@
 		display: flex;
 		align-items: center;
 		gap: var(--space-2);
-		padding: var(--space-2);
-		background: var(--color-surface);
+		padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+		background: var(--color-inset);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-md);
 		cursor: grab;
@@ -625,16 +653,19 @@
 		letter-spacing: -0.2em;
 	}
 	.rank {
-		display: inline-grid;
-		place-items: center;
 		flex: none;
-		width: 1.5rem;
-		height: 1.5rem;
+		min-width: 1rem;
 		font-family: var(--font-mono);
 		font-size: var(--text-xs);
-		font-weight: 600;
-		background: var(--color-surface-2);
-		border-radius: var(--radius-xs);
+		color: var(--color-text-muted);
+		text-align: center;
+	}
+	.dot {
+		flex: none;
+		width: 0.4375rem;
+		height: 0.4375rem;
+		background: var(--src, var(--color-neutral));
+		border-radius: 50%;
 	}
 	.who {
 		display: grid;
@@ -648,21 +679,15 @@
 		align-items: center;
 		gap: var(--space-2);
 		font-size: var(--text-sm);
-		font-weight: 600;
+		font-weight: 500;
 	}
-	.dot {
-		width: 0.5rem;
-		height: 0.5rem;
-		background: var(--src, var(--color-neutral));
-		border-radius: 50%;
+	.count {
+		flex: none;
+		font-variant-numeric: tabular-nums;
 	}
 	.arrows {
 		display: flex;
 		flex: none;
-	}
-	.arrows .btn {
-		width: var(--control-h-sm);
-		padding: 0;
 	}
 	.excludes {
 		display: flex;
@@ -670,19 +695,10 @@
 		align-items: center;
 		gap: var(--space-2);
 	}
-	.exclusion {
-		display: inline-flex;
-		align-items: center;
-		gap: var(--space-1);
-		min-height: 1.75rem;
-		padding: 0 var(--space-1) 0 var(--space-3);
-		font-size: var(--text-xs);
-		border: 1px solid var(--color-border-strong);
-		border-radius: var(--radius-pill);
-	}
 	.x {
-		width: 1.5rem;
-		height: 1.5rem;
+		width: 1.25rem;
+		height: 1.25rem;
+		margin-right: -0.375rem;
 		padding: 0;
 		font: inherit;
 		color: var(--color-text-muted);
@@ -697,77 +713,27 @@
 	}
 	.add {
 		max-width: 100%;
-		min-height: 1.75rem;
-		padding: 0 var(--space-2);
-		font: inherit;
-		font-size: var(--text-xs);
-		color: var(--color-link);
-		background: transparent;
-		border: 1px dashed var(--color-border-strong);
-		border-radius: var(--radius-pill);
-	}
-	.pills {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-2);
-	}
-	/* The radio covers its pill, so a click anywhere on it lands on the input. */
-	.pill input {
-		position: absolute;
-		inset: 0;
-		margin: 0;
-		opacity: 0;
-		cursor: pointer;
-	}
-	.pill {
-		position: relative;
-		display: inline-flex;
-		align-items: center;
 		min-height: var(--control-h-sm);
-		padding: 0 var(--space-3);
-		font-size: var(--text-sm);
-		font-weight: 500;
-		color: var(--color-text-muted);
-		border: 1px solid var(--color-border-strong);
-		border-radius: var(--radius-sm);
-		cursor: pointer;
-	}
-	.pill:has(input:checked) {
-		color: var(--color-link);
-		background: var(--color-accent-soft);
-		border-color: var(--color-accent);
-	}
-	.pill:has(input:focus-visible) {
-		outline: 2px solid var(--color-focus);
-		outline-offset: 2px;
-	}
-	.invalid .pill {
-		border-color: var(--color-error);
+		font-size: var(--text-xs);
 	}
 	.ack {
 		display: grid;
 		gap: var(--space-2);
-		padding: var(--space-3);
-		border: 1px solid var(--color-warn);
-		border-radius: var(--radius-md);
-	}
-	.ack p {
-		display: flex;
-		gap: var(--space-2);
-		align-items: center;
-		margin: 0;
 	}
 	.row {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
-		gap: var(--space-3);
+		grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+		gap: var(--space-2) var(--space-3);
 	}
 	.row .field {
+		display: grid;
+		gap: var(--space-1);
 		min-width: 0;
 		margin: 0;
 	}
 	.row .wide {
 		grid-column: 1 / -1;
+		margin: 0;
 	}
 	.row select {
 		width: 100%;
@@ -775,41 +741,45 @@
 	}
 	input[type='range'] {
 		min-height: var(--control-h);
-		padding: 0;
 		accent-color: var(--color-accent);
-		background: transparent;
-		border: 0;
 	}
 	.error {
 		margin: 0;
 		font-size: var(--text-xs);
 		color: var(--color-error);
 	}
-	.note,
-	.ok {
-		display: flex;
-		flex-wrap: wrap;
+	.preview {
+		display: grid;
 		gap: var(--space-2);
-		align-items: center;
-		padding: var(--space-2) var(--space-3);
-		font-size: var(--text-sm);
-		border-radius: var(--radius-sm);
+		min-width: 0;
+		padding: var(--space-3) var(--space-4);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
 	}
-	.note {
-		background: var(--color-info-bg);
+	.preview.on {
+		background: var(--color-draft-bg);
+		border-color: color-mix(in srgb, var(--color-draft) 30%, transparent);
 	}
-	.ok {
-		background: var(--color-accent-soft);
+	.preview.on h3 {
+		color: var(--color-draft);
+	}
+	.preview > p {
+		margin: 0;
+	}
+	.preview :global(.ghost) {
+		stroke: var(--color-draft);
 	}
 	.summary {
-		margin: 0;
-		padding: var(--space-3);
 		font-size: var(--text-sm);
-		background: var(--color-draft-bg);
-		border-radius: var(--radius-md);
+		line-height: 1.45;
+	}
+	details summary {
+		color: var(--color-link);
+		cursor: pointer;
 	}
 	.scroll {
 		max-height: 18rem;
+		margin-top: var(--space-2);
 		overflow: auto;
 	}
 	.changes {
@@ -837,8 +807,6 @@
 	.save {
 		display: grid;
 		gap: var(--space-2);
-		padding-top: var(--space-4);
-		border-top: 1px solid var(--color-border);
 	}
 	.save :global(.field) {
 		margin: 0;
@@ -848,22 +816,22 @@
 		flex-wrap: wrap;
 		gap: var(--space-2);
 	}
-	.grow {
-		flex: 1;
+	.history {
+		padding-top: var(--space-4);
+		border-top: 1px solid var(--color-border);
 	}
 	.timeline li {
 		display: flex;
 		align-items: flex-start;
 		gap: var(--space-3);
-		padding-top: var(--space-2);
-		border-top: 1px solid var(--color-border);
+		font-size: var(--text-sm);
 	}
 	.mark {
 		flex: none;
-		width: 0.5625rem;
-		height: 0.5625rem;
+		width: 0.5rem;
+		height: 0.5rem;
 		margin-top: 0.4rem;
-		border: 2px solid var(--color-text-faint);
+		border: 1.5px solid var(--color-text-faint);
 		border-radius: 50%;
 	}
 	.timeline .active .mark {

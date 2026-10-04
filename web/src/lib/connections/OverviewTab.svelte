@@ -24,7 +24,7 @@
 </script>
 
 {#if connection.health === 'needs_reauth'}
-	<div class="callout" role="alert">
+	<div class="inline-alert error" role="alert">
 		<StatusIcon status="error" />
 		<span>{providerLabel(connection.provider)} no longer accepts the stored authorization. Sign in again to resume syncing; no data is lost.</span>
 	</div>
@@ -82,17 +82,6 @@
 </div>
 
 <style>
-	.callout {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-2);
-		align-items: center;
-		padding: var(--space-3) var(--space-4);
-		margin: 0 0 var(--space-4);
-		background: var(--color-error-bg);
-		border: 1px solid var(--color-error);
-		border-radius: var(--radius-md);
-	}
 	.cols {
 		display: flex;
 		flex-wrap: wrap;

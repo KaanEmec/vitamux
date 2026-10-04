@@ -6,7 +6,7 @@
 	import { goto } from '$app/navigation';
 	import { api, type Problem, type Schemas } from '../api/client.ts';
 	import ProblemAlert from '../components/ProblemAlert.svelte';
-	import StatusIcon from '../components/StatusIcon.svelte';
+	import Notice from '../settings/Notice.svelte';
 	import Button from '../ui/Button.svelte';
 	import DataTable from './DataTable.svelte';
 	import DeleteDialog from './DeleteDialog.svelte';
@@ -78,7 +78,7 @@
 </script>
 
 <ProblemAlert {problem} />
-{#if message}<p class="done" role="status"><StatusIcon status="ok" /> {message}</p>{/if}
+{#if message}<Notice>{message}</Notice>{/if}
 
 <section class="card" aria-labelledby="sync-state">
 	<h2 id="sync-state">Syncing</h2>
@@ -121,6 +121,7 @@
 						<td>
 							<input
 								type="checkbox"
+								role="switch"
 								aria-label="Enable {s.stream} {s.mode}"
 								checked={s.enabled}
 								onchange={(e) => patch(s, { enabled: e.currentTarget.checked })}
@@ -139,7 +140,7 @@
 <section class="card" aria-labelledby="remove">
 	<h2 id="remove">Remove</h2>
 	<p>Disconnect {providerLabel(connection.provider)} and keep its data, or delete the connection with everything it collected.</p>
-	<Button variant="danger" onclick={() => (removing = true)}>Remove connection…</Button>
+	<Button variant="destructive" onclick={() => (removing = true)}>Remove connection…</Button>
 </section>
 
 {#if removing}<DeleteDialog {connection} onclose={() => (removing = false)} ondeleted={deleted} />{/if}
@@ -154,19 +155,5 @@
 	}
 	section p {
 		margin: 0 0 var(--space-3);
-	}
-	.done {
-		display: flex;
-		gap: var(--space-2);
-		align-items: center;
-	}
-	select {
-		min-height: var(--control-h-sm);
-		padding: 0 var(--space-2);
-		font: inherit;
-		color: var(--color-text);
-		background: var(--color-inset);
-		border: 1px solid var(--color-border-strong);
-		border-radius: var(--radius-sm);
 	}
 </style>

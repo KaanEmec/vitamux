@@ -76,7 +76,7 @@
 
 <svelte:head><title>Events · Vitamux</title></svelte:head>
 
-<ViewHead title="Events" text="Alerts, symptoms and other typed events, one lane per type. A bar spans an event from start to end.">
+<ViewHead title="Events" text="Alerts, symptoms and other typed events, one lane per type. A bar spans an event from start to end." tile={{ code: 'events' }}>
 	<RangePicker bind:value={rangeKey} options={['1M', '3M', '1Y', 'All']} />
 </ViewHead>
 
@@ -107,14 +107,5 @@
 <style>
 	.field {
 		max-width: 22rem;
-	}
-	select {
-		min-height: var(--control-h);
-		padding: 0 var(--space-3);
-		font: inherit;
-		color: var(--color-text);
-		background: var(--color-surface);
-		border: 1px solid var(--color-border-strong);
-		border-radius: var(--radius-md);
 	}
 </style>

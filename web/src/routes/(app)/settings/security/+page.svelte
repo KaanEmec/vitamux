@@ -142,13 +142,16 @@
 
 <Card title="Two-factor authentication" id="totp-h">
 	{#if recovery}
-		<div class="callout">
-			<strong>Recovery codes</strong>
-			<p>Save these codes somewhere safe. Each works once if you lose your authenticator, and they are not shown again.</p>
-			<ul class="secret" aria-label="Recovery codes">
-				{#each recovery as c (c)}<li><code>{c}</code></li>{/each}
-			</ul>
-			<button class="btn primary" type="button" onclick={() => (recovery = null)}>I have saved them</button>
+		<div class="inline-alert warn">
+			<StatusIcon status="warn" />
+			<div>
+				<strong>Recovery codes</strong>
+				<p>Save these codes somewhere safe. Each works once if you lose your authenticator, and they are not shown again.</p>
+				<ul class="secret" aria-label="Recovery codes">
+					{#each recovery as c (c)}<li><code>{c}</code></li>{/each}
+				</ul>
+				<button class="btn primary" type="button" onclick={() => (recovery = null)}>I have saved them</button>
+			</div>
 		</div>
 	{/if}
 
@@ -161,7 +164,7 @@
 				<TextField label="Authenticator code" name="totp_code" bind:value={totpCode} error={errors.totp_code} inputmode="numeric" autocomplete="one-time-code" />
 				<TextField label="Or a recovery code" name="recovery_code" bind:value={recoveryCode} error={errors.recovery_code} autocomplete="off" />
 				<div class="actions">
-					<button class="btn primary" type="submit" disabled={busy}>Turn off two-factor</button>
+					<button class="btn destructive primary" type="submit" disabled={busy}>Turn off two-factor</button>
 					<button class="btn" type="button" onclick={() => (disabling = false)}>Cancel</button>
 				</div>
 			</form>

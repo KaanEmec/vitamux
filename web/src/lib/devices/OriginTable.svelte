@@ -79,16 +79,3 @@
 		</table>
 	</div>
 {/if}
-
-<style>
-	select {
-		min-height: var(--control-h-sm);
-		padding: 0 var(--space-2);
-		font: inherit;
-		font-size: var(--text-sm);
-		color: var(--color-text);
-		background: var(--color-inset);
-		border: 1px solid var(--color-border-strong);
-		border-radius: var(--radius-sm);
-	}
-</style>

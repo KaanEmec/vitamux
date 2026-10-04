@@ -14,6 +14,7 @@
 	import Card from '../settings/Card.svelte';
 	import Notice from '../settings/Notice.svelte';
 	import { when } from '../settings/format.ts';
+	import Button from '../ui/Button.svelte';
 	import CopyValue from '../ui/CopyValue.svelte';
 
 	type Sidecar = Schemas['Sidecar'];
@@ -113,11 +114,11 @@
 									<span class="muted">Read-only</span>
 								{:else if removing === s.name}
 									<div class="actions">
-										<button class="btn sm danger" type="button" disabled={busy} onclick={() => remove(s)}>{force ? 'Remove anyway' : 'Confirm remove'}</button>
-										<button class="btn sm" type="button" onclick={() => ((removing = null), (force = false), (problem = null))}>Keep</button>
+										<Button size="sm" variant="destructive" class="primary" disabled={busy} onclick={() => remove(s)}>{force ? 'Remove anyway' : 'Confirm remove'}</Button>
+										<Button size="sm" onclick={() => ((removing = null), (force = false), (problem = null))}>Keep</Button>
 									</div>
 								{:else}
-									<button class="btn sm" type="button" onclick={() => ((removing = s.name), (force = false))} aria-label="Remove the sidecar {s.name}">Remove</button>
+									<Button size="sm" variant="destructive" onclick={() => ((removing = s.name), (force = false))} aria-label="Remove the sidecar {s.name}">Remove</Button>
 								{/if}
 							</td>
 						</tr>
@@ -135,7 +136,7 @@
 			<p>Give this secret to the sidecar as its <code>VITAMUX_SIDECAR_SECRET_FILE</code>. It is shown once and cannot be retrieved later.</p>
 			<CopyValue label="Shared secret" value={created.secret} />
 			<p class="muted">Once the sidecar runs, use Check again under Connections, Connect a source.</p>
-			<button class="btn primary" type="button" onclick={() => (created = null)}>I have saved it</button>
+			<Button variant="primary" onclick={() => (created = null)}>I have saved it</Button>
 		</div>
 	{/if}
 	<form onsubmit={add}>
@@ -160,6 +161,6 @@
 			required
 		/>
 		<ProblemAlert problem={addProblem} fields={['name', 'url']} />
-		<button class="btn primary" type="submit" disabled={busy}>Add sidecar</button>
+		<Button variant="primary" type="submit" disabled={busy}>Add sidecar</Button>
 	</form>
 </Card>

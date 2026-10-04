@@ -2,6 +2,33 @@
 
 Newest first. Before a final release, `scripts/release-notes.sh --changelog vX.Y.Z` adds its section from the Conventional Commits since the previous final tag; edit it and add upgrade notes under "Breaking changes" before tagging. The release workflow refuses a final tag without its section and uses it as the release notes. Release candidates are described on their GitHub releases only.
 
+## v0.3.0 (2026-10-04)
+
+Charts and metric visualisation redesign ([E23](docs/plan/E23-chart-redesign/README.md)).
+
+### Web UI
+
+- **Charts** are drawn with LayerChart ([ADR-0022](docs/adr/0022-layerchart.md), replacing the own SVG kit). Every chart has a crosshair tooltip with the value, status and source, which can be pinned to open Explain, Override or Raw records. Period changes animate (no motion when reduced motion is set), touch can scrub through points, and keyboard navigation and "Show as a table" work as before.
+- **Design tokens v3**, dark first: each metric has its own hue and icon tile, and sleep stages and source chips are recoloured. The light theme mirrors every token.
+- **Dashboard**: hero tiles (up to four, chosen in edit mode) drive one large chart with 7D/30D/90D/1Y, a mean line, the range and a neutral delta against the previous period. There is a last-night card, and pinned cards with sparklines. Warnings and errors can be **dismissed**; a new occurrence shows again, and "Show" brings dismissed ones back.
+- **Metric detail**: a stats header, per-source overlay toggles, "Compare previous", fallback and override markers, shaded gaps, the source behind each day, a brush navigator, a distribution and a values table. The rule lens is a side panel with a draft-vs-active preview.
+- **Sleep, blood pressure and body**:
+  - Sleep has a last-night hypnogram, nightly stage stacks, bedtime and wake bars, the average night and a list of nights.
+  - Blood pressure shows one dumbbell per session, with a morning and evening filter.
+  - Body shows weight with a 7-day moving average and composition tiles, with no class labels.
+- **Controls** are restyled across every page: buttons, fields, dropdowns, checkboxes, radios, a new switch, tabs, dialogs with action footers, popovers and alerts. Connections, setup, Rules, Lab, Settings and login use them.
+
+### API
+
+- `GET /resolved/series`: `points[].providers`.
+- `GET /resolved/sleep`: `nights[].episode` (bed to wake).
+- `GET /resolved/summary`: `compare=true` adds `comparisons` (7/30/90/365 days, against the period before).
+- `GET/PUT /settings/dashboard`: `hero` (up to four metrics) and `dismissed` (alert keys).
+
+### Breaking changes
+
+None. No migrations. The web build adds `layerchart`, and its chart code loads lazily (about 128 KiB gzip).
+
 ## v0.2.8 (2026-10-04)
 
 ### Rules

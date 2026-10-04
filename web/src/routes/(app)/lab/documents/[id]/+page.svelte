@@ -185,7 +185,7 @@
 		{#if doc.status !== 'deleted'}
 			<div class="actions">
 				<button class="btn" type="button" disabled={active} onclick={() => (extracting = true)}>{runs.length ? 'Extract again' : 'Extract'}</button>
-				<button class="btn" type="button" onclick={() => (deleting = true)}>Delete document</button>
+				<button class="btn destructive" type="button" onclick={() => (deleting = true)}>Delete document</button>
 			</div>
 		{/if}
 	</header>
@@ -250,20 +250,23 @@
 
 				<section class="card confirm" aria-labelledby="confirm-title">
 					<h2 id="confirm-title">Confirm</h2>
-					{#if notice}<p role="status"><StatusIcon status="ok" /> {notice} <a href="/lab/results">See results</a></p>{/if}
+					{#if notice}<p class="inline-alert ok" role="status"><StatusIcon status="ok" /> <span>{notice} <a href="/lab/results">See results</a></span></p>{/if}
 					{#if confirmProblem?.status === 422}
-						<div class="not-ready" role="alert">
-							<p><StatusIcon status="error" /> <strong>Not ready to confirm.</strong></p>
-							<ul>
-								{#each confirmProblem.errors ?? [] as e (e.pointer)}
-									{@const n = rowOfPointer(e.pointer)}
-									{@const r = rows.find((x) => x.index === n)}
-									<li>
-										{label(r)}{e.pointer.split('/')[3] ? ` ${e.pointer.split('/')[3].replaceAll('_', ' ')}` : ''}: {e.detail}
-										{#if r}<button class="btn link" type="button" onclick={() => select(r)}>Go to row {r.index + 1}</button>{/if}
-									</li>
-								{/each}
-							</ul>
+						<div class="inline-alert error not-ready" role="alert">
+							<StatusIcon status="error" />
+							<div>
+								<strong>Not ready to confirm.</strong>
+								<ul>
+									{#each confirmProblem.errors ?? [] as e (e.pointer)}
+										{@const n = rowOfPointer(e.pointer)}
+										{@const r = rows.find((x) => x.index === n)}
+										<li>
+											{label(r)}{e.pointer.split('/')[3] ? ` ${e.pointer.split('/')[3].replaceAll('_', ' ')}` : ''}: {e.detail}
+											{#if r}<button class="btn link" type="button" onclick={() => select(r)}>Go to row {r.index + 1}</button>{/if}
+										</li>
+									{/each}
+								</ul>
+							</div>
 						</div>
 					{:else}
 						<ProblemAlert problem={confirmProblem} />
@@ -409,24 +412,10 @@
 		font-size: var(--text-xs);
 		color: var(--color-text-muted);
 	}
-	kbd {
-		padding: 1px var(--space-2);
-		font-size: var(--text-2xs);
-		color: var(--color-text);
-		border: 1px solid var(--color-border-strong);
-		border-radius: var(--radius-xs);
-	}
 	.confirm h2 {
 		font-size: var(--text-md);
 	}
-	.not-ready {
-		padding: var(--space-3);
-		margin-bottom: var(--space-3);
-		background: var(--color-error-bg);
-		border: 1px solid var(--color-error);
-		border-radius: var(--radius-sm);
-	}
 	.not-ready ul {
-		margin: 0;
+		margin: var(--space-1) 0 0;
 	}
 </style>

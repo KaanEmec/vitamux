@@ -1,39 +1,51 @@
-<!-- A short label: neutral (tags such as "v3 · custom"), accent ("Official"), warn ("Unofficial"), draft. -->
+<!-- A short tinted label: neutral (tags such as "v3 · custom"), accent ("Official"), warn ("Unofficial"), error, info, draft. -->
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
-	let { tone = 'neutral', title, children }: { tone?: 'neutral' | 'accent' | 'warn' | 'draft'; title?: string; children: Snippet } = $props();
+	let { tone = 'neutral', title, children }: { tone?: 'neutral' | 'accent' | 'warn' | 'error' | 'info' | 'draft'; title?: string; children: Snippet } = $props();
 </script>
 
 <span class={['badge', tone]} {title}>{@render children()}</span>
 
 <style>
 	.badge {
+		--tone: var(--color-text-muted);
 		display: inline-flex;
 		align-items: center;
-		min-height: 1.5rem;
+		min-height: 1.375rem;
 		padding: 0 var(--space-2);
 		font-size: var(--text-xs);
 		font-weight: 600;
+		line-height: 1;
 		white-space: nowrap;
-		border: 1px solid transparent;
+		color: var(--tone);
+		background: var(--tone-bg, transparent);
+		border: 1px solid color-mix(in srgb, var(--tone) 35%, transparent);
 		border-radius: var(--radius-xs);
 	}
 	.neutral {
+		--tone-bg: var(--color-surface-2);
 		font-weight: 500;
-		color: var(--color-text-muted);
-		background: var(--color-surface-2);
+		border-color: var(--color-border);
 	}
 	.accent {
-		color: var(--color-link);
-		border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+		--tone: var(--color-link);
+		--tone-bg: var(--color-accent-soft);
 	}
 	.warn {
-		color: var(--color-warn);
-		border-color: color-mix(in srgb, var(--color-warn) 45%, transparent);
+		--tone: var(--color-warn);
+		--tone-bg: var(--color-warn-bg);
+	}
+	.error {
+		--tone: var(--color-error);
+		--tone-bg: var(--color-error-bg);
+	}
+	.info {
+		--tone: var(--color-info);
+		--tone-bg: var(--color-info-bg);
 	}
 	.draft {
-		color: var(--color-draft);
-		background: var(--color-draft-bg);
+		--tone: var(--color-draft);
+		--tone-bg: var(--color-draft-bg);
 	}
 </style>
