@@ -428,9 +428,21 @@ const STREAM_PAGES = {
   // One raw per in-window record, keyed by its id, so a new workout never reshuffles stored raws.
   async "whoop.workouts"({ client, take, start, end, cursor }) {
     const token = cursor?.next_token ?? undefined;
-    const page = await client.listDeveloperWorkouts({ limit: WORKOUT_PAGE, nextToken: token });
+    let page;
+    try {
+      page = await client.listDeveloperWorkouts({ limit: WORKOUT_PAGE, nextToken: token });
+    } catch (err) {
+      // @dofek/whoop 0.1.65 refuses null in optional fields (older workouts have sport_id: null),
+      // so read the page from WHOOP's captured body instead; the checks below still apply.
+      if (err?.name !== "ZodError") throw err;
+    }
     const c = take();
     if (!c) throw drift("workouts");
+    if (!page) {
+      const b = JSON.parse(c.text);
+      if (!Array.isArray(b?.records)) throw drift("workouts");
+      page = { records: b.records, next_token: typeof b.next_token === "string" ? b.next_token : null };
+    }
     const texts = sliceRecords(c.text, "records");
     if (texts.length !== page.records.length) throw drift("workout records");
     const starts = page.records.map((r) => Date.parse(r.start)).filter(Number.isFinite);

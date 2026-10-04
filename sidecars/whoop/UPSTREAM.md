@@ -14,6 +14,8 @@ Rules: [docs/sidecars.md#license-gate](../../docs/sidecars.md#license-gate).
 
 ## Notes
 
+- Workaround to drop on an upstream bump: `listDeveloperWorkouts`'s zod schema refuses `null` in optional fields (`sport_id: null` on older workouts), so the sidecar falls back to its own parse of the captured page on `ZodError`. Remove it once upstream accepts nulls.
+
 - Published on npm as [`@dofek/whoop`](https://www.npmjs.com/package/@dofek/whoop), pinned exactly in `package.json` and `package-lock.json`. Source: https://github.com/Asherlc/dofek/tree/main/packages/whoop-whoop. Runtime: Node >= 22.14.
 - **Unofficial.** Client for WHOOP's private app API (Cognito sign-in). Not affiliated with or endorsed by WHOOP. Vitamux marks the connector `official: false` and a new connection starts paused.
 - The `@dofek/*` siblings are released in lockstep (same version number, exact pins between them). Update them together: one `npm install @dofek/whoop@<version>` moves the tree.

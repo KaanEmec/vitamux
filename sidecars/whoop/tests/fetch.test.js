@@ -124,6 +124,15 @@ test("workouts: one raw per in-window record plus weightlifting detail where it 
   assert.equal(s.calls.filter((c) => c.key.includes("weightlifting")).length, 2); // w-old not asked
 });
 
+test("workouts: a null optional field the upstream schema refuses still syncs", async (t) => {
+  const page = DEV([W("w-1", "2026-01-02T10:00:00Z", { sport_id: null })]);
+  const s = await start({ "/developer/v2/activity/workout": () => json(page), "/weightlifting-service/v2/weightlifting-workout/w-1": () => json({}, 404) });
+  t.after(s.stop);
+  const lines = (await s.call("POST", "/v1/fetch", req({ stream: "whoop.workouts", to: "2026-01-04T00:00:00Z" }))).lines();
+  assert.deepEqual(lines.map((x) => x.external_key ?? x.type), ["whoop.workouts:w-1", "result"]);
+  assert.equal(lines.at(-1).done, true);
+});
+
 test("workouts: a record's raw is sliced byte-exact from the page", async (t) => {
   const rec = '{ "id" : "w-1", "start":"2026-01-02T10:00:00Z", "end":"2026-01-02T11:00:00Z", "note": "a \\"}]\\" b", "big": 9007199254740993, "zones": [{"z": [1, 2]}] }';
   const text = `{"next_token": null, "records" : [ ${rec} ], "after": {"records": []}}`;
