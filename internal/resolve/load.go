@@ -161,34 +161,9 @@ func (l *loader) results(ctx context.Context, v Version, ovs []Override) ([][]Re
 		}}
 	}
 
-	opt := Options{Now: req.Now}
-	if len(r.Contexts) > 0 {
-		if len(r.Contexts[ContextSleep]) > 0 {
-			for _, a := range l.nights {
-				opt.Events.Sleep = append(opt.Events.Sleep, a.Episodes...)
-			}
-		}
-		if len(r.Contexts[ContextWorkout]) > 0 {
-			wo, err := l.loadWorkouts(ctx, first.Start, last.End)
-			if err != nil {
-				return nil, err
-			}
-			opt.Events.Workouts = ClusterWorkouts(wo)
-		}
-	}
-	if r.Follow != "" {
-		lead := l.req
-		lead.Metric, lead.Rule, lead.Sources = r.Follow, nil, false
-		leader, err := Run(ctx, l.d, lead)
-		if err != nil {
-			return nil, fmt.Errorf("resolve: follow leader %s: %w", r.Follow, err)
-		}
-		opt.Leader = map[string]string{}
-		for _, x := range leader {
-			if x.Selected != "" {
-				opt.Leader[x.Window.Key] = x.Selected
-			}
-		}
+	opt, err := l.sharedOptions(ctx, r, first.Start, last.End)
+	if err != nil {
+		return nil, err
 	}
 
 	var out [][]Result
@@ -236,6 +211,40 @@ func (l *loader) results(ctx context.Context, v Version, ovs []Override) ([][]Re
 		out = append(out, rs)
 	}
 	return out, nil
+}
+
+// sharedOptions are the Options every date of results starts from: the sleep episodes and
+// workouts (loaded in [from, to)) of r's event contexts, and a follower's leader selections.
+func (l *loader) sharedOptions(ctx context.Context, r *Rule, from, to time.Time) (Options, error) {
+	opt := Options{Now: l.req.Now}
+	if len(r.Contexts[ContextSleep]) > 0 {
+		for _, a := range l.nights {
+			opt.Events.Sleep = append(opt.Events.Sleep, a.Episodes...)
+		}
+	}
+	if len(r.Contexts[ContextWorkout]) > 0 {
+		wo, err := l.loadWorkouts(ctx, from, to)
+		if err != nil {
+			return Options{}, err
+		}
+		opt.Events.Workouts = ClusterWorkouts(wo)
+	}
+	if r.Follow == "" {
+		return opt, nil
+	}
+	lead := l.req
+	lead.Metric, lead.Rule, lead.Sources = r.Follow, nil, false
+	leader, err := Run(ctx, l.d, lead)
+	if err != nil {
+		return Options{}, fmt.Errorf("resolve: follow leader %s: %w", r.Follow, err)
+	}
+	opt.Leader = map[string]string{}
+	for _, x := range leader {
+		if x.Selected != "" {
+			opt.Leader[x.Window.Key] = x.Selected
+		}
+	}
+	return opt, nil
 }
 
 // slider holds the rows of a series while a request walks its dates forward: it loads ahead in
