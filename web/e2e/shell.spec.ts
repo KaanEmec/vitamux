@@ -6,7 +6,7 @@ test.beforeEach(({ api }) => {
 
 test('the shell is keyboard navigable', async ({ page }) => {
 	await page.goto('/');
-	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Today');
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Dashboard');
 
 	// First Tab reaches the skip link, then the brand, then the sections in order.
 	await page.keyboard.press('Tab');
@@ -32,7 +32,7 @@ test('the shell is keyboard navigable', async ({ page }) => {
 
 test('every section has a route', async ({ page }) => {
 	for (const [path, heading] of [
-		['/', 'Today'],
+		['/', 'Dashboard'],
 		['/explore', 'Explore'],
 		['/connections', 'Connections'],
 		['/data', 'Data'],

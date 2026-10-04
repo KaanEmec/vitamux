@@ -34,7 +34,7 @@ test('asks for a TOTP code when required', async ({ page, api }) => {
 	await code.fill(owner.totp);
 	await page.getByRole('button', { name: 'Verify' }).click();
 	await expect(page).toHaveURL('/');
-	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Today');
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Dashboard');
 });
 
 test('accepts a recovery code instead of TOTP', async ({ page, api }) => {
@@ -44,7 +44,7 @@ test('accepts a recovery code instead of TOTP', async ({ page, api }) => {
 	await page.getByRole('button', { name: 'Use a recovery code instead' }).click();
 	await page.getByLabel('Recovery code').fill(owner.recovery);
 	await page.getByRole('button', { name: 'Verify' }).click();
-	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Today');
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Dashboard');
 });
 
 test('maps problem field errors to their inputs', async ({ page }) => {

@@ -1,8 +1,8 @@
 import { expect, ids, test } from './connections-fake';
 
-test('Today: alerts for a degraded connection, key metrics with sources, health cards', async ({ page }) => {
+test('Dashboard: alerts for a degraded connection, health cards', async ({ page }) => {
 	await page.goto('/');
-	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Today');
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Dashboard');
 
 	const alerts = page.getByRole('region', { name: 'Alerts' });
 	await expect(alerts.getByText('Ultrahuman is degraded: ultrahuman.metrics: response shape changed (schema_drift)')).toBeVisible();
@@ -13,19 +13,12 @@ test('Today: alerts for a degraded connection, key metrics with sources, health 
 	await expect(page.getByRole('row', { name: /ultrahuman\.metrics/ }).getByText('Degraded')).toBeVisible();
 
 	await page.goto('/');
-	const tile = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'Resting heart rate' }) });
-	await expect(tile.getByText('52 bpm')).toBeVisible();
-	await expect(tile.getByText('Fallback')).toBeVisible();
-	await expect(tile.getByRole('list', { name: 'Sources' })).toHaveText('watch · Apple Health');
-	const steps = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'Steps' }) });
-	await expect(steps.getByText('Yesterday')).toBeVisible();
-
 	const health = page.getByRole('region', { name: 'Connections' });
 	await expect(health.getByRole('listitem').filter({ hasText: 'Apple Health' }).getByText('Healthy')).toBeVisible();
 	await expect(health.getByRole('listitem').filter({ hasText: 'Ultrahuman' }).getByText('Unofficial')).toBeVisible();
 });
 
-test('Today without resolved values still shows health', async ({ page, conns }) => {
+test('Dashboard without resolved values still shows health', async ({ page, conns }) => {
 	conns.resolvedStatus = 503;
 	await page.goto('/');
 	await expect(page.getByText('Resolved values are not available yet.')).toBeVisible();

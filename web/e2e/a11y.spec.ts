@@ -32,7 +32,7 @@ anonTest('login', async ({ page }) => {
 	await scan(page, '/login');
 });
 
-connTest('Today and connections', async ({ page }) => {
+connTest('Dashboard and connections', async ({ page }) => {
 	for (const path of ['/', '/connections', `/connections/${ids.ultrahuman}`, `/connections/${ids.ultrahuman}?tab=backfills`, `/connections/${ids.withings}?tab=settings`]) {
 		await page.goto(path);
 		await scan(page, path);
