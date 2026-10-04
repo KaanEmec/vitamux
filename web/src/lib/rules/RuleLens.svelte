@@ -325,7 +325,7 @@
 							<span class="rank">{i + 1}</span>
 							<span class="dot" aria-hidden="true"></span>
 							<span class="who">
-								<span class="name"><span class="dot" aria-hidden="true"></span>{groupLabel(g.id)}{#if baseIds.indexOf(g.id) !== i}<Badge tone="draft">moved</Badge>{/if}</span>
+								<span class="name">{groupLabel(g.id)}{#if baseIds.indexOf(g.id) !== i}<Badge tone="draft">moved</Badge>{/if}</span>
 								<span class="muted small">{g.match.map((s) => selectorText(s, choices)).join(' or ')}</span>
 							</span>
 							{#if counts}<span class="count muted small">{counts[g.id] ?? 0} {counts[g.id] === 1 ? 'day' : 'days'}</span>{/if}

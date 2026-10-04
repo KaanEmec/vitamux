@@ -665,7 +665,13 @@ label.check:has(input:disabled) {
 	background: var(--tone);
 	border-radius: 50%;
 }
+/* A long one-click chip (a selector's full text) wraps rather than widening the page. */
 :is(button, a).chip {
+	max-width: 100%;
+	padding-block: 0.125rem;
+	white-space: normal;
+	overflow-wrap: anywhere;
+	text-align: start;
 	font-family: inherit;
 	text-decoration: none;
 	cursor: pointer;
@@ -703,6 +709,7 @@ label.check:has(input:disabled) {
 	--tone: var(--color-info);
 	--tone-bg: var(--color-info-bg);
 	display: flex;
+	flex-wrap: wrap; /* on a narrow screen the actions go below the text */
 	gap: var(--space-3);
 	align-items: flex-start;
 	padding: var(--space-3) var(--space-4);
@@ -729,7 +736,7 @@ label.check:has(input:disabled) {
 	color: var(--tone);
 }
 .inline-alert > :not(.status-icon) {
-	flex: 1;
+	flex: 1 1 12rem;
 	min-width: 0;
 }
 .inline-alert strong {

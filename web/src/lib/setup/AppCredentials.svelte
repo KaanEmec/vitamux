@@ -139,14 +139,14 @@
 									<span class="muted">Read-only</span>
 								{:else if removing === p.code}
 									<div class="actions">
-										<Button size="sm" variant="destructive" disabled={busy} onclick={() => remove(p)}>{force ? 'Remove anyway' : 'Confirm remove'}</Button>
+										<Button size="sm" variant="destructive" class="primary" disabled={busy} onclick={() => remove(p)}>{force ? 'Remove anyway' : 'Confirm remove'}</Button>
 										<Button size="sm" onclick={reset}>Keep</Button>
 									</div>
 								{:else}
 									<div class="actions">
 										<Button size="sm" onclick={() => edit(p)} aria-label="{a.set ? 'Replace' : 'Set'} the {p.name} app credentials">{a.set ? 'Replace' : 'Set'}</Button>
 										{#if a.set}
-											<Button size="sm" onclick={() => ((removing = p.code), (force = false))} aria-label="Remove the {p.name} app credentials">Remove</Button>
+											<Button size="sm" variant="destructive" onclick={() => ((removing = p.code), (force = false))} aria-label="Remove the {p.name} app credentials">Remove</Button>
 										{/if}
 									</div>
 								{/if}
