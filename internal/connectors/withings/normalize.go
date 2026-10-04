@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/KaanEmec/vitamux/internal/catalog"
@@ -14,15 +16,27 @@ import (
 
 // meastypes maps Withings measure types to catalogue codes and the unit Withings reports
 // (the W column of docs/metrics.md). 11 is bp_pulse inside a blood-pressure group and
-// heart_rate elsewhere. The catalogue decides which codes form a group.
+// heart_rate elsewhere; 12 is a generic temperature, body temperature only from a thermometer.
+// 173–175 are segmental: the measure's position names the body part (segments). The catalogue
+// decides which codes form a group.
 var meastypes = map[int]struct{ metric, unit string }{
 	1: {"weight", "kg"}, 4: {"height", "m"}, 5: {"fat_free_mass", "kg"}, 6: {"body_fat_ratio", "%"},
 	8: {"fat_mass", "kg"}, 9: {"bp_diastolic", "mmHg"}, 10: {"bp_systolic", "mmHg"}, 11: {"heart_rate", "bpm"},
 	12: {"body_temperature", "°C"}, 54: {"spo2", "%"}, 71: {"body_temperature", "°C"}, 73: {"skin_temperature", "°C"},
 	76: {"muscle_mass", "kg"}, 77: {"hydration", "kg"}, 88: {"bone_mass", "kg"}, 91: {"pulse_wave_velocity", "m/s"},
-	123: {"vo2max", "mL/kg/min"}, 155: {"vascular_age", "years"}, 168: {"extracellular_water", "kg"},
-	169: {"intracellular_water", "kg"}, 170: {"visceral_fat_index", "index"}, 226: {"basal_metabolic_rate", "kcal/day"},
+	123: {"vo2max", "mL/kg/min"}, 135: {"ecg_qrs", "s"}, 136: {"ecg_pr", "s"}, 137: {"ecg_qt", "s"}, 138: {"ecg_qtc", "s"},
+	155: {"vascular_age", "years"}, 167: {"withings_nerve_health_score", "index"}, 168: {"extracellular_water", "kg"},
+	169: {"intracellular_water", "kg"}, 170: {"visceral_fat_index", "index"}, 173: {"fat_free_mass", "kg"},
+	174: {"fat_mass", "kg"}, 175: {"muscle_mass", "kg"}, 196: {"withings_nerve_response_score", "index"},
+	226: {"basal_metabolic_rate", "kcal/day"}, 227: {"withings_metabolic_age", "years"}, 229: {"withings_esc", "µS"},
 }
+
+// segments maps the position of a segmental measure (173–175) to its code suffix.
+var segments = map[int]string{2: "_right_arm", 3: "_left_arm", 10: "_left_leg", 11: "_right_leg", 12: "_trunk"}
+
+// rawMeastypes are documented types kept in raw only (docs/providers/withings.md#measures-getmeas):
+// 130 and 139 are AFib classifications, and no catalogue event fits them yet.
+var rawMeastypes = map[int]bool{130: true, 139: true}
 
 // maxMeasureDate is 9999-12-31T23:59:59Z: later instants do not marshal as RFC 3339 and
 // eventually overflow timestamptz, so a record dated past it is refused, not written.
@@ -36,23 +50,65 @@ var groupKinds = []string{"bp_reading", "body_composition"}
 type Normalizer struct{}
 
 func (Normalizer) ID() string                    { return StreamMeasures }
-func (Normalizer) Version() int                  { return 1 }
+func (Normalizer) Version() int                  { return 2 }
 func (Normalizer) Accepts(stream, _ string) bool { return stream == StreamMeasures }
 
 type rawGroup struct {
-	GrpID        int64  `json:"grpid"`
-	Attrib       int    `json:"attrib"`
-	Date         int64  `json:"date"`
-	Category     int    `json:"category"`
-	DeviceID     string `json:"deviceid"`
-	HashDeviceID string `json:"hash_deviceid"`
-	Model        string `json:"model"`
-	ModelID      int    `json:"model_id"`
-	Measures     []struct {
-		Value int64 `json:"value"`
-		Type  int   `json:"type"`
-		Unit  int   `json:"unit"`
+	GrpID    int64 `json:"grpid"`
+	Attrib   int   `json:"attrib"`
+	Date     int64 `json:"date"`
+	Category int   `json:"category"`
+	deviceFields
+	Measures []struct {
+		Value    int64 `json:"value"`
+		Type     int   `json:"type"`
+		Unit     int   `json:"unit"`
+		Position *int  `json:"position"`
 	} `json:"measures"`
+}
+
+// deviceFields are the device fields Withings sends with a record; all may be null (manual
+// entries). Live responses name the model id modelid, the OpenAPI spec model_id; model is a
+// name in measures and may be a number elsewhere.
+type deviceFields struct {
+	DeviceID     string          `json:"deviceid"`
+	HashDeviceID string          `json:"hash_deviceid"`
+	Model        json.RawMessage `json:"model"`
+	ModelID      *int            `json:"modelid"`
+	SpecModelID  *int            `json:"model_id"`
+}
+
+// source adds the record's device to out, or its origin when a phone app relayed it (model ids
+// 1051–1060; the origin is flagged relayed, so it is never counted twice), and returns the
+// device fingerprint, origin key and device type.
+func (d deviceFields) source(out *normalize.Output) (dev, origin, typ string) {
+	id := 0
+	if d.ModelID != nil {
+		id = *d.ModelID
+	} else if d.SpecModelID != nil {
+		id = *d.SpecModelID
+	}
+	var name string
+	_ = json.Unmarshal(d.Model, &name) // a number or null is no name
+	if id >= 1051 && id <= 1060 {
+		origin = "relay:model:" + strconv.Itoa(id)
+		addOrigin(out, normalize.Origin{Key: origin, Name: name})
+	} else {
+		typ = deviceType(id, name)
+	}
+	if dev = d.HashDeviceID; dev == "" {
+		dev = d.DeviceID
+	}
+	if dev != "" && !slices.ContainsFunc(out.Devices, func(x normalize.Device) bool { return x.Fingerprint == dev }) {
+		out.Devices = append(out.Devices, normalize.Device{Fingerprint: dev, Type: typ, Manufacturer: "Withings", Model: name})
+	}
+	return dev, origin, typ
+}
+
+func addOrigin(out *normalize.Output, o normalize.Origin) {
+	if !slices.ContainsFunc(out.Origins, func(x normalize.Origin) bool { return x.Key == o.Key }) {
+		out.Origins = append(out.Origins, o)
+	}
 }
 
 // Normalize is pure: local dates come from the owner's timezone periods (the record's
@@ -75,13 +131,7 @@ func (Normalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ norma
 	}
 	at := time.Unix(g.Date, 0).UTC()
 	ext := strconv.FormatInt(g.GrpID, 10)
-	dev := g.HashDeviceID
-	if dev == "" {
-		dev = g.DeviceID
-	}
-	if dev != "" {
-		out.Devices = []normalize.Device{{Fingerprint: dev, Type: deviceType(g.ModelID), Manufacturer: "Withings", Model: g.Model}}
-	}
+	dev, origin, typ := g.source(&out)
 	var flags normalize.Flags
 	if g.Attrib == 2 || g.Attrib == 4 {
 		flags = normalize.FlagManualEntry
@@ -94,12 +144,30 @@ func (Normalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ norma
 	seen := map[string]bool{}
 	for _, m := range g.Measures {
 		t, ok := meastypes[m.Type]
-		if !ok {
-			out.Warnings = append(out.Warnings, normalize.Warning{Code: "unknown_meastype", Detail: "type " + strconv.Itoa(m.Type)})
-			continue
+		warn := func(code string) {
+			out.Warnings = append(out.Warnings, normalize.Warning{Code: code, Detail: "type " + strconv.Itoa(m.Type)})
 		}
-		if m.Type == 11 && bp {
+		switch {
+		case rawMeastypes[m.Type]:
+			continue
+		case !ok:
+			warn("unknown_meastype")
+			continue
+		case m.Type == 11 && bp:
 			t.metric = "bp_pulse"
+		case m.Type == 12 && typ != "thermometer":
+			warn("not_body_temperature") // e.g. a scale's room temperature
+			continue
+		case m.Type >= 173 && m.Type <= 175:
+			var seg string
+			if m.Position != nil {
+				seg = segments[*m.Position]
+			}
+			if seg == "" {
+				warn("unknown_position")
+				continue
+			}
+			t.metric += seg
 		}
 		if seen[t.metric] {
 			out.Warnings = append(out.Warnings, normalize.Warning{Code: "duplicate_meastype", Detail: "type " + strconv.Itoa(m.Type)})
@@ -109,7 +177,7 @@ func (Normalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ norma
 		meta, _ := catalog.Lookup(t.metric)
 		x := normalize.Measurement{Metric: t.metric, Kind: catalog.Sample, Start: at, Value: decimal(m.Value, m.Unit), Unit: t.unit, Flags: flags}
 		if meta.Group == "" {
-			x.Device, x.Key = dev, normalize.Key{RecordType: "measuregrp", ExternalID: ext, Component: t.metric}
+			x.Device, x.Origin, x.Key = dev, origin, normalize.Key{RecordType: "measuregrp", ExternalID: ext, Component: t.metric}
 			out.Measurements = append(out.Measurements, x)
 			continue
 		}
@@ -118,7 +186,7 @@ func (Normalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ norma
 	gctx, _ := json.Marshal(map[string]int{"attrib": g.Attrib})
 	for _, kind := range groupKinds {
 		if comps := byKind[kind]; len(comps) > 0 {
-			out.Groups = append(out.Groups, normalize.Group{Kind: kind, MeasuredAt: at, Context: gctx, Device: dev,
+			out.Groups = append(out.Groups, normalize.Group{Kind: kind, MeasuredAt: at, Context: gctx, Device: dev, Origin: origin,
 				Key: normalize.Key{RecordType: "measuregrp", ExternalID: ext, Component: kind}, Components: comps})
 		}
 	}
@@ -134,19 +202,33 @@ func decimal(v int64, unit int) float64 {
 	return float64(v) / math.Pow10(-unit)
 }
 
-// deviceType maps Withings model_id ranges (OpenAPI measuregrp model_id) to rule device types.
-func deviceType(modelID int) string {
+// deviceType maps a Withings model id to a rule device type (docs/providers/withings.md#devices);
+// without an id, a known word of the model name decides.
+func deviceType(id int, name string) string {
 	switch {
-	case modelID >= 1 && modelID <= 18:
+	case id >= 1 && id <= 7, id >= 9 && id <= 12, id >= 14 && id <= 16, id == 18:
 		return "scale"
-	case modelID >= 41 && modelID <= 48:
+	case id == 13, id >= 60 && id <= 63:
+		return "under_mattress"
+	case id >= 41 && id <= 48:
 		return "bp_monitor"
-	case modelID >= 51 && modelID <= 59, modelID >= 90 && modelID <= 95:
+	case id == 51, id == 54, id == 58:
+		return "band"
+	case id == 52, id == 53, id == 55, id == 59, id >= 90 && id <= 95:
 		return "watch"
-	case modelID >= 60 && modelID <= 63:
-		return "sleep_monitor"
-	case modelID == 70 || modelID == 71:
+	case id == 70, id == 71:
 		return "thermometer"
+	case id != 0:
+		return ""
+	}
+	for _, w := range modelWords {
+		if strings.Contains(name, w.word) {
+			return w.typ
+		}
 	}
 	return ""
+}
+
+var modelWords = []struct{ word, typ string }{
+	{"BPM", "bp_monitor"}, {"Sleep", "under_mattress"}, {"Thermo", "thermometer"}, {"ScanWatch", "watch"}, {"Body", "scale"},
 }

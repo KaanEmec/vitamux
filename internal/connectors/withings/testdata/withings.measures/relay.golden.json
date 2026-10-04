@@ -1,0 +1,37 @@
+{
+  "synthetic": true,
+  "normalizer": "withings.measures",
+  "version": 2,
+  "output": {
+    "origins": [
+      {
+        "key": "relay:model:1055",
+        "name": "Synthetic phone app"
+      }
+    ],
+    "groups": [
+      {
+        "kind": "body_composition",
+        "measured_at": "2025-01-02T15:00:00Z",
+        "context": {
+          "attrib": 0
+        },
+        "origin": "relay:model:1055",
+        "key": {
+          "record_type": "measuregrp",
+          "external_id": "98765000000014",
+          "component": "body_composition"
+        },
+        "components": [
+          {
+            "metric": "weight",
+            "kind": "sample",
+            "start": "2025-01-02T15:00:00Z",
+            "value": 80.3,
+            "unit": "kg"
+          }
+        ]
+      }
+    ]
+  }
+}

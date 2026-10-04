@@ -1,0 +1,1 @@
+{"synthetic": true, "timezone": "Europe/Berlin", "measuregrp": {"grpid": 98765000000014, "attrib": 0, "date": 1735830000, "created": 1735830060, "modified": 1735830060, "category": 1, "deviceid": null, "hash_deviceid": null, "measures": [{"value": 80300, "type": 1, "unit": -3}], "model": "Synthetic phone app", "modelid": 1055, "comment": null}}

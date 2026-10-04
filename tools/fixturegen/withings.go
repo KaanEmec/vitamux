@@ -158,7 +158,7 @@ func appendWithingsGroup(b []byte, wg wgroup) []byte {
 	}
 	b = append(b, "],"...)
 	b = appendStr(b, "model", g.Src.Model)
-	b = append(b, `,"model_id":`...)
+	b = append(b, `,"modelid":`...)
 	b = strconv.AppendInt(b, int64(modelID), 10)
 	return append(b, `,"comment":null}`...)
 }

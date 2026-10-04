@@ -40,7 +40,7 @@ Every API call is a form POST with `Authorization: Bearer <access_token>`. Respo
 
 `POST https://wbsapi.withings.net/measure`, `action=getmeas`, optional `meastype` or `meastypes`, `category` (1 real measures, 2 user objectives), `startdate`/`enddate` (unix seconds, filter on measurement `date`) **or** `lastupdate`, and `offset`.
 
-Response body: `updatetime` (server time of the answer; the next `lastupdate`), `timezone` (the account's zone, one per response), `measuregrps`, `more`, `offset`. A measure group has `grpid` (int64), `attrib`, `date`, `created`, `modified`, `category`, `deviceid`, `hash_deviceid`, `model`, `model_id`, `comment` (deprecated, empty) and `measures[]` of `{value, type, unit}` (`algo`, `fm` deprecated). Creating, updating or deleting a measure updates its group.
+Response body: `updatetime` (server time of the answer; the next `lastupdate`), `timezone` (the account's zone, one per response), `measuregrps`, `more`, `offset`. A measure group has `grpid` (int64), `attrib`, `date`, `created`, `modified`, `category`, `deviceid`, `hash_deviceid`, `model`, the model id, `comment` (deprecated, empty) and `measures[]` of `{value, type, unit}` (`algo`, `fm` deprecated; segmental types add `position`). The model id is `modelid` in live responses and `model_id` in the spec (checked 2026-10-04); device fields are all null on manual entries. Creating, updating or deleting a measure updates its group.
 
 `attrib`: 0 and 8 device, unambiguous · 1 device, may belong to another user · 2 entered manually · 4 entered manually at account creation · 5 BPM auto (best of several) · 7 confirmed activity · 15 guided conditions (Nerve Health Score).
 
@@ -50,7 +50,12 @@ Open: how a *deleted* group appears in a `lastupdate` response is not documented
 
 - Stream `withings.measures`: incremental every hour on `lastupdate` (first run from 0, i.e. the whole history), cursor `{"lastupdate": updatetime}` advanced after the last page; a daily correction re-fetches the last 7 days by `startdate`/`enddate`; backfill units of 30 days by date. All requests send `category=1`. Rate limit 120/min.
 - Raw: one record per measure group, external key `measuregrp:<grpid>`, body `{"timezone": <response timezone>, "measuregrp": <group as received>}`, so an unchanged group is a no-op and a modified one a new raw version.
-- Normalizer: groups with 9/10 → `bp_reading` (11 → `bp_pulse`), groups with body-composition types → `body_composition`, every other type a plain sample (11 outside BP → `heart_rate`). `attrib` 2 and 4 set `manual_entry`. Device fingerprint is `hash_deviceid` (else `deviceid`). Local dates come from the owner's timezone periods, not from the response `timezone`, which is the account's current zone rather than the zone of each measurement. Unknown types → warning `unknown_meastype`, raw kept. Category 2 groups are skipped with a warning.
+- Normalizer (`withings.measures` v2): groups with 9/10 → `bp_reading` (11 → `bp_pulse`), groups with body-composition types → `body_composition`, every other type a plain sample (11 outside BP → `heart_rate`). `attrib` 2 and 4 set `manual_entry`. Device fingerprint is `hash_deviceid` (else `deviceid`), typed as in [devices](#devices). Local dates come from the owner's timezone periods, not from the response `timezone`, which is the account's current zone rather than the zone of each measurement. Unknown types → warning `unknown_meastype`, raw kept. Category 2 groups are skipped with a warning.
+- Measure types beyond the catalogue's W column: 12 is a generic temperature (room temperature on WS-50 and Home), so it is `body_temperature` only from a thermometer, else warning `not_body_temperature`. 135–138 are the ECG intervals QRS, PR, QT and QTc in seconds; 167 and 196 the nerve health and nerve response scores; 227 metabolic age; 229 electrochemical skin conductance (µS). 173, 174 and 175 (fat-free, fat and muscle mass) are segmental: `position` 2 right arm, 3 left arm, 10 left leg, 11 right leg, 12 trunk names the code (`fat_mass_left_leg`, …), so the duplicate check covers the position; another position → warning `unknown_position`. 130 and 139 (AFib classification) stay raw: no catalogue event fits yet. U-Scan types are not mapped: none is verified in a getmeas sample.
+
+### Devices
+
+Model id → device type: 1–7, 9–12, 14–16, 18 `scale`; 13 (Sleep Analyzer) and 60–63 `under_mattress`; 41–48 `bp_monitor` (45 BPM Connect); 51, 54, 58 `band`; 52, 53, 55, 59, 90–95 `watch`; 70, 71 `thermometer`. Without a model id, a word of the model name decides (`BPM`, `Sleep`, `Thermo`, `ScanWatch`, `Body`). 1051–1060 are phone apps relaying into Withings: their records carry the origin `relay:model:<id>` instead of a device type, and `known_relay_origins` (`relay:%` → `phone_app`) flags it relayed, so they are never counted twice. Activity rows of `brand` 18 are relays too (`relay:brand:18`).
 
 ## Notifications
 
@@ -67,7 +72,7 @@ Open: how a *deleted* group appears in a `lastupdate` response is not documented
 
 ## Fixtures
 
-`go run ./tools/fixturegen` also writes `withings/getmeas-NNNN.json` (synthetic getmeas pages of the Withings BP cuff and scale groups, oldest first, 100 groups per page with `more`/`offset`) and `withings/getmeas-corrections.json` (the corrected group versions a later `lastupdate` call returns). Deleted groups are not rendered (see the open point above).
+`go run ./tools/fixturegen` also writes `withings/getmeas-NNNN.json` (synthetic getmeas pages of the Withings BP cuff and scale groups with the live `modelid`, oldest first, 100 groups per page with `more`/`offset`) and `withings/getmeas-corrections.json` (the corrected group versions a later `lastupdate` call returns). Deleted groups are not rendered (see the open point above).
 
 ## Manual real-account checklist
 

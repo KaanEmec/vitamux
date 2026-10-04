@@ -9,11 +9,13 @@
     "measuregrp.deviceid": "raw: device fingerprint",
     "measuregrp.grpid": "raw: identifier (external id of the group)",
     "measuregrp.hash_deviceid": "raw: device fingerprint",
-    "measuregrp.measures[].type": "raw: selects the code (meastype table in the normalizer)",
+    "measuregrp.measures[].position": "raw: body part of a segmental measure (173-175), selects the segment code",
+    "measuregrp.measures[].type": "raw: selects the code (meastype table in the normalizer); 130 and 139 (AFib classification) stay raw, no catalogue event fits",
     "measuregrp.measures[].unit": "raw: power of ten of the value",
-    "measuregrp.measures[].value": "weight, height, fat_free_mass, body_fat_ratio, fat_mass, bp_diastolic, bp_systolic, bp_pulse, heart_rate, body_temperature, spo2, skin_temperature, muscle_mass, hydration, bone_mass, pulse_wave_velocity, vo2max, vascular_age, extracellular_water, intracellular_water, visceral_fat_index, basal_metabolic_rate",
-    "measuregrp.model": "raw: device model text",
-    "measuregrp.model_id": "raw: device type derived from the model id",
+    "measuregrp.measures[].value": "weight, height, fat_free_mass, body_fat_ratio, fat_mass, bp_diastolic, bp_systolic, bp_pulse, heart_rate, body_temperature, spo2, skin_temperature, muscle_mass, hydration, bone_mass, pulse_wave_velocity, vo2max, ecg_qrs, ecg_pr, ecg_qt, ecg_qtc, vascular_age, withings_nerve_health_score, extracellular_water, intracellular_water, visceral_fat_index, fat_free_mass_trunk, fat_free_mass_left_arm, fat_free_mass_right_arm, fat_free_mass_left_leg, fat_free_mass_right_leg, fat_mass_trunk, fat_mass_left_arm, fat_mass_right_arm, fat_mass_left_leg, fat_mass_right_leg, muscle_mass_trunk, muscle_mass_left_arm, muscle_mass_right_arm, muscle_mass_left_leg, muscle_mass_right_leg, withings_nerve_response_score, basal_metabolic_rate, withings_metabolic_age, withings_esc",
+    "measuregrp.model": "raw: device model text; sets the device type when no model id is sent",
+    "measuregrp.model_id": "raw: device type derived from the model id (OpenAPI name)",
+    "measuregrp.modelid": "raw: device type derived from the model id (live name); 1051-1060 are phone-app relays",
     "measuregrp.modified": "raw: provider bookkeeping time",
     "timezone": "raw: not used yet; the owner timezone applies"
   }
