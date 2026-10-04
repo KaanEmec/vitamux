@@ -19,6 +19,11 @@ export function nightHours(n: Night, code: string): number | null {
 	return s == null ? null : s / 3600;
 }
 
+/** The sessions of the selected source's main episode. */
+export function selectedSessions(n: Night, byId: Map<string, Session>): Session[] {
+	return (n.members.find((m) => m.selected)?.session_refs ?? []).flatMap((id) => byId.get(id) ?? []);
+}
+
 /** Clock hours of the main episode: bed time, and wake time unwrapped so it may pass 24. */
 export interface Span {
 	bed: number;

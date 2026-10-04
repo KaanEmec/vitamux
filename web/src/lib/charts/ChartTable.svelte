@@ -12,6 +12,7 @@
 <details bind:open>
 	<summary>Show as a table</summary>
 	{#if table}
+		<!-- svelte-ignore a11y_no_noninteractive_tabindex (a scrollable region must be focusable) -->
 		<div class="scroll" tabindex="0" role="region" aria-label={caption}>
 			<table>
 				<caption class="visually-hidden">{caption}</caption>
