@@ -33,8 +33,10 @@ import (
 type resolvedEnv struct {
 	t     *testing.T
 	h     http.Handler
+	d     *db.DB
 	user  uuid.UUID
 	count func(table string) int
+	exec  func(sql string) // as the owner role
 }
 
 func newResolvedEnv(t *testing.T, start string, days int) *resolvedEnv {
@@ -60,11 +62,16 @@ func newResolvedEnv(t *testing.T, start string, days int) *resolvedEnv {
 		}
 	}
 	owner := dbtest.Pool(t, u, db.OwnerRole)
-	rt, err := newRouter(slog.New(slog.DiscardHandler), newUITestFS(), Options{DB: db.New(app)})
+	d := db.New(app)
+	rt, err := newRouter(slog.New(slog.DiscardHandler), newUITestFS(), Options{DB: d})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &resolvedEnv{t: t, h: rt.mux, user: stats.UserID, count: func(table string) int {
+	return &resolvedEnv{t: t, h: rt.mux, d: d, user: stats.UserID, exec: func(sql string) {
+		if _, err := owner.Exec(ctx, sql); err != nil {
+			t.Fatal(err)
+		}
+	}, count: func(table string) int {
 		var n int
 		if err := owner.QueryRow(ctx, "SELECT count(*) FROM "+table).Scan(&n); err != nil {
 			t.Fatal(err)

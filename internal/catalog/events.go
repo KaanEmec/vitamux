@@ -23,6 +23,9 @@ var events = []Event{
 	{Code: "headphone_audio_alert", HK: "HeadphoneAudioExposureEvent", Levels: []string{"seven_day_limit"}},
 }
 
+// Events returns every event in docs order.
+func Events() []Event { return slices.Clone(events) }
+
 // LookupEvent finds an event by code.
 func LookupEvent(code string) (Event, bool) {
 	i := slices.IndexFunc(events, func(e Event) bool { return e.Code == code })
