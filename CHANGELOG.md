@@ -2,6 +2,16 @@
 
 Newest first. Before a final release, `scripts/release-notes.sh --changelog vX.Y.Z` adds its section from the Conventional Commits since the previous final tag; edit it and add upgrade notes under "Breaking changes" before tagging. The release workflow refuses a final tag without its section and uses it as the release notes. Release candidates are described on their GitHub releases only.
 
+## v0.2.6 (2026-10-04)
+
+### Connectors
+
+- Garmin wellness data has a device: heart rate, steps, stress, Body Battery, HRV, respiration, SpO2, daily totals, sleep and training. Garmin's responses don't name the wrist device, so these rows had none, matched no device-type group, and were left out of `builtin:steps` and other device-type rules. They now use one stable device, "Garmin wearable", of type `watch`. Scale and blood-pressure readings and activities keep the device Garmin names. Garmin's wellness normalizers are bumped (daily summary and training to 3, the others to 2).
+
+### Breaking changes
+
+None. To attach the device to Garmin data already stored, reprocess every Garmin wellness stream, e.g. `vitamux reprocess --normalizer garmin.steps` and the same for `garmin.heart_rate`, `garmin.daily_summary`, `garmin.stress_body_battery`, `garmin.sleep`, `garmin.hrv`, `garmin.respiration`, `garmin.spo2` and `garmin.training`.
+
 ## v0.2.5 (2026-10-04)
 
 ### Connectors

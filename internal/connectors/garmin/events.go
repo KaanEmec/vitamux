@@ -62,7 +62,7 @@ func sleep(b *builder, resp []byte) error {
 		}
 		start, end := millis(*d.StartGMT), millis(*d.EndGMT)
 		z = zoneAt(end, millis(*d.EndLocal)) // sleep_date is the local wake date
-		s := normalize.SleepSession{Start: start, End: end, Zone: z,
+		s := normalize.SleepSession{Start: start, End: end, Zone: z, Device: b.wearable(),
 			Totals: &normalize.SleepTotals{Asleep: d.Asleep, Deep: d.Deep, Light: d.Light, REM: d.REM, Awake: d.Awake},
 			Key:    normalize.Key{RecordType: "sleep", ExternalID: strconv.FormatInt(*d.ID, 10)}}
 		rem := r.REMData == nil || *r.REMData
@@ -100,7 +100,7 @@ func sleep(b *builder, resp []byte) error {
 		if !n.EndGMT.After(n.StartGMT.Time) {
 			continue
 		}
-		s := normalize.SleepSession{Start: n.StartGMT.Time, End: n.EndGMT.Time, Zone: z, Nap: true,
+		s := normalize.SleepSession{Start: n.StartGMT.Time, End: n.EndGMT.Time, Zone: z, Nap: true, Device: b.wearable(),
 			Key: normalize.Key{RecordType: "nap", ExternalID: strconv.FormatInt(n.StartGMT.UnixMilli(), 10)}}
 		if n.Seconds != nil {
 			s.Totals = &normalize.SleepTotals{Asleep: n.Seconds}
