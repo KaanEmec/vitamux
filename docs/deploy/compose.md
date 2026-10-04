@@ -18,6 +18,10 @@ Enforced by the policy test `deploy/compose/compose_test.go` (runs in the `go` C
 - The healthcheck is `vitamux healthcheck` (GET `/readyz`; the distroless image has no curl or shell, only `pg_dump`/`pg_restore` for backups). `stop_grace_period: 60s` lets `serve` drain jobs on `SIGTERM` ([reliability#upgrades](../architecture/reliability.md#upgrades)).
 - The CI `image` job scans the built image with Trivy and fails only on CRITICAL findings that have a fix.
 
+## Sidecars
+
+Optional sidecars are overlay files, `sidecars/<name>/compose.yaml`, enabled with `COMPOSE_FILE` and `COMPOSE_PROFILES` ([install#sidecars](../install.md#sidecars)). Policy for them, as in the template ([sidecars.md](../sidecars.md#layout)): no database network (`frontend` only), 256 MiB, read-only root, `cap_drop: ALL`, `no-new-privileges`, a healthcheck, and a shared secret file instead of an environment value.
+
 ## Upgrade
 
 `docker compose pull && docker compose up -d --wait`: `migrate` runs first and `vitamux` starts only if it succeeded. Backup first, rollback rules and the drain: [operations/upgrade.md](../operations/upgrade.md).
