@@ -40,18 +40,9 @@ func (s *Service) Confirm(ctx context.Context, user uuid.UUID, actor string, run
 	var res Confirmation
 	err = s.db.Tx(ctx, func(q *dbq.Queries) error {
 		res = Confirmation{}
-		run, err := q.GetOwnerExtractionRun(ctx, dbq.GetOwnerExtractionRunParams{ID: runID, UserID: user})
+		run, err := lockReviewableRun(ctx, q, user, runID)
 		if err != nil {
 			return err
-		}
-		if _, err := q.LockDocument(ctx, dbq.LockDocumentParams{UserID: user, ID: run.DocumentID}); err != nil {
-			return err
-		}
-		if run, err = q.GetOwnerExtractionRun(ctx, dbq.GetOwnerExtractionRunParams{ID: runID, UserID: user}); err != nil {
-			return err
-		}
-		if !reviewable(run.Status) {
-			return ErrNotReviewable
 		}
 		report, err := q.GetDocumentReport(ctx, run.DocumentID)
 		existing := err == nil
@@ -74,21 +65,7 @@ func (s *Service) Confirm(ctx context.Context, user uuid.UUID, actor string, run
 			return err
 		}
 		if !existing {
-			report = dbq.LabReport{ID: uuid.Must(uuid.NewV7()), Laboratory: meta.Laboratory}
-			if report.Laboratory == nil {
-				for _, r := range rows {
-					if r.Laboratory != nil && r.ReviewStatus != Rejected {
-						report.Laboratory = r.Laboratory
-						break
-					}
-				}
-			}
-			if meta.ReportedAt != nil {
-				report.ReportedAt, _, _ = localInstant(*meta.ReportedAt, tl, true)
-			}
-			if err := q.InsertLabReport(ctx, dbq.InsertLabReportParams{ID: report.ID, UserID: user, DocumentID: run.DocumentID,
-				RunID: &run.ID, Laboratory: report.Laboratory, ReportedAt: report.ReportedAt, Provider: run.Provider, Model: run.Model,
-				SchemaVersion: run.SchemaVersion, PromptVersion: run.PromptVersion, ConfirmedBy: actor}); err != nil {
+			if report, err = insertReport(ctx, q, user, actor, run, meta, rows, tl); err != nil {
 				return err
 			}
 		}
@@ -128,32 +105,15 @@ func (s *Service) Confirm(ctx context.Context, user uuid.UUID, actor string, run
 				res.Created++
 				continue
 			}
-			before := snapshotOf(prev)
-			after := v.snapshot
-			after.Revision, after.UpdatedAt = before.Revision, before.UpdatedAt
-			if sameJSON(before, after) {
-				res.Unchanged++
-				continue
-			}
-			b, err := json.Marshal(before)
+			revised, err := reviseResult(ctx, q, actor, prev, insertParams(prev.ID, user, report.ID, r.ID, v), v.snapshot)
 			if err != nil {
 				return err
 			}
-			reason := "confirmed again after review edits"
-			if err := q.InsertLabResultRevision(ctx, dbq.InsertLabResultRevisionParams{ResultID: prev.ID, Revision: prev.Revision,
-				Snapshot: b, Reason: &reason, ChangedBy: actor}); err != nil {
-				return err
+			if revised {
+				res.Revised++
+			} else {
+				res.Unchanged++
 			}
-			p := insertParams(prev.ID, user, report.ID, r.ID, v)
-			if err := q.ReviseLabResult(ctx, dbq.ReviseLabResultParams{ID: prev.ID, AnalyteID: p.AnalyteID, OriginalLabel: p.OriginalLabel,
-				ValueText: p.ValueText, ValueNumeric: p.ValueNumeric, Comparator: p.Comparator, UnitText: p.UnitText,
-				ReferenceRangeText: p.ReferenceRangeText, RefLow: p.RefLow, RefHigh: p.RefHigh, AbnormalFlagPrinted: p.AbnormalFlagPrinted,
-				SpecimenType: p.SpecimenType, CanonicalValue: p.CanonicalValue, CanonicalUnit: p.CanonicalUnit,
-				ConversionFactor: p.ConversionFactor, ConversionOffset: p.ConversionOffset, CatalogVersion: p.CatalogVersion,
-				CollectedAt: p.CollectedAt, CollectedDate: p.CollectedDate, Page: p.Page, EvidenceText: p.EvidenceText}); err != nil {
-				return err
-			}
-			res.Revised++
 		}
 		if err := q.SetExtractionRunStatus(ctx, dbq.SetExtractionRunStatusParams{Status: "confirmed", ID: run.ID}); err != nil {
 			return err
@@ -167,6 +127,50 @@ func (s *Service) Confirm(ctx context.Context, user uuid.UUID, actor string, run
 				"created": res.Created, "revised": res.Revised, "removed": res.Removed, "unchanged": res.Unchanged}})
 	})
 	return res, db.MapErr(err)
+}
+
+// insertReport creates the lab report of a run's first confirmation. Its laboratory is the
+// document's, else that of the first kept row; its reported date is the document's.
+func insertReport(ctx context.Context, q *dbq.Queries, user uuid.UUID, actor string, run dbq.ExtractionRun, meta documents.DocumentMeta,
+	rows []dbq.ListReviewRowsRow, tl normalize.Timeline) (dbq.LabReport, error) {
+	report := dbq.LabReport{ID: uuid.Must(uuid.NewV7()), Laboratory: meta.Laboratory}
+	for _, r := range rows {
+		if report.Laboratory == nil && r.Laboratory != nil && r.ReviewStatus != Rejected {
+			report.Laboratory = r.Laboratory
+		}
+	}
+	if meta.ReportedAt != nil {
+		report.ReportedAt, _, _ = localInstant(*meta.ReportedAt, tl, true)
+	}
+	return report, q.InsertLabReport(ctx, dbq.InsertLabReportParams{ID: report.ID, UserID: user, DocumentID: run.DocumentID,
+		RunID: &run.ID, Laboratory: report.Laboratory, ReportedAt: report.ReportedAt, Provider: run.Provider, Model: run.Model,
+		SchemaVersion: run.SchemaVersion, PromptVersion: run.PromptVersion, ConfirmedBy: actor})
+}
+
+// reviseResult stores the previous values of a result in lab_result_revisions and replaces
+// them with after (whose insert parameters are p). It reports false, changing nothing, when
+// the values are the same.
+func reviseResult(ctx context.Context, q *dbq.Queries, actor string, prev dbq.ListReportResultsRow, p dbq.InsertLabResultParams, after Snapshot) (bool, error) {
+	before := snapshotOf(prev)
+	after.Revision, after.UpdatedAt = before.Revision, before.UpdatedAt
+	if sameJSON(before, after) {
+		return false, nil
+	}
+	b, err := json.Marshal(before)
+	if err != nil {
+		return false, err
+	}
+	reason := "confirmed again after review edits"
+	if err := q.InsertLabResultRevision(ctx, dbq.InsertLabResultRevisionParams{ResultID: prev.ID, Revision: prev.Revision,
+		Snapshot: b, Reason: &reason, ChangedBy: actor}); err != nil {
+		return false, err
+	}
+	return true, q.ReviseLabResult(ctx, dbq.ReviseLabResultParams{ID: prev.ID, AnalyteID: p.AnalyteID, OriginalLabel: p.OriginalLabel,
+		ValueText: p.ValueText, ValueNumeric: p.ValueNumeric, Comparator: p.Comparator, UnitText: p.UnitText,
+		ReferenceRangeText: p.ReferenceRangeText, RefLow: p.RefLow, RefHigh: p.RefHigh, AbnormalFlagPrinted: p.AbnormalFlagPrinted,
+		SpecimenType: p.SpecimenType, CanonicalValue: p.CanonicalValue, CanonicalUnit: p.CanonicalUnit,
+		ConversionFactor: p.ConversionFactor, ConversionOffset: p.ConversionOffset, CatalogVersion: p.CatalogVersion,
+		CollectedAt: p.CollectedAt, CollectedDate: p.CollectedDate, Page: p.Page, EvidenceText: p.EvidenceText})
 }
 
 func (s *Service) remove(ctx context.Context, q *dbq.Queries, res *Confirmation, id uuid.UUID) error {

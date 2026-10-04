@@ -86,6 +86,26 @@ type Extraction struct {
 
 func reviewable(status string) bool { return status == "succeeded" || status == "confirmed" }
 
+// lockReviewableRun returns the owner's run once its document is locked, so review edits and
+// confirmation of one document are serialized. The run is read again under the lock.
+func lockReviewableRun(ctx context.Context, q *dbq.Queries, user, runID uuid.UUID) (dbq.ExtractionRun, error) {
+	params := dbq.GetOwnerExtractionRunParams{ID: runID, UserID: user}
+	run, err := q.GetOwnerExtractionRun(ctx, params)
+	if err != nil {
+		return run, err
+	}
+	if _, err := q.LockDocument(ctx, dbq.LockDocumentParams{UserID: user, ID: run.DocumentID}); err != nil {
+		return run, err
+	}
+	if run, err = q.GetOwnerExtractionRun(ctx, params); err != nil {
+		return run, err
+	}
+	if !reviewable(run.Status) {
+		return run, ErrNotReviewable
+	}
+	return run, nil
+}
+
 // Get returns one of the user's runs with every row, its suggestion and its warnings.
 func (s *Service) Get(ctx context.Context, user, runID uuid.UUID) (Extraction, error) {
 	q := s.db.Q()
@@ -233,18 +253,9 @@ func (s *Service) EditRow(ctx context.Context, user uuid.UUID, actor string, run
 	}
 
 	err = s.db.Tx(ctx, func(q *dbq.Queries) error {
-		run, err := q.GetOwnerExtractionRun(ctx, dbq.GetOwnerExtractionRunParams{ID: runID, UserID: user})
+		run, err := lockReviewableRun(ctx, q, user, runID)
 		if err != nil {
 			return err
-		}
-		if _, err := q.LockDocument(ctx, dbq.LockDocumentParams{UserID: user, ID: run.DocumentID}); err != nil {
-			return err
-		}
-		if run, err = q.GetOwnerExtractionRun(ctx, dbq.GetOwnerExtractionRunParams{ID: runID, UserID: user}); err != nil {
-			return err
-		}
-		if !reviewable(run.Status) {
-			return ErrNotReviewable
 		}
 		r, err := q.LockExtractedRow(ctx, dbq.LockExtractedRowParams{RunID: run.ID, RowIndex: int32(index)}) //nolint:gosec // bounded by the API
 		if err != nil {
