@@ -18,9 +18,9 @@
 	const rawDays = 'retention.raw_days';
 	const superseded = 'retention.superseded_after_days';
 	const idempotency = 'retention.idempotency_key_days';
-	// Shown on other pages (providers, notifications) or by the typed controls here.
+	// Shown on other pages (providers, notifications, source order) or by the typed controls here.
 	const known = new Set([docDays, docDelete, rawDays, superseded, idempotency]);
-	const elsewhere = (k: string) => k.startsWith('documents.external_ai.') || k.startsWith('withings.');
+	const elsewhere = (k: string) => k.startsWith('documents.external_ai.') || k.startsWith('withings.') || k.startsWith('sources.');
 
 	interface Extra {
 		key: string;

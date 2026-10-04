@@ -22,7 +22,8 @@ export class SettingsApi {
 		'retention.raw_days': { withings: 90 },
 		'retention.superseded_after_days': 0,
 		'retention.idempotency_key_days': 30,
-		'retention.future_flag': false
+		'retention.future_flag': false,
+		'sources.priority': ['whoop']
 	};
 	/** Bodies of PATCH /settings, in order. */
 	patches: Json[] = [];

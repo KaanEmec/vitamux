@@ -11,6 +11,7 @@ interface Version {
 	metric: string;
 	version: number;
 	builtin: boolean;
+	default?: boolean;
 	active: boolean;
 	spec: Json;
 	based_on: string | null;
@@ -80,6 +81,31 @@ const builtinVersion = (b: (typeof builtins)[number]): Version => ({
 	reason: b.reason
 });
 
+// The default rule of a code without a built-in (J24.1): the source order, then the device ladder.
+const skinDefault: Version = {
+	ref: 'default:skin_temperature:0a1b2c3d',
+	metric: 'skin_temperature',
+	version: 1,
+	builtin: true,
+	default: true,
+	active: true,
+	spec: {
+		schema: 'vitamux.rule/1',
+		metric: 'skin_temperature',
+		window: { kind: 'local_day' },
+		groups: [
+			{ id: 'oura', match: [{ provider: 'oura' }] },
+			{ id: 'manual', match: [{ entry: 'manual' }] }
+		],
+		strategy: { op: 'first_available' }
+	},
+	based_on: null,
+	note: null,
+	created_by: null,
+	created_at: null,
+	reason: 'The value depends on where the device is worn, so there is no neutral order: uses the default rule.'
+};
+
 export class RulesApi {
 	/** Owner versions per metric, oldest first. */
 	owned = new Map<string, Version[]>();
@@ -102,7 +128,7 @@ export class RulesApi {
 			});
 		await r('**/api/v1/rules', (route) => json(route, 200, { rules: this.activeSet() }));
 		await r('**/api/v1/metrics', (route) =>
-			json(route, 200, { metrics: [...builtins.map((b) => ({ code: b.spec.metric })), { code: 'skin_temperature' }] })
+			json(route, 200, { metrics: [...builtins.map((b) => ({ code: b.spec.metric })), { code: 'skin_temperature' }, { code: 'sleep_deep' }] })
 		);
 		await r('**/api/v1/rules/*/versions', (route, [metric]) =>
 			route.request().method() === 'POST' ? this.create(route, metric) : this.versions(route, metric)
@@ -137,12 +163,13 @@ export class RulesApi {
 	}
 
 	private activeSet(): Version[] {
-		return builtins.map((b) => this.owned.get(b.spec.metric as string)?.find((v) => v.active) ?? builtinVersion(b));
+		return [...builtins.map((b) => this.owned.get(b.spec.metric as string)?.find((v) => v.active) ?? builtinVersion(b)), skinDefault];
 	}
 
 	private versions(route: Route, metric: string) {
 		const own = this.owned.get(metric);
 		if (own?.length) return json(route, 200, { versions: [...own].reverse() });
+		if (metric === skinDefault.metric) return json(route, 200, { versions: [skinDefault] });
 		const b = builtins.find((x) => x.spec.metric === metric);
 		if (!b) return problem(route, 404, 'not_found', 'no such metric');
 		return json(route, 200, { versions: [builtinVersion(b)] });

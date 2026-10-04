@@ -301,8 +301,8 @@ func TestResolvedSummaryAndTrend(t *testing.T) {
 	if bp := s.Metrics["blood_pressure"]; bp.Unit != nil || bp.Stats[0].Components == nil {
 		t.Errorf("blood pressure: %+v", bp)
 	}
-	if sk := s.Metrics["skin_temperature"]; sk.Rule != nil || sk.Value.Status != "no_data" || sk.Stats[1].N != 0 {
-		t.Errorf("metric without a rule: %+v", sk)
+	if sk := s.Metrics["skin_temperature"]; sk.Rule == nil || !strings.HasPrefix(sk.Rule.Ref, "default:") || sk.Value.Status != "no_data" || sk.Stats[1].N != 0 {
+		t.Errorf("metric on its default rule, without data: %+v", sk)
 	}
 
 	// compare=true: each of 7, 30, 90 and 365 dates beside the equally long period before it

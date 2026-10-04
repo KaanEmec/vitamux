@@ -47,12 +47,15 @@ func by(ctx context.Context) resolve.By {
 }
 
 func ruleVersionBody(v resolve.Version) oapi.RuleVersion {
-	out := oapi.RuleVersion{Ref: v.Ref, Metric: v.Metric, Version: v.Version, Builtin: v.Builtin, Active: v.Active,
+	out := oapi.RuleVersion{Ref: v.Ref, Metric: v.Metric, Version: v.Version, Builtin: v.Builtin, Default: v.Default, Active: v.Active,
 		Spec: v.Spec, BasedOn: optString(v.BasedOn), Note: optString(v.Note), CreatedBy: optString(v.CreatedBy)}
 	if !v.CreatedAt.IsZero() {
 		out.CreatedAt = &v.CreatedAt
 	}
-	if b, ok := resolve.LookupBuiltin(v.Metric); ok && v.Builtin && b.Version == v.Version {
+	if why, ok := resolve.NoBuiltin[v.Metric]; ok && v.Default {
+		why = strings.ToUpper(why[:1]) + why[1:] + "." // a clause in docs/resolution-defaults.md
+		out.Reason = &why
+	} else if b, ok := resolve.LookupBuiltin(v.Metric); ok && v.Builtin && b.Version == v.Version {
 		out.Reason = &b.Why
 	}
 	return out
@@ -105,7 +108,8 @@ func (o *owner) ListRuleVersions(ctx context.Context, req oapi.ListRuleVersionsR
 	if _, err := o.ownerDB(); err != nil {
 		return nil, err
 	}
-	vs, err := resolve.NewStore(o.opts.DB).History(ctx, auth.PrincipalFrom(ctx).UserID, req.Metric)
+	store, user := resolve.NewStore(o.opts.DB), auth.PrincipalFrom(ctx).UserID
+	vs, err := store.History(ctx, user, req.Metric)
 	if err != nil {
 		return nil, err
 	}
@@ -114,16 +118,13 @@ func (o *owner) ListRuleVersions(ctx context.Context, req oapi.ListRuleVersionsR
 		out.Versions = append(out.Versions, ruleVersionBody(v))
 	}
 	if len(vs) == 0 {
-		b, ok := resolve.LookupBuiltin(req.Metric)
+		v, err := store.Active(ctx, user, req.Metric)
 		_, known := catalog.Lookup(req.Metric)
 		switch {
-		case ok:
-			spec, err := json.Marshal(b.Rule)
-			if err != nil {
-				return nil, err
-			}
-			out.Versions = append(out.Versions, ruleVersionBody(resolve.Version{Ref: b.Ref(), Metric: b.Rule.Metric,
-				Version: b.Version, Builtin: true, Spec: spec, Active: true}))
+		case err == nil:
+			out.Versions = append(out.Versions, ruleVersionBody(v))
+		case !errors.Is(err, db.ErrNotFound):
+			return nil, err
 		case !known:
 			return nil, problemErr(CodeNotFound, "no such metric")
 		}

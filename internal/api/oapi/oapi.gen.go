@@ -3121,7 +3121,7 @@ type RelayTarget struct {
 
 // ResolutionPreview defines model for ResolutionPreview.
 type ResolutionPreview struct {
-	// ActiveRule The rule in effect; null when the metric has none.
+	// ActiveRule The rule in effect (a default rule at least); never null since J24.1, kept nullable for clients.
 	ActiveRule *RuleRef     `json:"active_rule"`
 	Days       []PreviewDay `json:"days"`
 	DraftRule  RuleRef      `json:"draft_rule"`
@@ -3429,7 +3429,7 @@ type RuleActivation struct {
 
 // RuleRef defines model for RuleRef.
 type RuleRef struct {
-	// Ref builtin:<metric>:<n>, rule:<metric>:<n>, or draft:<metric> in a preview.
+	// Ref builtin:<metric>:<n>, default:<metric>:<hash>, rule:<metric>:<n>, or draft:<metric> in a preview.
 	Ref      string  `json:"ref"`
 	Strategy *string `json:"strategy,omitempty"`
 
@@ -3442,9 +3442,11 @@ type RuleVersion struct {
 	// Active The rule in effect for the metric.
 	Active bool `json:"active"`
 
-	// BasedOn The built-in this version copied.
+	// BasedOn The built-in or default rule this version copied.
 	BasedOn *string `json:"based_on"`
-	Builtin bool    `json:"builtin"`
+
+	// Builtin Shipped with Vitamux rather than stored by the owner; true for the default rule too.
+	Builtin bool `json:"builtin"`
 
 	// CreatedAt Null for built-ins.
 	CreatedAt *time.Time `json:"created_at"`
@@ -3452,14 +3454,17 @@ type RuleVersion struct {
 	// CreatedBy Audit actor; null for built-ins.
 	CreatedBy *string `json:"created_by"`
 
+	// Default The default rule of a metric without a built-in: the owner's source order (setting sources.priority), then a generic device ladder (docs/resolution-defaults.md#default-rule).
+	Default bool `json:"default"`
+
 	// Metric Catalogue code or rule family (sleep, blood_pressure).
 	Metric string  `json:"metric"`
 	Note   *string `json:"note"`
 
-	// Reason Built-ins only: why the ladder is ordered this way (docs/resolution-defaults.md).
+	// Reason Built-ins only: why the ladder is ordered this way, or why the metric uses the default rule (docs/resolution-defaults.md).
 	Reason *string `json:"reason,omitempty"`
 
-	// Ref rule:<metric>:<n> for the owner's versions, builtin:<metric>:<n> for built-ins.
+	// Ref rule:<metric>:<n> for the owner's versions, builtin:<metric>:<n> for built-ins, default:<metric>:<hash> for the default rule.
 	Ref string `json:"ref"`
 
 	// Spec The typed rule (schemas/resolution-rule.v1.json).
@@ -3568,6 +3573,9 @@ type Settings struct {
 
 	// RetentionSupersededAfterDays Days to keep superseded canonical rows; 0 keeps them (default).
 	RetentionSupersededAfterDays *int `json:"retention.superseded_after_days,omitempty"`
+
+	// SourcesPriority The owner's source order: provider codes, first preferred. Metrics without a built-in resolve through the default rule, which tries these providers first (docs/resolution-defaults.md#default-rule). Empty by default.
+	SourcesPriority *[]string `json:"sources.priority,omitempty"`
 
 	// WithingsNotifications Withings notification subscriptions (polling runs either way); needs VITAMUX_PUBLIC_URL.
 	WithingsNotifications *bool `json:"withings.notifications,omitempty"`

@@ -696,7 +696,7 @@ type ResolutionRule struct {
 	Version int32
 	// Rule JSON, schemas/resolution-rule.v1.json; validated by internal/resolve before insert.
 	Spec json.RawMessage
-	// Built-in reference this version copied (builtin:<metric>:<n>); set on the copy only.
+	// Built-in (builtin:<metric>:<n>) or default rule (default:<metric>:<hash>) this version copied; set on the copy only.
 	BasedOn *string
 	Note    *string
 	// Audit actor: owner, api_key:<id> or system.

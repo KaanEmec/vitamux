@@ -36,7 +36,7 @@
 	const total = $derived(trend?.buckets.length ?? dates.length);
 
 	const fmt = (v: number | null | undefined) => (v == null ? '–' : `${formatNumber(v)}${unit ? ` ${unit}` : ''}`);
-	const ruleName = (r: Schemas['RuleRef'] | undefined) => (!r ? '–' : r.ref.startsWith('builtin:') ? 'Built-in' : `v${r.version}`);
+	const ruleName = (r: Schemas['RuleRef'] | undefined) => (!r ? '–' : r.ref.startsWith('default:') ? 'Default' : r.ref.startsWith('builtin:') ? 'Built-in' : `v${r.version}`);
 	const sourceText = (r: Resolved | undefined) => dayProviders(r).map(providerLabel).join(', ') || '–';
 </script>
 

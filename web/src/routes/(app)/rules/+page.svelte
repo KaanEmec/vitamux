@@ -19,7 +19,7 @@
 	import Skeleton from '#lib/ui/Skeleton.svelte';
 
 	type Entry = { metric: string; rule: Schemas['RuleVersion'] | null };
-	type Filter = 'all' | 'custom' | 'builtin';
+	type Filter = 'all' | 'custom' | 'builtin' | 'default';
 
 	let entries = $state<Entry[] | null>(null);
 	let problem = $state<Problem | null>(null);
@@ -48,19 +48,18 @@
 	});
 
 	const isCustom = (e: Entry) => !!e.rule && !e.rule.builtin;
-	const isBuiltin = (e: Entry) => !!e.rule?.builtin;
+	const isBuiltin = (e: Entry) => !!e.rule?.builtin && !e.rule.default;
+	const isDefault = (e: Entry) => !!e.rule?.default;
+	const matches: Record<Filter, (e: Entry) => boolean> = { all: () => true, custom: isCustom, builtin: isBuiltin, default: isDefault };
 	const count = (f: (e: Entry) => boolean) => entries?.filter(f).length ?? 0;
 	const filters = $derived<{ value: Filter; label: string }[]>([
 		{ value: 'all', label: `All ${entries?.length ?? 0}` },
 		{ value: 'custom', label: `Custom ${count(isCustom)}` },
-		{ value: 'builtin', label: `Built-in ${count(isBuiltin)}` }
+		{ value: 'builtin', label: `Built-in ${count(isBuiltin)}` },
+		{ value: 'default', label: `Default ${count(isDefault)}` }
 	]);
 	const visible = $derived(
-		(entries ?? []).filter(
-			(e) =>
-				e.metric.includes(query.trim().toLowerCase().replaceAll(' ', '_')) &&
-				(filter === 'all' || (filter === 'custom' ? isCustom(e) : isBuiltin(e)))
-		)
+		(entries ?? []).filter((e) => e.metric.includes(query.trim().toLowerCase().replaceAll(' ', '_')) && matches[filter](e))
 	);
 
 	const spec = (r: Schemas['RuleVersion']) => r.spec as unknown as Rule;
@@ -115,6 +114,8 @@
 					<h2 id="m-{e.metric}"><a href="/rules/{e.metric}">{e.metric}</a></h2>
 					{#if !e.rule}
 						<Badge>No rule</Badge>
+					{:else if e.rule.default}
+						<Badge title="Your source order, then a generic device ladder">Default</Badge>
 					{:else if e.rule.builtin}
 						<Badge>Built-in default</Badge>
 					{:else}
@@ -138,7 +139,11 @@
 						<p class="muted small">No data in the last 90 days.</p>
 					{/if}
 				{/if}
-				{#if e.rule?.builtin && e.rule.reason}
+				{#if e.rule?.default}
+					<p class="muted small">
+						{e.rule.reason} Your <a href="/settings/sources#source-order">source order</a> comes first; you can reorder or replace it.
+					</p>
+				{:else if e.rule?.builtin && e.rule.reason}
 					<p class="muted small">{e.rule.reason} Suggested order; you can reorder or replace it.</p>
 				{/if}
 				<div class="actions">

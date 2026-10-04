@@ -84,7 +84,7 @@
 	const spec = (v: Version) => v.spec as unknown as Rule;
 	const current = $derived(versions?.find((v) => v.active) ?? null);
 	const byVersion = (n: number) => versions?.find((v) => v.version === n);
-	const name = (v: Version | undefined) => (!v ? '' : v.builtin ? 'Built-in' : `Version ${v.version}`);
+	const name = (v: Version | undefined) => (!v ? '' : v.default ? 'Default rule' : v.builtin ? 'Built-in' : `Version ${v.version}`);
 	const provider = (g: Rule['groups'][number]) => {
 		const p = g.match.find((s) => typeof s.provider === 'string' && s.provider)?.provider;
 		return typeof p === 'string' ? p : g.id;
@@ -112,7 +112,7 @@
 			{#if current}
 				{@const r = spec(current)}
 				<section class="card" aria-labelledby="in-effect">
-					<h2 id="in-effect">In effect: {current.builtin ? 'built-in default' : `version ${current.version}`}</h2>
+					<h2 id="in-effect">In effect: {current.default ? 'default rule' : current.builtin ? 'built-in default' : `version ${current.version}`}</h2>
 					<p class="sentence">{ruleSentence(r)}</p>
 					<ol class="groups" aria-label="Source order">
 						{#each r.groups as g, i (i)}

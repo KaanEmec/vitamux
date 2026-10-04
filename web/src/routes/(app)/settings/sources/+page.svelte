@@ -2,6 +2,7 @@
 <script lang="ts">
 	import AppCredentials from '#lib/setup/AppCredentials.svelte';
 	import Sidecars from '#lib/setup/Sidecars.svelte';
+	import SourceOrder from '#lib/settings/SourceOrder.svelte';
 </script>
 
 <svelte:head><title>Sources · Vitamux</title></svelte:head>
@@ -11,5 +12,6 @@
 	<a href="/connections">Connections</a>.
 </p>
 
+<SourceOrder />
 <AppCredentials />
 <Sidecars />

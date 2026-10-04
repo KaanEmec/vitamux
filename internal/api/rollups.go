@@ -200,17 +200,18 @@ func (o *owner) GetResolvedSummary(ctx context.Context, req oapi.GetResolvedSumm
 	}
 	from, sparkFrom := date.AddDate(0, 0, 1-reach), date.AddDate(0, 0, 1-sparklineDays)
 	for _, m := range metrics {
-		s := oapi.MetricSummary{Metric: m, Unit: unitOf(m), Value: noRule(m), Sparkline: make([]oapi.SummaryPoint, 0, sparklineDays)}
+		s := oapi.MetricSummary{Metric: m, Unit: unitOf(m), Sparkline: make([]oapi.SummaryPoint, 0, sparklineDays),
+			Value: oapi.ResolvedValue{Status: oapi.ResolvedValueStatus(resolve.ResultNoData), Explanation: "No value for this date."}}
 		points := map[time.Time]oapi.SummaryPoint{}
 		values := map[time.Time]dayValue{}
-		v, ok, err := o.ruleFor(ctx, m)
+		v, err := o.ruleFor(ctx, m)
 		switch {
 		case err != nil:
 			return nil, err
 		case noTimezone:
 			s.Value = oapi.ResolvedValue{Status: oapi.ResolvedValueStatus(resolve.ResultNoData),
 				Explanation: "No timezone period is configured, so there are no local days yet; add one in the settings."}
-		case ok:
+		default:
 			ref := ruleRef(v, v.Rule.Strategy.Op)
 			s.Rule = &ref
 			err := o.eachDaily(ctx, m, v, from, date, func(r resolve.Result) {
@@ -292,21 +293,19 @@ func (o *owner) GetResolvedTrend(ctx context.Context, req oapi.GetResolvedTrendR
 	out := oapi.GetResolvedTrend200JSONResponse{Metric: prm.Metric, Unit: unitOf(prm.Metric), Grain: oapi.ResolvedTrendGrain(grain),
 		Timezone: z.name(first.Start), StartDate: prm.StartDate, EndDate: prm.EndDate, Buckets: []oapi.Rollup{}}
 	values := map[time.Time]dayValue{}
-	v, ok, err := o.ruleFor(ctx, prm.Metric)
+	v, err := o.ruleFor(ctx, prm.Metric)
 	if err != nil {
 		return nil, err
 	}
-	if ok {
-		ref := ruleRef(v, v.Rule.Strategy.Op)
-		out.Rule = &ref
-		err := o.eachDaily(ctx, prm.Metric, v, from, to, func(r resolve.Result) {
-			if dv, ok := rollupValue(r); ok {
-				values[r.Window.Date] = dv
-			}
-		})
-		if err != nil {
-			return nil, err
+	ref := ruleRef(v, v.Rule.Strategy.Op)
+	out.Rule = &ref
+	err = o.eachDaily(ctx, prm.Metric, v, from, to, func(r resolve.Result) {
+		if dv, ok := rollupValue(r); ok {
+			values[r.Window.Date] = dv
 		}
+	})
+	if err != nil {
+		return nil, err
 	}
 	for d := from; !d.After(to); {
 		next := nextBucket(d, grain)
