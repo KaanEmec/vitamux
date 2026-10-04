@@ -412,6 +412,7 @@ func selectorText(s Selector) string {
 	}
 	add("device_type", s.DeviceType)
 	add("device_model", s.DeviceModel)
+	add("device_manufacturer", s.DeviceManufacturer)
 	add("device_id", s.DeviceID)
 	add("entry", string(s.Entry))
 	return strings.Join(parts, " ")

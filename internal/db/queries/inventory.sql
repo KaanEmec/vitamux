@@ -151,6 +151,7 @@ LIMIT @lim;
 SELECT min(a.hour_start)::timestamptz AS hour_start, a.local_date,
   a.connection_id, a.device_id, a.origin_id, p.code AS provider,
   COALESCE(d.device_type, '')::text AS device_type, COALESCE(d.model, '')::text AS device_model,
+  COALESCE(d.manufacturer, '')::text AS device_manufacturer,
   COALESCE(o.origin_key, '')::text AS origin_key, COALESCE(o.name, '')::text AS origin_name,
   (o.relayed_provider_id IS NOT NULL)::boolean AS relayed,
   sum(a.samples)::integer AS samples, sum(a.buckets)::integer AS buckets, sum(a.bucket_mean_sum)::float8 AS bucket_mean_sum,
@@ -162,7 +163,7 @@ LEFT JOIN devices d ON d.id = a.device_id
 LEFT JOIN data_origins o ON o.id = a.origin_id
 WHERE a.user_id = @user_id AND a.metric_id = (SELECT id FROM metric_catalog WHERE code = @metric::text)
   AND a.hour_start >= @from_at AND a.hour_start < @to_at
-GROUP BY CASE WHEN @by_day::boolean THEN NULL ELSE a.hour_start END, a.local_date, a.connection_id, a.device_id, a.origin_id, p.code, d.device_type, d.model, o.origin_key, o.name, o.relayed_provider_id
+GROUP BY CASE WHEN @by_day::boolean THEN NULL ELSE a.hour_start END, a.local_date, a.connection_id, a.device_id, a.origin_id, p.code, d.device_type, d.model, d.manufacturer, o.origin_key, o.name, o.relayed_provider_id
 ORDER BY a.connection_id, a.device_id NULLS FIRST, a.origin_id NULLS FIRST, 1;
 
 -- name: SourceDailyValues :many
@@ -171,6 +172,7 @@ ORDER BY a.connection_id, a.device_id NULLS FIRST, a.origin_id NULLS FIRST, 1;
 SELECT DISTINCT ON (x.connection_id, x.device_id, x.origin_id, x.local_date)
   x.local_date, x.value, x.connection_id, x.device_id, x.origin_id, p.code AS provider,
   COALESCE(d.device_type, '')::text AS device_type, COALESCE(d.model, '')::text AS device_model,
+  COALESCE(d.manufacturer, '')::text AS device_manufacturer,
   COALESCE(o.origin_key, '')::text AS origin_key, COALESCE(o.name, '')::text AS origin_name,
   (o.relayed_provider_id IS NOT NULL)::boolean AS relayed
 FROM measurements x

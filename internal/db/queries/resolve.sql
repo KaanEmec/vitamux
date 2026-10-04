@@ -23,6 +23,7 @@ ORDER BY x.start_at, x.id;
 -- i is the 1-based position of the triple.
 SELECT k.i::integer AS i, p.code AS provider,
   COALESCE(d.device_type, '')::text AS device_type, COALESCE(d.model, '')::text AS device_model,
+  COALESCE(d.manufacturer, '')::text AS device_manufacturer,
   COALESCE(o.origin_key, '')::text AS origin_key, COALESCE(o.name, '')::text AS origin_name,
   (o.relayed_provider_id IS NOT NULL)::boolean AS relayed
 FROM (SELECT unnest(@provider_ids::smallint[]) AS provider_id, unnest(@device_ids::uuid[]) AS device_id,
@@ -39,6 +40,7 @@ SELECT x.id, x.start_at, x.end_at, x.tz_offset_min, x.is_nap, x.has_stages,
   x.asleep_s, x.deep_s, x.light_s, x.rem_s, x.awake_s, x.latency_s,
   p.code AS provider, x.connection_id, x.device_id,
   COALESCE(d.device_type, '')::text AS device_type, COALESCE(d.model, '')::text AS device_model,
+  COALESCE(d.manufacturer, '')::text AS device_manufacturer,
   COALESCE(o.origin_key, '')::text AS origin_key, COALESCE(o.name, '')::text AS origin_name,
   (o.relayed_provider_id IS NOT NULL)::boolean AS relayed
 FROM sleep_sessions x
@@ -59,6 +61,7 @@ ORDER BY session_id, start_at, id;
 SELECT x.id, x.start_at, x.end_at, x.sport, x.distance_m, x.energy_kcal, x.avg_hr_bpm, x.max_hr_bpm,
   p.code AS provider, x.connection_id, x.device_id,
   COALESCE(d.device_type, '')::text AS device_type, COALESCE(d.model, '')::text AS device_model,
+  COALESCE(d.manufacturer, '')::text AS device_manufacturer,
   COALESCE(o.origin_key, '')::text AS origin_key, COALESCE(o.name, '')::text AS origin_name,
   (o.relayed_provider_id IS NOT NULL)::boolean AS relayed
 FROM workouts x
@@ -77,6 +80,7 @@ ORDER BY x.start_at, x.id;
 -- only asks whether a device has a row in a base bucket.
 SELECT b.bucket::timestamptz AS bucket, p.code AS provider, b.connection_id, b.device_id,
   COALESCE(d.device_type, '')::text AS device_type, COALESCE(d.model, '')::text AS device_model,
+  COALESCE(d.manufacturer, '')::text AS device_manufacturer,
   COALESCE(o.origin_key, '')::text AS origin_key, COALESCE(o.name, '')::text AS origin_name,
   (o.relayed_provider_id IS NOT NULL)::boolean AS relayed
 FROM (

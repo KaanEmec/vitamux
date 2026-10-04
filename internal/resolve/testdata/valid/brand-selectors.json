@@ -1,0 +1,12 @@
+{
+  "schema": "vitamux.rule/1",
+  "metric": "heart_rate",
+  "window": {"kind": "bucket", "size": "5m"},
+  "groups": [
+    {"id": "whoop", "match": [{"provider": "whoop"}]},
+    {"id": "garmin_any", "match": [{"device_manufacturer": "Garmin"}]},
+    {"id": "apple_watch", "match": [{"provider": "apple_health", "device_manufacturer": "Apple Inc.", "device_model": "Watch"}]}
+  ],
+  "exclude": [{"device_manufacturer": "Garmin", "device_model": "Forerunner 965", "relayed": true}],
+  "strategy": {"op": "first_available"}
+}

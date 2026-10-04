@@ -13,15 +13,16 @@ import (
 // Source is the provenance identity selectors match on: one (provider, connection, origin,
 // device, entry) combination. It is comparable, so callers can assign once per source.
 type Source struct {
-	Provider     string
-	ConnectionID uuid.UUID
-	OriginKey    string // data_origins.origin_key, "" when the row has no origin
-	OriginName   string
-	Relayed      bool      // the origin relays another vendor (data_origins.relayed_provider_id)
-	DeviceID     uuid.UUID // uuid.Nil when the row has no device
-	DeviceType   string
-	DeviceModel  string
-	Manual       bool // provider "manual" or the manual_entry quality flag
+	Provider           string
+	ConnectionID       uuid.UUID
+	OriginKey          string // data_origins.origin_key, "" when the row has no origin
+	OriginName         string
+	Relayed            bool      // the origin relays another vendor (data_origins.relayed_provider_id)
+	DeviceID           uuid.UUID // uuid.Nil when the row has no device
+	DeviceType         string
+	DeviceModel        string
+	DeviceManufacturer string
+	Manual             bool // provider "manual" or the manual_entry quality flag
 }
 
 // Input is one canonical row as resolution sees it. J09.4 fills it from active measurements.
@@ -46,7 +47,8 @@ func (in Input) At() time.Time {
 }
 
 // Matches reports whether every set field of s equals src. origin_key_prefix is a plain
-// prefix; all comparisons are exact. A field set on s never matches an empty field of src.
+// prefix and device_manufacturer ignores case, because connectors spell brands differently;
+// all other comparisons are exact. A field set on s never matches an empty field of src.
 func (s Selector) Matches(src Source) bool {
 	switch {
 	case s.Provider != "" && s.Provider != src.Provider,
@@ -57,6 +59,7 @@ func (s Selector) Matches(src Source) bool {
 		s.Relayed != nil && *s.Relayed != src.Relayed,
 		s.DeviceType != "" && s.DeviceType != src.DeviceType,
 		s.DeviceModel != "" && s.DeviceModel != src.DeviceModel,
+		s.DeviceManufacturer != "" && !strings.EqualFold(s.DeviceManufacturer, src.DeviceManufacturer),
 		s.DeviceID != "" && (src.DeviceID == uuid.Nil || s.DeviceID != src.DeviceID.String()),
 		s.Entry == EntryManual && !src.Manual,
 		s.Entry == EntryDevice && src.Manual:

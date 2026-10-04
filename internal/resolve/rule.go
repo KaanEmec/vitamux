@@ -64,8 +64,10 @@ type Selector struct {
 	Relayed         *bool  `json:"relayed,omitempty"`
 	DeviceType      string `json:"device_type,omitempty"`
 	DeviceModel     string `json:"device_model,omitempty"`
-	DeviceID        string `json:"device_id,omitempty"`
-	Entry           Entry  `json:"entry,omitempty"`
+	// DeviceManufacturer is the brand as devices.manufacturer stores it; it matches case-insensitively.
+	DeviceManufacturer string `json:"device_manufacturer,omitempty"`
+	DeviceID           string `json:"device_id,omitempty"`
+	Entry              Entry  `json:"entry,omitempty"`
 }
 
 // DeviceTypes is the devices.device_type vocabulary that device_type selectors and the built-in

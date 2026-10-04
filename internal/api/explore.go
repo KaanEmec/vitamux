@@ -364,7 +364,8 @@ func (o *owner) GetSourceSeries(ctx context.Context, req oapi.GetSourceSeriesReq
 	}
 	for _, r := range rows {
 		i := source(r.ConnectionID, r.DeviceID, r.OriginID, resolve.Source{Provider: r.Provider, DeviceType: r.DeviceType,
-			DeviceModel: r.DeviceModel, OriginKey: r.OriginKey, OriginName: r.OriginName, Relayed: r.Relayed})
+			DeviceModel: r.DeviceModel, DeviceManufacturer: r.DeviceManufacturer, OriginKey: r.OriginKey, OriginName: r.OriginName,
+			Relayed: r.Relayed})
 		s := &out.Sources[i]
 		pt := oapi.SourcePoint{LocalDate: apiDate(r.LocalDate), N: int(r.Samples)}
 		if !byDay {
@@ -394,7 +395,8 @@ func (o *owner) GetSourceSeries(ctx context.Context, req oapi.GetSourceSeriesReq
 	}
 	for _, r := range daily {
 		i := source(r.ConnectionID, r.DeviceID, r.OriginID, resolve.Source{Provider: r.Provider, DeviceType: r.DeviceType,
-			DeviceModel: r.DeviceModel, OriginKey: r.OriginKey, OriginName: r.OriginName, Relayed: r.Relayed})
+			DeviceModel: r.DeviceModel, DeviceManufacturer: r.DeviceManufacturer, OriginKey: r.OriginKey, OriginName: r.OriginName,
+			Relayed: r.Relayed})
 		s := &out.Sources[i]
 		if j, ok := at[sourceDay{i, r.LocalDate}]; ok {
 			s.Points[j].DailyValue = optNum(r.Value)
