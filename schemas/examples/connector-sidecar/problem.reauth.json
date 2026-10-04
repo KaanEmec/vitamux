@@ -1,0 +1,6 @@
+{
+  "title": "reauth_required",
+  "status": 401,
+  "detail": "refresh token refused",
+  "code": "reauth_required"
+}

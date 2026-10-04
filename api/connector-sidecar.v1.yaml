@@ -1,0 +1,198 @@
+openapi: 3.1.0
+info:
+  title: Vitamux sidecar connector protocol
+  version: vitamux-connector/1
+  license:
+    name: MIT
+    identifier: MIT
+  description: >
+    The HTTP contract between the Vitamux core (client) and a remote sidecar connector
+    (server), e.g. a container wrapping an existing open-source collector. Frozen by ADR-0017:
+    within v1 only additive, optional changes. Messages are the JSON Schema definitions in
+    schemas/connector-sidecar.v1.json; synthetic examples are in
+    schemas/examples/connector-sidecar/. Go wire types: internal/connectors/remote/wire.go.
+
+
+    The sidecar is stateless and has no database access. It never schedules: the core plans
+    work units from the descriptor and asks for one page at a time. Credentials are opaque to
+    the core, sealed at rest, and sent only with the call that needs them. Receivers ignore
+    unknown fields. Every response carries the Vitamux-Protocol header. Errors are
+    application/problem+json whose `code` is a typed error class.
+
+
+    Limits enforced by the core: describe and auth responses 1 MiB and 30 s; a fetch page
+    64 MiB and 5 min, each line 36 MiB; a binary raw body 25 MiB decoded; an auth session
+    64 KiB decoded.
+servers:
+  - url: http://sidecar:8080
+    description: A private address (loopback, private or link-local); the core refuses others.
+security:
+  - sidecarSecret: []
+tags:
+  - name: sidecar
+    description: Remote connector (docs/architecture/connectors.md#remote-sidecar-mode).
+paths:
+  /v1/describe:
+    get:
+      operationId: describe
+      tags: [sidecar]
+      summary: Describe the connector (connectors.Descriptor)
+      description: Called at startup and retried lazily. `provider` must equal the name the core configured for this sidecar.
+      responses:
+        '200':
+          description: The descriptor.
+          headers: {Vitamux-Protocol: {$ref: '#/components/headers/Protocol'}}
+          content:
+            application/json:
+              schema: {$ref: '../schemas/connector-sidecar.v1.json#/$defs/describe'}
+              examples:
+                example_sidecar: {externalValue: '../schemas/examples/connector-sidecar/describe.json'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '4XX': {$ref: '#/components/responses/Problem'}
+        '5XX': {$ref: '#/components/responses/Problem'}
+  /v1/auth/begin:
+    post:
+      operationId: authBegin
+      tags: [sidecar]
+      summary: Start an authorization (Interactive.Begin)
+      description: Returns the first step and must not call the provider. An OAuth2 step redirects with the given state; a prompt step asks the owner for input.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '../schemas/connector-sidecar.v1.json#/$defs/auth_begin_request'}
+            examples:
+              begin: {externalValue: '../schemas/examples/connector-sidecar/auth_begin_request.json'}
+      responses:
+        '200':
+          description: The first step (`step` only).
+          headers: {Vitamux-Protocol: {$ref: '#/components/headers/Protocol'}}
+          content:
+            application/json:
+              schema: {$ref: '../schemas/connector-sidecar.v1.json#/$defs/auth_response'}
+              examples:
+                redirect: {externalValue: '../schemas/examples/connector-sidecar/auth_response.redirect.json'}
+                prompt: {externalValue: '../schemas/examples/connector-sidecar/auth_response.prompt-login.json'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '4XX': {$ref: '#/components/responses/Problem'}
+        '5XX': {$ref: '#/components/responses/Problem'}
+  /v1/auth/continue:
+    post:
+      operationId: authContinue
+      tags: [sidecar]
+      summary: Continue an authorization (Interactive.Continue)
+      description: >
+        After an OAuth2 redirect (`callback`) or a prompt (`values`), with the previous step's
+        `session`. Returns the next step, or the authorized account and its credentials.
+        A callback without a grant is a permanent problem.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '../schemas/connector-sidecar.v1.json#/$defs/auth_continue_request'}
+            examples:
+              callback: {externalValue: '../schemas/examples/connector-sidecar/auth_continue_request.callback.json'}
+              login: {externalValue: '../schemas/examples/connector-sidecar/auth_continue_request.prompt-login.json'}
+              code: {externalValue: '../schemas/examples/connector-sidecar/auth_continue_request.prompt-code.json'}
+      responses:
+        '200':
+          description: The next step, or the completed authorization.
+          headers: {Vitamux-Protocol: {$ref: '#/components/headers/Protocol'}}
+          content:
+            application/json:
+              schema: {$ref: '../schemas/connector-sidecar.v1.json#/$defs/auth_response'}
+              examples:
+                mfa: {externalValue: '../schemas/examples/connector-sidecar/auth_response.prompt-code.json'}
+                pairing: {externalValue: '../schemas/examples/connector-sidecar/auth_response.pairing.json'}
+                authorized: {externalValue: '../schemas/examples/connector-sidecar/auth_response.authorized.json'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '4XX': {$ref: '#/components/responses/Problem'}
+        '5XX': {$ref: '#/components/responses/Problem'}
+  /v1/auth/refresh:
+    post:
+      operationId: authRefresh
+      tags: [sidecar]
+      summary: Refresh credentials (Authenticator.Refresh)
+      description: A refused refresh token is a reauth_required problem.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '../schemas/connector-sidecar.v1.json#/$defs/refresh_request'}
+            examples:
+              refresh: {externalValue: '../schemas/examples/connector-sidecar/refresh_request.json'}
+      responses:
+        '200':
+          description: The new credentials.
+          headers: {Vitamux-Protocol: {$ref: '#/components/headers/Protocol'}}
+          content:
+            application/json:
+              schema: {$ref: '../schemas/connector-sidecar.v1.json#/$defs/refresh_response'}
+              examples:
+                refreshed: {externalValue: '../schemas/examples/connector-sidecar/refresh_response.json'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '4XX': {$ref: '#/components/responses/Problem'}
+        '5XX': {$ref: '#/components/responses/Problem'}
+  /v1/fetch:
+    post:
+      operationId: fetch
+      tags: [sidecar]
+      summary: Fetch one page of a work unit (Connector.Fetch)
+      description: >
+        The response streams one JSON object per line: any number of `raw` lines, then exactly
+        one final line, `result` (connectors.FetchResult) or `error` (a typed error ending the
+        page). Raw lines before an `error` line are stored as quarantined for schema_drift and
+        discarded otherwise. A stream without a final line, a malformed line, or an oversized
+        page is a protocol violation: the core discards the whole page and records a transient
+        error. A failure before the first line may instead be a problem+json response.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '../schemas/connector-sidecar.v1.json#/$defs/fetch_request'}
+            examples:
+              incremental: {externalValue: '../schemas/examples/connector-sidecar/fetch_request.json'}
+      responses:
+        '200':
+          description: NDJSON page; each line matches one of the schemas below.
+          headers: {Vitamux-Protocol: {$ref: '#/components/headers/Protocol'}}
+          content:
+            application/x-ndjson:
+              schema:
+                oneOf:
+                  - {$ref: '../schemas/connector-sidecar.v1.json#/$defs/raw_line'}
+                  - {$ref: '../schemas/connector-sidecar.v1.json#/$defs/result_line'}
+                  - {$ref: '../schemas/connector-sidecar.v1.json#/$defs/error_line'}
+              examples:
+                page: {externalValue: '../schemas/examples/connector-sidecar/fetch.page.ndjson'}
+                last: {externalValue: '../schemas/examples/connector-sidecar/fetch.last.ndjson'}
+                drift: {externalValue: '../schemas/examples/connector-sidecar/fetch.drift.ndjson'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '4XX': {$ref: '#/components/responses/Problem'}
+        '5XX': {$ref: '#/components/responses/Problem'}
+components:
+  securitySchemes:
+    sidecarSecret:
+      type: http
+      scheme: bearer
+      description: >
+        Shared secret per sidecar (32 random bytes, hex). A wrong secret is 401 with code
+        permanent; sidecars compare it in constant time.
+  headers:
+    Protocol:
+      description: Always `vitamux-connector/1`.
+      required: true
+      schema: {const: vitamux-connector/1}
+  responses:
+    Problem:
+      description: >
+        RFC 9457 problem. The core dispatches on `code` only: reauth_required, rate_limited
+        (with retry_after_s), transient, schema_drift (with endpoint and fingerprint),
+        permanent; unknown codes count as transient. `detail` must be secret-free.
+      headers: {Vitamux-Protocol: {$ref: '#/components/headers/Protocol'}}
+      content:
+        application/problem+json:
+          schema: {$ref: '../schemas/connector-sidecar.v1.json#/$defs/problem'}
+          examples:
+            rate_limited: {externalValue: '../schemas/examples/connector-sidecar/problem.json'}
+            reauth_required: {externalValue: '../schemas/examples/connector-sidecar/problem.reauth.json'}

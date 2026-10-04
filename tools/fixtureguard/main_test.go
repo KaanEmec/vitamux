@@ -53,6 +53,8 @@ func TestCleanTreePasses(t *testing.T) {
 	write(t, root, "fixtures/e.pdf.synthetic", "synthetic: true\n")
 	write(t, root, "fixtures/.gitkeep", "")
 	write(t, root, "internal/x/testdata/fuzz/FuzzX/0123abcd", "go test fuzz v1\n[]byte(\"{}\")\n")
+	write(t, root, "schemas/examples/.synthetic", "synthetic: true\n")
+	write(t, root, "schemas/examples/a.json", `{"schema": "x/1"}`)
 	write(t, root, "outside/real@gmail.com.txt", "not scanned: not under fixtures or testdata")
 	if got := rules(t, root); len(got) != 0 {
 		t.Fatalf("clean tree reported %v", got)
@@ -64,6 +66,7 @@ func TestSeededViolations(t *testing.T) {
 		name, file, body, rule string
 	}{
 		{"json marker missing", "fixtures/a.json", `{"x": 1}`, RuleMarker},
+		{"contract example marker missing", "schemas/examples/a.json", `{"x": 1}`, RuleMarker},
 		{"json marker false", "fixtures/a.json", `{"synthetic": false}`, RuleMarker},
 		{"json array", "fixtures/a.json", `[{"synthetic": true}]`, RuleMarker},
 		{"ndjson header missing", "testdata/a.ndjson", "{\"x\":1}\n{\"synthetic\":true}\n", RuleMarker},

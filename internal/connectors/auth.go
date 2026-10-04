@@ -45,20 +45,39 @@ type Interactive interface {
 
 // AuthInput is one step's input.
 type AuthInput struct {
-	RedirectURL string     // the provider callback, ${VITAMUX_PUBLIC_URL}/oauth/<provider>/callback
-	State       string     // Begin: the signed state to round-trip
-	Callback    url.Values // Continue: the callback's query
+	RedirectURL string            // the provider callback, ${VITAMUX_PUBLIC_URL}/oauth/<provider>/callback
+	State       string            // Begin: the signed state to round-trip
+	Callback    url.Values        // Continue: the callback's query
+	Values      map[string]string // Continue: the owner's answers to a prompt; never stored or logged
+	Session     []byte            // Continue: the previous step's Session
 }
 
-// AuthStep is what the owner does next.
+// AuthStep is what the owner does next: follow RedirectURL or answer Prompt. Session is the
+// connector's opaque continuation; the core seals it and never shows it to the browser.
 type AuthStep struct {
 	RedirectURL string
+	Prompt      *AuthPrompt
+	Session     []byte
 }
 
-// Authorized is a completed authorization.
+// AuthPrompt asks the owner for input, e.g. credentials or an MFA code.
+type AuthPrompt struct {
+	Message string
+	Fields  []AuthField
+}
+
+// AuthField is one prompt input. Kind is text, password or code.
+type AuthField struct {
+	Name, Label string
+	Kind        string
+}
+
+// Authorized is a completed authorization, or the next step when Next is set (AccountID and
+// Credentials are then ignored).
 type Authorized struct {
 	AccountID   string // provider account id; only its SHA-256 is stored (connections.account_key)
 	Credentials Credentials
+	Next        *AuthStep
 }
 
 // AuthRequest starts an authorization for the owner session SessionID.

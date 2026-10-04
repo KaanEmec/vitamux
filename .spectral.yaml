@@ -1,4 +1,4 @@
-# Spectral ruleset for api/openapi.yaml (ADR-0015). Run: npm --prefix web run lint:api
+# Spectral ruleset for api/openapi.yaml (ADR-0015) and api/connector-sidecar.v1.yaml (ADR-0017). Run: npm --prefix web run lint:api
 extends: ["spectral:oas"]
 rules:
   info-contact: off

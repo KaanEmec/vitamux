@@ -1,0 +1,5 @@
+{
+  "step": {
+    "redirect_url": "https://provider.example.com/oauth/authorize?client_id=synthetic&state=synthetic-signed-state"
+  }
+}

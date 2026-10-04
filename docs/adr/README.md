@@ -16,3 +16,4 @@ ADRs record decisions that code depends on. Keep each one short and link to the 
 | [0013](0013-extraction-consent.md) | Extraction providers behind one interface; external ones need configuration, owner enablement and per-request consent naming provider and model | Accepted |
 | [0015](0015-rest-openapi-conventions.md) | REST + OpenAPI 3.1 contract-first, problem+json, cursor pagination | Accepted |
 | [0016](0016-canonical-writer.md) | Account-scoped dedupe keys; corrections supersede; one canonical writer | Accepted |
+| [0017](0017-sidecar-protocol.md) | Sidecar protocol `vitamux-connector/1`: HTTP + JSON + NDJSON pages, frozen, additive only within v1 | Accepted |

@@ -45,6 +45,14 @@ type Descriptor struct {
 	Streams      []StreamSpec
 	RateLimits   []RateLimitSpec // all apply at once, per provider
 	Capabilities Capabilities
+	Name         string    // display name (providers.name)
+	Upstream     *Upstream // the wrapped third-party package; nil for in-process connectors
+	Remote       bool      // served by a sidecar (connection mode 'remote')
+}
+
+// Upstream is the third-party package a sidecar wraps.
+type Upstream struct {
+	Package, Version, SourceURL string
 }
 
 // StreamSpec is one stream's defaults. EnsureSchedules turns them into schedules.
@@ -116,6 +124,7 @@ type FetchResult struct {
 	HighWatermark time.Time // newest source time seen; zero = unknown
 	Done          bool      // the unit is complete
 	RetryAfter    time.Duration
+	Credentials   *Credentials // rotated by the provider during the fetch; nil = unchanged
 }
 
 // Credentials are a connection's decrypted provider tokens. They print as [redacted].

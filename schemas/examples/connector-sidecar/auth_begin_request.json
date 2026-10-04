@@ -1,0 +1,7 @@
+{
+  "redirect_url": "https://vitamux.example.com/oauth/example_sidecar/callback",
+  "state": "synthetic-signed-state",
+  "config": {
+    "region": "eu"
+  }
+}

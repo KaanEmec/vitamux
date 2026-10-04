@@ -1,0 +1,8 @@
+{
+  "type": "about:blank",
+  "title": "rate_limited",
+  "status": 429,
+  "detail": "provider quota exhausted",
+  "code": "rate_limited",
+  "retry_after_s": 120
+}

@@ -156,11 +156,11 @@ Verified API facts and the exact mapping: [providers/withings.md](../providers/w
 
 ## Remote sidecar mode
 
-This mode exists for providers whose only usable client is in another language, typically an existing open-source collector. Built in [E17](../plan/E17-sidecar-connectors/README.md). Sketch of protocol `vitamux-connector/1`:
+This mode exists for providers whose only usable client is in another language, typically an existing open-source collector. Built in [E17](../plan/E17-sidecar-connectors/README.md). Protocol `vitamux-connector/1` is frozen by [ADR-0017](../adr/0017-sidecar-protocol.md): spec [`api/connector-sidecar.v1.yaml`](../../api/connector-sidecar.v1.yaml), messages [`schemas/connector-sidecar.v1.json`](../../schemas/connector-sidecar.v1.json), [examples](../../schemas/examples/connector-sidecar/), Go wire types in `internal/connectors/remote`.
 
-- Private HTTP with a shared bearer secret; the sidecar is stateless and has no DB access.
-- Endpoints: `GET /v1/describe`, `POST /v1/auth/begin|continue|refresh`, `POST /v1/fetch` (NDJSON raw lines, then a `result` line with `next_cursor`, `done`, `retry_after_s`, and any rotated credentials).
-- Errors are problem+json with `code ∈ {reauth_required, rate_limited, transient, schema_drift, permanent}`.
+- Private HTTP with a shared bearer secret; the sidecar is stateless and has no DB access. The core plans; the sidecar fetches one page per call.
+- Endpoints: `GET /v1/describe`, `POST /v1/auth/begin|continue|refresh`, `POST /v1/fetch` (NDJSON raw lines, then one `result` or `error` line).
+- Errors are problem+json with `code` = a [typed error](#typed-errors) class.
 - A conformance kit (`vitamux connector-test --url`) ships with the implementation.
 
 ## Third-party collectors

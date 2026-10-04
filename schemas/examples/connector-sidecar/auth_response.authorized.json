@@ -1,0 +1,13 @@
+{
+  "authorized": {
+    "account_id": "synthetic-account-1",
+    "credentials": {
+      "access_token": "synthetic-access-token-1",
+      "refresh_token": "synthetic-refresh-token-1",
+      "expires_at": "2026-09-14T10:00:00Z",
+      "extra": {
+        "region": "synthetic-eu"
+      }
+    }
+  }
+}
