@@ -172,7 +172,7 @@ type groupRows struct {
 var flagBits = map[string]normalize.Flags{
 	"manual_entry": normalize.FlagManualEntry, "motion_context": normalize.FlagMotionContext,
 	"implausible": normalize.FlagImplausible, "relayed": normalize.FlagRelayed,
-	"migrated_without_raw": normalize.FlagMigratedWithoutRaw, "prorated_source": normalize.FlagProratedSource,
+	"migrated_without_raw": normalize.FlagMigratedWithoutRaw, "prorated_source": normalize.FlagProratedSource, "calibrating": normalize.FlagCalibrating,
 }
 
 // windowRows partitions the inputs of w and applies the row gates: quality.exclude_flags and the

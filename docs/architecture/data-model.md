@@ -79,7 +79,7 @@ All canonical event tables share the source and provenance columns: `connection_
 | `value` float8 | Canonical unit. `source_value`, `source_unit_id` only if conversion changed the value |
 | `provider_id`, `connection_id`, `device_id`, `origin_id`, `group_id` | Source identity; group for BP and weigh-ins |
 | `external_id`, `dedupe_key` | |
-| `quality_flags` bitset | `manual_entry`, `motion_context`, `implausible`, `relayed`, `migrated_without_raw`, `prorated_source` |
+| `quality_flags` bitset | `manual_entry`, `motion_context`, `implausible`, `relayed`, `migrated_without_raw`, `prorated_source`, `calibrating` |
 | `raw_payload_id`, `normalizer_version_id`, `ingested_at`, `normalized_at` | Provenance (`fetched_at` lives on the raw row) |
 | `superseded_at`, `superseded_by`, `deleted_at`, `deleted_by_raw_id` | History |
 

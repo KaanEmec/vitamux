@@ -78,7 +78,7 @@
         "exclude_flags": {
           "type": "array",
           "uniqueItems": true,
-          "items": {"enum": ["manual_entry", "motion_context", "implausible", "relayed", "migrated_without_raw", "prorated_source"]}
+          "items": {"enum": ["manual_entry", "motion_context", "implausible", "relayed", "migrated_without_raw", "prorated_source", "calibrating"]}
         },
         "max_staleness": {"$ref": "#/$defs/duration"},
         "require_wear": {"description": "E3: the wear metric, e.g. heart_rate. Devices that never report it are exempt.", "type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},

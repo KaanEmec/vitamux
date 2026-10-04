@@ -137,6 +137,7 @@ A group id means the same selectors in every built-in. Fields of one selector ar
 - No built-in for `ecg_qt`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
 - No built-in for `ecg_qtc`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
 - No built-in for `electrodermal_activity`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `elevation_change`: added with the WHOOP mappings (J25.4); no researched ladder yet, so the owner picks a source.
 - No built-in for `elevation_gain`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
 - No built-in for `environment_audio_exposure`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
 - No built-in for `environment_sound_reduction`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
@@ -203,14 +204,26 @@ A group id means the same selectors in every built-in. Fields of one selector ar
 - No built-in for `walking_step_length`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `water_temperature`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
 - No built-in for `wheelchair_pushes`: added with the mapping corrections (J25.1); no researched ladder yet, so the owner picks a source.
+- No built-in for `whoop_hr_zone_0_time`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `whoop_hr_zone_1_time`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `whoop_hr_zone_2_time`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `whoop_hr_zone_3_time`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `whoop_hr_zone_4_time`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `whoop_hr_zone_5_time`: a provider-scoped value with a single source, so there is nothing to order.
 - No built-in for `whoop_max_heart_rate`: a provider-scoped score with a single source, so there is nothing to order.
 - No built-in for `whoop_recovery`: a provider-scoped score with a single source, so there is nothing to order.
 - No built-in for `whoop_sleep_consistency`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `whoop_sleep_cycles`: a provider-scoped value with a single source, so there is nothing to order.
 - No built-in for `whoop_sleep_debt`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `whoop_sleep_debt_post`: a provider-scoped value with a single source, so there is nothing to order.
 - No built-in for `whoop_sleep_disturbances`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `whoop_sleep_nap_credit`: a provider-scoped value with a single source, so there is nothing to order.
 - No built-in for `whoop_sleep_need`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `whoop_sleep_need_from_strain`: a provider-scoped value with a single source, so there is nothing to order.
+- No built-in for `whoop_sleep_need_habitual`: a provider-scoped value with a single source, so there is nothing to order.
 - No built-in for `whoop_sleep_performance`: a provider-scoped score with a single source, so there is nothing to order.
 - No built-in for `whoop_strain`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `whoop_workout_strain`: a provider-scoped value with a single source, so there is nothing to order.
 - No built-in for `withings_breathing_quality`: a provider-scoped score with a single source, so there is nothing to order.
 - No built-in for `withings_esc`: a provider-scoped score with a single source, so there is nothing to order.
 - No built-in for `withings_metabolic_age`: a provider-scoped score with a single source, so there is nothing to order.

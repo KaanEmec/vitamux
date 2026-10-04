@@ -1,6 +1,6 @@
 {
   "synthetic": true,
   "normalizer": "whoop.cycles",
-  "version": 3,
+  "version": 4,
   "error": "whoop.cycles: cycle without id (shape drift)"
 }

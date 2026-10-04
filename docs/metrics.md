@@ -50,6 +50,14 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `physical_effort` | kcal/kg/h | sample | intensive | 0 to 100 | bucket, hour, local_day, local_night, sleep_episode, latest |  | PhysicalEffort |  |
 | `garmin_acute_load` | index | daily_value | daily_summary | 0 to 10000 | local_day, latest |  |  |  |
 | `garmin_chronic_load` | index | daily_value | daily_summary | 0 to 10000 | local_day, latest |  |  |  |
+| `whoop_workout_strain` | index | interval | latest | 0 to 21 | local_day, latest |  |  |  |
+| `whoop_hr_zone_0_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day |  |  |  |
+| `whoop_hr_zone_1_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day |  |  |  |
+| `whoop_hr_zone_2_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day |  |  |  |
+| `whoop_hr_zone_3_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day |  |  |  |
+| `whoop_hr_zone_4_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day |  |  |  |
+| `whoop_hr_zone_5_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day |  |  |  |
+| `elevation_change` | m | interval, daily_value | additive | -20000 to 20000 | bucket, hour, local_day |  |  |  |
 
 ## Heart and circulation
 
@@ -232,6 +240,11 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `whoop_sleep_consistency` | % | daily_value | daily_summary | 0 to 100 | local_day, latest |  |  |  |
 | `whoop_sleep_disturbances` | count | daily_value | daily_summary | 0 to 500 | local_day, latest |  |  |  |
 | `withings_sleep_score` | index | daily_value | daily_summary | 0 to 100 | local_day, latest |  |  |  |
+| `whoop_sleep_debt_post` | s | daily_value | daily_summary | 0 to 86400 | local_day, latest |  |  |  |
+| `whoop_sleep_need_habitual` | s | daily_value | daily_summary | 0 to 86400 | local_day, latest |  |  |  |
+| `whoop_sleep_need_from_strain` | s | daily_value | daily_summary | 0 to 86400 | local_day, latest |  |  |  |
+| `whoop_sleep_nap_credit` | s | daily_value | daily_summary | 0 to 86400 | local_day, latest |  |  |  |
+| `whoop_sleep_cycles` | count | daily_value | daily_summary | 0 to 20 | local_day, latest |  |  |  |
 
 ## Derived
 

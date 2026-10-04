@@ -2677,7 +2677,7 @@ type Measurement struct {
 	// Provenance Version and provenance columns of a canonical row; GET /provenance/{entity}/{id} has the full trace.
 	Provenance RecordProvenance `json:"provenance"`
 
-	// QualityFlags Bitset: 1 manual_entry, 2 motion_context, 4 implausible, 8 relayed, 16 migrated_without_raw, 32 prorated_source.
+	// QualityFlags Bitset: 1 manual_entry, 2 motion_context, 4 implausible, 8 relayed, 16 migrated_without_raw, 32 prorated_source, 64 calibrating.
 	QualityFlags int `json:"quality_flags"`
 
 	// Source Where a canonical row came from. device and origin are the values the device and origin filters take.

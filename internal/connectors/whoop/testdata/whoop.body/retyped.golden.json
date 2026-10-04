@@ -1,0 +1,6 @@
+{
+  "synthetic": true,
+  "normalizer": "whoop.body",
+  "version": 1,
+  "error": "whoop.body: field \"height_meter\" is not float64 (shape drift)"
+}

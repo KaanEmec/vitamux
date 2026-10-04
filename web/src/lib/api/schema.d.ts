@@ -2823,7 +2823,7 @@ export interface components {
              */
             source_value: number | null;
             source_unit: string | null;
-            /** @description Bitset: 1 manual_entry, 2 motion_context, 4 implausible, 8 relayed, 16 migrated_without_raw, 32 prorated_source. */
+            /** @description Bitset: 1 manual_entry, 2 motion_context, 4 implausible, 8 relayed, 16 migrated_without_raw, 32 prorated_source, 64 calibrating. */
             quality_flags: number;
             /** @description Measurement group (blood-pressure reading */
             group_id: string | null;

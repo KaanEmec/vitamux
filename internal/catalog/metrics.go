@@ -234,4 +234,21 @@ var metrics = []Metric{
 	{Code: "whoop_sleep_consistency", Section: secSleep, Unit: "%", Kinds: daily, Agg: DailySummary, Min: 0, Max: 100, ProviderScoped: true, Since: SeedMappings},
 	{Code: "whoop_sleep_disturbances", Section: secSleep, Unit: "count", Kinds: daily, Agg: DailySummary, Min: 0, Max: 500, ProviderScoped: true, Since: SeedMappings},
 	{Code: "withings_sleep_score", Section: secSleep, Unit: "index", Kinds: daily, Agg: DailySummary, Min: 0, Max: 100, ProviderScoped: true, Since: SeedMappings},
+
+	// WHOOP leftovers (J25.4): a workout's strain and its time in each heart-rate zone are intervals over the workout; the
+	// sleep-need parts and the debt left after sleep are daily values at the main sleep's wake-up (whoop_sleep_debt is the
+	// debt inside the night's need).
+	{Code: "whoop_workout_strain", Section: secActivity, Unit: "index", Kinds: interval, Agg: Latest, Min: 0, Max: 21, ProviderScoped: true, Since: SeedWhoop},
+	{Code: "whoop_hr_zone_0_time", Section: secActivity, Unit: "s", Kinds: interval, Agg: Additive, Min: 0, Max: 86400, ProviderScoped: true, Since: SeedWhoop},
+	{Code: "whoop_hr_zone_1_time", Section: secActivity, Unit: "s", Kinds: interval, Agg: Additive, Min: 0, Max: 86400, ProviderScoped: true, Since: SeedWhoop},
+	{Code: "whoop_hr_zone_2_time", Section: secActivity, Unit: "s", Kinds: interval, Agg: Additive, Min: 0, Max: 86400, ProviderScoped: true, Since: SeedWhoop},
+	{Code: "whoop_hr_zone_3_time", Section: secActivity, Unit: "s", Kinds: interval, Agg: Additive, Min: 0, Max: 86400, ProviderScoped: true, Since: SeedWhoop},
+	{Code: "whoop_hr_zone_4_time", Section: secActivity, Unit: "s", Kinds: interval, Agg: Additive, Min: 0, Max: 86400, ProviderScoped: true, Since: SeedWhoop},
+	{Code: "whoop_hr_zone_5_time", Section: secActivity, Unit: "s", Kinds: interval, Agg: Additive, Min: 0, Max: 86400, ProviderScoped: true, Since: SeedWhoop},
+	{Code: "elevation_change", Section: secActivity, Unit: "m", Kinds: intervalDaily, Agg: Additive, Min: -20000, Max: 20000, Since: SeedWhoop},
+	{Code: "whoop_sleep_debt_post", Section: secSleep, Unit: "s", Kinds: daily, Agg: DailySummary, Min: 0, Max: 86400, ProviderScoped: true, Since: SeedWhoop},
+	{Code: "whoop_sleep_need_habitual", Section: secSleep, Unit: "s", Kinds: daily, Agg: DailySummary, Min: 0, Max: 86400, ProviderScoped: true, Since: SeedWhoop},
+	{Code: "whoop_sleep_need_from_strain", Section: secSleep, Unit: "s", Kinds: daily, Agg: DailySummary, Min: 0, Max: 86400, ProviderScoped: true, Since: SeedWhoop},
+	{Code: "whoop_sleep_nap_credit", Section: secSleep, Unit: "s", Kinds: daily, Agg: DailySummary, Min: 0, Max: 86400, ProviderScoped: true, Since: SeedWhoop},
+	{Code: "whoop_sleep_cycles", Section: secSleep, Unit: "count", Kinds: daily, Agg: DailySummary, Min: 0, Max: 20, ProviderScoped: true, Since: SeedWhoop},
 }

@@ -2,6 +2,7 @@ package whoop
 
 import (
 	"errors"
+	"time"
 	"testing"
 
 	"github.com/KaanEmec/vitamux/internal/normalize"
@@ -11,7 +12,7 @@ import (
 func TestGoldenStreams(t *testing.T) {
 	for _, n := range Normalizers() {
 		t.Run(n.ID(), func(t *testing.T) {
-			normtest.Golden(t, n, normalize.RawPayload{Stream: n.ID(), ContentType: "application/json"},
+			normtest.Golden(t, n, normalize.RawPayload{Stream: n.ID(), ContentType: "application/json", FetchedAt: time.Date(2026, 3, 2, 8, 30, 0, 0, time.UTC)},
 				normalize.Env{Provider: Provider})
 		})
 	}

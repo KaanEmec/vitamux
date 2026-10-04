@@ -1,0 +1,10 @@
+{
+  "fields": {
+    "response.height_meter": "height",
+    "response.max_heart_rate": "whoop_max_heart_rate",
+    "response.unknown_field": "raw: unrecognised field, not read",
+    "response.weight_kilogram": "weight",
+    "unit": "raw: container, read through its fields"
+  },
+  "synthetic": true
+}
