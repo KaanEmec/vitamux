@@ -51,7 +51,8 @@ routes:
   DELETE /api/v1/connections/{id}: {allow: write:config, csrf: true}
   POST /api/v1/connections/{id}/auth/begin: {allow: session, csrf: true}
   POST /api/v1/providers/{provider}/auth/begin: {allow: session, csrf: true}
-  POST /api/v1/connections/{id}/auth/continue: {allow: write:config, csrf: true, planned: true}
+  GET /api/v1/providers: {allow: read:config}
+  POST /api/v1/providers/{provider}/auth/continue: {allow: session, csrf: true}
   POST /api/v1/connections/{id}/sync: {allow: write:config, csrf: true}
   GET /api/v1/connections/{id}/backfills: {allow: read:config}
   POST /api/v1/connections/{id}/backfills: {allow: write:config, csrf: true}

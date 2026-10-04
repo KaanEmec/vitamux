@@ -612,7 +612,7 @@ export interface paths {
         put?: never;
         /**
          * Reauthorize a connection (OAuth redirect or credential prompt)
-         * @description OAuth: answers {"redirect_url"} and sets the short-lived browser-binding cookie that the provider callback needs (docs/architecture/connectors.md#oauth-connection-flow). Owner session only, since the state is bound to it.
+         * @description Answers the first step: {"redirect_url"} to send the browser to the provider, or {"state", "prompt"} to ask the owner for values and send them to continueProviderAuth. Sets the short-lived browser-binding cookie that the callback and continue need (docs/architecture/connectors.md#oauth-connection-flow). Owner session only, since the state is bound to it.
          */
         post: operations["beginConnectionAuth"];
         delete?: never;
@@ -631,8 +631,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Connect an account of a provider (OAuth redirect)
-         * @description Like beginConnectionAuth, for an account not connected yet. The callback creates the connection, or reuses the existing one when the same provider account connects again.
+         * Connect an account of a provider (OAuth redirect or credential prompt)
+         * @description Like beginConnectionAuth, for an account not connected yet. The last step creates the connection, or reuses the existing one when the same provider account connects again. A new connection of an unofficial connector starts paused.
          */
         post: operations["beginProviderAuth"];
         delete?: never;
@@ -641,7 +641,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/connections/{id}/auth/continue": {
+    "/api/v1/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the providers a connector serves (in-process and sidecars) */
+        get: operations["listProviders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/providers/{provider}/auth/continue": {
         parameters: {
             query?: never;
             header?: never;
@@ -650,8 +667,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Continue interactive authorization (e.g. an MFA code) */
-        post: operations["continueConnectionAuth"];
+        /**
+         * Answer an authorization prompt (credentials, an MFA code)
+         * @description Sends the owner's values for the prompt the state names. The state is single use: the answer is the next step with a new state, or the connection once authorized. Any error ends the flow; begin again. Owner session only, with the binding cookie of begin.
+         */
+        post: operations["continueProviderAuth"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2529,6 +2549,8 @@ export interface components {
             status: "active" | "degraded" | "needs_reauth" | "paused" | "error" | "disabled";
             /** @description False for an unofficial API; null when no connector is registered (push sources). */
             official: boolean | null;
+            /** @description The third-party package a sidecar connector wraps; null for in-process and push connections. */
+            upstream: components["schemas"]["Upstream"] | null;
             health: components["schemas"]["Health"];
             health_reason: string | null;
             /** Format: date-time */
@@ -2556,12 +2578,59 @@ export interface components {
              */
             status?: "active" | "paused";
         };
+        /** @description A provider served by a registered connector. */
+        Provider: {
+            code: string;
+            name: string;
+            /** @description False for an unofficial API; its new connections start paused. */
+            official: boolean;
+            /**
+             * @description Null while a sidecar has not described itself.
+             * @enum {string|null}
+             */
+            auth_kind: "none" | "oauth2" | "interactive_mfa" | "device_pairing" | null;
+            /** @description Served by a sidecar. */
+            remote: boolean;
+            /** @description False while a sidecar is unreachable or has not described itself. */
+            available: boolean;
+            upstream?: components["schemas"]["Upstream"];
+        };
+        /** @description The third-party package a sidecar connector wraps. */
+        Upstream: {
+            package: string;
+            version: string;
+            source_url: string;
+        };
         /** @description Next interactive auth step. */
-        AuthStep: {
+        AuthStep: components["schemas"]["AuthRedirect"] | components["schemas"]["AuthPromptStep"];
+        /** @description Send the browser to the provider; its callback continues the flow. */
+        AuthRedirect: {
             redirect_url: string;
         };
-        /** @description Open object. */
-        AuthContinueInput: Record<string, never>;
+        /** @description Ask the owner for the prompt's fields and send them with the state to continueProviderAuth. */
+        AuthPromptStep: {
+            state: string;
+            prompt: {
+                message: string;
+                fields: {
+                    name: string;
+                    label: string;
+                    /** @enum {string} */
+                    kind: "text" | "password" | "code";
+                }[];
+            };
+        };
+        /** @description Authorized; the connection was created or updated. */
+        AuthDone: {
+            connection_id: components["schemas"]["ConnectionID"];
+        };
+        AuthContinueInput: {
+            state: string;
+            /** @description The prompt's field values by name; never stored or logged. */
+            values: {
+                [key: string]: string;
+            };
+        };
         BackfillInput: {
             stream: string;
             /** Format: date-time */
@@ -4347,12 +4416,37 @@ export interface operations {
             503: components["responses"]["Problem"];
         };
     };
-    continueConnectionAuth: {
+    listProviders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every registered connector, by provider code. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        providers: components["schemas"]["Provider"][];
+                    };
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    continueProviderAuth: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                id: components["parameters"]["ConnectionIDPath"];
+                provider: string;
             };
             cookie?: never;
         };
@@ -4368,14 +4462,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AuthStep"];
+                    "application/json": components["schemas"]["AuthRedirect"] | components["schemas"]["AuthPromptStep"] | components["schemas"]["AuthDone"];
                 };
             };
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
-            404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     syncConnection: {

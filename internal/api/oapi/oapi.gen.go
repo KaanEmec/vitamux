@@ -39,6 +39,27 @@ func (e AnalyteAliasSource) Valid() bool {
 	}
 }
 
+// Defines values for AuthPromptStepPromptFieldsKind.
+const (
+	Code     AuthPromptStepPromptFieldsKind = "code"
+	Password AuthPromptStepPromptFieldsKind = "password"
+	Text     AuthPromptStepPromptFieldsKind = "text"
+)
+
+// Valid indicates whether the value is a known member of the AuthPromptStepPromptFieldsKind enum.
+func (e AuthPromptStepPromptFieldsKind) Valid() bool {
+	switch e {
+	case Code:
+		return true
+	case Password:
+		return true
+	case Text:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BackfillStatus.
 const (
 	BackfillStatusCancelled BackfillStatus = "cancelled"
@@ -738,6 +759,33 @@ func (e ProvenanceEntity) Valid() bool {
 	}
 }
 
+// Defines values for ProviderAuthKind.
+const (
+	DevicePairing  ProviderAuthKind = "device_pairing"
+	InteractiveMfa ProviderAuthKind = "interactive_mfa"
+	LessThanNil    ProviderAuthKind = "<nil>"
+	None           ProviderAuthKind = "none"
+	Oauth2         ProviderAuthKind = "oauth2"
+)
+
+// Valid indicates whether the value is a known member of the ProviderAuthKind enum.
+func (e ProviderAuthKind) Valid() bool {
+	switch e {
+	case DevicePairing:
+		return true
+	case InteractiveMfa:
+		return true
+	case LessThanNil:
+		return true
+	case None:
+		return true
+	case Oauth2:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ResolvedPointStatus.
 const (
 	ResolvedPointStatusCalculated ResolvedPointStatus = "calculated"
@@ -1303,12 +1351,43 @@ type AnalyteAliasInput struct {
 	Label   string `json:"label"`
 }
 
-// AuthContinueInput Open object.
-type AuthContinueInput = map[string]interface{}
+// AuthContinueInput defines model for AuthContinueInput.
+type AuthContinueInput struct {
+	State string `json:"state"`
+
+	// Values The prompt's field values by name; never stored or logged.
+	Values map[string]string `json:"values"`
+}
+
+// AuthDone Authorized; the connection was created or updated.
+type AuthDone struct {
+	ConnectionID ConnectionID `json:"connection_id"`
+}
+
+// AuthPromptStep Ask the owner for the prompt's fields and send them with the state to continueProviderAuth.
+type AuthPromptStep struct {
+	Prompt struct {
+		Fields []struct {
+			Kind  AuthPromptStepPromptFieldsKind `json:"kind"`
+			Label string                         `json:"label"`
+			Name  string                         `json:"name"`
+		} `json:"fields"`
+		Message string `json:"message"`
+	} `json:"prompt"`
+	State string `json:"state"`
+}
+
+// AuthPromptStepPromptFieldsKind defines model for AuthPromptStep.Prompt.Fields.Kind.
+type AuthPromptStepPromptFieldsKind string
+
+// AuthRedirect Send the browser to the provider; its callback continues the flow.
+type AuthRedirect struct {
+	RedirectURL string `json:"redirect_url"`
+}
 
 // AuthStep Next interactive auth step.
 type AuthStep struct {
-	RedirectURL string `json:"redirect_url"`
+	union json.RawMessage
 }
 
 // Backfill defines model for Backfill.
@@ -1423,6 +1502,9 @@ type Connection struct {
 	Provider  string           `json:"provider"`
 	Status    ConnectionStatus `json:"status"`
 	UpdatedAt time.Time        `json:"updated_at"`
+
+	// Upstream The third-party package a sidecar connector wraps; null for in-process and push connections.
+	Upstream *Upstream `json:"upstream"`
 }
 
 // ConnectionMode defines model for Connection.Mode.
@@ -2207,6 +2289,29 @@ type ProvenanceVersion struct {
 	SupersededBy *string         `json:"superseded_by"`
 }
 
+// Provider A provider served by a registered connector.
+type Provider struct {
+	// AuthKind Null while a sidecar has not described itself.
+	AuthKind *ProviderAuthKind `json:"auth_kind"`
+
+	// Available False while a sidecar is unreachable or has not described itself.
+	Available bool   `json:"available"`
+	Code      string `json:"code"`
+	Name      string `json:"name"`
+
+	// Official False for an unofficial API; its new connections start paused.
+	Official bool `json:"official"`
+
+	// Remote Served by a sidecar.
+	Remote bool `json:"remote"`
+
+	// Upstream The third-party package a sidecar connector wraps.
+	Upstream *Upstream `json:"upstream,omitempty"`
+}
+
+// ProviderAuthKind Null while a sidecar has not described itself.
+type ProviderAuthKind string
+
 // RawRef The row's raw payload; with include=provenance, when the row has one.
 type RawRef struct {
 	BatchID     openapi_types.UUID `json:"batch_id"`
@@ -2848,6 +2953,13 @@ type TimezonePeriodInput struct {
 	ValidFrom time.Time `json:"valid_from"`
 }
 
+// Upstream The third-party package a sidecar connector wraps.
+type Upstream struct {
+	Package   string `json:"package"`
+	SourceURL string `json:"source_url"`
+	Version   string `json:"version"`
+}
+
 // User defines model for User.
 type User struct {
 	ID          openapi_types.UUID `json:"id"`
@@ -3282,6 +3394,11 @@ type ListOverridesParams struct {
 // GetProvenanceParamsEntity defines parameters for GetProvenance.
 type GetProvenanceParamsEntity string
 
+// ContinueProviderAuth200JSONResponseBody defines parameters for ContinueProviderAuth.
+type ContinueProviderAuth200JSONResponseBody struct {
+	union json.RawMessage
+}
+
 // GetResolvedDailyParams defines parameters for GetResolvedDaily.
 type GetResolvedDailyParams struct {
 	// StartDate First local date, inclusive.
@@ -3475,9 +3592,6 @@ type CreateConnectionJSONRequestBody = ConnectionInput
 // UpdateConnectionJSONRequestBody defines body for UpdateConnection for application/json ContentType.
 type UpdateConnectionJSONRequestBody = ConnectionPatch
 
-// ContinueConnectionAuthJSONRequestBody defines body for ContinueConnectionAuth for application/json ContentType.
-type ContinueConnectionAuthJSONRequestBody = AuthContinueInput
-
 // CreateBackfillJSONRequestBody defines body for CreateBackfill for application/json ContentType.
 type CreateBackfillJSONRequestBody = BackfillInput
 
@@ -3502,6 +3616,9 @@ type CreateManualMeasurementJSONRequestBody = ManualMeasurementInput
 // CreateOverrideJSONRequestBody defines body for CreateOverride for application/json ContentType.
 type CreateOverrideJSONRequestBody = OverrideInput
 
+// ContinueProviderAuthJSONRequestBody defines body for ContinueProviderAuth for application/json ContentType.
+type ContinueProviderAuthJSONRequestBody = AuthContinueInput
+
 // PreviewResolutionJSONRequestBody defines body for PreviewResolution for application/json ContentType.
 type PreviewResolutionJSONRequestBody = ResolutionPreviewRequest
 
@@ -3525,6 +3642,156 @@ type UpdateTimezonePeriodJSONRequestBody = TimezonePeriodInput
 
 // WithingsNotifyFormdataRequestBody defines body for WithingsNotify for application/x-www-form-urlencoded ContentType.
 type WithingsNotifyFormdataRequestBody WithingsNotifyFormdataBody
+
+// AsAuthRedirect returns the union data inside the AuthStep as a AuthRedirect
+func (t AuthStep) AsAuthRedirect() (AuthRedirect, error) {
+	var body AuthRedirect
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAuthRedirect overwrites any union data inside the AuthStep as the provided AuthRedirect
+func (t *AuthStep) FromAuthRedirect(v AuthRedirect) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAuthRedirect performs a merge with any union data inside the AuthStep, using the provided AuthRedirect
+func (t *AuthStep) MergeAuthRedirect(v AuthRedirect) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAuthPromptStep returns the union data inside the AuthStep as a AuthPromptStep
+func (t AuthStep) AsAuthPromptStep() (AuthPromptStep, error) {
+	var body AuthPromptStep
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAuthPromptStep overwrites any union data inside the AuthStep as the provided AuthPromptStep
+func (t *AuthStep) FromAuthPromptStep(v AuthPromptStep) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAuthPromptStep performs a merge with any union data inside the AuthStep, using the provided AuthPromptStep
+func (t *AuthStep) MergeAuthPromptStep(v AuthPromptStep) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t AuthStep) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *AuthStep) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsAuthRedirect returns the union data inside the ContinueProviderAuth200JSONResponseBody as a AuthRedirect
+func (t ContinueProviderAuth200JSONResponseBody) AsAuthRedirect() (AuthRedirect, error) {
+	var body AuthRedirect
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAuthRedirect overwrites any union data inside the ContinueProviderAuth200JSONResponseBody as the provided AuthRedirect
+func (t *ContinueProviderAuth200JSONResponseBody) FromAuthRedirect(v AuthRedirect) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAuthRedirect performs a merge with any union data inside the ContinueProviderAuth200JSONResponseBody, using the provided AuthRedirect
+func (t *ContinueProviderAuth200JSONResponseBody) MergeAuthRedirect(v AuthRedirect) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAuthPromptStep returns the union data inside the ContinueProviderAuth200JSONResponseBody as a AuthPromptStep
+func (t ContinueProviderAuth200JSONResponseBody) AsAuthPromptStep() (AuthPromptStep, error) {
+	var body AuthPromptStep
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAuthPromptStep overwrites any union data inside the ContinueProviderAuth200JSONResponseBody as the provided AuthPromptStep
+func (t *ContinueProviderAuth200JSONResponseBody) FromAuthPromptStep(v AuthPromptStep) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAuthPromptStep performs a merge with any union data inside the ContinueProviderAuth200JSONResponseBody, using the provided AuthPromptStep
+func (t *ContinueProviderAuth200JSONResponseBody) MergeAuthPromptStep(v AuthPromptStep) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAuthDone returns the union data inside the ContinueProviderAuth200JSONResponseBody as a AuthDone
+func (t ContinueProviderAuth200JSONResponseBody) AsAuthDone() (AuthDone, error) {
+	var body AuthDone
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAuthDone overwrites any union data inside the ContinueProviderAuth200JSONResponseBody as the provided AuthDone
+func (t *ContinueProviderAuth200JSONResponseBody) FromAuthDone(v AuthDone) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAuthDone performs a merge with any union data inside the ContinueProviderAuth200JSONResponseBody, using the provided AuthDone
+func (t *ContinueProviderAuth200JSONResponseBody) MergeAuthDone(v AuthDone) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ContinueProviderAuth200JSONResponseBody) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ContinueProviderAuth200JSONResponseBody) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -3594,9 +3861,6 @@ type ServerInterface interface {
 	// BeginConnectionAuth Reauthorize a connection (OAuth redirect or credential prompt)
 	// (POST /api/v1/connections/{id}/auth/begin)
 	BeginConnectionAuth(w http.ResponseWriter, r *http.Request, id ConnectionIDPath)
-	// ContinueConnectionAuth Continue interactive authorization (e.g. an MFA code)
-	// (POST /api/v1/connections/{id}/auth/continue)
-	ContinueConnectionAuth(w http.ResponseWriter, r *http.Request, id ConnectionIDPath)
 	// ListBackfills List a connection's backfills, newest first
 	// (GET /api/v1/connections/{id}/backfills)
 	ListBackfills(w http.ResponseWriter, r *http.Request, id ConnectionIDPath)
@@ -3720,9 +3984,15 @@ type ServerInterface interface {
 	// GetProvenance Trace a record back to its raw payload, batch and normalizer
 	// (GET /api/v1/provenance/{entity}/{id})
 	GetProvenance(w http.ResponseWriter, r *http.Request, entity GetProvenanceParamsEntity, id ID)
-	// BeginProviderAuth Connect an account of a provider (OAuth redirect)
+	// ListProviders List the providers a connector serves (in-process and sidecars)
+	// (GET /api/v1/providers)
+	ListProviders(w http.ResponseWriter, r *http.Request)
+	// BeginProviderAuth Connect an account of a provider (OAuth redirect or credential prompt)
 	// (POST /api/v1/providers/{provider}/auth/begin)
 	BeginProviderAuth(w http.ResponseWriter, r *http.Request, provider string)
+	// ContinueProviderAuth Answer an authorization prompt (credentials, an MFA code)
+	// (POST /api/v1/providers/{provider}/auth/continue)
+	ContinueProviderAuth(w http.ResponseWriter, r *http.Request, provider string)
 	// PreviewResolution Resolve a draft rule over a range without writing anything
 	// (POST /api/v1/resolution/preview)
 	PreviewResolution(w http.ResponseWriter, r *http.Request)
@@ -4363,32 +4633,6 @@ func (siw *ServerInterfaceWrapper) BeginConnectionAuth(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.BeginConnectionAuth(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ContinueConnectionAuth operation middleware
-func (siw *ServerInterfaceWrapper) ContinueConnectionAuth(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id ConnectionIDPath
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ContinueConnectionAuth(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6060,6 +6304,20 @@ func (siw *ServerInterfaceWrapper) GetProvenance(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// ListProviders operation middleware
+func (siw *ServerInterfaceWrapper) ListProviders(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProviders(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // BeginProviderAuth operation middleware
 func (siw *ServerInterfaceWrapper) BeginProviderAuth(w http.ResponseWriter, r *http.Request) {
 
@@ -6077,6 +6335,32 @@ func (siw *ServerInterfaceWrapper) BeginProviderAuth(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.BeginProviderAuth(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ContinueProviderAuth operation middleware
+func (siw *ServerInterfaceWrapper) ContinueProviderAuth(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", r.PathValue("provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ContinueProviderAuth(w, r, provider)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -7359,7 +7643,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/connections/{id}", wrapper.UpdateConnection)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/connections/{id}/auth/begin", wrapper.BeginConnectionAuth)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/providers/{provider}/auth/begin", wrapper.BeginProviderAuth)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/connections/{id}/auth/continue", wrapper.ContinueConnectionAuth)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/providers", wrapper.ListProviders)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/providers/{provider}/auth/continue", wrapper.ContinueProviderAuth)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/connections/{id}/sync", wrapper.SyncConnection)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/connections/{id}/backfills", wrapper.ListBackfills)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/connections/{id}/backfills", wrapper.CreateBackfill)
@@ -8865,6 +9150,14 @@ type BeginConnectionAuthResponseObject interface {
 
 type BeginConnectionAuth200JSONResponse AuthStep
 
+func (t BeginConnectionAuth200JSONResponse) MarshalJSON() ([]byte, error) {
+	return AuthStep(t).MarshalJSON()
+}
+
+func (t *BeginConnectionAuth200JSONResponse) UnmarshalJSON(b []byte) error {
+	return (*AuthStep)(t).UnmarshalJSON(b)
+}
+
 func (response BeginConnectionAuth200JSONResponse) VisitBeginConnectionAuthResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
@@ -8945,101 +9238,6 @@ func (response BeginConnectionAuth503ApplicationProblemPlusJSONResponse) VisitBe
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(503)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ContinueConnectionAuthRequestObject struct {
-	ID   ConnectionIDPath `json:"id"`
-	Body *ContinueConnectionAuthJSONRequestBody
-}
-
-type ContinueConnectionAuthResponseObject interface {
-	VisitContinueConnectionAuthResponse(w http.ResponseWriter) error
-}
-
-type ContinueConnectionAuth200JSONResponse AuthStep
-
-func (response ContinueConnectionAuth200JSONResponse) VisitContinueConnectionAuthResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ContinueConnectionAuth401ApplicationProblemPlusJSONResponse struct {
-	ProblemApplicationProblemPlusJSONResponse
-}
-
-func (response ContinueConnectionAuth401ApplicationProblemPlusJSONResponse) VisitContinueConnectionAuthResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/problem+json")
-	w.WriteHeader(401)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ContinueConnectionAuth403ApplicationProblemPlusJSONResponse Problem
-
-func (response ContinueConnectionAuth403ApplicationProblemPlusJSONResponse) VisitContinueConnectionAuthResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/problem+json")
-	w.WriteHeader(403)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ContinueConnectionAuth404ApplicationProblemPlusJSONResponse Problem
-
-func (response ContinueConnectionAuth404ApplicationProblemPlusJSONResponse) VisitContinueConnectionAuthResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/problem+json")
-	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ContinueConnectionAuth409ApplicationProblemPlusJSONResponse Problem
-
-func (response ContinueConnectionAuth409ApplicationProblemPlusJSONResponse) VisitContinueConnectionAuthResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/problem+json")
-	w.WriteHeader(409)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ContinueConnectionAuth422ApplicationProblemPlusJSONResponse Problem
-
-func (response ContinueConnectionAuth422ApplicationProblemPlusJSONResponse) VisitContinueConnectionAuthResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/problem+json")
-	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -12206,6 +12404,73 @@ func (response GetProvenance404ApplicationProblemPlusJSONResponse) VisitGetProve
 	return err
 }
 
+type ListProvidersRequestObject struct {
+}
+
+type ListProvidersResponseObject interface {
+	VisitListProvidersResponse(w http.ResponseWriter) error
+}
+
+type ListProviders200JSONResponse struct {
+	Providers []Provider `json:"providers"`
+}
+
+func (response ListProviders200JSONResponse) VisitListProvidersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListProviders401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response ListProviders401ApplicationProblemPlusJSONResponse) VisitListProvidersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListProviders403ApplicationProblemPlusJSONResponse Problem
+
+func (response ListProviders403ApplicationProblemPlusJSONResponse) VisitListProvidersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListProviders503ApplicationProblemPlusJSONResponse Problem
+
+func (response ListProviders503ApplicationProblemPlusJSONResponse) VisitListProvidersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type BeginProviderAuthRequestObject struct {
 	Provider string `json:"provider"`
 }
@@ -12215,6 +12480,14 @@ type BeginProviderAuthResponseObject interface {
 }
 
 type BeginProviderAuth200JSONResponse AuthStep
+
+func (t BeginProviderAuth200JSONResponse) MarshalJSON() ([]byte, error) {
+	return AuthStep(t).MarshalJSON()
+}
+
+func (t *BeginProviderAuth200JSONResponse) UnmarshalJSON(b []byte) error {
+	return (*AuthStep)(t).UnmarshalJSON(b)
+}
 
 func (response BeginProviderAuth200JSONResponse) VisitBeginProviderAuthResponse(w http.ResponseWriter) error {
 
@@ -12261,6 +12534,101 @@ func (response BeginProviderAuth403ApplicationProblemPlusJSONResponse) VisitBegi
 type BeginProviderAuth503ApplicationProblemPlusJSONResponse Problem
 
 func (response BeginProviderAuth503ApplicationProblemPlusJSONResponse) VisitBeginProviderAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ContinueProviderAuthRequestObject struct {
+	Provider string `json:"provider"`
+	Body     *ContinueProviderAuthJSONRequestBody
+}
+
+type ContinueProviderAuthResponseObject interface {
+	VisitContinueProviderAuthResponse(w http.ResponseWriter) error
+}
+
+type ContinueProviderAuth200JSONResponse = ContinueProviderAuth200JSONResponseBody
+
+func (response ContinueProviderAuth200JSONResponse) VisitContinueProviderAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.union); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ContinueProviderAuth401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response ContinueProviderAuth401ApplicationProblemPlusJSONResponse) VisitContinueProviderAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ContinueProviderAuth403ApplicationProblemPlusJSONResponse Problem
+
+func (response ContinueProviderAuth403ApplicationProblemPlusJSONResponse) VisitContinueProviderAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ContinueProviderAuth409ApplicationProblemPlusJSONResponse Problem
+
+func (response ContinueProviderAuth409ApplicationProblemPlusJSONResponse) VisitContinueProviderAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ContinueProviderAuth422ApplicationProblemPlusJSONResponse Problem
+
+func (response ContinueProviderAuth422ApplicationProblemPlusJSONResponse) VisitContinueProviderAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ContinueProviderAuth503ApplicationProblemPlusJSONResponse Problem
+
+func (response ContinueProviderAuth503ApplicationProblemPlusJSONResponse) VisitContinueProviderAuthResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -14203,9 +14571,6 @@ type StrictServerInterface interface {
 	// BeginConnectionAuth Reauthorize a connection (OAuth redirect or credential prompt)
 	// (POST /api/v1/connections/{id}/auth/begin)
 	BeginConnectionAuth(ctx context.Context, request BeginConnectionAuthRequestObject) (BeginConnectionAuthResponseObject, error)
-	// ContinueConnectionAuth Continue interactive authorization (e.g. an MFA code)
-	// (POST /api/v1/connections/{id}/auth/continue)
-	ContinueConnectionAuth(ctx context.Context, request ContinueConnectionAuthRequestObject) (ContinueConnectionAuthResponseObject, error)
 	// ListBackfills List a connection's backfills, newest first
 	// (GET /api/v1/connections/{id}/backfills)
 	ListBackfills(ctx context.Context, request ListBackfillsRequestObject) (ListBackfillsResponseObject, error)
@@ -14329,9 +14694,15 @@ type StrictServerInterface interface {
 	// GetProvenance Trace a record back to its raw payload, batch and normalizer
 	// (GET /api/v1/provenance/{entity}/{id})
 	GetProvenance(ctx context.Context, request GetProvenanceRequestObject) (GetProvenanceResponseObject, error)
-	// BeginProviderAuth Connect an account of a provider (OAuth redirect)
+	// ListProviders List the providers a connector serves (in-process and sidecars)
+	// (GET /api/v1/providers)
+	ListProviders(ctx context.Context, request ListProvidersRequestObject) (ListProvidersResponseObject, error)
+	// BeginProviderAuth Connect an account of a provider (OAuth redirect or credential prompt)
 	// (POST /api/v1/providers/{provider}/auth/begin)
 	BeginProviderAuth(ctx context.Context, request BeginProviderAuthRequestObject) (BeginProviderAuthResponseObject, error)
+	// ContinueProviderAuth Answer an authorization prompt (credentials, an MFA code)
+	// (POST /api/v1/providers/{provider}/auth/continue)
+	ContinueProviderAuth(ctx context.Context, request ContinueProviderAuthRequestObject) (ContinueProviderAuthResponseObject, error)
 	// PreviewResolution Resolve a draft rule over a range without writing anything
 	// (POST /api/v1/resolution/preview)
 	PreviewResolution(ctx context.Context, request PreviewResolutionRequestObject) (PreviewResolutionResponseObject, error)
@@ -15048,39 +15419,6 @@ func (sh *strictHandler) BeginConnectionAuth(w http.ResponseWriter, r *http.Requ
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(BeginConnectionAuthResponseObject); ok {
 		if err := validResponse.VisitBeginConnectionAuthResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// ContinueConnectionAuth operation middleware
-func (sh *strictHandler) ContinueConnectionAuth(w http.ResponseWriter, r *http.Request, id ConnectionIDPath) {
-	var request ContinueConnectionAuthRequestObject
-
-	request.ID = id
-
-	var body ContinueConnectionAuthJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ContinueConnectionAuth(ctx, request.(ContinueConnectionAuthRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ContinueConnectionAuth")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ContinueConnectionAuthResponseObject); ok {
-		if err := validResponse.VisitContinueConnectionAuthResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -16216,6 +16554,30 @@ func (sh *strictHandler) GetProvenance(w http.ResponseWriter, r *http.Request, e
 	}
 }
 
+// ListProviders operation middleware
+func (sh *strictHandler) ListProviders(w http.ResponseWriter, r *http.Request) {
+	var request ListProvidersRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListProviders(ctx, request.(ListProvidersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListProviders")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListProvidersResponseObject); ok {
+		if err := validResponse.VisitListProvidersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // BeginProviderAuth operation middleware
 func (sh *strictHandler) BeginProviderAuth(w http.ResponseWriter, r *http.Request, provider string) {
 	var request BeginProviderAuthRequestObject
@@ -16235,6 +16597,39 @@ func (sh *strictHandler) BeginProviderAuth(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(BeginProviderAuthResponseObject); ok {
 		if err := validResponse.VisitBeginProviderAuthResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ContinueProviderAuth operation middleware
+func (sh *strictHandler) ContinueProviderAuth(w http.ResponseWriter, r *http.Request, provider string) {
+	var request ContinueProviderAuthRequestObject
+
+	request.Provider = provider
+
+	var body ContinueProviderAuthJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ContinueProviderAuth(ctx, request.(ContinueProviderAuthRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ContinueProviderAuth")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ContinueProviderAuthResponseObject); ok {
+		if err := validResponse.VisitContinueProviderAuthResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

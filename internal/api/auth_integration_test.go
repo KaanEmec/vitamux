@@ -65,7 +65,8 @@ type authEnv struct {
 // newAuthEnv builds the real handler over a fresh database with one owner, plus test-only
 // routes standing in for health and config endpoints that do not exist yet. When
 // the test ends it asserts that no secret it used reached the logs (E03 acceptance).
-func newAuthEnv(t *testing.T, development bool) *authEnv {
+// configure may add options (e.g. a connector runtime) before the router is built.
+func newAuthEnv(t *testing.T, development bool, configure ...func(*Options, *crypto.Keyring)) *authEnv {
 	t.Helper()
 	_, pool := dbtest.Migrated(t)
 	d := db.New(pool)
@@ -90,8 +91,11 @@ func newAuthEnv(t *testing.T, development bool) *authEnv {
 		t.Fatal(err)
 	}
 	logs := &syncBuffer{}
-	rt, err := newRouter(obs.NewLogger(logs, slog.LevelDebug), newUITestFS(),
-		Options{Auth: svc, Development: development, DB: d, Blobs: blobs})
+	opts := Options{Auth: svc, Development: development, DB: d, Blobs: blobs}
+	for _, c := range configure {
+		c(&opts, kr)
+	}
+	rt, err := newRouter(obs.NewLogger(logs, slog.LevelDebug), newUITestFS(), opts)
 	if err != nil {
 		t.Fatal(err)
 	}
