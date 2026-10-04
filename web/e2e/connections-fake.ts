@@ -47,10 +47,19 @@ export const ids = {
 };
 export const sidecarSecret = { username: 'synthetic-user', password: 'synthetic-pass', code: '123456' };
 const upstream = { package: 'example-collector', version: '1.4.2', source_url: 'https://example.com/example-collector' };
+const sidecar = { source: 'environment', bundled: false, enable: [] };
+const setup = { setup_state: 'ready', callback_url: null, problems: [], app_credentials: null, sidecar: null, connections: 0 };
 const providers = [
-	{ code: 'withings', name: 'Withings', official: true, auth_kind: 'oauth2', remote: false, available: true },
-	{ code: 'example_sidecar', name: 'Example Collector', official: false, auth_kind: 'interactive_mfa', remote: true, available: true, upstream },
-	{ code: 'offline_sidecar', name: 'Offline sidecar', official: false, auth_kind: null, remote: true, available: false }
+	{
+		...setup, code: 'withings', name: 'Withings', official: true, auth_kind: 'oauth2', remote: false, available: true,
+		callback_url: 'https://vitamux.example.test/oauth/withings/callback',
+		app_credentials: { set: true, managed_by_environment: true, client_id: 'synthetic-client', updated_at: null }
+	},
+	{ ...setup, code: 'example_sidecar', name: 'Example Collector', official: false, auth_kind: 'interactive_mfa', remote: true, available: true, upstream, sidecar },
+	{
+		...setup, code: 'offline_sidecar', name: 'Offline sidecar', official: false, auth_kind: null, remote: true, available: false, setup_state: 'needs_sidecar', sidecar,
+		problems: [{ code: 'sidecar_unreachable', message: 'Nothing answers at http://offline:8080. Start the sidecar on the private network, then check again.' }]
+	}
 ];
 const streamsOf: Record<string, string[]> = { example_sidecar: ['example_sidecar.heart_rate'], ultrahuman: ['ultrahuman.metrics'], withings: ['withings.measures'], apple_health: ['healthkit.samples.v1'] };
 
@@ -116,7 +125,10 @@ export class ConnectionsApi {
 		if (path === '/connections' && method === 'GET') return json(r, 200, { connections: this.connections });
 		if (path === '/jobs') return json(r, 200, { jobs: q.get('status') === 'dead' ? [deadJob()] : [], has_more: false });
 		if (path === '/resolved/daily') return this.daily(r, q);
-		if (path === '/providers' && method === 'GET') return json(r, 200, { providers });
+		if (path === '/providers' && method === 'GET') {
+			const live = (code: string) => this.connections.filter((c) => c.provider === code && c.status !== 'disabled').length;
+			return json(r, 200, { providers: providers.map((p) => ({ ...p, connections: live(p.code), setup_state: p.available && live(p.code) ? 'connected' : p.setup_state })) });
+		}
 		if ((m = path.match(/^\/providers\/([^/]+)\/auth\/continue$/)) && method === 'POST') return this.continueAuth(r, m[1]);
 		if ((m = path.match(/^\/providers\/([^/]+)\/auth\/begin$/)) && method === 'POST') {
 			if (providers.find((p) => p.code === m![1])?.auth_kind === 'interactive_mfa') return json(r, 200, this.prompt('login', null));

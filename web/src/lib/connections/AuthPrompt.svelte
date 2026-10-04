@@ -3,15 +3,17 @@
 	renders the owner prompt of a step, sends the values to POST /providers/{provider}/auth/continue
 	and follows the answer until the connection exists: another prompt is shown here, a redirect
 	leaves for the provider, a connection id opens the connection page (or calls `ondone`, for a
-	page that already shows the connection). The server consumes a
-	state when it is continued, so after an error the owner starts again (`onrestart`).
-	Entered values are cleared the moment they are sent and are never kept anywhere else.
+	page that already shows the connection). The server consumes a state when it is continued, so
+	after an error the owner starts again (`onrestart`); the error is explained in plain language
+	(setup.ts signInError). Entered values are cleared the moment they are sent and are never kept
+	anywhere else; the fields carry autocomplete hints for password managers.
 -->
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { api, type Problem, type Schemas } from '../api/client.ts';
 	import ProblemAlert from '../components/ProblemAlert.svelte';
 	import TextField from '../components/TextField.svelte';
+	import { explain } from '../setup/setup.ts';
 	import Button from '../ui/Button.svelte';
 	import { goToProvider } from './connections.ts';
 
@@ -32,6 +34,7 @@
 	// svelte-ignore state_referenced_locally
 	let values = $state(blank(first));
 	let problem = $state<Problem | null>(null);
+	let lead = $state('');
 	let busy = $state(false);
 	let form = $state<HTMLFormElement>();
 
@@ -43,10 +46,10 @@
 
 	const attrs = (f: Field) =>
 		f.kind === 'password'
-			? ({ type: 'password', autocomplete: 'off' } as const)
+			? ({ type: 'password', autocomplete: 'current-password' } as const)
 			: f.kind === 'code'
 				? ({ type: 'text', inputmode: 'numeric', autocomplete: 'one-time-code' } as const)
-				: ({ type: 'text', autocomplete: 'off' } as const);
+				: ({ type: 'text', autocomplete: /user|email|login/i.test(f.name) ? 'username' : 'off', spellcheck: false } as const);
 
 	async function submit(e: SubmitEvent) {
 		e.preventDefault();
@@ -54,11 +57,13 @@
 		problem = null;
 		const sent = { ...values };
 		values = blank(step);
-		const { data, error } = await api.POST('/api/v1/providers/{provider}/auth/continue', {
+		const codeStep = step.prompt.fields.some((f) => f.kind === 'code');
+		const { data, error, response } = await api.POST('/api/v1/providers/{provider}/auth/continue', {
 			params: { path: { provider } },
 			body: { state: step.state, values: sent }
 		});
 		if (error) {
+			lead = await explain(error, response, provider, codeStep);
 			problem = error;
 			busy = false;
 		} else if ('connection_id' in data) {
@@ -75,7 +80,7 @@
 </script>
 
 {#if problem}
-	<ProblemAlert {problem} />
+	<ProblemAlert {problem} {lead} />
 	<Button variant="primary" onclick={onrestart}>Start again</Button>
 {:else}
 	{#key step.state}

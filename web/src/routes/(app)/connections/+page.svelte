@@ -1,7 +1,8 @@
 <!--
 	Connections: a card per source (health, last sync, 14-day run strip, fix-it action), the connect
 	wizard, running backfills and the latest runs, and the outcome of an OAuth round trip
-	(?connected=<provider> or ?auth_error=<code> from the callback).
+	(?connected=<provider> or ?auth_error=<code>&provider=<provider> from the callback). With no
+	connection yet, the guided setup (Connect a source) is the page.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
@@ -14,7 +15,8 @@
 	import ConnectWizard from '#lib/connections/ConnectWizard.svelte';
 	import DataTable from '#lib/connections/DataTable.svelte';
 	import ProgressBar from '#lib/connections/ProgressBar.svelte';
-	import { loadProviders } from '#lib/connections/providers.svelte.ts';
+	import { known, loadProviders } from '#lib/connections/providers.svelte.ts';
+	import SourceSetup from '#lib/setup/SourceSetup.svelte';
 	import { alerting, authErrors, elapsed, providerLabel, when, type Connection } from '#lib/connections/connections.ts';
 	import { loadRuns, type Run } from '#lib/connections/runs.ts';
 	import Button from '#lib/ui/Button.svelte';
@@ -31,12 +33,18 @@
 
 	let connections = $state<Connection[] | null>(null);
 	let problem = $state<Problem | null>(null);
-	let wizard = $state(false);
+	let wizard = $state<{ provider: string; app?: boolean } | boolean>(false);
 	let runs = $state<Record<string, Run[] | null>>({});
 	let backfills = $state<Record<string, Backfill[]>>({});
 
 	const connected = $derived(page.url.searchParams.get('connected'));
 	const authError = $derived(page.url.searchParams.get('auth_error'));
+	const failedProvider = $derived(page.url.searchParams.get('provider'));
+	// A refused exchange with the owner's own app usually means a wrong secret or callback URL.
+	const appSetup = $derived.by(() => {
+		const app = known.list?.find((p) => p.code === failedProvider)?.app_credentials;
+		return authError === 'exchange_failed' && !!app?.set && !app.managed_by_environment;
+	});
 	const removed = $derived(page.url.searchParams.get('removed'));
 
 	const attention = $derived(connections?.filter((c) => alerting.includes(c.health)).length ?? 0);
@@ -44,7 +52,7 @@
 	const summary = $derived(
 		connections?.length
 			? `${connections.length} ${connections.length === 1 ? 'source' : 'sources'} · ${healthy} healthy${attention ? ` · ${attention} need${attention === 1 ? 's' : ''} attention` : ''}`
-			: 'Sources send Vitamux your health data.'
+			: 'Sources send Vitamux your health data. Connect your first one below.'
 	);
 	const running = $derived(
 		(connections ?? []).flatMap((c) => (backfills[c.id] ?? []).filter((b) => b.status === 'running').map((b) => ({ c, b })))
@@ -90,7 +98,7 @@
 		<h1>Connections</h1>
 		<p class="muted summary">{summary}</p>
 	</div>
-	<Button variant="primary" onclick={() => (wizard = true)}><Icon d={plus} size={16} />Connect a source</Button>
+	{#if connections?.length}<Button variant="primary" onclick={() => (wizard = true)}><Icon d={plus} size={16} />Connect a source</Button>{/if}
 </div>
 
 {#if connected}
@@ -102,8 +110,13 @@
 {:else if authError}
 	<div class="banner error" role="alert">
 		<StatusIcon status="error" />
-		<span>Connecting failed: {authErrors[authError] ?? `the provider answered ${authError}.`}</span>
-		<button class="btn link" type="button" onclick={() => (wizard = true)}>Try again</button>
+		<span>
+			Connecting{failedProvider ? ` ${providerLabel(failedProvider)}` : ''} failed: {authErrors[authError] ?? `the provider answered ${authError}.`}
+			{#if appSetup}Check the client id, the secret and the callback URL of your {providerLabel(failedProvider ?? '')} app.{/if}
+		</span>
+		<button class="btn link" type="button" onclick={() => (wizard = failedProvider ? { provider: failedProvider, app: appSetup } : true)}>
+			{appSetup ? 'Review the app setup' : 'Try again'}
+		</button>
 	</div>
 {:else if removed}
 	<p class="banner" role="status"><StatusIcon status="ok" /> <span>The {providerLabel(removed)} connection was removed.</span></p>
@@ -113,6 +126,12 @@
 
 {#if connections === null}
 	<Skeleton variant="block" label="Loading connections" />
+{:else if connections.length === 0}
+	<section class="card" aria-labelledby="setup-title">
+		<h2 id="setup-title">Connect a source</h2>
+		<p class="muted lede">Pick a source. Each one shows what it needs, and every step happens here in the panel.</p>
+		<SourceSetup />
+	</section>
 {:else}
 	<div class="grid">
 		{#each connections as c (c.id)}
@@ -120,7 +139,7 @@
 		{/each}
 		<button class="add" type="button" onclick={() => (wizard = true)}>
 			<span class="plus"><Icon d={plus} size={20} /></span>
-			<span class="title">{connections.length ? 'Add a source' : 'Connect your first source'}</span>
+			<span class="title">Add a source</span>
 			<span class="muted">Guided setup for Withings, Garmin, WHOOP, Apple Health or any push collector</span>
 		</button>
 	</div>
@@ -171,7 +190,7 @@
 	</div>
 {/if}
 
-{#if wizard}<ConnectWizard onclose={() => (wizard = false)} />{/if}
+{#if wizard}<ConnectWizard start={wizard === true ? undefined : wizard} onclose={() => (wizard = false)} />{/if}
 
 <style>
 	.head {
@@ -265,6 +284,9 @@
 	h2 {
 		margin: 0;
 		font-size: var(--text-md);
+	}
+	.lede {
+		margin: var(--space-1) 0 var(--space-4);
 	}
 	.runs h2 {
 		margin-bottom: var(--space-3);

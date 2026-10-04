@@ -1476,7 +1476,9 @@ paths:
       description: >
         Sends the owner's values for the prompt the state names. The state is single use: the
         answer is the next step with a new state, or the connection once authorized. Any error
-        ends the flow; begin again. Owner session only, with the binding cookie of begin.
+        ends the flow; begin again: 422 when the provider refused the values (a wrong password
+        or code), 429 with Retry-After while it limits sign-ins, 503 when the provider or its
+        sidecar is unavailable. Owner session only, with the binding cookie of begin.
       security: [{session: [], csrf: []}]
       parameters:
         - name: provider
@@ -1502,6 +1504,7 @@ paths:
         '403': {$ref: '#/components/responses/Problem'}
         '409': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
+        '429': {$ref: '#/components/responses/Problem'}
         '503': {$ref: '#/components/responses/Problem'}
 
   /api/v1/connections/{id}/sync:
@@ -2784,7 +2787,7 @@ paths:
       description: >
         Authorized by the signed, single-use `state` and the browser-binding cookie, not by the
         session. Always answers 303 to /connections?connected=<provider> or
-        /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable.
+        /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable&provider=<provider>.
         HEAD answers 204 without side effects. A provider without a connector is 404.
       security: []
       parameters:

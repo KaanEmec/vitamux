@@ -27,9 +27,8 @@ Edit `.env`:
 
 - `VITAMUX_PUBLIC_URL`: the https URL users will open, e.g. `https://vitamux.example.com` (no trailing path). OAuth callbacks and webhook URLs are built from it, so change it only together with your provider registrations.
 - `VITAMUX_IMAGE`: pin a release tag, e.g. `ghcr.io/kaanemec/vitamux:v0.1.0` (tags are `v`-prefixed; `latest` follows final releases).
-- `VITAMUX_WITHINGS_CLIENT_ID`, if you connect Withings ([step 6](#6-connect-withings)).
 
-The other settings can stay at their defaults.
+The other settings can stay at their defaults. Provider keys and sign-ins are entered in the panel later ([step 6](#6-connect-sources-in-the-panel)).
 
 ## 3. Start the stack
 
@@ -40,8 +39,6 @@ docker compose up -d --wait                            # postgres -> migrate -> 
 ```
 
 `init-secrets` prints the master key's id and refuses to overwrite an existing key. **Back the key up now** (step 7): without it, provider tokens and documents cannot be decrypted and backups cannot be restored.
-
-If you use Withings, paste your application's client secret into `secrets/withings_client_secret` before `up` (or run `docker compose up -d --wait` again afterwards).
 
 ## 4. Create the owner
 
@@ -120,20 +117,23 @@ server {
 
 Check: `curl -fsS https://vitamux.example.com/readyz` answers `{"status":"ok",...}`. If not, see [troubleshooting](operations/troubleshooting.md#readyz-answers-503).
 
-## 6. Connect Withings
+## 6. Connect sources in the panel
 
-Each install uses its own Withings developer application ([details](providers/withings.md#app-registration-and-callback)):
+Sign in and open **Connections**. Until something is connected it lists every source with what it still needs and one next action ([ADR-0021](adr/0021-source-setup.md)); nothing needs a file edit or a restart:
 
-1. Create an application in the Withings developer dashboard and register this **callback URL**: `https://vitamux.example.com/oauth/withings/callback` (your `VITAMUX_PUBLIC_URL` + `/oauth/withings/callback`).
-2. Put the client id in `.env` (`VITAMUX_WITHINGS_CLIENT_ID`) and the client secret in `secrets/withings_client_secret`, then `docker compose up -d --wait`.
-3. In the UI, open Connections → **Connect a source** → Withings. The first sync fetches the whole history.
-4. Optional, for lower latency: turn on Withings notifications under Settings. Vitamux then subscribes **webhook URLs** of the form `https://vitamux.example.com/webhooks/withings/<token>` through the Withings API itself; nothing more needs registering in the dashboard, but your proxy must pass `/webhooks/` through. Hourly polling continues either way.
+- **Withings** runs on your own Withings developer application ([details](providers/withings.md#app-registration-and-callback)). **Set up Withings** shows the callback URL to register there (`VITAMUX_PUBLIC_URL` + `/oauth/withings/callback`), takes the client id and secret, checks them with Withings, then sends you to Withings to allow access. The first sync fetches the whole history. Replace or remove the app credentials under Settings → Sources.
+- **Garmin and WHOOP** need their sidecar turned on first ([sidecars](#sidecars)); their card shows the line for your install and **Check again**. Then sign in with email, password and the verification code in one dialog; the password and code pass through once and are never stored.
+- **Apple Health** pairs from the iPhone app under Settings → Devices.
+
+When the panel refuses something it says what to change ([troubleshooting](operations/troubleshooting.md#source-setup)). Optional, for lower latency: turn on Withings notifications under Settings → Profile. Vitamux then subscribes **webhook URLs** of the form `https://vitamux.example.com/webhooks/withings/<token>` through the Withings API itself; your proxy must pass `/webhooks/` through. Hourly polling continues either way.
+
+**Automated installs** can pin the Withings app instead: `VITAMUX_WITHINGS_CLIENT_ID` in `.env` and the secret in `secrets/withings_client_secret` (Coolify: `VITAMUX_WITHINGS_CLIENT_ID` and `WITHINGS_CLIENT_SECRET`), then `docker compose up -d --wait`. An environment value wins over the panel and shows there read-only ([configuration](configuration.md#providers)).
 
 ## 7. Backups
 
 The stack writes a daily backup to the `vitamux-backups` volume and keeps three ([backup](operations/backup.md), including off-host encryption and restore). Two things are **not** in those backups and must be stored elsewhere, e.g. a password manager:
 
-- `deploy/compose/secrets/` (database passwords and the Withings secret);
+- `deploy/compose/secrets/` (database passwords, and a Withings secret file if you use one);
 - the master key: `docker run --rm -v vitamux_vitamux-secrets:/s:ro busybox cat /s/master.key > master.key && chmod 600 master.key`, then move that file off the host.
 
 ## Sidecars
@@ -177,11 +177,11 @@ Steps:
 
 1. Create a resource of type Docker Compose from this public Git repository with the Compose file `/deploy/coolify/compose.yaml`, or paste the file into an empty Docker Compose resource.
 2. Under Domains, edit the `vitamux` service's domain: protocol `https`, your domain (e.g. `vitamux.example.com`), port `8080`; Noindex is a good idea. Coolify serves it on 443 and fills `SERVICE_URL_VITAMUX` (that is `VITAMUX_PUBLIC_URL`) from it on the next deploy. `SERVICE_URL_VITAMUX_8080` may keep a generated placeholder; Vitamux does not read it. After deploying, `/healthz` over HTTPS carries a `Strict-Transport-Security` header only when the public URL is right.
-3. Set environment variables: `VITAMUX_IMAGE` (a pinned tag), and for Withings `VITAMUX_WITHINGS_CLIENT_ID` and `WITHINGS_CLIENT_SECRET` (mark it as a secret). Optional: `VITAMUX_TRUSTED_PROXIES` with the subnet of Coolify's proxy network (`docker network inspect coolify`).
+3. Set environment variables: `VITAMUX_IMAGE` (a pinned tag). Optional: `VITAMUX_TRUSTED_PROXIES` with the subnet of Coolify's proxy network (`docker network inspect coolify`), `GARMIN_SIDECAR=1` and `WHOOP_SIDECAR=1` ([sidecars](#sidecars)), and for an automated install the Withings app (`VITAMUX_WITHINGS_CLIENT_ID`, `WITHINGS_CLIENT_SECRET` marked as a secret).
 4. Deploy. `secrets`, `master-key` and `migrate` run and exit; `vitamux` turns healthy. Volumes persist across redeploys, so the generated secrets and the key stay.
 5. Create the owner from the server's shell (the image has no shell, so Coolify's web terminal cannot attach): `docker exec -it <vitamux container> /vitamux admin create-owner`.
 6. Back up the master key from the server's shell as in [step 7](#7-backups), with the volume name Coolify gave `vitamux-secrets` (`docker volume ls`). The database secrets live in the `pg-secrets`, `migrate-secret` and `app-secret` volumes; back them up the same way or reset role passwords with `ALTER ROLE` after a restore.
-7. Register the Withings callback URL as in [step 6](#6-connect-withings).
+7. Connect sources in the panel as in [step 6](#6-connect-sources-in-the-panel).
 
 Daily backups go to the `vitamux-backups` volume as above; Coolify's own backup feature covers its database resources, not PostgreSQL inside a Compose resource. A restore runs from the server's shell with the `restore` profile service of the Coolify file ([backup#restore](operations/backup.md#restore)). Upgrades: change `VITAMUX_IMAGE` and redeploy ([upgrade](operations/upgrade.md#coolify)).
 

@@ -15008,6 +15008,20 @@ func (response ContinueProviderAuth422ApplicationProblemPlusJSONResponse) VisitC
 	return err
 }
 
+type ContinueProviderAuth429ApplicationProblemPlusJSONResponse Problem
+
+func (response ContinueProviderAuth429ApplicationProblemPlusJSONResponse) VisitContinueProviderAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ContinueProviderAuth503ApplicationProblemPlusJSONResponse Problem
 
 func (response ContinueProviderAuth503ApplicationProblemPlusJSONResponse) VisitContinueProviderAuthResponse(w http.ResponseWriter) error {

@@ -951,7 +951,7 @@ export interface paths {
         put?: never;
         /**
          * Answer an authorization prompt (credentials, an MFA code)
-         * @description Sends the owner's values for the prompt the state names. The state is single use: the answer is the next step with a new state, or the connection once authorized. Any error ends the flow; begin again. Owner session only, with the binding cookie of begin.
+         * @description Sends the owner's values for the prompt the state names. The state is single use: the answer is the next step with a new state, or the connection once authorized. Any error ends the flow; begin again: 422 when the provider refused the values (a wrong password or code), 429 with Retry-After while it limits sign-ins, 503 when the provider or its sidecar is unavailable. Owner session only, with the binding cookie of begin.
          */
         post: operations["continueProviderAuth"];
         delete?: never;
@@ -1855,7 +1855,7 @@ export interface paths {
         };
         /**
          * OAuth redirect target; completes the authorization and redirects to the UI
-         * @description Authorized by the signed, single-use `state` and the browser-binding cookie, not by the session. Always answers 303 to /connections?connected=<provider> or /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable. HEAD answers 204 without side effects. A provider without a connector is 404.
+         * @description Authorized by the signed, single-use `state` and the browser-binding cookie, not by the session. Always answers 303 to /connections?connected=<provider> or /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable&provider=<provider>. HEAD answers 204 without side effects. A provider without a connector is 404.
          */
         get: operations["oauthCallback"];
         put?: never;
@@ -5721,6 +5721,7 @@ export interface operations {
             403: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
         };
     };
