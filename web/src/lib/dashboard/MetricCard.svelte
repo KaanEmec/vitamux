@@ -11,7 +11,7 @@
 	import Chip from '../ui/Chip.svelte';
 	import { metricLook } from '../ui/metric.ts';
 	import MetricTile from '../ui/MetricTile.svelte';
-	import { hoursMinutes, type CardView } from './summary.ts';
+	import type { CardView } from './summary.ts';
 
 	let {
 		code,
@@ -76,7 +76,7 @@
 
 		{#if view.stages}
 			{#await stack then { default: StageStack }}
-				<StageStack stages={view.stages} label="Time in each sleep stage" format={hoursMinutes} />
+				<StageStack stages={view.stages} label="Time in each sleep stage" />
 			{/await}
 		{/if}
 

@@ -6,13 +6,11 @@
 <script lang="ts">
 	import { api, type Schemas } from '../api/client.ts';
 	import { formatClock } from '../charts/scale.ts';
-	import { stageLabels, stageOrder } from '../charts/sleep.ts';
 	import { addDays } from '../data/format.ts';
 	import Chip from '../ui/Chip.svelte';
 	import MetricTile from '../ui/MetricTile.svelte';
-	import { providerName } from '../views/format.ts';
-	import { memberStages, nightSeconds, selectedSessions, type Night, type Session } from '../views/sleep.ts';
-	import { hoursMinutes } from './summary.ts';
+	import { hm, providerName } from '../views/format.ts';
+	import { memberStages, nightSeconds, selectedSessions, stageAxis, stageSeconds, type Night, type Session } from '../views/sleep.ts';
 
 	let { day, mean }: { day: string; /** The 30-night mean of time asleep, in seconds. */ mean?: number } = $props();
 
@@ -42,11 +40,8 @@
 
 	const seconds = $derived(night ? nightSeconds(night) : {});
 	const source = $derived(night?.members.find((m) => m.selected)?.provider);
-	const staged = $derived(night ? selectedSessions(night, new Map(sessions.map((s) => [s.id, s]))).filter((s) => s.stages?.length) : []);
-	const rows = $derived(stageOrder.filter((st) => staged.some((s) => s.stages?.some((x) => x.stage === st))));
-	const stages = $derived(
-		(['deep', 'rem', 'light', 'awake'] as const).map((stage) => ({ stage, label: stageLabels[stage], seconds: seconds[`sleep_${stage}`] ?? 0 }))
-	);
+	const axis = $derived(stageAxis(night ? selectedSessions(night, new Map(sessions.map((s) => [s.id, s]))) : []));
+	const stages = $derived(night ? stageSeconds(night) : []);
 	const clock = (iso: string) => formatClock(Date.parse(iso), timezone);
 	const span = (e: Schemas['Span']) => `${clock(e.start)} → ${clock(e.end)}`;
 </script>
@@ -59,28 +54,21 @@
 			{#if source}<Chip {source}>{providerName(source)}</Chip>{/if}
 		</div>
 		<p class="total">
-			{hoursMinutes(seconds.sleep_total)}<span class="visually-hidden"> asleep</span>
+			{hm(seconds.sleep_total)}<span class="visually-hidden"> asleep</span>
 			{#if night.episode}<span class="span"><span class="visually-hidden">In bed </span>{span(night.episode)}</span>{/if}
 		</p>
-		{#if staged.length}
+		{#if axis.staged.length}
 			{#await hypnogram then { default: Hypnogram }}
-				<Hypnogram
-					stages={memberStages(staged)}
-					{rows}
-					from={Math.min(...staged.map((s) => Date.parse(s.start_at)))}
-					to={Math.max(...staged.map((s) => Date.parse(s.end_at)))}
-					label="Sleep stages of last night"
-					{timezone}
-				/>
+				<Hypnogram stages={memberStages(axis.staged)} rows={axis.rows} from={axis.from} to={axis.to} label="Sleep stages of last night" {timezone} />
 			{/await}
 		{/if}
 		{#if stages.some((s) => s.seconds > 0)}
 			{#await stack then { default: StageStack }}
-				<StageStack {stages} label="Time in each sleep stage last night" format={hoursMinutes} />
+				<StageStack {stages} label="Time in each sleep stage last night" />
 			{/await}
 		{/if}
 		<footer>
-			{#if mean != null}<span>30-night mean {hoursMinutes(mean)}</span>{/if}
+			{#if mean != null}<span>30-night mean {hm(mean)}</span>{/if}
 			<a href="/explore/sleep">Sleep view →</a>
 		</footer>
 	</section>

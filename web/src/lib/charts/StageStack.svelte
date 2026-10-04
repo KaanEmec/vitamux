@@ -4,24 +4,22 @@
 	points), so it stays tiny; widths are CSSOM (style: directives), never inline style attributes.
 -->
 <script lang="ts">
+	import { hm } from '../views/format.ts';
 	import { stageColor, stageLabels } from './sleep.ts';
 
 	let {
 		stages,
 		label,
-		format = (s: number) => `${Math.floor(s / 3600)}h ${String(Math.round((s % 3600) / 60)).padStart(2, '0')}m`,
 		legend = true
 	}: {
 		/** Seconds per stage, in display order. */
-		stages: { stage: string; seconds: number; label?: string }[];
+		stages: { stage: string; seconds: number }[];
 		/** Accessible name of the bar. */
 		label: string;
-		format?: (seconds: number) => string;
 		legend?: boolean;
 	} = $props();
 
 	const shown = $derived(stages.filter((s) => s.seconds > 0));
-	const name = (s: { stage: string; label?: string }) => s.label ?? stageLabels[s.stage] ?? s.stage;
 </script>
 
 <div class="stack" role="img" aria-label={label}>
@@ -30,7 +28,7 @@
 {#if legend}
 	<ul class="legend">
 		{#each shown as s (s.stage)}
-			<li><span class={['swatch', stageColor(s.stage)]}></span>{name(s)} <b>{format(s.seconds)}</b></li>
+			<li><span class={['swatch', stageColor(s.stage)]}></span>{stageLabels[s.stage] ?? s.stage} <b>{hm(s.seconds)}</b></li>
 		{/each}
 	</ul>
 {/if}

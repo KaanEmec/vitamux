@@ -1,7 +1,8 @@
 <!--
 	The frame every x/y chart of the kit draws in (ADR-0022): LayerChart's <ChartCore> and <Svg>
-	(lighter than <Chart>, whose extra marks the kit never uses) with our scales' domains, grid and axes (timezone-aware ticks), animated domain changes (none under
-	reduced motion), and one interaction model on top: pointer, touch scrub and keyboard all move
+	(lighter than <Chart>, whose extra marks the kit never uses) with our scales' domains, grid and
+	axes (timezone-aware ticks), animated domain changes (none under reduced motion), and one
+	interaction model on top: pointer, touch scrub and keyboard all move
 	one active point (arrows, Home/End, PageUp/PageDown, Enter opens it), shown by a crosshair and
 	the ChartTooltip card. A click pins the card so its actions can be used. Drag zooms (`view`,
 	shared with a BrushNavigator). Also a polite live region, the table fallback and the
@@ -17,8 +18,6 @@
 		right: number;
 		top: number;
 		bottom: number;
-		/** Visible x domain (after zoom). */
-		x: [number, number];
 		/** Index of the focused, hovered or pinned point, or -1. */
 		active: number;
 	}
@@ -264,7 +263,7 @@
 								{/each}
 								<clipPath id="{clipId}-clip"><rect x="-1" y="-6" width={context.width + 2} height={context.height + 7} /></clipPath>
 								<g clip-path="url(#{clipId}-clip)">
-									{@render draw({ sx: context.xScale, sy: context.yScale, left: 0, right: context.width, top: 0, bottom: context.height, x: xd, active })}
+									{@render draw({ sx: context.xScale, sy: context.yScale, left: 0, right: context.width, top: 0, bottom: context.height, active })}
 								</g>
 								<Axis placement="left" ticks={yTicks} format={yFormat} tickMarks={false} classes={{ tickLabel: 'axis' }} />
 								<Axis placement="bottom" ticks={xAxis.ticks} format={xAxis.format} tickMarks={false} classes={{ tickLabel: 'axis' }} />

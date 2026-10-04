@@ -5,10 +5,9 @@
 import type { Schemas } from '../api/client.ts';
 import type { icons } from './icons.ts';
 
-export type MetricHue = 'activity' | 'energy' | 'heart' | 'hrv' | 'sleep' | 'body' | 'bp' | 'respiratory' | 'other';
+type MetricHue = 'activity' | 'energy' | 'heart' | 'hrv' | 'sleep' | 'body' | 'bp' | 'respiratory' | 'other';
 
 export interface MetricLook {
-	hue: MetricHue;
 	/** `var(--metric-<hue>)`: strokes, fills, the tile icon. */
 	color: string;
 	/** `var(--metric-<hue>-tint)`: the icon tile ground. */
@@ -52,7 +51,7 @@ const iconOf: Record<MetricHue, keyof typeof icons> = {
 };
 
 /** The hue of a metric, card or group code, given its catalogue section when known. */
-export function metricHue(code: string, section?: Schemas['Metric']['section']): MetricHue {
+function metricHue(code: string, section?: Schemas['Metric']['section']): MetricHue {
 	if (code.startsWith('hrv_')) return 'hrv';
 	if (code.endsWith('_energy')) return 'energy';
 	return byCode[code] ?? (section && bySection[section]) ?? 'other';
@@ -60,5 +59,5 @@ export function metricHue(code: string, section?: Schemas['Metric']['section']):
 
 export function metricLook(code: string, section?: string): MetricLook {
 	const hue = metricHue(code, section);
-	return { hue, color: `var(--metric-${hue})`, tint: `var(--metric-${hue}-tint)`, icon: iconOf[hue] };
+	return { color: `var(--metric-${hue})`, tint: `var(--metric-${hue}-tint)`, icon: iconOf[hue] };
 }
