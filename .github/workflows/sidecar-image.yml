@@ -30,15 +30,18 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 2
+          fetch-depth: 0 # the push's first parent may be several commits back
       - id: list
         env:
           INPUT: ${{ inputs.sidecar }}
+          BEFORE: ${{ github.event.before }}
         run: |
           if [ -n "$INPUT" ]; then
             names=$INPUT
           else
-            names=$(git diff --name-only HEAD^ HEAD -- sidecars | cut -d/ -f2 | sort -u)
+            # Every commit of the push, not just the last one.
+            base=$BEFORE; git cat-file -e "$base^{commit}" 2>/dev/null || base=HEAD^
+            names=$(git diff --name-only "$base" HEAD -- sidecars | cut -d/ -f2 | sort -u)
           fi
           json=$(printf '%s\n' $names | grep -E '^[a-z][a-z0-9_-]*$' | while read -r n; do [ -d "sidecars/$n" ] && echo "$n"; done | jq -Rsc 'split("\n") | map(select(length > 0) | select(startswith("_") | not))')
           echo "names=${json:-[]}" >> "$GITHUB_OUTPUT"
