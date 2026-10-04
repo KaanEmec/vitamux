@@ -94,7 +94,7 @@ func TestBuiltinShape(t *testing.T) {
 		refs[b.Ref()] = true
 	}
 	hr, _ := LookupBuiltin("heart_rate")
-	if hr.Ref() != "builtin:heart_rate:1" || hr.Rule.Groups[0].ID != "chest_strap" || hr.Rule.Contexts[ContextWorkout] == nil {
+	if hr.Ref() != "builtin:heart_rate:2" || hr.Rule.Groups[0].ID != "chest_strap" || hr.Rule.Contexts[ContextWorkout] == nil {
 		t.Errorf("heart_rate: %+v", hr.Rule)
 	}
 	for _, code := range []string{"resting_heart_rate", "hrv_rmssd_nightly"} {
@@ -106,6 +106,20 @@ func TestBuiltinShape(t *testing.T) {
 	garmin := biBrand(provGarmin)
 	if len(garmin) != 2 || garmin[1].ID != "garmin_apple" || garmin[1].Match[0].Provider != provApple {
 		t.Errorf("a relaying brand is its direct group, then its Apple Health group: %+v", garmin)
+	}
+	watch := biAppleDevice("apple_watch", "Watch")[0].Match[0]
+	if watch.DeviceManufacturer != appleInc || watch.DeviceModel != "Watch" || watch.DeviceType != "" {
+		t.Errorf("apple_watch is Apple's manufacturer and model, not a device type: %+v", watch)
+	}
+	steps, _ := LookupBuiltin("steps")
+	if i, p := groupIndex(steps.Rule, "iphone"), groupIndex(steps.Rule, "phone"); i < 0 || i > p {
+		t.Errorf("steps: iphone (%d) comes before phone (%d)", i, p)
+	}
+	if groupIndex(hr.Rule, "whoop_apple") < 0 {
+		t.Error("heart_rate: WHOOP relayed through Apple Health has its group")
+	}
+	if g := biBrand(provGarmin)[1].Match; g[len(g)-1].DeviceManufacturer != "Garmin" {
+		t.Errorf("garmin_apple also takes Garmin devices in Apple Health: %+v", g)
 	}
 	fat, _ := LookupBuiltin("body_fat_ratio")
 	if fat.Rule.Follow != "weight" {
@@ -130,7 +144,11 @@ func TestDefaultsDocUpToDate(t *testing.T) {
 	if string(got) != DefaultsDoc() {
 		t.Errorf("%s is stale; run: go run ./internal/resolve/gen", DefaultsDocPath)
 	}
-	if !strings.Contains(string(got), "`builtin:sleep:1`") {
+	if !strings.Contains(string(got), "`builtin:sleep:2`") {
 		t.Error("doc lists the sleep family built-in")
 	}
+}
+
+func groupIndex(r Rule, id string) int {
+	return slices.IndexFunc(r.Groups, func(g Group) bool { return g.ID == id })
 }
