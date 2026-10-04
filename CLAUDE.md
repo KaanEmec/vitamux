@@ -31,7 +31,8 @@ Scope:
 - MVP connectors: Withings (official OAuth; blood pressure first), push ingestion, and file imports.
 - Apple Health bridge: required (epic E15).
 - Any source, including existing open-source collectors in other languages, plugs in through the connector contract: remote sidecars or push collectors (E17, v0.2.0).
-- Garmin collector, WHOOP (`@dofek/whoop`) and Open Wearables migration: deferred to E16.
+- Garmin Connect (unofficial, wraps `python-garminconnect`) and WHOOP (unofficial, wraps `@dofek/whoop`): sidecar epics E18 and E19 (v0.3.0). Wrapped upstreams follow their releases automatically, gated by tests ([J17.5](docs/plan/E17-sidecar-connectors/J17.5-upstream-tracking.md)).
+- The existing reference Garmin collector and the Open Wearables migration: deferred to E16.
 - Future sources (Ultrahuman, scales, BP devices, other official or unofficial adapters) must fit the same connector contract.
 - Single owner first. `user_id` exists on durable rows, but there are no orgs, billing, or role systems.
 - Not in scope: analytics suite, social, coaching, clinical portal.
@@ -86,6 +87,7 @@ Details are in [`docs/architecture/resolution.md`](docs/architecture/resolution.
 Support:
 
 - interactive auth bootstrap; protected token storage and refresh;
+- guided setup in the web panel for every source: OAuth app credentials, keys, sign-in and MFA, with no file edits or restarts beyond turning on an optional sidecar ([E20](docs/plan/E20-guided-setup/README.md));
 - incremental, manual, and correction syncs; bounded resumable backfill; idempotent replay;
 - rate limits, Retry-After, backoff, and jitter;
 - per-connection health;

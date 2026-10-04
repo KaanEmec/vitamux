@@ -27,7 +27,7 @@ A backend cannot read HealthKit, so it needs an iPhone app: a Swift package plus
 
 ## And Garmin, WHOOP, Oura?
 
-Not in v0.1. Garmin and WHOOP have no official API usable by self-hosters; they will come later as optional, replaceable adapters in their own containers ([sidecar mode](architecture/connectors.md#remote-sidecar-mode)), marked unofficial, and failing closed when the provider changes its API. Oura, Ultrahuman and others are on the [deferred list](architecture/project.md#deferred-features).
+Not in v0.1. Garmin and WHOOP have no official API usable by self-hosters; they are planned for v0.3.0 ([E18](plan/E18-garmin/README.md), [E19](plan/E19-whoop/README.md)) as optional, replaceable adapters in their own containers ([sidecar mode](architecture/connectors.md#remote-sidecar-mode)), marked unofficial, and failing closed when the provider changes its API. Oura, Ultrahuman and others are on the [deferred list](architecture/project.md#deferred-features).
 
 ## Why does a value come from one device and not another?
 

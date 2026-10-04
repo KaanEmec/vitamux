@@ -39,7 +39,10 @@ Conventions:
 | | **— MVP boundary (v0.1.0) —** | | |
 | [E15](E15-apple-health/README.md) | Apple Health Bridge (required) | v0.2.0 | E05, E07, E09, E11, G3; completes after G4 |
 | [E17](E17-sidecar-connectors/README.md) | Remote sidecar connectors and third-party collectors | v0.2.0 | E06, E07, E11, G4 |
-| [E16](E16-migration/README.md) | Reference installation and migration (**final, deferred**) | deploy | G5 |
+| [E18](E18-garmin/README.md) | Garmin Connect connector (unofficial sidecar) | v0.3.0 | E17, G5 |
+| [E19](E19-whoop/README.md) | WHOOP connector (unofficial sidecar) | v0.3.0 | E17, G5 |
+| [E20](E20-guided-setup/README.md) | Guided source setup in the web panel | v0.3.0 (Withings part may ship in v0.2.0) | E11, E17; E18, E19 for J20.4–J20.5 |
+| [E16](E16-migration/README.md) | Reference installation and migration (**final, deferred**) | deploy | G6 |
 
 ```mermaid
 flowchart LR
@@ -51,8 +54,12 @@ flowchart LR
   E06 & E09 --> E10 --> E11
   E10 --> E12
   E08 & E11 & E12 --> E13 --> E14
-  E14 -->|G4| E15 -->|G5| E16
+  E14 -->|G4| E15 -->|G5| E18 & E19
   E14 -->|G4| E17 --> E15
+  E17 --> E18 & E19
+  E11 --> E20
+  E18 & E19 --> E20
+  E18 & E19 & E20 -->|G6| E16
 ```
 
 ## Gates
@@ -64,7 +71,8 @@ flowchart LR
 | G2 | Rule schema v1 and sleep-date convention accepted | J09.1 | J09.2+, E11 rule UI |
 | G3 | Ingest batch schema v1 frozen | J05.1 | E15 contract work |
 | G4 | v0.1.0 released | J14.5 | E15 completion |
-| G5 | v0.2.0 released (E15 and E17) | J15.9 | E16 |
+| G5 | v0.2.0 released (E15 and E17) | J15.9 | E18 and E19 releases |
+| G6 | v0.3.0 released (E18, E19 and E20) | J19.7 | E16 |
 
 ## Parallel streams
 
@@ -75,3 +83,5 @@ flowchart LR
 5. E15 jobs J15.1, J15.3 and J15.4 can start after G3.
 6. J13.1 (threat model) can start early. The rest of E13 runs once features exist.
 7. J17.1 can start once E06 and E07 are done. E17 runs alongside E15.
+8. J18.1 and J19.1 (upstream and API verification) can start at any time. The rest of E18 and E19 follows J17.3; they run in parallel with each other and with E15.
+9. J20.1–J20.3 (setup ADR, app-credential store, Withings wizard) can start now. J20.4 follows J17.2, and J20.5 follows J18.2 and J19.2.
