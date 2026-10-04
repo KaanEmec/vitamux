@@ -22,8 +22,9 @@ const (
 
 // Reasons the extensions add.
 const (
-	ReasonNotWorn    = "not_worn"     // E3: the group's rows fall only where its device was not worn
-	ReasonNoFullSpan = "no_full_span" // E2: no run of covered buckets as long as within_source.span
+	ReasonNotWorn     = "not_worn"     // E3: the group's rows fall only where its device was not worn
+	ReasonNotReported = "not_reported" // E3: the group's worn devices do not report the metric
+	ReasonNoFullSpan  = "no_full_span" // E2: no run of covered buckets as long as within_source.span
 )
 
 // opFollow is the internal op of a follower that takes the leader's group (E5).
@@ -149,10 +150,18 @@ func (gv *GroupValue) windowStatistic(ws WithinSource, keys []int64, means []flo
 
 // ---- E3 wear gate
 
-// WearLookback is how far before a window callers load the wear metric. A device with no wear
-// rows in the supplied series counts as one that never reports it and is exempt, so a watch
-// left off for a whole day still needs its earlier wear rows in the series to be gated.
+// WearLookback is how far before a window callers load the wear metric and Series[Reporting].
+// A device with no wear rows in the supplied series counts as one that never reports it and is
+// exempt, so a watch left off for a whole day still needs its earlier wear rows in the series
+// to be gated.
 const WearLookback = 30 * 24 * time.Hour
+
+// Reporting is the Series entry of the sources that report the rule's metric, under
+// quality.require_wear: one Input (Source and Start) per source and day with rows of the metric,
+// loaded like the wear series. A worn device stands for its group only when it reports the
+// metric there or has rows in the series, so a band that never counts steps cannot make a
+// group's steps a measured 0.
+const Reporting = "@reporting"
 
 // wearKey identifies a device for the wear gate: the device row when known, else the source.
 type wearKey struct {
@@ -168,19 +177,28 @@ func wearKeyOf(src Source) wearKey {
 }
 
 // wearIndex is the wear series of quality.require_wear: per device the instants of its wear
-// rows in order, and per rule group the devices whose wear rows the rule assigns to it.
+// rows in order, per rule group the devices whose wear rows the rule assigns to it and that
+// report the metric, and the groups with a worn device that does not.
 type wearIndex struct {
 	at     map[wearKey][]int64
 	groups []map[wearKey]bool
+	silent []bool
 }
 
 // newWear indexes s[quality.require_wear]; nil without the gate. Manual and implausible rows
-// are not wear. A row counts at its start.
-func (r *Rule) newWear(s Series) *wearIndex {
+// are not wear. A row counts at its start. A device reports the metric when it has a row of
+// sp's codes or an entry in s[Reporting].
+func (r *Rule) newWear(sp spec, s Series) *wearIndex {
 	if r.Quality == nil || r.Quality.RequireWear == "" {
 		return nil
 	}
-	wi := &wearIndex{at: map[wearKey][]int64{}, groups: make([]map[wearKey]bool, len(r.Groups))}
+	reports := map[wearKey]bool{}
+	for _, code := range append([]string{Reporting}, sp.codes...) {
+		for _, x := range s[code] {
+			reports[wearKeyOf(x.Source)] = true
+		}
+	}
+	wi := &wearIndex{at: map[wearKey][]int64{}, groups: make([]map[wearKey]bool, len(r.Groups)), silent: make([]bool, len(r.Groups))}
 	assigned := map[Source]int{}
 	for _, x := range s[r.Quality.RequireWear] {
 		if x.Source.Manual || x.Flags&(normalize.FlagManualEntry|normalize.FlagImplausible) != 0 {
@@ -193,7 +211,11 @@ func (r *Rule) newWear(s Series) *wearIndex {
 			g = r.Assign(x.Source).Group
 			assigned[x.Source] = g
 		}
-		if g >= 0 {
+		switch {
+		case g < 0:
+		case !reports[k]:
+			wi.silent[g] = true
+		default:
 			if wi.groups[g] == nil {
 				wi.groups[g] = map[wearKey]bool{}
 			}
@@ -204,6 +226,21 @@ func (r *Rule) newWear(s Series) *wearIndex {
 		slices.Sort(ts)
 	}
 	return wi
+}
+
+// without returns wi with the groups in skip left without devices (exempt), or wi itself.
+func (wi *wearIndex) without(skip []bool) *wearIndex {
+	if wi == nil || !slices.Contains(skip, true) {
+		return wi
+	}
+	out := *wi
+	out.groups = slices.Clone(wi.groups)
+	for g, ok := range skip {
+		if ok {
+			out.groups[g] = nil
+		}
+	}
+	return &out
 }
 
 // counts reports whether a row of src in the bucket [b, b+base) counts: always without the
@@ -223,11 +260,13 @@ func wornIn(ts []int64, b time.Time, base time.Duration) bool {
 }
 
 // applyWear finishes a gated group value. The group's devices are those of its rows plus those
-// whose wear rows the rule assigns to it; without one that reports wear the group is exempt
-// (and skips the additive coverage gate). Otherwise WornBuckets counts the elapsed base buckets
-// in which one of them was worn. For additive metrics coverage becomes worn / elapsed buckets,
-// a group worn without rows is a valid 0 (worn, no steps) instead of missing, and a daily value
-// without any worn bucket is not_worn. Rows only in unworn buckets leave the group not_worn.
+// whose wear rows the rule assigns to it and that report the metric; without one that reports
+// wear the group is exempt (and skips the additive coverage gate), and without rows it is
+// no_data, not_reported when a worn device of the group does not report the metric. Otherwise
+// WornBuckets counts the elapsed base buckets in which one of them was worn. For additive
+// metrics coverage becomes worn / elapsed buckets, a group worn without rows is a valid 0
+// (worn, no steps) instead of missing, and a daily value without any worn bucket is not_worn.
+// Rows only in unworn buckets leave the group not_worn.
 func (gv *GroupValue) applyWear(wi *wearIndex, sp spec, w Window, in []Input, base time.Duration, now time.Time) {
 	var devs [][]int64
 	seen := map[wearKey]bool{}
@@ -247,6 +286,9 @@ func (gv *GroupValue) applyWear(wi *wearIndex, sp spec, w Window, in []Input, ba
 	}
 	if len(devs) == 0 {
 		gv.WearExempt = true
+		if gv.Count == 0 && gv.Reason == "" && gv.Group >= 0 && gv.Group < len(wi.silent) && wi.silent[gv.Group] {
+			gv.Reason = ReasonNotReported
+		}
 		return
 	}
 	first, end, n := elapsedSpan(w, base, now)
@@ -330,10 +372,13 @@ func followPos(leader string, groups []GroupValue) int {
 // composeDay resolves a local_day from its local hours (walked from the day's start, so DST
 // days have 23 or 25). Each hour resolves on its own, with its context, wear gate and coverage
 // gate, compose.op as the hourly pick, and no daily values; the day is the sum of the hour
-// values and Hours keeps every hour. The day's groups add up their hours: the best status of
-// any hour (selected, then fallback_unused, below_quality, stale, no_data), the summed value
-// (that group's own day) and coverage weighted by elapsed time. A day picked from more than one
-// group warns composite_exceeds_any_source when it is larger than every group's own day.
+// values and Hours keeps every hour. A group with only daily values that day is skipped in
+// every hour (no_data, only_daily_total), never a worn 0. The day's groups add up their hours:
+// the best status of any hour (selected, then fallback_unused, below_quality, stale, no_data),
+// the summed value (that group's own day) and coverage weighted by elapsed time. A day picked
+// from more than one group warns composite_exceeds_any_source when it is larger than every
+// group's own day. A daily total is never added to hours: when a daily-only group with a valid
+// value ranks above every group that supplied an hour, the day is that value (dailyDay).
 func (r *Rule) composeDay(sp spec, w Window, s Series, opt Options, wear *wearIndex) (WindowResult, error) {
 	h := *r
 	h.Compose, h.Strategy = nil, Strategy{Op: OpFirstAvailable}
@@ -348,13 +393,20 @@ func (r *Rule) composeDay(sp spec, w Window, s Series, opt Options, wear *wearIn
 	for i := range day {
 		day[i] = GroupValue{Group: i, ID: r.Groups[i].ID, Status: StatusNoData, WearExempt: true}
 	}
+	rows, excluded, unmatched, counts := r.windowRows(sp, w, s)
+	dailyOnly := make([]bool, len(r.Groups))
+	for g := range rows {
+		dailyOnly[g] = onlyDaily(rows[g].kept)
+	}
+	hwear := wear.without(dailyOnly)
+	supplied := make([]bool, len(r.Groups))
 	var elapsed time.Duration
 	picked := map[string]bool{}
 	seen := map[WindowWarning]bool{}
 	valued, direct := 0, true
 	for t := w.Start; t.Before(w.End); t = t.Add(time.Hour) {
 		hw := Window{Kind: catalog.WindowHour, Start: t, End: timeMin(t.Add(time.Hour), w.End), Date: w.Date, Key: t.UTC().Format(time.RFC3339)}
-		hr, err := h.resolveWindow(sp, hw, s, hopt, wear)
+		hr, err := h.resolveWindow(sp, hw, s, hopt, hwear)
 		if err != nil {
 			return WindowResult{}, err
 		}
@@ -370,6 +422,7 @@ func (r *Rule) composeDay(sp spec, w Window, s Series, opt Options, wear *wearIn
 			if g.Group >= 0 {
 				mergeHour(&day[g.Group], g)
 				cov[g.Group] += g.Coverage * float64(span)
+				supplied[g.Group] = supplied[g.Group] || g.Status == StatusSelected
 			}
 		}
 		if hr.Status != ResultNoData {
@@ -395,6 +448,9 @@ func (r *Rule) composeDay(sp spec, w Window, s Series, opt Options, wear *wearIn
 		slices.Sort(day[i].Refs)
 		day[i].Refs = slices.Compact(day[i].Refs)
 		most = max(most, day[i].Value)
+		if dailyOnly[i] && day[i].Status == StatusNoData {
+			day[i].Reason = ReasonOnlyDailyTotal
+		}
 	}
 	switch {
 	case valued == 0:
@@ -412,18 +468,74 @@ func (r *Rule) composeDay(sp spec, w Window, s Series, opt Options, wear *wearIn
 	if len(picked) > 1 && res.Value > most+1e-9 {
 		res.Warnings = append(res.Warnings, WindowWarning{Code: WarnCompositeExceeds})
 	}
+	if err := r.dailyDay(sp, w, rows, dailyOnly, supplied, day, &res, opt.Now, wear); err != nil {
+		return WindowResult{}, err
+	}
 	if res.Selected != "" && opt.Previous != "" && res.Selected != opt.Previous && r.selectionOnly() {
 		res.Warnings = append(res.Warnings, WindowWarning{Code: WarnDefinitionChanged, Group: res.Selected})
 	}
 	for _, i := range r.Ladder("", -1) {
 		res.Groups = append(res.Groups, day[i])
 	}
-	_, excluded, unmatched, counts := r.windowRows(sp, w, s)
 	res.Groups = append(res.Groups, sourceEntries(excluded, StatusExcluded)...)
 	res.Groups = append(res.Groups, sourceEntries(unmatched, StatusNotInRule)...)
 	res.Inputs = counts
 	res.Partial = !opt.Now.IsZero() && w.Partial(opt.Now)
 	return res, nil
+}
+
+// onlyDaily reports whether a group's rows are all daily values (and there is one).
+func onlyDaily(s Series) bool {
+	n := 0
+	for _, in := range s {
+		for _, x := range in {
+			if x.Kind != catalog.DailyValue {
+				return false
+			}
+			n++
+		}
+	}
+	return n > 0
+}
+
+// dailyDay makes a composed day the daily value of the first daily-only group in ladder order
+// with a valid value, when it ranks above every group that supplied an hour: direct when it is
+// the first group, else fallback. The hours are dropped (the day is not their sum) and the
+// groups that supplied them become fallback_unused.
+func (r *Rule) dailyDay(sp spec, w Window, rows []groupRows, dailyOnly, supplied []bool, day []GroupValue, res *WindowResult, now time.Time, wear *wearIndex) error {
+	ladder := r.Ladder("", -1)
+	for pos, g := range ladder {
+		if supplied[g] {
+			return nil
+		}
+		if !dailyOnly[g] {
+			continue
+		}
+		gv, err := r.aggregate(sp, w, g, rows[g].kept, now, wear)
+		if err != nil {
+			return err
+		}
+		r.gateGroup(sp, w, &gv, rows[g], now)
+		if gv.Status != StatusValid {
+			continue
+		}
+		for i := range day {
+			if day[i].Status == StatusSelected {
+				day[i].Status = StatusUnused
+			}
+		}
+		gv.Status = StatusSelected
+		day[g] = gv
+		res.Value, res.Selected, res.Status, res.Hours, res.Warnings = gv.Value, gv.ID, ResultDirect, nil, nil
+		if pos > 0 {
+			res.Status = ResultFallback
+		}
+		for _, a := range ladder[:pos] {
+			res.Warnings = append(res.Warnings, WindowWarning{Code: WarnPreferredUnavailable, Group: r.Groups[a].ID})
+		}
+		return nil
+	}
+	return nil
 }
 
 // pickMax names the group behind an hourly max (compose op max): the first group in ladder

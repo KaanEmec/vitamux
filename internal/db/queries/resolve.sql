@@ -99,3 +99,27 @@ LEFT JOIN devices d ON d.id = b.device_id
 LEFT JOIN data_origins o ON o.id = b.origin_id
 WHERE p.code <> 'manual'
 ORDER BY 1;
+
+-- name: ResolveReportingDays :many
+-- The sources that report a metric (E3 capability): the UTC days in which each source has an
+-- active row of the metrics (any kind, daily values included) starting from from_at and before
+-- to_at. A day is the bin of its rows' starts, so split loads return the same days.
+SELECT b.day::timestamptz AS day, p.code AS provider, b.connection_id, b.device_id,
+  COALESCE(d.device_type, '')::text AS device_type, COALESCE(d.model, '')::text AS device_model,
+  COALESCE(d.manufacturer, '')::text AS device_manufacturer,
+  COALESCE(o.origin_key, '')::text AS origin_key, COALESCE(o.name, '')::text AS origin_name,
+  (o.relayed_provider_id IS NOT NULL)::boolean AS relayed
+FROM (
+  SELECT date_bin('1 day', x.start_at, TIMESTAMPTZ '2000-01-01 00:00:00+00') AS day,
+    x.provider_id, x.connection_id, x.device_id, x.origin_id
+  FROM measurements x
+  WHERE x.user_id = @user_id
+    AND x.metric_id = ANY(@metric_ids::smallint[])
+    AND x.start_at >= @from_at AND x.start_at < @to_at
+    AND x.superseded_at IS NULL AND x.deleted_at IS NULL
+  GROUP BY 1, 2, 3, 4, 5
+) b
+JOIN providers p ON p.id = b.provider_id
+LEFT JOIN devices d ON d.id = b.device_id
+LEFT JOIN data_origins o ON o.id = b.origin_id
+ORDER BY 1, b.connection_id, b.device_id, b.origin_id;

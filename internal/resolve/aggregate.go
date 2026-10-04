@@ -132,7 +132,7 @@ func (r *Rule) Aggregate(w Window, group int, s Series, now time.Time) (GroupVal
 	if err != nil {
 		return GroupValue{}, err
 	}
-	return r.aggregate(sp, w, group, s, now, r.newWear(s))
+	return r.aggregate(sp, w, group, s, now, r.newWear(sp, s))
 }
 
 func (r *Rule) aggregate(sp spec, w Window, group int, s Series, now time.Time, wear *wearIndex) (GroupValue, error) {

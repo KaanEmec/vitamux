@@ -117,10 +117,10 @@ type srcIDs struct {
 
 // results resolves a non-sleep metric, one local date at a time. Each date sees exactly the
 // rows a request for that date alone loads (the date padded by a day on both sides, a year back
-// for latest windows, WearLookback more for the wear series), so its results do not depend on
-// the requested range and the cache (cache.go) can store them per date. A selection-only metric
-// also resolves the day before the range, whose last window is the first one's previous window
-// for definition_changed.
+// for latest windows, WearLookback more for the wear series and Series[Reporting]), so its
+// results do not depend on the requested range and the cache (cache.go) can store them per
+// date. A selection-only metric also resolves the day before the range, whose last window is
+// the first one's previous window for definition_changed.
 func (l *loader) results(ctx context.Context, v Version, ovs []Override) ([][]Result, error) {
 	r, req := v.Rule, l.req
 	sp, err := r.spec()
@@ -157,7 +157,11 @@ func (l *loader) results(ctx context.Context, v Version, ovs []Override) ([][]Re
 		wearCode = q.RequireWear
 		wear = &slider{end: end, load: func(ctx context.Context, from, to time.Time) (Series, error) {
 			in, err := l.loadWear(ctx, r, wearCode, from, to)
-			return Series{wearCode: in}, err
+			if err != nil {
+				return nil, err
+			}
+			rep, err := l.loadReporting(ctx, sp.codes, from, to)
+			return Series{wearCode: in, Reporting: rep}, err
 		}}
 	}
 
@@ -182,7 +186,7 @@ func (l *loader) results(ctx context.Context, v Version, ovs []Override) ([][]Re
 			if err != nil {
 				return nil, err
 			}
-			sub[wearCode] = w[wearCode]
+			sub[wearCode], sub[Reporting] = w[wearCode], w[Reporting]
 		}
 		ws, err := l.windows(r, sub, sp, d)
 		if err != nil {
@@ -586,6 +590,24 @@ func (l *loader) loadWear(ctx context.Context, r *Rule, code string, from, to ti
 	out := make([]Input, len(rows))
 	for i, row := range rows {
 		out[i] = Input{Kind: catalog.Sample, Start: l.local(row.Bucket),
+			Source: sourceOf(row.Provider, row.ConnectionID, row.DeviceID, row.DeviceType, row.DeviceModel, row.DeviceManufacturer, row.OriginKey, row.OriginName, row.Relayed, 0)}
+	}
+	return out, nil
+}
+
+// loadReporting loads Series[Reporting] from from to to: per source the days with a row of codes.
+func (l *loader) loadReporting(ctx context.Context, codes []string, from, to time.Time) ([]Input, error) {
+	ids, err := l.metricIDs(ctx, codes)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := l.q.ResolveReportingDays(ctx, dbq.ResolveReportingDaysParams{UserID: l.req.UserID, MetricIds: ids, FromAt: from, ToAt: to})
+	if err != nil {
+		return nil, db.MapErr(err)
+	}
+	out := make([]Input, len(rows))
+	for i, row := range rows {
+		out[i] = Input{Kind: catalog.DailyValue, Start: l.local(row.Day),
 			Source: sourceOf(row.Provider, row.ConnectionID, row.DeviceID, row.DeviceType, row.DeviceModel, row.DeviceManufacturer, row.OriginKey, row.OriginName, row.Relayed, 0)}
 	}
 	return out, nil
