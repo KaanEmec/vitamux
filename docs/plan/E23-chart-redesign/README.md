@@ -1,6 +1,6 @@
 # E23 Charts and metric visualisation redesign (v0.3.0)
 
-Release: v0.3.0 · Status: todo · Depends on: E21 · [Plan index](../README.md)
+Release: v0.3.0 · Status: in progress · Depends on: E21 · [Plan index](../README.md)
 Read first: [frontend#design-system](../../architecture/frontend.md#design-system), [frontend#chart-grammar](../../architecture/frontend.md#chart-grammar), [ADR-0020](../../adr/0020-chart-kit.md)
 
 **Objective:** Make the charts and metric screens the best part of the panel. Every metric gets its own hue and icon tile. Charts are richer and interactive: a crosshair tooltip, a period switch that animates, stat tiles that drive the chart, a brush navigator, and per-source overlays. The data rules stay the same: values are explainable, gaps stay gaps, and nothing is graded.
