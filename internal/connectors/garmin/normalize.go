@@ -51,7 +51,7 @@ var streams = map[string]struct {
 	StreamHRV:               {2, hrv},
 	StreamRespiration:       {2, respiration},
 	StreamSpO2:              {2, spo2},
-	StreamTraining:          {3, training},
+	StreamTraining:          {4, training},
 	StreamBodyComposition:   {1, bodyComposition},
 	StreamBloodPressure:     {1, bloodPressure},
 	StreamActivities:        {1, activity},
@@ -569,7 +569,8 @@ func training(b *builder, resp []byte) error {
 // maxMetrics maps the generic (running) VO2max. Garmin gives the owner's calendar date only, and
 // no single instant falls on one date for every offset from -12 to +14 h, so the sample sits at
 // 12:00 of that date with a zero offset: its local date is the calendar date for every owner.
-// The cycling VO2max is another method and is not mapped.
+// The response names no device, so the sample is the wearable's. The cycling VO2max is another
+// method and is not mapped.
 func maxMetrics(b *builder, raw []byte) error {
 	var r struct {
 		Generic *struct {
@@ -593,7 +594,7 @@ func maxMetrics(b *builder, raw []byte) error {
 		return drift(b.stream, "[].generic.calendarDate")
 	}
 	b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: "vo2max", Kind: catalog.Sample,
-		Start: d.Add(12 * time.Hour), Zone: normalize.Zone{OffsetMin: new(int16)}, Value: *v, Unit: "mL/kg/min",
+		Start: d.Add(12 * time.Hour), Zone: normalize.Zone{OffsetMin: new(int16)}, Value: *v, Unit: "mL/kg/min", Device: b.wearable(),
 		Key: normalize.Key{RecordType: "maxmet", ExternalID: r.Generic.CalendarDate, Component: "generic"}})
 	return nil
 }
