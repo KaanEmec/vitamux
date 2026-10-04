@@ -47,26 +47,28 @@
 </svg>
 
 <style>
+	/* Drawn in the metric hue when a parent sets --metric (lib/ui/metric.ts). */
 	.spark {
+		--hue: var(--metric, var(--color-accent));
 		display: block;
 		width: 100%;
 		height: 3rem;
 	}
 	.band {
-		fill: var(--chart-band);
+		fill: color-mix(in srgb, var(--hue) 12%, transparent);
 	}
 	.line {
 		fill: none;
-		stroke: var(--color-accent);
+		stroke: var(--hue);
 		stroke-width: 2;
 		stroke-linejoin: round;
 		vector-effect: non-scaling-stroke;
 	}
 	.bar {
-		fill: var(--chart-muted);
+		fill: color-mix(in srgb, var(--hue) 40%, transparent);
 	}
 	.bar.last {
-		fill: var(--color-accent);
+		fill: var(--hue);
 	}
 	.mean {
 		stroke: var(--color-text-muted);

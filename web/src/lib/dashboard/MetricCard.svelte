@@ -10,10 +10,13 @@
 	import { stageColor } from '../charts/sleep.ts';
 	import { metricHref } from '../nav.ts';
 	import Chip from '../ui/Chip.svelte';
+	import { metricLook } from '../ui/metric.ts';
+	import MetricTile from '../ui/MetricTile.svelte';
 	import { hoursMinutes, type CardView } from './summary.ts';
 
 	let {
 		code,
+		section,
 		label,
 		size,
 		view,
@@ -24,6 +27,8 @@
 		...rest
 	}: {
 		code: string;
+		/** Catalogue section (GET /metrics), which picks the hue and icon. */
+		section?: string;
 		label: string;
 		size: 'S' | 'M' | 'L';
 		view: CardView | null;
@@ -41,9 +46,19 @@
 	const shown = $derived(view?.chips.slice(0, 3) ?? []);
 </script>
 
-<article {...rest} class="card" class:m={size === 'M'} class:l={size === 'L'} class:edit class:over aria-labelledby={titleId}>
+<article
+	{...rest}
+	class="card"
+	class:m={size === 'M'}
+	class:l={size === 'L'}
+	class:edit
+	class:over
+	style:--metric={metricLook(code, section).color}
+	aria-labelledby={titleId}
+>
 	{#if edit}{@render tools?.()}{/if}
 	<header>
+		<MetricTile {code} {section} size="sm" />
 		<h3 id={titleId}>
 			{#if edit}{label}{:else}<a href={metricHref(code)}>{label}</a>{/if}
 		</h3>
@@ -112,7 +127,7 @@
 	header {
 		display: flex;
 		align-items: center;
-		gap: var(--space-2);
+		gap: var(--space-3);
 	}
 	h3 {
 		flex: 1;
@@ -134,7 +149,7 @@
 		border-radius: inherit;
 	}
 	article:has(h3 a:hover) {
-		border-color: var(--color-border-strong);
+		border-color: color-mix(in srgb, var(--metric) 55%, var(--color-border));
 	}
 	h3 a:focus-visible {
 		outline: none;
@@ -154,13 +169,9 @@
 		display: flex;
 		align-items: baseline;
 		gap: var(--space-2);
-		font-size: var(--text-xl);
+		font-size: var(--text-2xl);
 		font-weight: 600;
 		letter-spacing: var(--tracking-tight);
-	}
-	.l .value,
-	.m .value {
-		font-size: var(--text-2xl);
 	}
 	.unit,
 	.sub {

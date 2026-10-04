@@ -1,7 +1,8 @@
-/* Design tokens (design system v2, docs/architecture/frontend.md#design-system). Components use
-   these custom properties, never raw colours or sizes. Every colour is light-dark(light, dark):
-   the theme follows prefers-color-scheme unless <html data-theme="light|dark"> overrides it
-   (lib/theme.svelte.ts). Colour describes data state and source, never whether a value is good. */
+/* Design tokens (design system v3, dark first; docs/architecture/frontend.md#design-system).
+   Components use these custom properties, never raw colours or sizes. Every colour is
+   light-dark(light, dark): the theme follows prefers-color-scheme unless <html data-theme="light|dark">
+   overrides it (lib/prefs.svelte.ts). Colour names a metric, a source or a data state, never
+   whether a value is good. */
 :root {
 	color-scheme: light dark;
 
@@ -17,6 +18,7 @@
 	--text-display: 2.5rem;
 	--leading: 1.5;
 	--tracking-tight: -0.02em;
+	--tracking-label: 0.08em;
 
 	--space-1: 0.25rem;
 	--space-2: 0.5rem;
@@ -34,74 +36,102 @@
 
 	--control-h: 2.75rem;
 	--control-h-sm: 2rem;
+	--tile-size-sm: 2rem;
+	--tile-size: 2.25rem;
+	--tile-size-lg: 2.5rem;
 	--sidebar-width: 15rem;
 	--sidebar-collapsed: 4.5rem;
 	--content-max: 80rem;
 
-	/* Surfaces and text */
-	--color-bg: light-dark(#f4f7f7, #0a0f10);
-	--color-sidebar: light-dark(#fbfcfc, #0c1314);
-	--color-surface: light-dark(#ffffff, #111819);
-	--color-surface-2: light-dark(#e7eeee, #1a2627);
-	--color-inset: light-dark(#f4f7f7, #0d1415);
-	--color-selected: light-dark(#dfe8e8, #1f2d2e);
-	--color-border: light-dark(#dce4e4, #1d2a2b);
-	--color-border-strong: light-dark(#c3cfcf, #2a3a3b);
-	--color-text: light-dark(#0e1a1b, #e6eeee);
-	--color-text-muted: light-dark(#4f6363, #93a7a7);
-	--color-text-faint: light-dark(#5f7373, #6f8585);
+	/* Surfaces and text. A card fades from --color-surface-raised to --color-surface (--card-bg). */
+	--color-bg: light-dark(#f5f6f7, #0a0b0d);
+	--color-sidebar: light-dark(#fbfbfc, #070809);
+	--color-surface: light-dark(#ffffff, #111316);
+	--color-surface-raised: light-dark(#ffffff, #16191c);
+	--color-surface-2: light-dark(#eceef0, #1b1f23);
+	--color-inset: light-dark(#f2f3f5, #0d0f11);
+	--color-selected: light-dark(#e4e7ea, #1f2328);
+	--color-border: light-dark(#e1e4e8, #23272c);
+	--color-border-strong: light-dark(#c8cdd2, #2c3137);
+	--color-text: light-dark(#0f1214, #eef1f3);
+	--color-text-muted: light-dark(#4f5861, #a1a9b1);
+	--color-text-faint: light-dark(#5f6873, #868f97);
 	--color-accent: light-dark(#0f766e, #2dd4bf);
 	--color-accent-hover: light-dark(#115e59, #5eead4);
 	--color-accent-soft: light-dark(#e0f2ef, #0f2321);
 	--color-on-accent: light-dark(#ffffff, #042f2c);
 	--color-link: light-dark(#0f766e, #5eead4);
 	--color-focus: light-dark(#0f766e, #5eead4);
+	/* The selected period pill: a light pill on the dark track (white on grey in the light theme). */
+	--color-pill: light-dark(#ffffff, #eef1f3);
+	--color-on-pill: light-dark(#0f1214, #0a0b0d);
+	--card-bg: linear-gradient(180deg, var(--color-surface-raised), var(--color-surface));
 
 	/* Feedback for the UI itself (errors, notices, connection health). Always paired with a shape. */
 	--color-ok: light-dark(#0f766e, #5eead4);
 	--color-warn: light-dark(#8a4b00, #f2b54a);
-	--color-warn-bg: light-dark(#fdf0db, #2a2212);
+	--color-warn-bg: light-dark(#fdf0db, #261f10);
 	--color-error: light-dark(#b42318, #fca5a5);
-	--color-error-bg: light-dark(#fdecea, #2a1414);
+	--color-error-bg: light-dark(#fdecea, #261314);
 	--color-info: light-dark(#1d4ed8, #7cb4ff);
-	--color-info-bg: light-dark(#e8eefc, #142033);
-	--color-neutral: light-dark(#5f7373, #9aa9a9);
+	--color-info-bg: light-dark(#e8eefc, #121a24);
+	--color-neutral: light-dark(#5f6873, #9aa3ab);
 	--color-draft: light-dark(#5b3fc4, #d9ccff);
-	--color-draft-bg: light-dark(#eee8ff, #2b2550);
+	--color-draft-bg: light-dark(#eee8ff, #241f42);
 
 	/* Data status of a resolved value: each also has a shape and a word (lib/ui/status.ts). */
 	--status-direct: var(--color-accent);
 	--status-fallback: light-dark(#b45309, #f2b54a);
 	--status-calculated: light-dark(#2563eb, #7cb4ff);
 	--status-overridden: light-dark(#7c3aed, #b99cff);
-	--status-partial: light-dark(#5f7373, #9aa9a9);
-	--status-none: light-dark(#8a9c9c, #6f8585);
+	--status-partial: light-dark(#5f6873, #9aa3ab);
+	--status-none: light-dark(#868f97, #6b737b);
 
-	/* Stable per-source colours (lib/charts/colors.ts maps provider codes to these). */
-	--src-apple-health: light-dark(#c2255c, #ff8fb3);
-	--src-whoop: light-dark(#c2410c, #ffa463);
-	--src-withings: light-dark(#4d7c0f, #a3e635);
-	--src-garmin: light-dark(#4338ca, #8c9eff);
-	--src-manual: light-dark(#475569, #c9d6d6);
+	/* Metric hues by catalogue section (lib/ui/metric.ts), each with the tint of its icon tile. */
+	--metric-activity: light-dark(#047857, #34d399);
+	--metric-activity-tint: light-dark(#d1fae5, #0f2a20);
+	--metric-energy: light-dark(#c2410c, #fb923c);
+	--metric-energy-tint: light-dark(#ffedd5, #2c1a0e);
+	--metric-heart: light-dark(#be123c, #fb7185);
+	--metric-heart-tint: light-dark(#ffe4e6, #2e151b);
+	--metric-hrv: light-dark(#6d28d9, #a78bfa);
+	--metric-hrv-tint: light-dark(#ede9fe, #211a33);
+	--metric-sleep: light-dark(#4338ca, #818cf8);
+	--metric-sleep-tint: light-dark(#e0e7ff, #1b1d36);
+	--metric-body: light-dark(#b45309, #fbbf24);
+	--metric-body-tint: light-dark(#fef3c7, #2b230c);
+	--metric-bp: light-dark(#be185d, #f472b6);
+	--metric-bp-tint: light-dark(#fce7f3, #2e1526);
+	--metric-respiratory: light-dark(#0e7490, #22d3ee);
+	--metric-respiratory-tint: light-dark(#cffafe, #0c2730);
+	--metric-other: light-dark(#4f5861, #a1a9b1);
+	--metric-other-tint: light-dark(#eceef0, #1b1f23);
+
+	/* Stable per-source colours (lib/ui/source.ts maps provider codes to these). */
+	--src-apple-health: light-dark(#be185d, #f472b6);
+	--src-whoop: light-dark(#a16207, #f5d061);
+	--src-withings: light-dark(#0f766e, #2dd4bf);
+	--src-garmin: light-dark(#1d4ed8, #60a5fa);
+	--src-manual: light-dark(#4f5861, #a1a9b1);
 	--src-other-1: light-dark(#0e7490, #67e8f9);
-	--src-other-2: light-dark(#a16207, #fde047);
+	--src-other-2: light-dark(#c2410c, #fdba74);
 	--src-other-3: light-dark(#86198f, #f0abfc);
 
 	/* Sleep stages */
-	--stage-deep: light-dark(#3b4bdb, #5b6cff);
-	--stage-light: light-dark(#4f86e8, #7cb4ff);
-	--stage-rem: light-dark(#0f9488, #5eead4);
-	--stage-awake: light-dark(#d97706, #f2b54a);
+	--stage-deep: light-dark(#4f46e5, #6366f1);
+	--stage-rem: light-dark(#9333ea, #c084fc);
+	--stage-light: light-dark(#0284c7, #38bdf8);
+	--stage-awake: #71717a;
 	--stage-other: var(--color-neutral);
 
 	/* Charts */
-	--chart-grid: var(--color-border);
+	--chart-grid: light-dark(#e6e8eb, #1c2024);
 	--chart-axis: var(--color-text-faint);
 	--chart-band: color-mix(in srgb, var(--color-accent) 12%, transparent);
-	--chart-muted: light-dark(#c3cfcf, #2a3b3c);
+	--chart-muted: light-dark(#c8cdd2, #2c3137);
 
-	--shadow-1: 0 1px 2px light-dark(rgb(14 26 27 / 0.06), rgb(0 0 0 / 0.4));
-	--shadow-2: 0 12px 32px light-dark(rgb(14 26 27 / 0.14), rgb(0 0 0 / 0.55));
+	--shadow-1: 0 1px 2px light-dark(rgb(15 18 20 / 0.06), rgb(0 0 0 / 0.4));
+	--shadow-2: 0 12px 32px light-dark(rgb(15 18 20 / 0.14), rgb(0 0 0 / 0.5));
 	--focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-accent) 22%, transparent);
 }
 

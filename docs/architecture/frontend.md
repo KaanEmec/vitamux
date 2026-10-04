@@ -53,12 +53,14 @@ Saving (`POST /rules/{metric}/versions`) creates a new version; server field err
 
 ## Design system
 
-Design system v2 ("midnight teal"): calm surfaces, one accent, numbers in tabular figures. The approved canvas is the reference; the code is the source of truth.
+Design system v3 ([E23](../plan/E23-chart-redesign/README.md)), dark first: near-black ground, cards that fade from a raised surface with a hairline border, one teal accent, numbers in tabular figures, and a hue per metric. The light theme mirrors every token. The approved canvas is the reference; the code is the source of truth.
 
-- **Tokens** (`tokens.css`): every colour is `light-dark(light, dark)`, so `color-scheme` (system or `data-theme`) picks the theme. Groups: `--color-*` (surfaces, text, accent, link, focus, feedback), `--status-*`, `--src-*`, `--stage-*`, `--chart-*`; `--text-2xs`…`--text-display`, `--space-1`…`--space-8` (4–48 px), `--radius-xs|sm|md|lg|pill`, `--control-h`, `--shadow-1|2`, `--focus-ring`. Motion is minimal and off under `prefers-reduced-motion`.
-- **Primitives** (`lib/ui/`): `Button`, `Segmented`, `Tabs` (link tabs), `Chip` (source chip), `Badge`, `EmptyState`, `Skeleton`, `CopyValue` (a value with a Copy button), `Icon`/`icons.ts`, `Logo`; `.card`, `.btn`, `.field` in `base.css`; `Modal` (also a side `drawer`), `TextField`, `ProblemAlert`, `ExplainPopover`, `StatusIcon` and `HealthBadge` in `lib/components/`. Add a primitive when a second page needs it.
+- **Tokens** (`tokens.css`): every colour is `light-dark(light, dark)`, so `color-scheme` (system or `data-theme`) picks the theme. Groups: `--color-*` (surfaces, text, accent, link, focus, feedback, the selected `--color-pill`), `--card-bg`, `--status-*`, `--metric-*`, `--src-*`, `--stage-*`, `--chart-*`; `--text-2xs`…`--text-display`, `--space-1`…`--space-8` (4–48 px), `--radius-xs|sm|md|lg|pill`, `--control-h`, `--tile-size(-sm|-lg)`, `--shadow-1|2`, `--focus-ring`. Motion is minimal and off under `prefers-reduced-motion`.
+- **Metric hues** (`lib/ui/metric.ts`, `MetricTile`): the catalogue section picks one of activity, energy, heart, HRV, sleep, body, blood pressure or respiratory (`--metric-<hue>`), each with a tinted icon tile (`--metric-<hue>-tint`); HRV and energy codes, derived codes and family cards refine it, anything else is neutral. Sleep stages: deep, REM, light, awake (`--stage-*`).
+- **Primitives** (`lib/ui/`): `Button`, `Segmented` (period pills: the selected one is a light pill on the dark track), `Tabs` (link tabs), `Chip` (source chip, tinted by its source), `MetricTile`, `Badge`, `EmptyState`, `Skeleton`, `CopyValue` (a value with a Copy button), `Icon`/`icons.ts`, `Logo`; `.card`, `.btn`, `.field` in `base.css`; `Modal` (also a side `drawer`), `TextField`, `ProblemAlert`, `ExplainPopover`, `StatusIcon` and `HealthBadge` in `lib/components/`. Add a primitive when a second page needs it.
 - **Data status** (`lib/ui/status.ts`, `ResultStatus`): a shape, a colour and a word for each of direct (circle), fallback (diamond), calculated (triangle), overridden (square), partial (half circle) and no data (ring). Status colours describe data state only.
 - **Source colours** (`lib/ui/source.ts`): a provider maps to a `.src-*` class that sets `--src`; Apple Health, WHOOP, Withings, Garmin and push/manual are fixed, others take one of three extra colours by a stable hash. Series also differ by dash, so colour is never the only cue.
+- **Stat tiles**: a metric's tile, value, unit and a neutral sub-line; the selected tile (the one driving the chart below) takes a metric-hue border and a soft glow.
 - **Copy**: neutral words for values ("30-day mean", "vs 90-day mean"), never good or bad, no advice; plain language for errors; lab values, labels, units and ranges "as printed".
 
 ## Chart grammar
@@ -71,9 +73,13 @@ Design system v2 ("midnight teal"): calm surfaces, one accent, numbers in tabula
 | `additive` | bars per window | `Bars` |
 | `latest` | step line with readings | `TimeSeries step` |
 | `daily_summary` | line with baseline | `TimeSeries` + `baseline` |
-| `sleep_derived` | stage stack, hypnogram | `Bars` (stacks by stage), `Hypnogram` |
+| `sleep_derived` | stage stack per night, hypnogram, bedtime and wake range bars | `Bars` (stacks by stage), `Hypnogram` |
 | group `bp_*` | dumbbells | `RangeDumbbell` |
 | events | timeline lanes | `EventLanes` |
 | lab analytes | points with the printed range | `TimeSeries` (`style: 'dots'`) + `band` |
 
-Also in the kit: `Sparkline`, `CoverageStrip`, `RangePicker`, `ChartTooltip`, `ChartTable`. Every x/y chart draws in `ChartFrame`: one tab stop with arrow keys, Home/End and PageUp/PageDown between points (announced politely), Enter to open a point, drag to zoom, a "Show as a table" fallback, and the `vx-chart-render` User Timing measure. A draft series is `style: 'ghost'`; non-direct points carry their status marker.
+Any x/y view also takes source overlays (one series per source, from `GET /sources/series`, told apart by colour and dash), and a metric page adds a histogram of its values in the range. Marks take the metric hue; overlays take source colours. Also in the kit: `Sparkline`, `CoverageStrip`, `RangePicker`, `ChartTooltip`, `ChartTable`. Every x/y chart draws in `ChartFrame`: one tab stop with arrow keys, Home/End and PageUp/PageDown between points (announced politely), Enter to open a point, drag to zoom, a "Show as a table" fallback, and the `vx-chart-render` User Timing measure. A draft series is `style: 'ghost'`; non-direct points carry their status marker.
+
+### Interaction model
+
+Hovering, touching or arrowing to a point moves a crosshair and a tooltip with the date, value and unit, status (shape and word), source chip and an **Explain** link to the existing explanation, override and raw-record actions. A period switch (7D/30D/90D/1Y) animates marks to their new positions, with no motion under reduced motion. On the dashboard the selected stat tile drives the hero chart. A metric page adds a brush navigator under the chart (drag the window, wheel zooms) and toggles for source overlays. Touch scrubs through points. The keyboard model and the "Show as a table" fallback stay as above.
