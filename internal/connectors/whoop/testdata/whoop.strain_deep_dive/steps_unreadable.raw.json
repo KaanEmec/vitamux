@@ -1,0 +1,1 @@
+{"synthetic": true, "unit": {"start": "2026-02-28T21:00:00.000Z", "end": "2026-03-01T21:00:00.000Z"}, "response": {"header": {"deep_dive_score_type": "STRAIN"}, "metadata": {}, "sections": [{"id": null, "items": [{"type": "CONTRIBUTORS_TILE", "content": {"metrics": [{"id": "CONTRIBUTORS_TILE_STEPS", "status": "--"}]}}]}]}}

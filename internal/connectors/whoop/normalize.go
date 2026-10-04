@@ -1,7 +1,7 @@
 // Package whoop holds the core side of the WHOOP connector (E19): the normalizers of the raw
 // payloads the whoop sidecar stores (docs/providers/whoop.md). Each raw body is
-// {"unit": {...}, "response": <WHOOP's response body verbatim>}. whoop.strain_deep_dive is
-// raw only by design: its normalizer accepts it and writes nothing. whoop.journal is not synced.
+// {"unit": {...}, "response": <WHOOP's response body verbatim>}. Of whoop.strain_deep_dive, an
+// untyped app screen, only the day's step total is read. whoop.journal is not synced.
 package whoop
 
 import (
@@ -29,7 +29,7 @@ const (
 )
 
 // versions is each stream normalizer's Version(): bump only the stream whose output changes.
-var versions = map[string]int{StreamHeartRate: 1, StreamCycles: 2, StreamSleep: 2, StreamWorkouts: 1, StreamStrainDeepDive: 1}
+var versions = map[string]int{StreamHeartRate: 1, StreamCycles: 2, StreamSleep: 2, StreamWorkouts: 1, StreamStrainDeepDive: 2}
 
 // strap is the device of every WHOOP record: the private API names no device of its own.
 var strap = normalize.Device{Fingerprint: "whoop:strap", Type: "band", Manufacturer: "WHOOP"}
@@ -74,12 +74,15 @@ func (b *builder) warn(code, detail string) {
 	b.out.Warnings = append(b.out.Warnings, normalize.Warning{Code: code, Detail: detail})
 }
 
-// sleepUnit is the unit of a whoop.sleep raw: the sleep's activity id, plus its nap flag and
+// rawUnit is a raw's unit. A whoop.sleep raw has the sleep's activity id, plus its nap flag and
 // offset, which the sidecar copies from the cycle's sleeps[] because the stage events lack them.
-type sleepUnit struct {
-	ID             string `json:"id"`
-	IsNap          *bool  `json:"is_nap"`
-	TimezoneOffset string `json:"timezone_offset"`
+// A window raw has start and end; for the strain deep dive they bound the owner's local day.
+type rawUnit struct {
+	Start          *time.Time `json:"start"`
+	End            *time.Time `json:"end"`
+	ID             string     `json:"id"`
+	IsNap          *bool      `json:"is_nap"`
+	TimezoneOffset string     `json:"timezone_offset"`
 }
 
 // Normalize is pure. Heart rate carries no WHOOP timezone_offset, so its local dates come from
@@ -87,7 +90,7 @@ type sleepUnit struct {
 func (n Normalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ normalize.Env) (normalize.Output, error) {
 	b := &builder{stream: n.Stream}
 	var body struct {
-		Unit     sleepUnit       `json:"unit"`
+		Unit     rawUnit         `json:"unit"`
 		Response json.RawMessage `json:"response"`
 	}
 	if err := json.Unmarshal(raw.Body, &body); err != nil || isNull(body.Response) {
@@ -103,7 +106,8 @@ func (n Normalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ nor
 		err = b.sleep(body.Unit, body.Response)
 	case StreamWorkouts:
 		err = b.workouts(body.Response)
-	case StreamStrainDeepDive: // raw only: an untyped app screen, kept for reprocessing
+	case StreamStrainDeepDive:
+		err = b.dailySteps(body.Unit, body.Response)
 	default:
 		err = b.drift("stream is not normalized")
 	}
@@ -114,6 +118,61 @@ func (n Normalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ nor
 		b.out.Devices = []normalize.Device{strap}
 	}
 	return b.out, nil
+}
+
+// dailySteps reads the day's step total from the strain deep-dive screen: the metric
+// CONTRIBUTORS_TILE_STEPS, whose status is the count as display text ("7,421"). WHOOP's metrics
+// service no longer serves steps, so this daily total is the only step count WHOOP gives. A
+// screen without the tile writes nothing; the rest of the screen stays raw.
+func (b *builder) dailySteps(u rawUnit, resp json.RawMessage) error {
+	var r struct {
+		Sections []struct {
+			Items []struct {
+				Content struct {
+					Metrics []struct {
+						ID     string `json:"id"`
+						Status any    `json:"status"`
+					} `json:"metrics"`
+				} `json:"content"`
+			} `json:"items"`
+		} `json:"sections"`
+	}
+	if err := b.decode(resp, &r); err != nil {
+		return err
+	}
+	for _, sec := range r.Sections {
+		for _, it := range sec.Items {
+			for _, m := range it.Content.Metrics {
+				if m.ID != "CONTRIBUTORS_TILE_STEPS" {
+					continue
+				}
+				text, _ := m.Status.(string)
+				digits := strings.Map(func(r rune) rune {
+					if r >= '0' && r <= '9' {
+						return r
+					}
+					if r == ',' || r == '.' || r == ' ' || r == '\u00a0' || r == '\u202f' {
+						return -1 // thousands separators
+					}
+					return 'x'
+				}, strings.TrimSpace(text))
+				n, err := strconv.Atoi(digits)
+				if err != nil {
+					b.warn("steps_unreadable", "CONTRIBUTORS_TILE_STEPS status is not a count")
+					return nil
+				}
+				if u.Start == nil || u.End == nil {
+					return b.drift("unit without start and end")
+				}
+				b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: "steps",
+					Kind: catalog.DailyValue, Start: *u.Start, End: u.End, Value: float64(n), Unit: "count",
+					Device: strap.Fingerprint,
+					Key:    normalize.Key{RecordType: "day", ExternalID: u.Start.UTC().Format(time.RFC3339), Component: "steps"}})
+				return nil
+			}
+		}
+	}
+	return nil
 }
 
 func isNull(raw json.RawMessage) bool {
@@ -292,7 +351,7 @@ var sleepStages = map[string]string{"awake": "awake", "light": "light", "deep": 
 // the unit's activity id, bounded by its events. It is the only writer of WHOOP sleep sessions;
 // totals are summed from the stages. An unknown type is a warning and a gap. A raw stored by
 // sidecar 0.2.2 or older has no is_nap in its unit and stays raw until the sleep is fetched again.
-func (b *builder) sleep(u sleepUnit, resp json.RawMessage) error {
+func (b *builder) sleep(u rawUnit, resp json.RawMessage) error {
 	if u.ID == "" {
 		return b.drift("sleep without unit id")
 	}
