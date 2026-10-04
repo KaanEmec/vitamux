@@ -159,7 +159,7 @@ func TestCacheInvalidation(t *testing.T) {
 		FROM measurements WHERE user_id = $1 LIMIT 1`, s.user); err != nil {
 		t.Fatal(err)
 	}
-	expect("distance_walk_run", all[:3]) // the wear gate reads 30 days back, so every later date
+	expect("distance_walk_run", without(all, near...)) // the hourly composition reads the days around the workout
 	expect("steps", all)
 
 	// A timezone change moves window bounds: the owner's cache is cleared.

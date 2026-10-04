@@ -63,7 +63,7 @@ export class ExploreApi {
 		const resolve = this.data.resolve.bind(this.data);
 		this.data.resolve = (m, date) =>
 			m === 'steps'
-				? { status: 'direct', value: steps(date), unit: 'count', window: { kind: 'local_day', local_date: date }, rule: { ref: 'builtin:steps:3', version: 3, strategy: 'first_available' }, selected: 'apple_watch', inputs: [], explanation: `First available source: apple_watch ${steps(date)} steps.` }
+				? { status: 'direct', value: steps(date), unit: 'count', window: { kind: 'local_day', local_date: date }, rule: { ref: 'builtin:steps:4', version: 4, strategy: 'first_available' }, selected: 'apple_watch', inputs: [], explanation: `First available source: apple_watch ${steps(date)} steps.` }
 				: resolve(m, date);
 		await this.page.route('**/api/v1/**', (r) => this.dispatch(r));
 	}

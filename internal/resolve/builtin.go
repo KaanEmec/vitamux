@@ -200,7 +200,10 @@ func biV1(why string, r Rule) Builtin { return biV(1, why, r) }
 
 // biV wraps a schema-v1 rule as version n of its built-in. Version history:
 //   - steps, distance_walk_run, active_energy v2: relayed wearables in their own groups (biWorn);
-//     v3: the iPhone before other phones.
+//     v3: the iPhone before other phones; v4: no coverage or wear gates (opt-in, J24.2).
+//   - heart_rate v3: WHOOP directly above Garmin (owner decision, J24.4).
+//   - resting_heart_rate_nocturnal v3: no coverage gate, and the v3 heart-rate order.
+//   - sleep v3: no episode coverage gate.
 //   - every other n=2: Apple devices by manufacturer and model (biAppleDevice), relay groups for
 //     WHOOP, Polar and Fitbit, and manufacturer selectors in the Garmin and Withings relay groups.
 func biV(n int, why string, r Rule) Builtin {
@@ -213,7 +216,6 @@ func builtins() []Builtin {
 	day := RuleWindow{Kind: catalog.WindowLocalDay}
 	night := RuleWindow{Kind: catalog.WindowLocalNight}
 	latest := RuleWindow{Kind: catalog.WindowLatest}
-	stepGates := func() *Quality { return &Quality{MinCoverage: new(0.6), RequireWear: "heart_rate"} }
 	hourly := func() *Compose { return &Compose{From: catalog.WindowHour, Op: ComposeFirstAvailable} }
 	iphone := func() []Group { return biAppleDevice("iphone", "iPhone") }
 	// Only Oura and Garmin relay HRV into Apple Health; the others keep their direct group alone.
@@ -221,8 +223,8 @@ func builtins() []Builtin {
 		return biLadder(biBrand(provOura), biDirect(provWhoop), biBrand(provGarmin), biDirect(provPolar), biDirect(provFitbit), biDirect(provSamsung))
 	}
 	hrGroups := func() []Group {
-		return biLadder(biDevice("chest_strap"), biDevice("arm_band"), biAppleDevice("apple_watch", "Watch"), biBrand(provGarmin), biBrand(provFitbit),
-			biBrand(provSamsung), biBrand(provWhoop), biBrand(provPolar), biBrand(provXiaomi), biBrand(provAmazfit), biBrand(provOura))
+		return biLadder(biDevice("chest_strap"), biDevice("arm_band"), biAppleDevice("apple_watch", "Watch"), biBrand(provWhoop), biBrand(provGarmin), biBrand(provFitbit),
+			biBrand(provSamsung), biBrand(provPolar), biBrand(provXiaomi), biBrand(provAmazfit), biBrand(provOura))
 	}
 	hrQuality := func() *Quality {
 		return &Quality{PlausibleRange: []float64{25, 230}, ExcludeFlags: []string{"manual_entry"}}
@@ -243,21 +245,20 @@ func builtins() []Builtin {
 	}
 
 	out := []Builtin{
-		biV(3, "Watch, ring, band, iPhone, other phones, each direct before relayed; hours resolve separately so a watch left on the charger falls back to the phone for those hours only.",
-			Rule{Metric: "steps", Window: day, Strategy: firstAvailable, Quality: stepGates(), Compose: hourly(),
+		biV(4, "Watch, ring, band, iPhone, other phones, each direct before relayed; hours resolve separately so a watch left on the charger falls back to the phone for those hours only. Wear and coverage gates are opt-in.",
+			Rule{Metric: "steps", Window: day, Strategy: firstAvailable, Compose: hourly(),
 				Groups: biLadder(biWorn("watch"), biWorn("ring"), biWorn("band"), iphone(), biDevice("phone"))}),
-		biV(3, "Follows the step source; inside a workout, the device that recorded it.",
-			Rule{Metric: "distance_walk_run", Window: day, Strategy: firstAvailable, Quality: stepGates(), Compose: hourly(),
+		biV(4, "Follows the step source; inside a workout, the device that recorded it.",
+			Rule{Metric: "distance_walk_run", Window: day, Strategy: firstAvailable, Compose: hourly(),
 				Groups:   biLadder(biWorn("watch"), iphone(), biDevice("phone"), biWorn("ring")),
 				Contexts: map[Context][]string{ContextWorkout: {ContextWorkoutSource}}}),
-		biV(3, "Every device is far off; one worn source per day keeps days comparable.",
+		biV(4, "Every device is far off; one source per day keeps days comparable.",
 			Rule{Metric: "active_energy", Window: day, Strategy: firstAvailable,
-				Quality: &Quality{MinCoverage: new(0.8), RequireWear: "heart_rate"},
-				Groups:  biLadder(biWorn("watch"), biWorn("band"), biWorn("ring"), iphone(), biDevice("phone"))}),
+				Groups: biLadder(biWorn("watch"), biWorn("band"), biWorn("ring"), iphone(), biDevice("phone"))}),
 		biV1("Follows the active energy source; only reported totals are stored, never active plus basal.",
 			Rule{Metric: "total_energy", Window: day, Strategy: firstAvailable, Follow: "active_energy",
 				Groups: biLadder(biWorn("watch"), biWorn("band"), biWorn("ring"), iphone(), biDevice("phone"))}),
-		biV(2, "Chest straps are ECG-class, then wrist devices by independent validation; inside workouts the recording device follows the straps.",
+		biV(3, "Chest straps are ECG-class, then WHOOP (owner decision) and wrist devices by independent validation; inside workouts the recording device follows the straps.",
 			Rule{Metric: "heart_rate", Window: RuleWindow{Kind: catalog.WindowBucket, Size: "5m"}, Strategy: firstAvailable,
 				Quality: hrQuality(), Groups: hrGroups(),
 				Contexts: map[Context][]string{ContextWorkout: {"chest_strap", "arm_band", ContextWorkoutSource}}}),
@@ -287,10 +288,10 @@ func builtins() []Builtin {
 		biV1("Scales agree closely; the latest reading of the day, from a scale before scale apps and manual entries.",
 			Rule{Metric: "weight", Window: day, Strategy: firstAvailable, WithinSource: &WithinSource{Statistic: StatLatest}, Groups: weightGroups()}),
 		spot("height", "The newest value from any source."),
-		biV(2, "One definition across brands: the lowest 30-minute mean of heart rate in the main sleep episode, from the heart-rate ladder; sparse night data fails the coverage gate.",
+		biV(3, "One definition across brands: the lowest 30-minute mean of heart rate in the main sleep episode, from the heart-rate ladder; a coverage gate is opt-in.",
 			Rule{Metric: "resting_heart_rate_nocturnal", Window: night, Strategy: firstAvailable,
 				WithinSource: &WithinSource{Statistic: StatMinRollingMean, Span: "30m"},
-				Quality:      &Quality{MinCoverage: new(0.7), PlausibleRange: []float64{25, 230}, ExcludeFlags: []string{"manual_entry"}},
+				Quality:      &Quality{PlausibleRange: []float64{25, 230}, ExcludeFlags: []string{"manual_entry"}},
 				Groups:       hrGroups()}),
 		biV(2, "The lowest 5-minute SpO2 mean in the main sleep episode, from the SpO2 ladder; a failed reading is never 0 %.",
 			Rule{Metric: "spo2_night_min", Window: night, Strategy: firstAvailable, WithinSource: &WithinSource{Statistic: StatMin}, Groups: spo2Groups()}),
@@ -301,9 +302,9 @@ func builtins() []Builtin {
 				Rule{Metric: m.Code, Window: day, Strategy: firstAvailable, Follow: "weight", Groups: weightGroups()}))
 		}
 	}
-	return append(out, biV(2, "One night comes from one source, ranked by independent four-stage agreement with PSG; a device on the charger fails the coverage gate.",
+	return append(out, biV(3, "One night comes from one source, ranked by independent four-stage agreement with PSG; an episode coverage gate is opt-in.",
 		Rule{Metric: FamilySleep, Window: night, Strategy: Strategy{Op: OpEventPriority},
-			Quality: &Quality{MaxStaleness: "36h", Sleep: &SleepQuality{MatchOverlap: new(0.5), MinEpisodeCoverage: new(0.7)}},
+			Quality: &Quality{MaxStaleness: "36h", Sleep: &SleepQuality{MatchOverlap: new(0.5)}},
 			Groups: biLadder(biBrand(provOura), biAppleDevice("apple_watch", "Watch"), biBrand(provFitbit),
 				// The Withings normalizer reports its under-mattress sensor as sleep_monitor.
 				biGroup("under_mattress", Selector{DeviceType: "under_mattress"}, Selector{DeviceType: "sleep_monitor"}),

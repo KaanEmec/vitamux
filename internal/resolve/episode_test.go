@@ -140,7 +140,8 @@ func TestMatchedNight(t *testing.T) {
 func TestPartialCaptureExcluded(t *testing.T) {
 	a0 := staged(slA, "2026-06-15T01:00:00Z", "2026-06-15T05:00:00Z") // 03:00-07:00 local
 	b0 := staged(slB, "2026-06-14T21:40:00Z", "2026-06-15T05:05:00Z")
-	a := align(t, sleepRule(OpEventPriority, nil), "2026-06-15", a0, b0)
+	gate := 0.7
+	a := align(t, sleepRule(OpEventPriority, &SleepQuality{MinEpisodeCoverage: &gate}), "2026-06-15", a0, b0)
 	if len(a.Episodes) != 1 {
 		t.Fatalf("%d episodes, want the two sessions matched", len(a.Episodes))
 	}
@@ -153,6 +154,11 @@ func TestPartialCaptureExcluded(t *testing.T) {
 		t.Fatalf("selected %d warnings %v, want b with preferred_source_unavailable", sel.Selected, sel.Warnings)
 	}
 	want(t, sel, "sleep_deep", StatusValid, float64(*b0.Totals.Deep))
+
+	// Without the gate (opt-in) A is the preferred source again.
+	if s := mainSel(t, align(t, sleepRule(OpEventPriority, nil), "2026-06-15", a0, b0)); s.Selected != 0 || s.Groups[0].Status != StatusValid {
+		t.Errorf("no min_episode_coverage: selected %d, group a %s, want a valid", s.Selected, s.Groups[0].Status)
+	}
 
 	// A lower threshold admits A again.
 	low := 0.5

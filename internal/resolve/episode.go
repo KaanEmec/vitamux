@@ -13,11 +13,9 @@ import (
 // into one session (docs/architecture/resolution.md#sleep-episode-alignment).
 const FragmentGap = 60 * time.Minute
 
-// Defaults of quality.sleep.
-const (
-	DefaultMatchOverlap       = 0.5
-	DefaultMinEpisodeCoverage = 0.7
-)
+// DefaultMatchOverlap is the default of quality.sleep.match_overlap. The minimum episode
+// coverage has no default: a gate applies only when the rule sets it.
+const DefaultMatchOverlap = 0.5
 
 // SleepInput is one active sleep session as alignment sees it. J09.8 and J09.9 fill it from
 // sleep_sessions and sleep_stages; this package does no I/O.
@@ -106,7 +104,7 @@ type sleepParams struct {
 }
 
 func (r *Rule) sleepQuality() sleepParams {
-	p := sleepParams{matchOverlap: DefaultMatchOverlap, minCoverage: DefaultMinEpisodeCoverage}
+	p := sleepParams{matchOverlap: DefaultMatchOverlap}
 	if r.Quality == nil || r.Quality.Sleep == nil {
 		return p
 	}

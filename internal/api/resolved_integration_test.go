@@ -426,11 +426,11 @@ func TestResolutionPreviewIsolation(t *testing.T) {
 	var p oapi.ResolutionPreview
 	e.call(preview, "/api/v1/resolution/preview", `{"spec": `+stepsMax+`, "start_date": "2025-09-13", "end_date": "2025-09-15"}`, http.StatusOK, &p)
 	if p.Metric != "steps" || p.Window != "local_day" || p.DraftRule.Ref != "draft:steps" || p.ActiveRule == nil ||
-		p.ActiveRule.Ref != "builtin:steps:3" || len(p.Days) != 3 {
+		p.ActiveRule.Ref != "builtin:steps:4" || len(p.Days) != 3 {
 		t.Fatalf("preview: %+v", p)
 	}
 	d := p.Days[1]
-	if d.Draft.Rule.Ref != "draft:steps" || d.Active.Rule.Ref != "builtin:steps:3" || d.Draft.Value == nil || d.Active.Value == nil {
+	if d.Draft.Rule.Ref != "draft:steps" || d.Active.Rule.Ref != "builtin:steps:4" || d.Draft.Value == nil || d.Active.Value == nil {
 		t.Errorf("day: %+v", d)
 	}
 	// A follower draft resolves its leader (which reads the cache otherwise) live too.
@@ -469,7 +469,7 @@ func TestResolvedWorkouts(t *testing.T) {
 	})
 	var w oapi.ResolvedWorkouts
 	e.get(e.user, "GET /api/v1/resolved/workouts", "/api/v1/resolved/workouts?start_date=2026-06-15&end_date=2026-06-16", http.StatusOK, &w)
-	if w.Rule.Ref != "builtin:heart_rate:2" || len(w.Workouts) != 2 {
+	if w.Rule.Ref != "builtin:heart_rate:3" || len(w.Workouts) != 2 {
 		t.Fatalf("workouts: %+v", w)
 	}
 	run := w.Workouts[0]
