@@ -101,6 +101,12 @@ func (rt *Runtime) Handle(ctx context.Context, j jobs.Job) error {
 		return jobs.Permanent(fmt.Errorf("sync job: unsupported mode %q", p.Mode))
 	}
 	r, err := rt.prepare(ctx, *j.ConnectionID, p.Stream)
+	if errors.Is(err, errStreamGone) && p.ScheduleID != uuid.Nil {
+		// The connector dropped the stream (e.g. a sidecar update): retire its schedule
+		// instead of failing the connection.
+		rt.log.Info("schedule disabled: stream no longer declared", "connection_id", *j.ConnectionID, "stream", p.Stream)
+		return rt.db.Q().DisableSchedule(ctx, p.ScheduleID)
+	}
 	if err != nil {
 		if r.c != nil { // an unreachable sidecar counts as a failed sync
 			return rt.settle(ctx, r, p.Stream, err)
@@ -127,6 +133,9 @@ func (rt *Runtime) Handle(ctx context.Context, j jobs.Job) error {
 	return rt.settle(ctx, r, p.Stream, err)
 }
 
+// errStreamGone: a sync names a stream its connector no longer declares.
+var errStreamGone = errors.New("stream no longer declared")
+
 func (rt *Runtime) prepare(ctx context.Context, connectionID uuid.UUID, stream string) (syncRun, error) {
 	row, err := rt.db.Q().GetSyncConnection(ctx, connectionID)
 	if err = db.MapErr(err); errors.Is(err, db.ErrNotFound) {
@@ -150,7 +159,7 @@ func (rt *Runtime) prepare(ctx context.Context, connectionID uuid.UUID, stream s
 		return r, fmt.Errorf("%w: the %s sidecar is unavailable", ErrTransient, row.Provider)
 	}
 	if _, ok := d.stream(stream); !ok {
-		return syncRun{}, jobs.Permanent(fmt.Errorf("%w: %s has no stream %q", ErrPermanent, row.Provider, stream))
+		return syncRun{}, jobs.Permanent(fmt.Errorf("%w: %w: %s has no stream %q", ErrPermanent, errStreamGone, row.Provider, stream))
 	}
 	if d.AuthKind.needsRefresh() {
 		r.auth = c.(Authenticator) // checked by NewRegistry

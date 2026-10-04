@@ -26,6 +26,15 @@ func (q *Queries) AdvanceSchedule(ctx context.Context, arg AdvanceScheduleParams
 	return err
 }
 
+const disableSchedule = `-- name: DisableSchedule :exec
+UPDATE schedules SET enabled = false WHERE id = $1
+`
+
+func (q *Queries) DisableSchedule(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, disableSchedule, id)
+	return err
+}
+
 const getSchedule = `-- name: GetSchedule :one
 SELECT id, connection_id, stream, run_interval, lookback, next_run_at, enabled, mode FROM schedules WHERE id = $1
 `

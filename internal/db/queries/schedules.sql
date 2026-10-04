@@ -33,5 +33,8 @@ ORDER BY s.next_run_at
 LIMIT @max_rows
 FOR UPDATE OF s SKIP LOCKED;
 
+-- name: DisableSchedule :exec
+UPDATE schedules SET enabled = false WHERE id = @id;
+
 -- name: AdvanceSchedule :exec
 UPDATE schedules SET next_run_at = @next_run_at WHERE id = @id;
