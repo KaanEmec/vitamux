@@ -6,7 +6,7 @@ Vitamux is a standalone, open-source (MIT), self-hosted personal health data agg
 
 - Never put credentials, API keys, access or refresh tokens, passwords, MFA codes, private health payloads, or extracted medical values in source control, logs, prompts, fixtures, or docs. Fixtures are synthetic only.
 - Never diagnose, interpret, or advise. Blood-test extraction is structured data entry with provenance and mandatory human confirmation.
-- Vitamux is its own product. It is not an Open Wearables plugin, fork, or companion, and it is not specific to any VPS. Reference-environment facts (VPS, its Coolify instance, Open Wearables, existing Garmin collector, WHOOP plans) are only for the final migration epic E16: [`docs/architecture/migration-reference.md`](docs/architecture/migration-reference.md). Do not read or design for them elsewhere.
+- Vitamux is its own product. It is not an Open Wearables plugin, fork, or companion, and it is not specific to any VPS. Reference-environment facts (VPS, its Coolify instance, Open Wearables, existing Garmin collector, WHOOP plans) are only for the final migration epic E16: the owner-local, git-ignored `docs/architecture/migration-reference.md` (not in the repository). Do not read or design for them elsewhere.
 - Keep documentation lean: update the smallest relevant file and link instead of repeating. Do not create monolithic docs.
 - Precedence: this file > ADRs (`docs/adr/`) > `docs/architecture/` > `docs/plan/`.
 

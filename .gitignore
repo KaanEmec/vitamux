@@ -7,6 +7,7 @@
 secrets/
 credentials.txt
 openwearables/
+docs/architecture/migration-reference.md
 node_modules/
 /bin/
 /dist/

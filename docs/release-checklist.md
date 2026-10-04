@@ -2,7 +2,7 @@
 
 How a version ships. Policy: [project#versioning-and-releases](architecture/project.md#versioning-and-releases). Automation: [`.github/workflows/release.yml`](../.github/workflows/release.yml) runs on every `v*` tag pushed from `main`.
 
-1. **Prepare.** `main` is green (CI and the nightly fuzz run). [`KNOWN_LIMITATIONS.md`](release-notes/KNOWN_LIMITATIONS.md) is current. First public release only: scrub `docs/architecture/migration-reference.md` and its history (J14.4 T14.4.5) and make the GHCR package public after step 3.
+1. **Prepare.** `main` is green (CI and the nightly fuzz run). [`KNOWN_LIMITATIONS.md`](release-notes/KNOWN_LIMITATIONS.md) is current. First public release only: make the GHCR package public after step 3.
 2. **Tag a release candidate.** `git tag -a v0.1.0-rc.1 -m v0.1.0-rc.1 && git push origin v0.1.0-rc.1`.
 3. **Check the artifacts** on the GitHub pre-release:
    - image `ghcr.io/kaanemec/vitamux:vX.Y.Z-rc.N` for linux/amd64 and linux/arm64 (`docker buildx imagetools inspect`), with no `vX.Y` or `latest` move;

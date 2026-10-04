@@ -2,7 +2,7 @@
 
 Status: **not designed in detail yet.** This covers epic E16, the last epic. Do not read or design for the reference VPS, Open Wearables, the existing Garmin collector, or WHOOP/Dofek while working on E01–E15.
 
-Reference facts (VPS, Coolify, Open Wearables, Garmin collector and archive, WHOOP plans, current Withings callback) are in [migration-reference.md](migration-reference.md).
+Reference facts (VPS, Coolify, Open Wearables, Garmin collector and archive, WHOOP plans, current Withings callback) are in the owner-local, git-ignored `migration-reference.md` next to this file.
 
 ## Scope to plan later
 
