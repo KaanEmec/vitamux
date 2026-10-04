@@ -2,6 +2,19 @@
 
 Newest first. Before a final release, `scripts/release-notes.sh --changelog vX.Y.Z` adds its section from the Conventional Commits since the previous final tag; edit it and add upgrade notes under "Breaking changes" before tagging. The release workflow refuses a final tag without its section and uses it as the release notes. Release candidates are described on their GitHub releases only.
 
+## v0.2.2 (2026-10-04)
+
+Fixes for the Garmin and WHOOP connectors.
+
+### Connectors
+
+- WHOOP: sign-in now accepts codes WHOOP sends by email. They were refused as wrong codes before, because the upstream client answered them as SMS codes. The sidecar image carries this fix; redeploy to pull the new `:stable` image.
+- Garmin: days without wellness data and training-readiness snapshots without a score are stored as empty days instead of failing as schema drift. `garmin.daily_summary` and `garmin.training` are now normalizer version 2.
+
+### Breaking changes
+
+None. To renormalize Garmin days that failed before this release: `vitamux reprocess --normalizer garmin.daily_summary` and `vitamux reprocess --normalizer garmin.training`.
+
 ## v0.2.1 (2026-10-04)
 
 Every source is set up from the web panel (epic E20), built on the v0.2.0 design system.
