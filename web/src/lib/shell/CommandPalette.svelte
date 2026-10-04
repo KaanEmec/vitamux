@@ -135,11 +135,9 @@
 	input {
 		flex: 1;
 		min-height: 3.25rem;
-		font: inherit;
-		color: var(--color-text);
+		padding: 0;
 		background: transparent;
 		border: 0;
-		outline: none;
 	}
 	/* The palette's search row is borderless; the global field focus glow does not apply. */
 	.search input:focus {

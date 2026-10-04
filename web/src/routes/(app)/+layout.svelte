@@ -18,6 +18,7 @@
 	import CommandPalette from '#lib/shell/CommandPalette.svelte';
 	import NavList from '#lib/shell/NavList.svelte';
 	import SyncStatus from '#lib/shell/SyncStatus.svelte';
+	import Button from '#lib/ui/Button.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
 	import Logo from '#lib/ui/Logo.svelte';
 	import { icons } from '#lib/ui/icons.ts';
@@ -86,22 +87,21 @@
 		<NavList label="Sections" compact={prefs.sidebarCollapsed} />
 		<div class="foot">
 			{#if !prefs.sidebarCollapsed}<div class="account">{@render account()}</div>{/if}
-			<button
-				class="btn ghost sm collapse"
-				type="button"
+			<Button
+				variant="ghost"
+				size="sm"
+				icon={icons.sidebar}
 				aria-label={prefs.sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
 				aria-expanded={!prefs.sidebarCollapsed}
 				onclick={toggleSidebar}
-			>
-				<Icon d={icons.sidebar} />
-			</button>
+			/>
 		</div>
 	</header>
 
 	<div class="column">
 		<div class="topbar">
 			<button
-				class="jump"
+				class="btn lg jump"
 				type="button"
 				aria-label="Jump to a metric, source, rule or setting"
 				aria-keyshortcuts={mac ? 'Meta+K' : 'Control+K'}
@@ -114,9 +114,7 @@
 			<span class="spacer"></span>
 			<SyncStatus {connections} />
 			<span class="theme"><Segmented label="Theme" options={themes} value={prefs.theme} onchange={setTheme} /></span>
-			<button class="btn sm icon-btn" type="button" aria-label="Sign out" title="Sign out" onclick={signOut}>
-				<Icon d={icons.signOut} size={16} />
-			</button>
+			<Button size="lg" icon={icons.signOut} aria-label="Sign out" title="Sign out" onclick={signOut} />
 		</div>
 
 		<main id="main" tabindex="-1">
@@ -214,12 +212,7 @@
 	.version {
 		color: var(--color-text-muted);
 	}
-	.collapse {
-		width: var(--control-h-sm);
-		padding: 0;
-		color: var(--color-text-muted);
-	}
-	.collapsed .collapse :global(.icon) {
+	.collapsed .foot :global(.icon) {
 		transform: scaleX(-1);
 	}
 
@@ -240,25 +233,18 @@
 		border-bottom: 1px solid var(--color-border);
 		backdrop-filter: blur(8px);
 	}
-	.jump {
+	.btn.jump {
 		display: flex;
 		flex: 1 1 16rem;
 		align-items: center;
 		gap: var(--space-3);
+		justify-content: flex-start;
 		max-width: 28rem;
-		min-height: var(--control-h);
 		padding: 0 var(--space-3);
-		font: inherit;
 		font-size: var(--text-sm);
+		font-weight: 400;
 		color: var(--color-text-muted);
 		text-align: left;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-md);
-		cursor: pointer;
-	}
-	.jump:hover {
-		border-color: var(--color-border-strong);
 	}
 	.jump-label {
 		flex: 1;
@@ -274,12 +260,6 @@
 	}
 	.spacer {
 		flex: 1;
-	}
-	.icon-btn {
-		width: var(--control-h);
-		min-height: var(--control-h);
-		padding: 0;
-		color: var(--color-text-muted);
 	}
 
 	main {
@@ -317,7 +297,7 @@
 		.topbar {
 			padding: var(--space-2) var(--space-4);
 		}
-		.jump {
+		.btn.jump {
 			flex: none;
 			justify-content: center;
 			width: var(--control-h);

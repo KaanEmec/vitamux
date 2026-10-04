@@ -253,18 +253,20 @@
 	</div>
 	<div class="actions">
 		<div class="date" role="group" aria-label="Day shown">
-			<button class="btn sm" type="button" aria-label="Previous day" onclick={() => chooseDay(addDays(day, -1))}>
-				<Icon d={dashIcons.left} size={16} />
-			</button>
+			<Button size="lg" icon={dashIcons.left} aria-label="Previous day" onclick={() => chooseDay(addDays(day, -1))} />
 			<input type="date" aria-label="Date" value={day} max={today()} onchange={(e) => chooseDay(e.currentTarget.value === today() ? undefined : e.currentTarget.value || undefined)} />
-			<button class="btn sm" type="button" aria-label="Next day" disabled={isToday || day >= today()} onclick={() => chooseDay(addDays(day, 1) >= today() ? undefined : addDays(day, 1))}>
-				<Icon d={dashIcons.right} size={16} />
-			</button>
-			{#if !isToday}<Button size="sm" onclick={() => chooseDay(undefined)}>Today</Button>{/if}
+			<Button
+				size="lg"
+				icon={dashIcons.right}
+				aria-label="Next day"
+				disabled={isToday || day >= today()}
+				onclick={() => chooseDay(addDays(day, 1) >= today() ? undefined : addDays(day, 1))}
+			/>
+			{#if !isToday}<Button size="lg" onclick={() => chooseDay(undefined)}>Today</Button>{/if}
 		</div>
 		{#if !editing}
-			<Button onclick={customize} disabled={layout === null || layoutMissing || summaryMissing || !!layoutProblem || !!summaryProblem}>
-				<Icon d={dashIcons.edit} size={16} /> Customize
+			<Button size="lg" icon={dashIcons.edit} onclick={customize} disabled={layout === null || layoutMissing || summaryMissing || !!layoutProblem || !!summaryProblem}>
+				Customize
 			</Button>
 		{/if}
 	</div>
@@ -290,7 +292,7 @@
 					heroDraft = [...defaultHero];
 				}}>Reset to default</Button
 			>
-			<Button onclick={() => (adding = true)}><Icon d={dashIcons.plus} size={16} /> Add metric</Button>
+			<Button icon={dashIcons.plus} onclick={() => (adding = true)}>Add metric</Button>
 			<Button onclick={() => (editing = false)}>Cancel</Button>
 			<Button variant="primary" loading={saving} onclick={save}>Save</Button>
 		</div>
@@ -299,7 +301,7 @@
 		<legend>Hero tiles · up to {heroMax}</legend>
 		{#each heroOptions as m (m)}
 			{@const on = heroDraft.includes(m)}
-			<label class={['pick', on && 'on']}>
+			<label class="option-card pick">
 				<input type="checkbox" checked={on} disabled={!on && heroDraft.length >= heroMax} onchange={(e) => toggleHero(m, e.currentTarget.checked)} />
 				{cardLabel(m)}
 			</label>
@@ -442,20 +444,6 @@
 		align-items: center;
 		gap: var(--space-2);
 	}
-	.date input {
-		min-height: var(--control-h-sm);
-		padding: 0 var(--space-2);
-		font: inherit;
-		font-size: var(--text-sm);
-		color: var(--color-text);
-		background: var(--color-inset);
-		border: 1px solid var(--color-border-strong);
-		border-radius: var(--radius-md);
-	}
-	.date .btn {
-		width: var(--control-h-sm);
-		padding: 0;
-	}
 	.edit-bar {
 		display: flex;
 		flex-wrap: wrap;
@@ -497,23 +485,10 @@
 		font-weight: 600;
 	}
 	.pick {
-		display: inline-flex;
 		align-items: center;
-		gap: var(--space-2);
-		min-height: var(--control-h-sm);
-		padding: 0 var(--space-3);
+		padding: var(--space-1) var(--space-3);
 		font-size: var(--text-sm);
-		border: 1px solid var(--color-border-strong);
 		border-radius: var(--radius-pill);
-		cursor: pointer;
-	}
-	.pick.on {
-		background: var(--color-accent-soft);
-		border-color: var(--color-accent);
-	}
-	.pick:has(input:disabled) {
-		color: var(--color-text-muted);
-		cursor: not-allowed;
 	}
 	.hero-tiles {
 		display: grid;

@@ -108,13 +108,4 @@
 	.field {
 		max-width: 22rem;
 	}
-	select {
-		min-height: var(--control-h);
-		padding: 0 var(--space-3);
-		font: inherit;
-		color: var(--color-text);
-		background: var(--color-surface);
-		border: 1px solid var(--color-border-strong);
-		border-radius: var(--radius-md);
-	}
 </style>

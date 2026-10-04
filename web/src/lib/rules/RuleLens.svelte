@@ -326,8 +326,8 @@
 							</span>
 							{#if counts}<span class="count muted small">{counts[g.id] ?? 0} {counts[g.id] === 1 ? 'day' : 'days'}</span>{/if}
 							<span class="arrows">
-								<button id="{uid}-up-{g.key}" class="btn ghost sm" type="button" disabled={i === 0} aria-label="Move {g.id} up" onclick={() => move(i, i - 1, 'up')}>↑</button>
-								<button id="{uid}-down-{g.key}" class="btn ghost sm" type="button" disabled={i === form.groups.length - 1} aria-label="Move {g.id} down" onclick={() => move(i, i + 1, 'down')}>↓</button>
+								<button id="{uid}-up-{g.key}" class="btn ghost sm icon-btn" type="button" disabled={i === 0} aria-label="Move {g.id} up" onclick={() => move(i, i - 1, 'up')}>↑</button>
+								<button id="{uid}-down-{g.key}" class="btn ghost sm icon-btn" type="button" disabled={i === form.groups.length - 1} aria-label="Move {g.id} down" onclick={() => move(i, i + 1, 'down')}>↓</button>
 							</span>
 						</li>
 					{/each}
@@ -338,7 +338,7 @@
 				<div class="excludes" role="group" aria-label="Never use">
 					<span class="muted small">Never use:</span>
 					{#each form.exclude as s, i (i)}
-						<span class="exclusion">
+						<span class="chip">
 							{selectorText(s) || 'empty exclusion'}
 							<button type="button" class="x" aria-label="Remove exclusion {selectorText(s)}" onclick={() => form?.exclude.splice(i, 1)}>×</button>
 						</span>
@@ -417,22 +417,25 @@
 			</div>
 
 			{#if needsSumAck(form)}
-				<div class="ack" role="group" aria-labelledby="{uid}-ack">
-					<p id="{uid}-ack"><StatusIcon status="warn" /> <strong>Adding sources can count the same activity twice.</strong></p>
-					<label>
-						<input
-							type="checkbox"
-							bind:this={ackInput}
-							checked={form.acknowledged.includes(sumWarning)}
-							onchange={(e) => toggleAck(e.currentTarget.checked)}
-							aria-invalid={ackError || errorFor('spec.acknowledged_warnings') ? 'true' : undefined}
-							aria-describedby={ackError || errorFor('spec.acknowledged_warnings') ? `${uid}-ack-err` : undefined}
-						/>
-						I understand the duplicate risk
-					</label>
-					{#if ackError || errorFor('spec.acknowledged_warnings')}
-						<p class="error" id="{uid}-ack-err">{ackError || errorFor('spec.acknowledged_warnings')}</p>
-					{/if}
+				<div class="inline-alert warn" role="group" aria-labelledby="{uid}-ack">
+					<StatusIcon status="warn" />
+					<div class="ack">
+						<strong id="{uid}-ack">Adding sources can count the same activity twice.</strong>
+						<label class="check">
+							<input
+								type="checkbox"
+								bind:this={ackInput}
+								checked={form.acknowledged.includes(sumWarning)}
+								onchange={(e) => toggleAck(e.currentTarget.checked)}
+								aria-invalid={ackError || errorFor('spec.acknowledged_warnings') ? 'true' : undefined}
+								aria-describedby={ackError || errorFor('spec.acknowledged_warnings') ? `${uid}-ack-err` : undefined}
+							/>
+							I understand the duplicate risk
+						</label>
+						{#if ackError || errorFor('spec.acknowledged_warnings')}
+							<p class="error" id="{uid}-ack-err">{ackError || errorFor('spec.acknowledged_warnings')}</p>
+						{/if}
+						</div>
 				</div>
 			{/if}
 
@@ -448,7 +451,7 @@
 				{:else if preview === 'loading' || preview === null}
 					<p class="muted small">Resolving the draft…</p>
 				{:else if 'unavailable' in preview}
-					<p class="note"><StatusIcon status="info" /> Preview unavailable: this server cannot resolve drafts yet. You can still save the rule.</p>
+					<p class="inline-alert info"><StatusIcon status="info" /><span>Preview unavailable: this server cannot resolve drafts yet. You can still save the rule.</span></p>
 				{:else if summary}
 					{#await import('../charts/Sparkline.svelte') then { default: Sparkline }}
 						<Sparkline
@@ -497,11 +500,15 @@
 		{/if}
 
 		{#if message}
-			<p class="ok" role="status">
+			<div class="inline-alert ok" role="status">
 				<StatusIcon status="ok" />
-				{message}
-				{#if revertTo && !history}<button class="btn sm" type="button" disabled={busy} onclick={() => revertTo && activate(revertTo, true)}>Revert to version {revertTo}</button>{/if}
-			</p>
+				<span>{message}</span>
+				{#if revertTo && !history}
+					<div class="alert-actions">
+						<button class="btn sm" type="button" disabled={busy} onclick={() => revertTo && activate(revertTo, true)}>Revert to version {revertTo}</button>
+					</div>
+				{/if}
+			</div>
 		{/if}
 
 		{#if history && versions?.length}
@@ -540,7 +547,7 @@
 	<aside class="lens card" aria-labelledby="{uid}-title">
 		<div class="lens-head">
 			<h2 id="{uid}-title">{title}</h2>
-			{#if activeVersion}<span class="rule-chip">{activeVersion.builtin ? 'Built-in' : `Rule v${activeVersion.version}`} · active</span>{/if}
+			{#if activeVersion}<span class="chip">{activeVersion.builtin ? 'Built-in' : `Rule v${activeVersion.version}`} · active</span>{/if}
 		</div>
 		{@render body()}
 	</aside>
@@ -562,16 +569,6 @@
 	.lens h2 {
 		margin: 0;
 		font-size: var(--text-md);
-	}
-	.rule-chip {
-		display: inline-flex;
-		align-items: center;
-		min-height: 1.375rem;
-		padding: 0 var(--space-2);
-		font-size: var(--text-2xs);
-		color: var(--color-text-muted);
-		border: 1px solid var(--color-border-strong);
-		border-radius: var(--radius-pill);
 	}
 	.open {
 		width: 100%;
@@ -688,29 +685,16 @@
 		display: flex;
 		flex: none;
 	}
-	.arrows .btn {
-		width: var(--control-h-sm);
-		padding: 0;
-	}
 	.excludes {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		gap: var(--space-2);
 	}
-	.exclusion {
-		display: inline-flex;
-		align-items: center;
-		gap: var(--space-1);
-		min-height: 1.75rem;
-		padding: 0 var(--space-1) 0 var(--space-3);
-		font-size: var(--text-xs);
-		border: 1px solid var(--color-border-strong);
-		border-radius: var(--radius-pill);
-	}
 	.x {
-		width: 1.5rem;
-		height: 1.5rem;
+		width: 1.25rem;
+		height: 1.25rem;
+		margin-right: -0.375rem;
 		padding: 0;
 		font: inherit;
 		color: var(--color-text-muted);
@@ -725,27 +709,12 @@
 	}
 	.add {
 		max-width: 100%;
-		min-height: 1.75rem;
-		padding: 0 var(--space-2);
-		font: inherit;
+		min-height: var(--control-h-sm);
 		font-size: var(--text-xs);
-		color: var(--color-link);
-		background: transparent;
-		border: 1px dashed var(--color-border-strong);
-		border-radius: var(--radius-pill);
 	}
 	.ack {
 		display: grid;
 		gap: var(--space-2);
-		padding: var(--space-3);
-		border: 1px solid var(--color-warn);
-		border-radius: var(--radius-md);
-	}
-	.ack p {
-		display: flex;
-		gap: var(--space-2);
-		align-items: center;
-		margin: 0;
 	}
 	.row {
 		display: grid;
@@ -768,32 +737,12 @@
 	}
 	input[type='range'] {
 		min-height: var(--control-h);
-		padding: 0;
 		accent-color: var(--color-accent);
-		background: transparent;
-		border: 0;
 	}
 	.error {
 		margin: 0;
 		font-size: var(--text-xs);
 		color: var(--color-error);
-	}
-	.note,
-	.ok {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-2);
-		align-items: center;
-		padding: var(--space-2) var(--space-3);
-		font-size: var(--text-sm);
-		border-radius: var(--radius-sm);
-	}
-	.note {
-		margin: 0;
-		background: var(--color-info-bg);
-	}
-	.ok {
-		background: var(--color-accent-soft);
 	}
 	.preview {
 		display: grid;

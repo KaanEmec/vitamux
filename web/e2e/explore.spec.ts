@@ -113,7 +113,7 @@ test('metric detail: stats header, range, overlays, compare, source strip and th
 	await expect(garmin).toHaveAttribute('aria-pressed', 'true');
 	await expect(region.getByText('Garmin · watch')).toBeVisible();
 	await page.getByRole('button', { name: 'Compare previous' }).click();
-	await expect(region.getByText('Previous 7 days')).toBeVisible();
+	await expect(region.getByText('Previous 7 days', { exact: true })).toBeVisible(); // not the stat's "vs previous 7 days"
 	await region.getByText('Show as a table').click();
 	const table = page.getByRole('table', { name: /Resting heart rate/ });
 	await expect(table.getByRole('columnheader')).toHaveCount(4); // date + resolved + previous + garmin

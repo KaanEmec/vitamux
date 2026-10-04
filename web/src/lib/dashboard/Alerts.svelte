@@ -10,7 +10,6 @@
 	import StatusIcon, { type Status } from '../components/StatusIcon.svelte';
 	import { ago, alerting, providerLabel, type Connection } from '../connections/connections.ts';
 	import Button from '../ui/Button.svelte';
-	import Icon from '../ui/Icon.svelte';
 	import { icons } from '../ui/icons.ts';
 
 	interface Alert {
@@ -102,18 +101,20 @@
 		<ul>
 			{#each listed as a (a.key)}
 				{@const off = dismissed.includes(a.key)}
-				<li class={[a.status, off && 'off']}>
+				<li class={['inline-alert', a.status, off && 'off']}>
 					<StatusIcon status={a.status} />
-					<span class="text">{a.text}</span>
-					{#if a.href && a.action}<a href={a.href}>{a.action}</a>{/if}
-					{#if ondismiss}
-						{#if off}
-							<Button variant="ghost" size="sm" aria-label="Restore: {a.text}" onclick={() => restore(a.key)}>Restore</Button>
-						{:else}
-							<Button variant="ghost" class="dismiss" aria-label="Dismiss: {a.text}" onclick={() => dismiss(a.key)}>
-								<Icon d={icons.close} size={16} />
-							</Button>
-						{/if}
+					<span>{a.text}</span>
+					{#if (a.href && a.action) || ondismiss}
+						<div class="alert-actions">
+							{#if a.href && a.action}<a href={a.href}>{a.action}</a>{/if}
+							{#if ondismiss}
+								{#if off}
+									<Button variant="ghost" size="sm" aria-label="Restore: {a.text}" onclick={() => restore(a.key)}>Restore</Button>
+								{:else}
+									<Button variant="ghost" icon={icons.close} class="dismiss" aria-label="Dismiss: {a.text}" onclick={() => dismiss(a.key)} />
+								{/if}
+							{/if}
+						</div>
 					{/if}
 				</li>
 			{/each}
@@ -129,7 +130,7 @@
 </section>
 
 <style>
-	/* One row per alert: what happened, then where it is handled. Tinted by state, never alarming. */
+	/* One .inline-alert per alert: what happened, then where it is handled. */
 	ul {
 		display: grid;
 		gap: var(--space-2);
@@ -138,38 +139,23 @@
 		list-style: none;
 	}
 	li {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-2) var(--space-3);
 		align-items: center;
 		min-height: var(--control-h);
-		padding: var(--space-2) var(--space-4);
+		margin: 0;
 		font-size: var(--text-sm);
-		background: var(--color-warn-bg);
-		border: 1px solid color-mix(in srgb, var(--color-warn) 30%, transparent);
-		border-radius: var(--radius-lg);
 	}
-	li.error {
-		background: var(--color-error-bg);
-		border-color: color-mix(in srgb, var(--color-error) 30%, transparent);
-	}
-	.text {
-		flex: 1 1 14rem;
+	li.off {
+		border-style: dashed;
 	}
 	li a {
 		font-weight: 500;
 		text-decoration: none;
-	}
-	li.off {
-		border-style: dashed;
 	}
 	/* The icon button keeps a 44 px target without growing the row. */
 	li :global(.dismiss) {
 		min-width: var(--control-h);
 		min-height: var(--control-h);
 		margin: calc(var(--space-2) * -1) calc(var(--space-3) * -1) calc(var(--space-2) * -1) 0;
-		padding: 0;
-		color: var(--color-text-muted);
 	}
 	.btn.link {
 		min-height: var(--control-h);

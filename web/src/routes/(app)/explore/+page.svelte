@@ -20,6 +20,7 @@
 	import { icons } from '#lib/ui/icons.ts';
 	import { metricLook } from '#lib/ui/metric.ts';
 	import MetricTile from '#lib/ui/MetricTile.svelte';
+	import { sourceClass } from '#lib/ui/source.ts';
 	import Skeleton from '#lib/ui/Skeleton.svelte';
 
 	const sparkline = import('#lib/charts/Sparkline.svelte');
@@ -117,17 +118,16 @@
 {#if pending}<p class="note muted">Counts are catching up while the hourly aggregates are rebuilt.</p>{/if}
 
 <div class="filters">
-	<label class="search">
-		<Icon d={icons.search} size={16} />
-		<span class="visually-hidden">Search</span>
-		<input type="search" bind:value={text} placeholder="Search metric, code, device or analyte" />
-	</label>
+	<div class="input-group search">
+		<span class="affix"><Icon d={icons.search} size={16} /></span>
+		<input type="search" aria-label="Search" bind:value={text} placeholder="Search metric, code, device or analyte" />
+	</div>
 	{#if providers.length > 1}
 		<div class="chips" role="group" aria-label="Source">
-			<button type="button" class="filter" aria-pressed={!provider} onclick={() => (provider = '')}>All sources</button>
+			<button type="button" class="chip" aria-pressed={!provider} onclick={() => (provider = '')}>All sources</button>
 			{#each providers as p (p)}
-				<button type="button" class="filter" aria-pressed={provider === p} onclick={() => (provider = provider === p ? '' : p)}>
-					<Chip source={p}>{providerLabel(p)}</Chip>
+				<button type="button" class={['chip', sourceClass(p)]} aria-pressed={provider === p} onclick={() => (provider = provider === p ? '' : p)}>
+					<span class="dot" aria-hidden="true"></span>{providerLabel(p)}
 				</button>
 			{/each}
 		</div>
@@ -170,7 +170,7 @@
 	<section class="section card" aria-label={name}>
 		<div class="section-head">
 			<h2>
-				<button type="button" aria-expanded={open} onclick={() => (collapsed[name] = open)}>
+				<button type="button" class="btn ghost sm" aria-expanded={open} onclick={() => (collapsed[name] = open)}>
 					{name}
 					<svg class={['caret', !open && 'closed']} width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6" /></svg>
 				</button>
@@ -202,7 +202,7 @@
 									{#if key && pins.layout}
 										<button
 											type="button"
-											class={['star', pins.has(key) && 'pinned']}
+											class={['btn ghost sm icon-btn star', pins.has(key) && 'pinned']}
 											aria-pressed={pins.has(key)}
 											aria-label="Pin {name} to the dashboard"
 											onclick={() => pins.toggle(key)}
@@ -262,77 +262,13 @@
 		margin: var(--space-5) 0;
 	}
 	.search {
-		display: flex;
 		flex: 1 1 16rem;
-		align-items: center;
-		gap: var(--space-2);
 		max-width: 24rem;
-		min-height: var(--control-h);
-		padding: 0 var(--space-3);
-		color: var(--color-text-muted);
-		background: var(--color-surface);
-		border: 1px solid var(--color-border-strong);
-		border-radius: var(--radius-md);
-	}
-	.search:focus-within {
-		outline: 2px solid var(--color-focus);
-		outline-offset: 2px;
-	}
-	.search input {
-		flex: 1;
-		min-width: 0;
-		font: inherit;
-		color: var(--color-text);
-		background: transparent;
-		border: 0;
-		outline: none;
 	}
 	.chips {
 		display: flex;
 		flex-wrap: wrap;
 		gap: var(--space-2);
-	}
-	.filter {
-		display: inline-flex;
-		align-items: center;
-		min-height: 2.25rem;
-		padding: 0 var(--space-1);
-		font: inherit;
-		font-size: var(--text-sm);
-		color: var(--color-text-muted);
-		background: transparent;
-		border: 1px solid var(--color-border-strong);
-		border-radius: var(--radius-pill);
-		cursor: pointer;
-	}
-	.filter:first-child {
-		padding: 0 var(--space-3);
-	}
-	.filter[aria-pressed='true'] {
-		color: var(--color-text);
-		background: var(--color-selected);
-		border-color: var(--color-accent);
-	}
-	.filter :global(.chip) {
-		background: transparent;
-	}
-	select {
-		min-height: 2.25rem;
-		padding: 0 var(--space-3);
-		font: inherit;
-		font-size: var(--text-sm);
-		color: var(--color-text);
-		background: var(--color-surface);
-		border: 1px solid var(--color-border-strong);
-		border-radius: var(--radius-md);
-	}
-	.check {
-		display: inline-flex;
-		align-items: center;
-		gap: var(--space-2);
-		min-height: var(--control-h);
-		font-size: var(--text-sm);
-		color: var(--color-text-muted);
 	}
 	.section {
 		padding: 0;
@@ -351,17 +287,9 @@
 		margin: 0;
 		font-size: var(--text-md);
 	}
-	.section-head button {
-		display: inline-flex;
-		align-items: center;
-		gap: var(--space-2);
-		min-height: 2.25rem;
-		padding: 0;
+	.section-head .btn {
 		font: inherit;
 		color: inherit;
-		background: none;
-		border: 0;
-		cursor: pointer;
 	}
 	.caret {
 		fill: none;
@@ -427,19 +355,10 @@
 		width: 2.75rem;
 		padding-right: 0;
 	}
-	.star {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 2rem;
-		height: 2rem;
+	.btn.star {
 		color: var(--color-text-faint);
-		background: transparent;
-		border: 0;
-		border-radius: var(--radius-sm);
-		cursor: pointer;
 	}
-	.star.pinned {
+	.btn.star.pinned {
 		color: var(--color-accent);
 	}
 	.star.pinned :global(path) {

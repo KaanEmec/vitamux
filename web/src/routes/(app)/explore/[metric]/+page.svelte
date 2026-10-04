@@ -363,13 +363,14 @@
 
 				<div class="toggles" role="group" aria-label="Series">
 					<span class="muted small">Show</span>
-					<span class="toggle on resolved"><span class="swatch" aria-hidden="true"></span>Resolved</span>
+					<span class="chip resolved"><span class="dot" aria-hidden="true"></span>Resolved</span>
 					{#each providers as p (p)}
-						<button type="button" class={['toggle', sourceClass(p)]} aria-pressed={shownSources.includes(p)} onclick={() => toggleSource(p)}>
-							<span class="swatch" aria-hidden="true"></span>{providerLabel(p)}
+						{@const shown = shownSources.includes(p)}
+						<button type="button" class={['chip', sourceClass(p), !shown && 'dashed']} aria-pressed={shown} onclick={() => toggleSource(p)}>
+							<span class="dot" aria-hidden="true"></span>{providerLabel(p)}
 						</button>
 					{/each}
-					<button type="button" class="toggle" aria-pressed={showBaseline} onclick={() => (showBaseline = !showBaseline)}>Range and mean</button>
+					<button type="button" class={['chip', !showBaseline && 'dashed']} aria-pressed={showBaseline} onclick={() => (showBaseline = !showBaseline)}>Range and mean</button>
 					<span class="muted small span">{spanText}{resolved && !bars ? ' · drag on the chart to zoom' : ''}</span>
 				</div>
 
@@ -513,12 +514,9 @@
 		gap: var(--space-2);
 	}
 	.btn[aria-pressed='true'] {
-		color: var(--color-text);
 		background: var(--color-selected);
-		border-color: var(--color-border-strong);
 	}
-	.lens-btn,
-	.lens-btn[aria-expanded='true'] {
+	.lens-btn {
 		color: var(--color-link);
 		background: var(--color-accent-soft);
 		border-color: color-mix(in srgb, var(--color-accent) 35%, transparent);
@@ -570,36 +568,8 @@
 		padding-top: var(--space-4);
 		border-top: 1px solid var(--color-border);
 	}
-	.toggle {
-		--tone: var(--src, var(--metric, var(--color-accent)));
-		display: inline-flex;
-		align-items: center;
-		gap: var(--space-2);
-		min-height: 1.75rem;
-		padding: 0 var(--space-3);
-		font: inherit;
-		font-size: var(--text-xs);
-		font-weight: 500;
-		color: var(--color-text-muted);
-		background: transparent;
-		border: 1px dashed var(--color-border-strong);
-		border-radius: var(--radius-pill);
-		cursor: pointer;
-	}
-	.toggle.on,
-	.toggle[aria-pressed='true'] {
-		color: color-mix(in srgb, var(--tone) 50%, var(--color-text));
-		background: color-mix(in srgb, var(--tone) 12%, var(--color-surface));
-		border: 1px solid color-mix(in srgb, var(--tone) 50%, var(--color-surface));
-	}
-	.toggle.on {
-		cursor: default;
-	}
-	.swatch {
-		width: 0.875rem;
-		height: 0.1875rem;
-		background: var(--tone);
-		border-radius: 2px;
+	.resolved {
+		--tone: var(--metric, var(--color-accent));
 	}
 	.span {
 		flex: 1 1 12rem;
