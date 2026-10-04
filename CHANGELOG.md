@@ -2,6 +2,45 @@
 
 Newest first. Before a final release, `scripts/release-notes.sh --changelog vX.Y.Z` adds its section from the Conventional Commits since the previous final tag; edit it and add upgrade notes under "Breaking changes" before tagging. The release workflow refuses a final tag without its section and uses it as the release notes. Release candidates are described on their GitHub releases only.
 
+## v0.1.1 (2026-10-04)
+
+First final release. v0.1.0 was not published as a tag of its own: v0.1.1 contains all of it (its notes are in CHANGELOG.md) plus the changes below.
+
+### Sources
+
+- Apple Health bridge: a Swift package and a minimal iOS app pair with Vitamux and upload HealthKit data incrementally (anchored sync with deletions, idempotent batches). The Apple Health export importer remains as a fallback.
+- Sidecar connectors (protocol `vitamux-connector/1`, ADR 0017): run a collector written in any language as its own container behind the connector contract. Configure them with `VITAMUX_SIDECARS`; `vitamux admin init-secrets` creates their secrets.
+- Garmin Connect (wraps `python-garminconnect`) and WHOOP (wraps `@dofek/whoop`) as unofficial sidecars, with sign-in and MFA in the web UI. Unofficial connections start paused.
+- `vitamux connector-test` conformance kit and a Python example sidecar for writing your own.
+- `vitamux import batches [--dry-run] DIR` replays ingest batch files, such as an old collector's archive, into the live connection for the same account without duplicates.
+- Sidecar images follow their upstream releases once the checks pass.
+
+### Web UI
+
+- One connection wizard for OAuth redirects and for sign-in or MFA prompts. Provider names and the wrapped upstream version are shown.
+
+### API
+
+- `GET /api/v1/providers`, and `POST /api/v1/providers/{provider}/auth/continue` for prompt-based sign-in. It replaces `POST /api/v1/connections/{id}/auth/continue`, which was never implemented.
+- Connections carry `upstream` (wrapped package and version) for sidecar sources.
+
+### Fixes
+
+- Exports import back with providers matched by code, including health events.
+- Concurrent normalization no longer fails when two workers insert the same device, origin or normalizer version.
+- Sleep-episode windows keep the owner's timezone.
+- Resolution aggregates hours in SQL and loads data in a sliding window, which keeps bulk work inside the memory budget.
+- Coolify: the public URL comes from `SERVICE_URL_VITAMUX`, and the empty restore command is gone.
+
+### Maintenance
+
+- Go code updated to Go 1.27 idioms with the modernize linter enforced; internal refactors without behaviour changes.
+- Dependency updates: kin-openapi 0.144.0 and cel-go 0.29.0 (security advisories; both are build-tool dependencies, not part of the binary), golang.org/x/image 0.46.0, GitHub Actions on the Node 24 runtime.
+
+### Breaking changes
+
+None. Database migrations 00023 to 00028 run with `vitamux migrate up` as for any upgrade.
+
 ## v0.1.0 (2026-10-04)
 
 First release. Vitamux is a self-hosted personal health data aggregator: it keeps what your sources send, normalizes it, and lets you decide which source wins for each metric.
