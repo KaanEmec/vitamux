@@ -56,7 +56,7 @@ The provider names are illustrative; rules work for any provider.
 
 | Kind | Definition (in the user's timezone for that date) |
 | --- | --- |
-| `bucket(size)` | 1, 5, 15, or 30 min, aligned to local midnight. DST follows the wall clock. |
+| `bucket(size)` | 1, 5, 15, or 30 min, aligned to local midnight. DST follows the wall clock. Planned ([J22.26](../plan/E22-ios-app/J22.26-intraday-views.md)): 30 s for intensive metrics. |
 | `hour` | Local hours. DST days have 23 or 25. |
 | `local_day` | Rows with stored `local_date = D`, so a travel day is not split |
 | `local_night` | Main sleep episode of night D: candidates end in `[D−1 anchor, D anchor)` ([ADR-0009](../adr/0009-sleep-date-night-window.md)) |

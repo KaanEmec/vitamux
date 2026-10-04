@@ -97,6 +97,8 @@ Every panel route and every owner endpoint the panel calls has an app screen. "S
 | Lab results by analyte, history | Same | | J22.12 |
 | Settings › Profile, timezone periods, Withings notifications | Same | | J22.13 |
 | Settings › Devices: pairing code, devices, resync, revoke, origins | Same, plus "This iPhone" | QR shown for other phones | J22.13, J22.14 |
+| Apple Health source filter (take or ignore per app and type) | Apple Health › Sources | New in both clients | J22.25 |
+| Intraday Day view with zoom to buckets and raw samples | Day range on metric detail | New in both clients | J22.26 |
 | Settings › AI providers, API keys (shown once), Security (password, TOTP, sessions) | Same | TOTP: `otpauth://` link and copy | J22.13 |
 | Settings › Retention, Backups and export, System status | Same | Export saved to Files | J22.13 |
 | Bridge app: pairing, groups, per-type status, sync now, anchor reset, privacy | Apple Health | Pairing is one tap when signed in | J22.14 |
@@ -110,6 +112,7 @@ Operations the panel does not call stay out (manual measurements, push connectio
 - **Swift Charts**, iOS 18 vectorized plots (`LinePlot`, `AreaPlot`) for long series. Above about 2,000 points per series the kit decimates to min/max per pixel column, so a 14,400-point day stays smooth.
 - **Grammar:** `chartFor(metric)` in VitamuxKit's `Charts/` mirrors [the panel's](frontend.md#chart-grammar), driven by `GET /metrics`. A shared fixture of catalogue entries and expected views is tested by both `web` and VitamuxKit, so the two cannot drift.
 - **Views:** line with band, bars, step, line with baseline, stage stack, hypnogram, dumbbell, event lanes, lab points with the printed range, sparkline, coverage strip; for Watch data also an ECG strip, a beat-to-beat (RR) plot, activity rings and a workout route ([Apple Watch](#apple-watch)). Each has a range picker, selection with a callout, status markers (shape, colour and word), source series that differ by dash as well as colour, and a draft ghost series for the rule lens.
+- **Intraday:** a metric's `intraday` catalogue metadata gives its default and finest bucket; the Day view zooms through the ladder (heart rate 1 min → 30 s → raw, steps 30 → 15 → 5 min) with night and workout overlays ([J22.26](../plan/E22-ios-app/J22.26-intraday-views.md)). Metrics measured once a day have no Day view.
 - **Accessibility:** chart descriptors for VoiceOver and Audio Graphs, and a "Show as table" fallback on every chart.
 - **Copy:** neutral words as in [the design system](frontend.md#design-system): "30-day mean", "as printed", no good or bad.
 
@@ -118,6 +121,7 @@ Operations the panel does not call stay out (manual measurements, push connectio
 The app embeds HealthBridgeKit and owns the HealthKit entitlements, purpose string, observer registration in `didFinishLaunching`, background delivery and `BGAppRefreshTask` exactly as [described for E15](apple-health.md#sync-algorithm). Changes:
 
 - **One-tap pairing:** signed in, the app creates a pairing code (`POST /devices/pairing-codes`) and redeems it itself (`POST /api/ingest/v1/devices/pair`). The device token stays separate from the app session, with its own Keychain item, so ingest keeps working after sign-out and a stolen session cannot impersonate the device. Manual QR pairing remains for a phone that only syncs. Code creation for an app caller must not need `VITAMUX_PUBLIC_URL`, since no QR is shown (J22.3).
+- **Source filter (take or ignore):** the owner chooses per app seen in Apple Health, and optionally per type, whether Vitamux takes its data or ignores it. A provider connected directly (WHOOP, Garmin) is ignored by default with the reason shown. The filter is stored with the device on the server, applied on the phone as a HealthKit source predicate so ignored data never leaves it, editable from the app and the panel, and backed by a server guard that keeps stray rows raw and unnormalized ([J22.25](../plan/E22-ios-app/J22.25-apple-health-source-filter.md)). The relayed classification and the rules' relayed exclusion stay as the second line of defence.
 - **One screen** joins local state (enabled groups, per-type anchors, last upload, queue) with the server's view of this device (`GET /devices`: last seen, possibly-denied types, resync requests).
 - **Upgrade in place:** the app keeps Bridge's bundle identifier (`org.vitamux.healthbridge`) and Keychain service, so an installed Bridge updates into the app with its device token, anchors and HealthKit authorizations intact. Owners who changed the bundle id keep theirs.
 

@@ -12,6 +12,8 @@ Owner decisions (2026-10-04):
 - Full panel parity, including admin and ops settings.
 - Extras: home-screen widgets, offline read cache, local notifications, lab PDFs from the camera or Files.
 - Apple Watch: every type the Watch records, read on the iPhone (no watchOS app), including ECG, beat-to-beat series, workout routes, cycle tracking and State of Mind as opt-in groups.
+- Apple Health has a visible take/ignore setting per app and type, so a provider connected directly is never collected twice through Apple Health ([J22.25](J22.25-apple-health-source-filter.md)).
+- Metrics can be viewed inside a day at their own resolution: heart rate down to 30-second buckets and raw readings, steps as 30-minute bars, once-a-day metrics not at all ([J22.26](J22.26-intraday-views.md)).
 - A lean, clean architecture: plain SwiftUI, two packages, one app target, a folder per feature, no extra layers or third-party packages ([lean architecture](../../architecture/ios-app.md#lean-architecture)).
 - iOS 18 minimum, iPhone only.
 - v0.4.0, after E20 (v0.3.0).
@@ -24,14 +26,17 @@ Owner decisions (2026-10-04):
 - `apple/VitamuxApp` (app, widget extension, UI tests), replacing `apple/HealthBridgeApp`;
 - every panel screen on the phone, plus Apple Health, widgets, cache and notifications;
 - type registry v2, its normalizer and the Watch views in the app and the panel;
+- intraday resolution in the catalogue, the 30-second bucket, and the Day view in both clients;
 - a device test report and the v0.4.0 release.
 
 ## Acceptance
 - **Sign-in:** on a fresh install the owner types a server URL, signs in with password and TOTP (or a recovery code), and lands on the dashboard. The session shows in the panel's Settings › Security and ending it there signs the app out at its next request. A server below the minimum API version gets a clear message.
 - **Parity:** every row of the [parity matrix](../../architecture/ios-app.md#parity-matrix) works on the phone against the same endpoints, with the same confirmations, field errors and audit records as the panel.
 - **Visualisation:** every metric code, group, event type and lab analyte in the synthetic dataset opens a chart picked by the grammar, with selection, status markers, source series, baseline, coverage and a table fallback. The grammar fixture passes in both `web` and the app's chart kit.
+- **Intraday:** every metric with an intraday resolution opens a Day view in both clients; heart rate zooms from 1-minute buckets to 30 seconds and raw samples, steps show 30-minute bars, and a bucket's explanation matches the all-sources view.
 - **Rules:** from a metric chart the owner reorders sources, changes strategy, window or coverage, sees the draft overlaid, then saves, activates or reverts. The full builder works with live preview.
 - **Apple Health:** a signed-in owner pairs this iPhone in one tap. Selected types sync incrementally with deletions, in the background on a physical device. An installed Bridge upgrades in place without re-pairing, re-authorizing or a full re-pull.
+- **No double counting:** with WHOOP or Garmin connected directly, their copies in Apple Health are ignored by default, visibly, and the owner can take or ignore any Health app per type from the phone or the panel.
 - **Apple Watch:** on a physical iPhone with a paired Watch, every registry v2 group the owner turns on arrives with the Watch as its device. ECG strips, RR series, activity rings and routes show in both clients. A rule can prefer or exclude the Watch. Sensitive groups stay off until turned on.
 - **Extras:** widgets show cached dashboard values, redacted while locked; screens read from the cache offline, marked stale; notifications fire on state changes and carry no health values; a scanned or shared PDF reaches lab review.
 - **Lean:** the code follows the [lean architecture](../../architecture/ios-app.md#lean-architecture) rules, and CI rejects any package outside the allowed list.
@@ -45,6 +50,7 @@ Owner decisions (2026-10-04):
 - J22.14 can start right after J22.5, since it only needs sign-in and HealthBridgeKit.
 - After J22.15: J22.16 (kit) and J22.17 (server) run in parallel with everything else; J22.18 follows both.
 - J22.19 lands before J22.20 and J22.21.
+- J22.25 follows J22.14 and J22.16, and J22.26 follows J22.8; both land before J22.22. J22.26's catalogue and API parts (T22.26.1, T22.26.2) can start now.
 
 ## Jobs
 | Job | Title | Depends on | Gate |
@@ -70,9 +76,11 @@ Owner decisions (2026-10-04):
 | [J22.19](J22.19-offline-cache.md) | Offline read cache | J22.4 | None |
 | [J22.20](J22.20-widgets.md) | Home-screen and lock-screen widgets | J22.7, J22.19 | None |
 | [J22.21](J22.21-notifications.md) | Local notifications | J22.14, J22.19 | None |
-| [J22.22](J22.22-quality-gates.md) | Quality gates and CI | J22.7–J22.21 | None |
+| [J22.22](J22.22-quality-gates.md) | Quality gates and CI | J22.7–J22.21, J22.25, J22.26 | None |
 | [J22.23](J22.23-device-campaign-release.md) | Device campaign, docs and v0.4.0 | J22.22, G6 | G8 |
 | [J22.24](J22.24-design-pass.md) | Visual design pass (after parity) | J22.22 | None |
+| [J22.25](J22.25-apple-health-source-filter.md) | Apple Health source filter: take or ignore per app and type | J22.3, J22.14, J22.16 | None |
+| [J22.26](J22.26-intraday-views.md) | Intraday views: one day at the metric's own resolution | J22.6, J22.8 | None |
 
 ## Out of scope
 - A watchOS app, complications, or uploads from the Watch itself: Watch data comes through the iPhone.

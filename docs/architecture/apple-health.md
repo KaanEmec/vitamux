@@ -78,6 +78,7 @@ Normalizer (`internal/connectors/applehealth`, [J15.2](../plan/E15-apple-health/
 
 - `provider = apple_health` is the transport. `data_origins.origin_key` = bundle id; `devices` come from `HKDevice`.
 - Apple-native origins (`com.apple.health.*`, Apple devices) have `is_native`. Origins matching `known_relay_origins` get `relayed_provider` (e.g., Garmin Connect → `garmin`). The UI (Settings › Devices) lists every origin it has seen so the owner can classify unknown ones: `PATCH /origins/{id}` writes `data_origins.relayed_provider_id` (an owner edit wins; `known_relay_origins` only seeds new origins), and the `relayed` selector and the all-sources view read it live. Rows already stored keep the `relayed` quality flag they were written with until they are reprocessed.
+- Planned ([J22.25](../plan/E22-ios-app/J22.25-apple-health-source-filter.md)): a per-device take/ignore filter per origin app and type, applied on the phone, so a directly connected provider's copy in Health is not collected at all; the relayed exclusion below stays for anything that still arrives.
 - Example rules: Apple Watch HR first (`provider: apple_health, device_type: watch, relayed: false`), a scale app's weight first (`origin_key: …`), or exclude relayed Garmin data (`relayed: true`).
 
 ### Brand origin sets
