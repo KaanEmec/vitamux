@@ -1,0 +1,77 @@
+# Nightly upstream canary (docs/sidecars.md#upstream-canary): builds every sidecar against its
+# upstream's default branch (UPSTREAM.md: Canary source, default git+Repository) instead of the
+# locked release and runs the same checks. One issue per sidecar is opened, updated while it keeps
+# failing, and closed when it passes again. Inert while sidecars/ holds nothing but _template.
+name: sidecar-canary
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+permissions: {}
+
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      names: ${{ steps.list.outputs.names }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - id: list
+        run: |
+          names=$(find sidecars -mindepth 1 -maxdepth 1 -type d ! -name '_*' -printf '%f\n' 2>/dev/null | sort | jq -Rsc 'split("\n") | map(select(length > 0))')
+          echo "names=${names:-[]}" >> "$GITHUB_OUTPUT"
+
+  canary:
+    needs: list
+    if: needs.list.outputs.names != '[]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write # the per-sidecar canary issue
+    strategy:
+      fail-fast: false
+      matrix:
+        name: ${{ fromJSON(needs.list.outputs.names) }}
+    env:
+      NAME: ${{ matrix.name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+      - name: Checks against the upstream default branch
+        id: check
+        run: |
+          src=$(sed -n 's/^- Canary source: *//p' "sidecars/$NAME/UPSTREAM.md")
+          [ -n "$src" ] || src="git+$(sed -n 's/^- Repository: *//p' "sidecars/$NAME/UPSTREAM.md")"
+          echo "canary source: $src"
+          if scripts/sidecar-check.sh "$NAME" "$src" > canary.log 2>&1; then
+            echo "result=pass" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=fail" >> "$GITHUB_OUTPUT"
+          fi
+          tail -n 60 canary.log
+      - name: Open, update or close the canary issue
+        env:
+          RESULT: ${{ steps.check.outputs.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Upstream canary failed: $NAME"
+          num=$(gh issue list --state open --label upstream-canary --json number,title --jq "map(select(.title == \"$title\")) | .[0].number // empty")
+          if [ "$RESULT" = pass ]; then
+            [ -z "$num" ] || gh issue close "$num" --comment "The upstream default branch builds and passes again ($RUN_URL)."
+            exit 0
+          fi
+          { echo "The nightly build of sidecar \`$NAME\` against its upstream default branch failed: $RUN_URL"
+            echo; echo "The locked release keeps running; nothing was merged or published. Last lines (synthetic cassettes only, no secrets):"
+            echo; echo '```text'; tail -n 40 canary.log; echo '```'; } > body.md
+          gh label create upstream-canary --description "Nightly upstream canary failed" --color D93F0B 2> /dev/null || true
+          if [ -n "$num" ]; then
+            gh issue edit "$num" --body-file body.md
+          else
+            gh issue create --title "$title" --label upstream-canary --body-file body.md
+          fi
+          exit 1

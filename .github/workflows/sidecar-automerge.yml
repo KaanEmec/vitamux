@@ -1,0 +1,86 @@
+# Auto-merge of upstream bumps (docs/sidecars.md#automatic-upstream-updates). A Dependabot PR is
+# approved and merged only when (1) it changes nothing but the upstream package lines of ONE
+# sidecar's manifest and lockfile (tools/sidecarscope, reading UPSTREAM.md from the default branch)
+# and (2) every check on the PR is green. Otherwise it stays open with the label upstream-break.
+# This workflow runs from the default branch and never checks out or executes PR code; it reads
+# the PR's files through the API. Inert while sidecars/ holds nothing but _template.
+# Repository settings it relies on: "Allow GitHub Actions to create and approve pull requests",
+# and sidecar-ci plus ci as required status checks.
+name: sidecar-automerge
+on:
+  workflow_run:
+    workflows: [ci, sidecar-ci]
+    types: [completed]
+permissions: {}
+
+jobs:
+  decide:
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.actor.login == 'dependabot[bot]' &&
+      startsWith(github.event.workflow_run.head_branch, 'dependabot/') &&
+      contains(github.event.workflow_run.head_branch, '/sidecars/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # approve, merge, label
+      issues: write # create the label
+      actions: write # dispatch sidecar-image after the merge
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      PR: ${{ github.event.workflow_run.pull_requests[0].number }}
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0 # the default branch: trusted scripts and UPSTREAM.md
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+      - name: Scope check (only the upstream package lines of one sidecar)
+        id: scope
+        run: |
+          [ -n "$PR" ] || { echo "no pull request attached to this run"; echo "go=false" >> "$GITHUB_OUTPUT"; exit 0; }
+          # A newer push to the branch has its own runs; vet only the commit that was tested.
+          [ "$(gh pr view "$PR" --json headRefOid --jq .headRefOid)" = "$HEAD_SHA" ] || { echo "head moved on"; echo "go=false" >> "$GITHUB_OUTPUT"; exit 0; }
+          base_ref=$(gh pr view "$PR" --json baseRefName --jq .baseRefName)
+          gh pr diff "$PR" --name-only > changed.txt
+          mkdir base head
+          while read -r f; do
+            mkdir -p "base/$(dirname "$f")" "head/$(dirname "$f")"
+            gh api -H "Accept: application/vnd.github.raw" "repos/$REPO/contents/$f?ref=$base_ref" > "base/$f" 2> /dev/null || rm -f "base/$f"
+            gh api -H "Accept: application/vnd.github.raw" "repos/$REPO/contents/$f?ref=$HEAD_SHA" > "head/$f" 2> /dev/null || rm -f "head/$f"
+          done < changed.txt
+          if name=$(go run ./tools/sidecarscope -base base -head head < changed.txt 2> scope.err); then
+            echo "go=true" >> "$GITHUB_OUTPUT"
+            echo "name=$name" >> "$GITHUB_OUTPUT"
+          else
+            cat scope.err
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            echo "break=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Checks (none failed, none pending)
+        id: checks
+        if: steps.scope.outputs.go == 'true'
+        run: |
+          gh pr checks "$PR" --json name,bucket > checks.json || true
+          cat checks.json
+          if jq -e 'map(select(.bucket == "fail" or .bucket == "cancel")) | length > 0' checks.json > /dev/null; then
+            echo "break=true" >> "$GITHUB_OUTPUT"
+          elif jq -e 'length == 0 or (map(select(.bucket == "pending")) | length > 0)' checks.json > /dev/null; then
+            echo "waiting: the run that finishes last decides" # a later workflow_run event re-evaluates
+          else
+            echo "green=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Leave open for review (label upstream-break)
+        if: steps.scope.outputs.break == 'true' || steps.checks.outputs.break == 'true'
+        run: |
+          gh label create upstream-break --description "Upstream bump needs review; the last good version stays live" --color B60205 2> /dev/null || true
+          gh pr edit "$PR" --add-label upstream-break
+      - name: Approve and merge
+        if: steps.checks.outputs.green == 'true'
+        env:
+          SIDECAR: ${{ steps.scope.outputs.name }}
+        run: |
+          gh pr review "$PR" --approve --body "Upstream bump of $SIDECAR: only upstream package lines changed and every check is green."
+          gh pr merge "$PR" --squash --match-head-commit "$HEAD_SHA"
+          gh workflow run sidecar-image.yml -f "sidecar=$SIDECAR" # GITHUB_TOKEN merges do not trigger push workflows

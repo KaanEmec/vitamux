@@ -1,0 +1,121 @@
+# Sidecar images (docs/sidecars.md#updates): on every merge that changes sidecars/<name>/, run the
+# sidecar checks, then publish ghcr.io/kaanemec/vitamux-sidecar-<name> multi-arch with an SPDX SBOM
+# and an optional keyless signature. Tags: <upstream-version>-<short-sha> (immutable) and stable
+# (moving; only ever a build that passed the checks). Independent of core releases. Inert while
+# sidecars/ holds nothing but _template. sidecar-automerge.yml starts it by dispatch after a merge,
+# because merges made with GITHUB_TOKEN do not trigger push workflows.
+# Actions are pinned by commit SHA (docs/security.md#supply-chain).
+name: sidecar-image
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sidecars/**"
+      - "!sidecars/_template/**"
+  workflow_dispatch:
+    inputs:
+      sidecar:
+        description: Sidecar directory name (sidecars/<name>)
+        required: true
+permissions:
+  contents: read
+env:
+  IMAGE_PREFIX: ghcr.io/kaanemec/vitamux-sidecar-
+
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    outputs:
+      names: ${{ steps.list.outputs.names }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 2
+      - id: list
+        env:
+          INPUT: ${{ inputs.sidecar }}
+        run: |
+          if [ -n "$INPUT" ]; then
+            names=$INPUT
+          else
+            names=$(git diff --name-only HEAD^ HEAD -- sidecars | cut -d/ -f2 | sort -u)
+          fi
+          json=$(printf '%s\n' $names | grep -E '^[a-z][a-z0-9_-]*$' | while read -r n; do [ -d "sidecars/$n" ] && echo "$n"; done | jq -Rsc 'split("\n") | map(select(length > 0) | select(startswith("_") | not))')
+          echo "names=${json:-[]}" >> "$GITHUB_OUTPUT"
+
+  image:
+    needs: list
+    if: needs.list.outputs.names != '[]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # push the image and its signature
+      id-token: write # keyless signing (Sigstore, GitHub OIDC)
+    concurrency:
+      group: sidecar-image-${{ matrix.name }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix:
+        name: ${{ fromJSON(needs.list.outputs.names) }}
+    env:
+      NAME: ${{ matrix.name }}
+      SIGN: ${{ vars.VITAMUX_SIGN_RELEASES != 'false' }} # set the repo variable to false to skip signing
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+      - name: Sidecar checks (a failing check publishes nothing, so stable keeps the last good image)
+        run: scripts/sidecar-check.sh "$NAME"
+      - name: Image tags
+        id: meta
+        run: |
+          ver=$(sed -n 's/^- Version: *//p' "sidecars/$NAME/UPSTREAM.md" | tr -c 'A-Za-z0-9._\n-' '-')
+          [ -n "$ver" ] || { echo "::error::UPSTREAM.md has no Version"; exit 1; }
+          image=$IMAGE_PREFIX$NAME
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+          echo "tags=$image:$ver-${GITHUB_SHA::7},$image:stable" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # Scan before anything is pushed: single-arch load of the same (cached) build.
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: sidecars/${{ matrix.name }}
+          load: true
+          tags: sidecar:scan
+          cache-from: type=gha,scope=sidecar-${{ matrix.name }}
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: sidecar:scan
+          scanners: vuln
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        id: push
+        with:
+          context: sidecars/${{ matrix.name }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          sbom: true # SPDX attestation per platform
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=sidecar-${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=sidecar-${{ matrix.name }}
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        if: env.SIGN == 'true'
+      - name: Keyless signature (image digest)
+        if: env.SIGN == 'true'
+        env:
+          REF: ${{ steps.meta.outputs.image }}@${{ steps.push.outputs.digest }}
+        run: cosign sign --yes "$REF"
