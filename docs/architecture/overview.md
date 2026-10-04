@@ -125,7 +125,7 @@ web/                          SvelteKit SPA (embedded at build)
 api/openapi.yaml, authz.yaml  schemas/ (ingest, rule, lab extraction JSON Schemas)
 prompts/lab-extraction/       fixtures/ (synthetic)   tools/ (fixturegen, fixtureguard, labeval, notices, apiref, doclinks, ...)
 deploy/compose/, coolify/, sql/   docs/ (this tree, adr/)
-LICENSE NOTICE THIRD_PARTY_NOTICES.md CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md
+LICENSE NOTICE THIRD_PARTY_NOTICES.md SECURITY.md
 ```
 
 The Swift package and app (`apple/`) and `internal/connectors/applehealth` arrive with [E15](../plan/E15-apple-health/README.md).

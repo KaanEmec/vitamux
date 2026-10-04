@@ -51,7 +51,7 @@ Changes per release: [CHANGELOG.md](CHANGELOG.md).
 
 ## Contributing
 
-Setup, commands and conventions: [docs/development.md](docs/development.md) and [CONTRIBUTING.md](CONTRIBUTING.md). Fixtures are synthetic only; never commit real health data or credentials. Report vulnerabilities as described in [SECURITY.md](SECURITY.md). Community rules: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+Setup, commands and conventions: [docs/development.md](docs/development.md). Fixtures are synthetic only; never commit real health data or credentials. Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
 
 ## License
 

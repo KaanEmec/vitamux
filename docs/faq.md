@@ -43,4 +43,4 @@ It is built for one internet-reachable owner: argon2id passwords, optional TOTP,
 
 ## What license?
 
-MIT. Contributions are signed off under the DCO ([CONTRIBUTING.md](../CONTRIBUTING.md)).
+MIT. Contributions are signed off under the DCO.
