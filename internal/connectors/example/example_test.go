@@ -71,3 +71,8 @@ func TestGoldenHeartRate(t *testing.T) {
 	normtest.Golden(t, Normalizer{}, normalize.RawPayload{Stream: Stream, ContentType: "application/json"},
 		normalize.Env{Provider: Provider})
 }
+
+func TestGoldenSidecarHeartRate(t *testing.T) {
+	normtest.Golden(t, Normalizer{Stream: SidecarStream}, normalize.RawPayload{Stream: SidecarStream, ContentType: "application/json"},
+		normalize.Env{Provider: "example_sidecar"})
+}

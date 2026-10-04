@@ -13,12 +13,23 @@ import (
 // errUnreadable carries no payload bytes, unlike json's syntax errors.
 var errUnreadable = errors.New("example.heart_rate: unreadable sample")
 
-// Normalizer turns one stored sample into a heart_rate measurement.
-type Normalizer struct{}
+// SidecarStream is the Python example sidecar's heart-rate stream (examples/sidecar-python);
+// its samples have the same shape.
+const SidecarStream = "example_sidecar.heart_rate"
 
-func (Normalizer) ID() string                    { return Stream }
-func (Normalizer) Version() int                  { return 1 }
-func (Normalizer) Accepts(stream, _ string) bool { return stream == Stream }
+// Normalizer turns one stored sample into a heart_rate measurement. The zero value serves
+// Stream; set Stream to SidecarStream for the sidecar's.
+type Normalizer struct{ Stream string }
+
+func (n Normalizer) ID() string {
+	if n.Stream != "" {
+		return n.Stream
+	}
+	return Stream
+}
+
+func (Normalizer) Version() int                    { return 1 }
+func (n Normalizer) Accepts(stream, _ string) bool { return stream == n.ID() }
 
 // Normalize maps a sample; one without bpm or time is skipped with a warning.
 func (Normalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ normalize.Env) (normalize.Output, error) {

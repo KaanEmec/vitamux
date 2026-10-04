@@ -1,6 +1,7 @@
 // Package example is a toy connector for a fictional heart-rate API, built from docs/adapters.md
-// alone to show the walkthrough end to end. It is registered only in its own tests, never in
-// cmd/vitamux, and has no providers row outside them.
+// alone to show the walkthrough end to end. The connector is registered only in its own tests,
+// never in cmd/vitamux, and has no providers row outside them. Only its Normalizer ships, for the
+// Python example sidecar's stream (examples/sidecar-python).
 package example
 
 import (

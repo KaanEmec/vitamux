@@ -1,0 +1,6 @@
+{
+  "synthetic": true,
+  "normalizer": "example_sidecar.heart_rate",
+  "version": 1,
+  "error": "example.heart_rate: unreadable sample"
+}

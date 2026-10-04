@@ -1,0 +1,28 @@
+{
+  "synthetic": true,
+  "normalizer": "example_sidecar.heart_rate",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "synthetic-band-01",
+        "type": "watch",
+        "manufacturer": "Example"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "heart_rate",
+        "kind": "sample",
+        "start": "2026-09-14T07:15:00Z",
+        "value": 76,
+        "unit": "bpm",
+        "device": "synthetic-band-01",
+        "key": {
+          "record_type": "sample",
+          "external_id": "hr-3"
+        }
+      }
+    ]
+  }
+}
