@@ -83,7 +83,7 @@ func Import(ctx context.Context, d *db.DB, fsys fs.FS, o ImportOptions) (ImportS
 		im := &importer{ctx: ctx, q: q, fsys: fsys, man: man, opts: o, off: map[string]int64{},
 			conns: map[uuid.UUID]uuid.UUID{}, devices: map[uuid.UUID]uuid.UUID{}, origins: map[uuid.UUID]uuid.UUID{},
 			batches: map[uuid.UUID]uuid.UUID{}, nvs: map[int64]int64{}, raws: map[int64]int64{}, groups: map[int64]int64{},
-			sessions: map[uuid.UUID]bool{}, workouts: map[uuid.UUID]bool{}}
+			sessions: map[uuid.UUID]bool{}, workouts: map[uuid.UUID]bool{}, provs: map[int64]int64{}}
 		if err := im.run(); err != nil {
 			return err
 		}
@@ -125,6 +125,8 @@ type importer struct {
 	// Exported id → target id, for rows the target already had.
 	conns, devices, origins, batches map[uuid.UUID]uuid.UUID
 	nvs, raws, groups                map[int64]int64
+	// Exported provider id → target id, only where they differ (see providers).
+	provs map[int64]int64
 	// Sleep sessions and workouts this import inserted; only their stages and segments follow.
 	sessions, workouts map[uuid.UUID]bool
 
@@ -193,10 +195,18 @@ func (im *importer) run() error {
 }
 
 // checkRefs makes sure the seeded reference rows the export's ids point at mean the same here.
+// Providers are the exception: sidecars register theirs at runtime, so ids depend on the
+// instance and providers are matched by code (see providers).
 func (im *importer) checkRefs() error {
 	for _, t := range refTables {
 		f, ok := im.man.file(t.name + ".ndjson")
 		if !ok {
+			continue
+		}
+		if t.name == "providers" {
+			if err := im.providers(f); err != nil {
+				return err
+			}
 			continue
 		}
 		local, err := t.rows(im.q, im.ctx)
@@ -218,6 +228,69 @@ func (im *importer) checkRefs() error {
 		}
 	}
 	return nil
+}
+
+// providers registers the export's providers this instance lacks (a sidecar's, or the same
+// ones registered in another order) and records the id of each one that differs here.
+func (im *importer) providers(f File) error {
+	type provider struct {
+		ID   int64  `json:"id"`
+		Code string `json:"code"`
+		Name string `json:"name"`
+	}
+	var exported []provider
+	err := im.lines(f, func(line []byte) error {
+		var p provider
+		if err := json.Unmarshal(line, &p); err != nil {
+			return err
+		}
+		exported = append(exported, p)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	for _, p := range exported {
+		if err := im.q.RegisterProvider(im.ctx, dbq.RegisterProviderParams{Code: p.Code, Name: p.Name}); err != nil {
+			return fmt.Errorf("%w: provider %q: %w", ErrIncompatible, p.Code, err)
+		}
+	}
+	local, err := im.q.ExportProviders(im.ctx)
+	if err != nil {
+		return err
+	}
+	ids := map[string]int64{}
+	for _, l := range local {
+		var p provider
+		if err := json.Unmarshal(l, &p); err != nil {
+			return err
+		}
+		ids[p.Code] = p.ID
+	}
+	for _, p := range exported {
+		if ids[p.Code] != p.ID {
+			im.provs[p.ID] = ids[p.Code]
+		}
+	}
+	return nil
+}
+
+// providerRefs lists the exported columns that reference providers.id; they are translated to
+// the target's ids. TestProviderRefs checks the list against the schema.
+var providerRefs = map[string][]string{
+	"connections": {"provider_id"}, "devices": {"provider_id"}, "data_origins": {"provider_id", "relayed_provider_id"},
+	"measurement_groups": {"provider_id"}, "measurements": {"provider_id"}, "sleep_sessions": {"provider_id"}, "workouts": {"provider_id"},
+}
+
+func (im *importer) provRef(r row, k string) error {
+	if r.null(k) || len(im.provs) == 0 {
+		return nil
+	}
+	v, err := r.int(k)
+	if n, ok := im.provs[v]; ok {
+		r.setInt(k, n)
+	}
+	return err
 }
 
 // refKey is a reference row's id and code.
@@ -281,6 +354,11 @@ func (im *importer) table(t table) error {
 		r := row{}
 		if err := json.Unmarshal(line, &r); err != nil {
 			return err
+		}
+		for _, k := range providerRefs[t.name] {
+			if err := im.provRef(r, k); err != nil {
+				return err
+			}
 		}
 		keep, err := t.patch(im, r)
 		if err != nil || !keep {
