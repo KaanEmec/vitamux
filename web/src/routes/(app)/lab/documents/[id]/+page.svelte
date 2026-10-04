@@ -412,13 +412,6 @@
 		font-size: var(--text-xs);
 		color: var(--color-text-muted);
 	}
-	kbd {
-		padding: 1px var(--space-2);
-		font-size: var(--text-2xs);
-		color: var(--color-text);
-		border: 1px solid var(--color-border-strong);
-		border-radius: var(--radius-xs);
-	}
 	.confirm h2 {
 		font-size: var(--text-md);
 	}

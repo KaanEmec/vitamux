@@ -252,12 +252,6 @@
 		white-space: nowrap;
 		text-overflow: ellipsis;
 	}
-	kbd {
-		padding: 1px var(--space-2);
-		font-size: var(--text-2xs);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-xs);
-	}
 	.spacer {
 		flex: 1;
 	}

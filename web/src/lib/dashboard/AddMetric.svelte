@@ -88,8 +88,4 @@
 		flex: 1;
 		font-size: var(--text-md);
 	}
-	button[aria-pressed='true'] {
-		color: var(--color-link);
-		background: var(--color-accent-soft);
-	}
 </style>

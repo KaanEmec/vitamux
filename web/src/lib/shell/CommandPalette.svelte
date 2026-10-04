@@ -143,12 +143,6 @@
 	.search input:focus {
 		box-shadow: none;
 	}
-	kbd {
-		padding: 1px var(--space-2);
-		font-size: var(--text-2xs);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-xs);
-	}
 	ul {
 		max-height: min(24rem, 60vh);
 		margin: 0;

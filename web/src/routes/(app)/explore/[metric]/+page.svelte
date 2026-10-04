@@ -513,9 +513,6 @@
 		align-items: center;
 		gap: var(--space-2);
 	}
-	.btn[aria-pressed='true'] {
-		background: var(--color-selected);
-	}
 	.lens-btn {
 		color: var(--color-link);
 		background: var(--color-accent-soft);
