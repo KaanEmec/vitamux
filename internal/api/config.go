@@ -130,11 +130,7 @@ func (o *owner) ListJobs(ctx context.Context, req oapi.ListJobsRequestObject) (o
 	if err != nil {
 		return nil, err
 	}
-	afterKey, err := p.afterKey()
-	if err != nil {
-		return nil, err
-	}
-	afterID, err := p.afterUUID()
+	afterKey, afterID, err := p.afterKeyUUID()
 	if err != nil {
 		return nil, err
 	}

@@ -257,10 +257,7 @@ func (o *owner) ListLabResults(ctx context.Context, req oapi.ListLabResultsReque
 		return nil, err
 	}
 	f := review.ResultFilter{Limit: p.lim()}
-	if f.AfterDate, err = p.afterKey(); err != nil {
-		return nil, err
-	}
-	if f.AfterID, err = p.afterUUID(); err != nil {
+	if f.AfterDate, f.AfterID, err = p.afterKeyUUID(); err != nil {
 		return nil, err
 	}
 	if d := req.Params.StartDate; d != nil {

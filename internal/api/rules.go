@@ -199,11 +199,7 @@ func (o *owner) ListOverrides(ctx context.Context, req oapi.ListOverridesRequest
 	if err != nil {
 		return nil, err
 	}
-	afterKey, err := p.afterKey()
-	if err != nil {
-		return nil, err
-	}
-	afterID, err := p.afterUUID()
+	afterKey, afterID, err := p.afterKeyUUID()
 	if err != nil {
 		return nil, err
 	}

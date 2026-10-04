@@ -167,6 +167,16 @@ func (p page) afterUUID() (uuid.UUID, error) {
 	return id, nil
 }
 
+// afterKeyUUID returns both parts of a cursor whose id is a UUID.
+func (p page) afterKeyUUID() (*time.Time, uuid.UUID, error) {
+	key, err := p.afterKey()
+	if err != nil {
+		return nil, uuid.Nil, err
+	}
+	id, err := p.afterUUID()
+	return key, id, err
+}
+
 // lim is the row count to fetch: one more than the page, to learn whether another follows.
 func (p page) lim() int32 { return int32(p.limit + 1) } //nolint:gosec // limit <= maxPageLimit
 
@@ -409,11 +419,7 @@ func (o *owner) ListSleep(ctx context.Context, req oapi.ListSleepRequestObject) 
 	if err != nil {
 		return nil, err
 	}
-	afterKey, err := p.afterKey()
-	if err != nil {
-		return nil, err
-	}
-	afterID, err := p.afterUUID()
+	afterKey, afterID, err := p.afterKeyUUID()
 	if err != nil {
 		return nil, err
 	}
@@ -518,11 +524,7 @@ func (o *owner) ListWorkouts(ctx context.Context, req oapi.ListWorkoutsRequestOb
 	if err != nil {
 		return nil, err
 	}
-	afterKey, err := p.afterKey()
-	if err != nil {
-		return nil, err
-	}
-	afterID, err := p.afterUUID()
+	afterKey, afterID, err := p.afterKeyUUID()
 	if err != nil {
 		return nil, err
 	}
