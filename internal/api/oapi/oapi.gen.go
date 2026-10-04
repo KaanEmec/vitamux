@@ -837,6 +837,30 @@ func (e OverrideWindowKind) Valid() bool {
 	}
 }
 
+// Defines values for PeriodComparisonDays.
+const (
+	N30  PeriodComparisonDays = 30
+	N365 PeriodComparisonDays = 365
+	N7   PeriodComparisonDays = 7
+	N90  PeriodComparisonDays = 90
+)
+
+// Valid indicates whether the value is a known member of the PeriodComparisonDays enum.
+func (e PeriodComparisonDays) Valid() bool {
+	switch e {
+	case N30:
+		return true
+	case N365:
+		return true
+	case N7:
+		return true
+	case N90:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProvenanceEntity.
 const (
 	ProvenanceEntityGroup       ProvenanceEntity = "group"
@@ -2016,6 +2040,9 @@ type DashboardCardSize string
 type DashboardLayout struct {
 	Cards []DashboardCard `json:"cards"`
 
+	// Hero The metrics of the hero stat tiles, in order (catalogue codes or rule families). The curated default (steps, resting_heart_rate, hrv_rmssd_nightly, weight) while the stored layout has none; an empty list when the owner chose none. Codes no longer in the catalogue are dropped.
+	Hero []string `json:"hero"`
+
 	// IsDefault No layout is stored; this is the curated default.
 	IsDefault bool                   `json:"is_default"`
 	Version   DashboardLayoutVersion `json:"version"`
@@ -2028,6 +2055,9 @@ type DashboardLayoutVersion int
 type DashboardLayoutInput struct {
 	// Cards In display order; a metric at most once.
 	Cards []DashboardCard `json:"cards"`
+
+	// Hero Hero stat-tile metrics in order, a metric at most once, each a catalogue code or rule family. Omit to keep the default; an empty list shows none.
+	Hero *[]string `json:"hero,omitempty"`
 
 	// Version Layout schema version.
 	Version DashboardLayoutInputVersion `json:"version"`
@@ -2680,8 +2710,10 @@ type MetricWindows string
 
 // MetricSummary defines model for MetricSummary.
 type MetricSummary struct {
-	Metric string   `json:"metric"`
-	Rule   *RuleRef `json:"rule,omitempty"`
+	// Comparisons With compare=true, the 7, 30, 90 and 365 day periods, in that order.
+	Comparisons *[]PeriodComparison `json:"comparisons,omitempty"`
+	Metric      string              `json:"metric"`
+	Rule        *RuleRef            `json:"rule,omitempty"`
 
 	// Sparkline The 30 local dates ending at date, oldest first.
 	Sparkline []SummaryPoint `json:"sparkline"`
@@ -2814,6 +2846,19 @@ type PairingCode struct {
 	// URL The public base URL (VITAMUX_PUBLIC_URL) the app pairs against.
 	URL string `json:"url"`
 }
+
+// PeriodComparison A period and the one before it, for a neutral delta. Both are plain rollups; compare mean, or for a family each component's mean.
+type PeriodComparison struct {
+	// Current Plain statistics of the resolved daily values of the local dates start_date through end_date, for display; not a resolution strategy. Values of windows still open are left out.
+	Current Rollup               `json:"current"`
+	Days    PeriodComparisonDays `json:"days"`
+
+	// Previous Plain statistics of the resolved daily values of the local dates start_date through end_date, for display; not a resolution strategy. Values of windows still open are left out.
+	Previous Rollup `json:"previous"`
+}
+
+// PeriodComparisonDays defines model for PeriodComparison.Days.
+type PeriodComparisonDays int
 
 // PreviewDay defines model for PreviewDay.
 type PreviewDay struct {
@@ -3115,8 +3160,10 @@ type ResolvedLinks struct {
 	Sources *string `json:"sources,omitempty"`
 }
 
-// ResolvedNight defines model for ResolvedNight.
+// ResolvedNight episode is the bed (start) and wake (end) time of the night's main episode, the union span of its sessions in the owner's timezone; absent when the night has no episode. Time per stage is result.value.sleep_awake, sleep_light, sleep_deep and sleep_rem, in seconds.
 type ResolvedNight struct {
+	// Episode The span an E2 min or min_rolling_mean statistic picked.
+	Episode   *Span              `json:"episode,omitempty"`
 	LocalDate openapi_types.Date `json:"local_date"`
 
 	// Members Every source with a session in the main episode, inside the rule or not.
@@ -3139,6 +3186,9 @@ type ResolvedPoint struct {
 	Links     *ResolvedLinks      `json:"links,omitempty"`
 	LocalDate *openapi_types.Date `json:"local_date,omitempty"`
 	Partial   *bool               `json:"partial,omitempty"`
+
+	// Providers The providers of the records behind the value (those of the chosen groups' sources), distinct, in input order; absent without a value.
+	Providers *[]string `json:"providers,omitempty"`
 
 	// Sources The groups the value came from (one for selecting strategies).
 	Sources []string `json:"sources"`
@@ -4360,6 +4410,9 @@ type GetResolvedSummaryParams struct {
 
 	// Date Local date; today in the owner's timezone when omitted.
 	Date *openapi_types.Date `form:"date,omitempty" json:"date,omitempty"`
+
+	// Compare true adds comparisons to every metric: the rollups of the 7, 30, 90 and 365 local dates ending at date beside those of the equally long period before them. Resolves up to 730 dates per metric, so it is off by default.
+	Compare *bool `form:"compare,omitempty" json:"compare,omitempty"`
 }
 
 // GetResolvedTrendParams defines parameters for GetResolvedTrend.
@@ -8032,6 +8085,19 @@ func (siw *ServerInterfaceWrapper) GetResolvedSummary(w http.ResponseWriter, r *
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "date"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "date", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "compare" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "compare", r.URL.Query(), &params.Compare, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "compare"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "compare", Err: err})
 		}
 		return
 	}

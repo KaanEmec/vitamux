@@ -28,6 +28,9 @@ const (
 // statPeriods are the summary's rollups: the 7, 30 and 90 local dates ending at its date.
 var statPeriods = []int{7, 30, 90}
 
+// comparePeriods are the periods compared with the one before them (compare=true).
+var comparePeriods = []int{7, 30, 90, 365}
+
 // metricList trims and de-duplicates requested metrics and checks each is resolvable.
 func metricList(requested []string) ([]string, error) {
 	var out []string
@@ -152,7 +155,8 @@ func unitOf(metric string) *string {
 // ---- summary
 
 // GetResolvedSummary answers each metric's value of date, its last 30 daily values and the 7-,
-// 30- and 90-day rollups ending at date.
+// 30- and 90-day rollups ending at date; with compare also each of the 7, 30, 90 and 365 day
+// periods beside the one before it.
 func (o *owner) GetResolvedSummary(ctx context.Context, req oapi.GetResolvedSummaryRequestObject) (oapi.GetResolvedSummaryResponseObject, error) {
 	if _, err := o.ownerDB(); err != nil {
 		return nil, err
@@ -189,7 +193,12 @@ func (o *owner) GetResolvedSummary(ctx context.Context, req oapi.GetResolvedSumm
 		}
 		out.Timezone = z.name(day.Start)
 	}
-	from, sparkFrom := date.AddDate(0, 0, 1-statPeriods[len(statPeriods)-1]), date.AddDate(0, 0, 1-sparklineDays)
+	reach := statPeriods[len(statPeriods)-1]
+	compare := ptrVal(req.Params.Compare)
+	if compare {
+		reach = 2 * comparePeriods[len(comparePeriods)-1]
+	}
+	from, sparkFrom := date.AddDate(0, 0, 1-reach), date.AddDate(0, 0, 1-sparklineDays)
 	for _, m := range metrics {
 		s := oapi.MetricSummary{Metric: m, Unit: unitOf(m), Value: noRule(m), Sparkline: make([]oapi.SummaryPoint, 0, sparklineDays)}
 		points := map[time.Time]oapi.SummaryPoint{}
@@ -233,6 +242,15 @@ func (o *owner) GetResolvedSummary(ctx context.Context, req oapi.GetResolvedSumm
 		}
 		for _, n := range statPeriods {
 			s.Stats = append(s.Stats, rollup(date.AddDate(0, 0, 1-n), date, values, additive(m)))
+		}
+		if compare {
+			cs := make([]oapi.PeriodComparison, 0, len(comparePeriods))
+			for _, n := range comparePeriods {
+				cs = append(cs, oapi.PeriodComparison{Days: oapi.PeriodComparisonDays(n),
+					Current:  rollup(date.AddDate(0, 0, 1-n), date, values, additive(m)),
+					Previous: rollup(date.AddDate(0, 0, 1-2*n), date.AddDate(0, 0, -n), values, additive(m))})
+			}
+			s.Comparisons = &cs
 		}
 		out.Metrics[m] = s
 	}

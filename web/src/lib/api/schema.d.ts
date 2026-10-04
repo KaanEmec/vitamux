@@ -2180,6 +2180,8 @@ export interface components {
             coverage?: number;
             /** @description The groups the value came from (one for selecting strategies). */
             sources: string[];
+            /** @description The providers of the records behind the value (those of the chosen groups' sources), distinct, in input order; absent without a value. */
+            providers?: string[];
             warnings?: string[];
             links?: components["schemas"]["ResolvedLinks"];
         };
@@ -2187,10 +2189,12 @@ export interface components {
             timezone: string;
             nights: components["schemas"]["ResolvedNight"][];
         };
+        /** @description episode is the bed (start) and wake (end) time of the night's main episode, the union span of its sessions in the owner's timezone; absent when the night has no episode. Time per stage is result.value.sleep_awake, sleep_light, sleep_deep and sleep_rem, in seconds. */
         ResolvedNight: {
             /** Format: date */
             local_date: string;
             result: components["schemas"]["ResolvedValue"];
+            episode?: components["schemas"]["Span"];
             /** @description Every source with a session in the main episode, inside the rule or not. */
             members: components["schemas"]["SleepMember"][];
         };
@@ -2344,6 +2348,15 @@ export interface components {
             sparkline: components["schemas"]["SummaryPoint"][];
             /** @description Rollups of the 7, 30 and 90 local dates ending at date, in that order. */
             stats: components["schemas"]["Rollup"][];
+            /** @description With compare=true, the 7, 30, 90 and 365 day periods, in that order. */
+            comparisons?: components["schemas"]["PeriodComparison"][];
+        };
+        /** @description A period and the one before it, for a neutral delta. Both are plain rollups; compare mean, or for a family each component's mean. */
+        PeriodComparison: {
+            /** @enum {integer} */
+            days: 7 | 30 | 90 | 365;
+            current: components["schemas"]["Rollup"];
+            previous: components["schemas"]["Rollup"];
         };
         SummaryPoint: {
             /** Format: date */
@@ -2519,11 +2532,15 @@ export interface components {
             version: 1;
             /** @description In display order; a metric at most once. */
             cards: components["schemas"]["DashboardCard"][];
+            /** @description Hero stat-tile metrics in order, a metric at most once, each a catalogue code or rule family. Omit to keep the default; an empty list shows none. */
+            hero?: string[];
         };
         DashboardLayout: {
             /** @enum {integer} */
             version: 1;
             cards: components["schemas"]["DashboardCard"][];
+            /** @description The metrics of the hero stat tiles, in order (catalogue codes or rule families). The curated default (steps, resting_heart_rate, hrv_rmssd_nightly, weight) while the stored layout has none; an empty list when the owner chose none. Codes no longer in the catalogue are dropped. */
+            hero: string[];
             /** @description No layout is stored; this is the curated default. */
             is_default: boolean;
         };
@@ -4925,6 +4942,8 @@ export interface operations {
                 metrics: string[];
                 /** @description Local date; today in the owner's timezone when omitted. */
                 date?: string;
+                /** @description true adds comparisons to every metric: the rollups of the 7, 30, 90 and 365 local dates ending at date beside those of the equally long period before them. Resolves up to 730 dates per metric, so it is off by default. */
+                compare?: boolean;
             };
             header?: never;
             path?: never;
