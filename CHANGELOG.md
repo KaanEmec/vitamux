@@ -2,6 +2,16 @@
 
 Newest first. Before a final release, `scripts/release-notes.sh --changelog vX.Y.Z` adds its section from the Conventional Commits since the previous final tag; edit it and add upgrade notes under "Breaking changes" before tagging. The release workflow refuses a final tag without its section and uses it as the release notes. Release candidates are described on their GitHub releases only.
 
+## v0.2.5 (2026-10-04)
+
+### Connectors
+
+- WHOOP daily steps: read from the strain deep dive (`CONTRIBUTORS_TILE_STEPS`) as a daily total per local day. WHOOP no longer serves intraday steps. `whoop.strain_deep_dive` is now normalizer version 2.
+
+### Breaking changes
+
+None. To get daily steps from deep dives already stored: `vitamux reprocess --stream whoop.strain_deep_dive`.
+
 ## v0.2.4 (2026-10-04)
 
 ### Connectors
