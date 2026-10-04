@@ -1,0 +1,18 @@
+{
+ "synthetic": true,
+ "type": "HKCategoryTypeIdentifierSleepAnalysis",
+ "records": [
+  {"attrs": {"type": "HKCategoryTypeIdentifierSleepAnalysis", "sourceName": "Synthetic Watch", "value": "HKCategoryValueSleepAnalysisInBed",
+   "startDate": "2026-09-14 23:20:00 +0200", "endDate": "2026-09-15 06:50:00 +0200"}},
+  {"attrs": {"type": "HKCategoryTypeIdentifierSleepAnalysis", "sourceName": "Synthetic Watch", "value": "HKCategoryValueSleepAnalysisAsleepCore",
+   "startDate": "2026-09-14 23:35:00 +0200", "endDate": "2026-09-15 01:00:00 +0200"}},
+  {"attrs": {"type": "HKCategoryTypeIdentifierSleepAnalysis", "sourceName": "Synthetic Watch", "value": "HKCategoryValueSleepAnalysisAsleepCore",
+   "startDate": "2026-09-14 23:35:00 +0200", "endDate": "2026-09-15 01:00:00 +0200"}},
+  {"attrs": {"type": "HKCategoryTypeIdentifierSleepAnalysis", "sourceName": "Synthetic Watch", "value": "HKCategoryValueSleepAnalysisAsleepDeep",
+   "startDate": "2026-09-15 01:00:00 +0200", "endDate": "2026-09-15 01:45:00 +0200"}},
+  {"attrs": {"type": "HKCategoryTypeIdentifierSleepAnalysis", "sourceName": "Synthetic Watch", "value": "HKCategoryValueSleepAnalysisAsleep",
+   "startDate": "2026-09-15 13:00:00 +0200", "endDate": "2026-09-15 13:30:00 +0200"}},
+  {"attrs": {"type": "HKCategoryTypeIdentifierSleepAnalysis", "sourceName": "Synthetic Watch", "value": "HKCategoryValueSleepAnalysisNap",
+   "startDate": "2026-09-15 14:00:00 +0200", "endDate": "2026-09-15 14:30:00 +0200"}}
+ ]
+}

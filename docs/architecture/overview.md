@@ -94,7 +94,8 @@ The minimal reliable topology is **`vitamux` + `postgres`**, with volumes `pgdat
 | `vitamux admin …` | `init-secrets [--if-missing]`, `create-owner`, `reset-password`, `purge-user` |
 | `vitamux keys rotate` | Re-seal under the current master key ([key rotation](../operations/key-rotation.md)) |
 | `vitamux reprocess` | Re-run normalizers over raw payloads |
-| `vitamux import ndjson [--merge]` | Load a Vitamux export ([exports](api.md#exports)); the Apple Health export importer is E15 |
+| `vitamux import ndjson [--merge]` | Load a Vitamux export ([exports](api.md#exports)) |
+| `vitamux import apple-health-export FILE` | Backfill from the Health app's export ([importer](apple-health.md#export-importer-fallback)) |
 | `vitamux backup` / `vitamux restore` | Consistent backup bundle ([operations/backup.md](../operations/backup.md)) |
 | `vitamux resolve verify` | Compare the resolved cache with live resolution |
 | `vitamux version` | Version, commit, expected schema |

@@ -55,7 +55,7 @@ func RecomputeJob(d *db.DB, log *slog.Logger) jobs.Handler {
 			return err
 		}
 		log.Info("local dates recomputed", "measurements", n.Measurements, "groups", n.Groups,
-			"workouts", n.Workouts, "sleep_sessions", n.SleepSessions)
+			"workouts", n.Workouts, "sleep_sessions", n.SleepSessions, "health_events", n.Events)
 		return nil
 	}
 }

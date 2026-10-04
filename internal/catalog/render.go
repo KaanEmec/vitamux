@@ -13,13 +13,15 @@ const DocPath = "docs/metrics.md"
 // entry. A generated seed file never changes once released: an entry added later takes a new
 // marker and its own file.
 const (
-	SeedV1      = 10 // the J07.1 v1 seed
-	SeedDerived = 20 // the derived codes of J09.10
+	SeedV1        = 10 // the J07.1 v1 seed
+	SeedDerived   = 20 // the derived codes of J09.10
+	SeedHealthKit = 25 // the E15 codes of J15.2
 )
 
 var seedFiles = map[int]struct{ path, job string }{
-	SeedV1:      {"internal/db/migrations/00010_catalogue_seed.sql", "J07.1"},
-	SeedDerived: {"internal/db/migrations/00020_catalogue_derived.sql", "J09.10"},
+	SeedV1:        {"internal/db/migrations/00010_catalogue_seed.sql", "J07.1"},
+	SeedDerived:   {"internal/db/migrations/00020_catalogue_derived.sql", "J09.10"},
+	SeedHealthKit: {"internal/db/migrations/00025_catalogue_healthkit.sql", "J15.2"},
 }
 
 func since(marker int) int {
@@ -105,22 +107,20 @@ func MetricsDoc() string {
 	b.WriteString("Aggregation values are defined in [resolution](architecture/resolution.md#within-source-aggregation). ")
 	b.WriteString("Plausible is the range outside which a value is flagged `implausible`. Apple HK and Withings columns are informational; HK ids omit the `HKQuantityTypeIdentifier` prefix.\n")
 
-	section := ""
-	for _, m := range metrics {
-		if m.Section != section {
-			section = m.Section
-			b.WriteString("\n## " + section + "\n\n")
-			b.WriteString("| Code | Unit | Kinds | Aggregation | Plausible | Windows | Group | Apple HK | Withings |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n")
+	for _, section := range sections {
+		b.WriteString("\n## " + section + "\n\n")
+		b.WriteString("| Code | Unit | Kinds | Aggregation | Plausible | Windows | Group | Apple HK | Withings |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n")
+		for _, m := range metrics {
+			if m.Section == section {
+				metricRow(&b, m)
+			}
 		}
-		kinds := join(m.Kinds)
-		if kinds == "" {
-			kinds = "-"
-		}
-		if m.DerivedFrom != "" {
-			kinds = "- (from `" + m.DerivedFrom + "`)"
-		}
-		fmt.Fprintf(&b, "| `%s` | %s | %s | %s | %s to %s | %s | %s | %s | %s |\n",
-			m.Code, m.Unit, kinds, m.Agg, num(m.Min), num(m.Max), join(m.Windows()), m.Group, m.HK, m.Withings)
+	}
+
+	b.WriteString("\n## Events\n\nTyped events in `health_events`, never resolved like metrics ([metric-catalog](architecture/metric-catalog.md#events)). ")
+	b.WriteString("HK ids omit the `HKCategoryTypeIdentifier` prefix.\n\n| Code | Levels | Apple HK |\n| --- | --- | --- |\n")
+	for _, e := range events {
+		fmt.Fprintf(&b, "| `%s` | %s | %s |\n", e.Code, strings.Join(e.Levels, ", "), e.HK)
 	}
 
 	b.WriteString("\n## Windows and strategies by aggregation\n\n")
@@ -145,4 +145,16 @@ func MetricsDoc() string {
 		fmt.Fprintf(&b, "| %s | %s | %s | %s |\n", u.Code, u.Base, num(u.Factor), num(u.Offset))
 	}
 	return b.String()
+}
+
+func metricRow(b *strings.Builder, m Metric) {
+	kinds := join(m.Kinds)
+	if kinds == "" {
+		kinds = "-"
+	}
+	if m.DerivedFrom != "" {
+		kinds = "- (from `" + m.DerivedFrom + "`)"
+	}
+	fmt.Fprintf(b, "| `%s` | %s | %s | %s | %s to %s | %s | %s | %s | %s |\n",
+		m.Code, m.Unit, kinds, m.Agg, num(m.Min), num(m.Max), join(m.Windows()), m.Group, m.HK, m.Withings)
 }

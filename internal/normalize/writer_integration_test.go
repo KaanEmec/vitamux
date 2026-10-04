@@ -4,6 +4,7 @@ package normalize
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -431,5 +432,40 @@ func TestWriterConcurrentNewDevice(t *testing.T) {
 	}
 	if n := e.int(`SELECT count(*) FROM devices`); n != 1 {
 		t.Errorf("%d devices", n)
+	}
+}
+
+// TestWriterHealthEvents: events follow the same rules as the other event tables: replay is
+// unchanged, a change supersedes and links, a tombstone sets deleted_at, and nothing is dirty.
+func TestWriterHealthEvents(t *testing.T) {
+	e := writerEnv(t)
+	ev := func(level string) Output {
+		end := ts("2026-06-15T09:00:00Z")
+		return Output{Events: []Event{{Code: "walking_steadiness_alert", Start: ts("2026-06-01T09:00:00Z"), End: &end,
+			Level: level, Context: json.RawMessage(`{"k": 1}`), Flags: FlagManualEntry, Key: Key{RecordType: "ev", ExternalID: "e1"}}}}
+	}
+	if st := e.write(e.conn, 1, ev("initial_low")); st.Inserted != 1 {
+		t.Fatalf("insert %+v", st)
+	}
+	if st := e.write(e.conn, 1, ev("initial_low")); st.Unchanged != 1 || st.Inserted != 0 {
+		t.Errorf("replay %+v", st)
+	}
+	if st := e.write(e.conn, 1, ev("repeat_low")); st.Inserted != 1 || st.Superseded != 1 {
+		t.Errorf("change %+v", st)
+	}
+	if n := e.int(`SELECT count(*) FROM health_events o JOIN health_events n ON n.id = o.superseded_by
+		WHERE o.level = 'initial_low' AND n.level = 'repeat_low' AND n.superseded_at IS NULL AND n.local_date = '2026-06-01'
+		AND n.quality_flags = 1`); n != 1 {
+		t.Error("superseded event not linked to its successor")
+	}
+	if st := e.write(e.conn, 1, Output{Tombstones: []Key{{RecordType: "ev", ExternalID: "e1"}}}); st.Deleted != 1 {
+		t.Errorf("tombstone %+v", st)
+	}
+	if n := e.int(`SELECT count(*) FROM resolution_dirty`); n != 0 {
+		t.Errorf("events marked %d days dirty", n)
+	}
+	bad := ev("low")
+	if _, err := Write(t.Context(), e.d.Q(), Source{ConnectionID: e.conn, RawPayloadID: e.raw(e.conn), NormalizerVersionID: 1}, bad); !errors.Is(err, ErrInvalidOutput) {
+		t.Errorf("unknown level: %v", err)
 	}
 }

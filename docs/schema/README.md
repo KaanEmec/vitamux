@@ -24,6 +24,7 @@ Schema `vitamux` at migration 27. Design and rationale: [data-model.md](../archi
 | [exports](#exports) | SELECT, INSERT, UPDATE, DELETE | Export zips (blob_sha256 holds a blob reference); deleted with their blob after expires_at. |
 | [extraction_row_edits](#extraction_row_edits) | SELECT, INSERT, DELETE | Append-only review trail of each extracted row. |
 | [extraction_runs](#extraction_runs) | SELECT, INSERT, UPDATE, DELETE | One extraction attempt of a document. Re-extraction adds a run; runs can be compared. Deleted with the document original. |
+| [health_events](#health_events) | SELECT, INSERT, UPDATE, DELETE | Typed events (alerts, results) with a level or value; codes are owned by internal/catalog (Events). |
 | [idempotency_keys](#idempotency_keys) | SELECT, INSERT, UPDATE, DELETE | First successful response per (client, Idempotency-Key), replayed for the same request; another request with the key is a conflict. |
 | [import_items](#import_items) | SELECT, INSERT, UPDATE, DELETE | Items already imported, so re-running an importer skips them. |
 | [import_runs](#import_runs) | SELECT, INSERT, UPDATE, DELETE |  |
@@ -41,6 +42,7 @@ Schema `vitamux` at migration 27. Design and rationale: [data-model.md](../archi
 | [metric_catalog](#metric_catalog) | SELECT | Metrics owned by internal/catalog. Sources combine only when they share a code. |
 | [normalizer_versions](#normalizer_versions) | SELECT, INSERT, UPDATE, DELETE |  |
 | [oauth_states](#oauth_states) | SELECT, INSERT, UPDATE, DELETE | One row per pending authorization step; the callback or the next continue deletes it (single use). Logging out deletes it with the session. |
+| [pairing_codes](#pairing_codes) | SELECT, INSERT, UPDATE, DELETE | Short-lived, single-use codes a device exchanges for a client token at POST /api/ingest/v1/devices/pair. Only the code's SHA-256 is stored. |
 | [provider_rate_state](#provider_rate_state) | SELECT, INSERT, UPDATE, DELETE | Shared Retry-After state, so a restart keeps honouring provider rate limits. |
 | [providers](#providers) | SELECT | Data vendors and transports. Seeded by migrations; read-only for the app role. |
 | [raw_payloads](#raw_payloads) | SELECT, INSERT, UPDATE, DELETE |  |
@@ -245,9 +247,11 @@ Ingest tokens `vmx_cli_<id>_<secret>` scoped to one connection; only the secret'
 | created_at | timestamp with time zone | no | `now()` |  |
 | last_seen_at | timestamp with time zone | yes |  |  |
 | revoked_at | timestamp with time zone | yes |  |  |
+| anchor_resets | jsonb | no | `'{}'::jsonb` | Device anchor resets the owner requested: HealthKit type identifier (or * for every type) to the latest request time. The device applies those newer than the last it applied. |
 
 Constraints:
 
+- `clients_anchor_resets_check`: `CHECK ((jsonb_typeof(anchor_resets) = 'object'::text))`
 - `clients_connection_id_fkey`: `FOREIGN KEY (connection_id) REFERENCES connections(id)`
 - `clients_kind_check`: `CHECK ((kind = ANY (ARRAY['collector'::text, 'device'::text, 'importer'::text])))`
 - `clients_pkey`: `PRIMARY KEY (id)`
@@ -494,6 +498,60 @@ Constraints:
 Indexes:
 
 - `extraction_runs_document_idx`: `btree (document_id, created_at)`
+
+## health_events
+
+Typed events (alerts, results) with a level or value; codes are owned by internal/catalog (Events).
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| user_id | uuid | no |  |  |
+| code | text | no |  |  |
+| start_at | timestamp with time zone | no |  |  |
+| end_at | timestamp with time zone | yes |  |  |
+| tz_offset_min | smallint | yes |  |  |
+| local_date | date | no |  |  |
+| value | double precision | yes |  |  |
+| level | text | yes |  | Provider level mapped to a code-owned word, e.g. initial_low; null when the event has none. |
+| context | jsonb | no | `'{}'::jsonb` | Source metadata kept as given, e.g. HealthKit thresholds. |
+| quality_flags | integer | no | `0` | measurements.quality_flags bitset (manual_entry, relayed). |
+| provider_id | smallint | no |  |  |
+| connection_id | uuid | no |  |  |
+| device_id | uuid | yes |  |  |
+| origin_id | uuid | yes |  |  |
+| external_id | text | yes |  |  |
+| dedupe_key | bytea | no |  |  |
+| raw_payload_id | bigint | yes |  |  |
+| normalizer_version_id | integer | no |  |  |
+| ingested_at | timestamp with time zone | no | `now()` |  |
+| normalized_at | timestamp with time zone | no | `now()` |  |
+| superseded_at | timestamp with time zone | yes |  |  |
+| superseded_by | uuid | yes |  |  |
+| deleted_at | timestamp with time zone | yes |  |  |
+| deleted_by_raw_id | bigint | yes |  |  |
+
+Constraints:
+
+- `health_events_check`: `CHECK ((end_at >= start_at))`
+- `health_events_code_check`: `CHECK ((code ~ '^[a-z][a-z0-9_]*$'::text))`
+- `health_events_connection_id_fkey`: `FOREIGN KEY (connection_id) REFERENCES connections(id)`
+- `health_events_dedupe_key_check`: `CHECK ((length(dedupe_key) = 16))`
+- `health_events_deleted_by_raw_id_fkey`: `FOREIGN KEY (deleted_by_raw_id) REFERENCES raw_payloads(id)`
+- `health_events_device_id_fkey`: `FOREIGN KEY (device_id) REFERENCES devices(id)`
+- `health_events_normalizer_version_id_fkey`: `FOREIGN KEY (normalizer_version_id) REFERENCES normalizer_versions(id)`
+- `health_events_origin_id_fkey`: `FOREIGN KEY (origin_id) REFERENCES data_origins(id)`
+- `health_events_pkey`: `PRIMARY KEY (id)`
+- `health_events_provider_id_fkey`: `FOREIGN KEY (provider_id) REFERENCES providers(id)`
+- `health_events_raw_payload_id_fkey`: `FOREIGN KEY (raw_payload_id) REFERENCES raw_payloads(id)`
+- `health_events_superseded_by_fkey`: `FOREIGN KEY (superseded_by) REFERENCES health_events(id)`
+- `health_events_tz_offset_min_check`: `CHECK (((tz_offset_min >= '-1080'::integer) AND (tz_offset_min <= 1080)))`
+- `health_events_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id)`
+
+Indexes:
+
+- `health_events_dedupe_idx`: `UNIQUE btree (dedupe_key) WHERE (superseded_at IS NULL)`
+- `health_events_user_code_idx`: `btree (user_id, code, start_at) WHERE ((superseded_at IS NULL) AND (deleted_at IS NULL))`
 
 ## idempotency_keys
 
@@ -1030,6 +1088,30 @@ Constraints:
 - `oauth_states_provider_id_fkey`: `FOREIGN KEY (provider_id) REFERENCES providers(id)`
 - `oauth_states_session_id_fkey`: `FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE`
 - `oauth_states_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE`
+
+## pairing_codes
+
+Short-lived, single-use codes a device exchanges for a client token at POST /api/ingest/v1/devices/pair. Only the code's SHA-256 is stored.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| user_id | uuid | no |  |  |
+| code_hash | bytea | no |  |  |
+| created_at | timestamp with time zone | no |  |  |
+| expires_at | timestamp with time zone | no |  |  |
+| used_at | timestamp with time zone | yes |  |  |
+
+Constraints:
+
+- `pairing_codes_code_hash_check`: `CHECK ((length(code_hash) = 32))`
+- `pairing_codes_code_hash_key`: `UNIQUE (code_hash)`
+- `pairing_codes_pkey`: `PRIMARY KEY (id)`
+- `pairing_codes_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE`
+
+Indexes:
+
+- `pairing_codes_user_created_idx`: `btree (user_id, created_at)`
 
 ## provider_rate_state
 

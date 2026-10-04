@@ -69,10 +69,11 @@ const (
 )
 
 var bodyClasses = []bodyClass{
-	{prefix: "/api/ingest/v1/", suffix: "/blobs", max: 25 * miB}, // raw file parts
-	{prefix: "/api/v1/documents", max: 25 * miB},                 // PDF upload: 20 MiB file plus multipart framing
-	{prefix: "/api/ingest/v1/", max: 10 * miB},                   // gzip batches: depth is checked after decompression (checkJSONDepth)
-	{prefix: "/api/", max: 1 * miB, json: true},                  // owner JSON
+	{prefix: "/api/ingest/v1/", suffix: "/blobs", max: 25 * miB},   // raw file parts
+	{prefix: "/api/v1/documents", max: 25 * miB},                   // PDF upload: 20 MiB file plus multipart framing
+	{prefix: "/api/ingest/v1/devices/", max: 64 * kiB, json: true}, // pairing (unauthenticated) and device config
+	{prefix: "/api/ingest/v1/", max: 10 * miB},                     // gzip batches: depth is checked after decompression (checkJSONDepth)
+	{prefix: "/api/", max: 1 * miB, json: true},                    // owner JSON
 	{max: 64 * kiB}, // webhooks, OAuth callbacks, everything else
 }
 

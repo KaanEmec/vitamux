@@ -1,0 +1,50 @@
+{
+  "synthetic": true,
+  "normalizer": "healthkit.samples",
+  "version": 2,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "hk:6505da02fcd835c932e75a0bdbdc7cd2",
+        "type": "phone",
+        "manufacturer": "Apple Inc.",
+        "model": "iPhone",
+        "hardware_version": "iPhone17,1",
+        "software_version": "26.0"
+      }
+    ],
+    "origins": [
+      {
+        "key": "com.apple.health.00000000-0000-4000-8000-0000000000A2",
+        "name": "Synthetic Phone",
+        "native": true
+      }
+    ],
+    "events": [
+      {
+        "code": "walking_steadiness_alert",
+        "start": "2026-09-01T00:00:00+02:00",
+        "end": "2026-09-14T00:00:00+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "level": "repeat_low",
+        "context": {
+          "HKTimeZone": "Europe/Amsterdam"
+        },
+        "device": "hk:6505da02fcd835c932e75a0bdbdc7cd2",
+        "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A2",
+        "key": {
+          "record_type": "HKCategoryTypeIdentifierAppleWalkingSteadinessEvent",
+          "external_id": "6F0D0000-0000-4000-8000-00000000000A"
+        }
+      }
+    ],
+    "warnings": [
+      {
+        "code": "unknown_category_value",
+        "detail": "6F0D0000-0000-4000-8000-00000000000B"
+      }
+    ]
+  }
+}

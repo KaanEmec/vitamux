@@ -61,7 +61,7 @@ Memory stays bounded through batching: normalize 5,000 rows per transaction, COP
 | Rule semantics confuse users | Previews, explanations, all-sources view, conservative `first_available` defaults |
 | Rotating refresh token lost on crash | Single-flight refresh, immediate persist, quick reauth |
 | HealthKit background delivery is sparse | Foreground and observer sync, honest UI, physical-device tests |
-| Apple developer account requirements | Verify early (Q2) |
+| Apple developer account requirements | Paid membership is the supported path (Q2, resolved) |
 | AI extraction errors or vendor privacy | Mandatory review, deterministic re-parse, opt-in consent, local provider option |
 | High-frequency HR volume | Hourly aggregates, benchmarks, partitioning trigger |
 | Master key loss | Init and backup docs, readiness check, `key_id` in manifest |
@@ -72,12 +72,12 @@ Memory stays bounded through batching: normalize 5,000 rows per transaction, COP
 | Assumption | Verified in |
 | --- | --- |
 | ~~Withings: rotating refresh tokens, short-lived access tokens, `getmeas` `lastupdate` and paging, meastype codes, `value×10^unit`, notify `appli` codes, HEAD-validated callbacks, rate limits~~ Verified 2026-10-03: [providers/withings.md](../providers/withings.md#assumptions-checked) | J08.1 |
-| HealthKit: hidden read-denial, `earliestPermittedSampleDate`, background-delivery entitlement and per-type frequencies, sleep category values | J15.1 |
+| ~~HealthKit: hidden read-denial, `earliestPermittedSampleDate`, background-delivery entitlement and per-type frequencies, sleep category values~~ Verified 2026-10-04: [apple-health.md](apple-health.md#permissions); device-only behaviour in the [device checklist](../apple-health-device-checklist.md) | J15.1 |
 | Storage and performance estimates in [data-model.md](data-model.md#volume-and-partitioning) | J04.4 |
 
 ## Open questions
 
 1. ~~**Q1**~~ Resolved 2026-10-03: name **Vitamux**, license **MIT**, private GitHub repo `vitamux` (public later).
-2. **Q2**: Is a paid Apple Developer Program membership available?
+2. ~~**Q2**~~ Resolved 2026-10-04: a paid Apple Developer Program membership is the supported path for the Apple Health app (free accounts get 7-day profiles, and background delivery on them is unconfirmed). A free account works for contributor development builds; the export importer is the fallback. See [apple-health.md › Distribution](apple-health.md#distribution).
 3. **Q3**: Owner timezone history since 2024, to seed `timezone_periods`.
 4. **Q4**: Preferred AI extraction provider. Is sending complete lab PDFs to an external vendor acceptable at all, or local-only?

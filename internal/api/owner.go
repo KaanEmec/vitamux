@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/KaanEmec/vitamux/internal/api/oapi"
+	"github.com/KaanEmec/vitamux/internal/auth"
 	"github.com/KaanEmec/vitamux/internal/db"
 )
 
@@ -64,13 +65,17 @@ func problemErr(code Code, detail string, errs ...FieldError) error {
 	return &apiError{code: code, detail: detail, errs: errs}
 }
 
-// responseError answers an owner handler's error: its problem, 422 for a bad cursor, 404
-// for db.ErrNotFound, and 500 (logged) otherwise.
+// responseError answers an owner handler's error: its problem, 429 with Retry-After when
+// throttled, 422 for a bad cursor, 404 for db.ErrNotFound, and 500 (logged) otherwise.
 func (rt *router) responseError(w http.ResponseWriter, r *http.Request, err error) {
 	var ae *apiError
+	var throttled *auth.ThrottledError
 	switch {
 	case errors.As(err, &ae):
 		writeProblem(w, r, ae.code, ae.detail, ae.errs...)
+	case errors.As(err, &throttled):
+		retryAfter(w, throttled.RetryAfter)
+		writeProblem(w, r, CodeRateLimited, "too many requests; try again later")
 	case errors.Is(err, errInvalidCursor):
 		writeProblem(w, r, CodeValidationFailed, err.Error(), FieldError{Pointer: "/cursor", Detail: "start again without a cursor"})
 	case errors.Is(err, db.ErrNotFound):

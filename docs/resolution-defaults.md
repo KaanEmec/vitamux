@@ -37,6 +37,8 @@ A built-in applies while the owner has no rule for the metric. The first edit co
 | `builtin:intracellular_water:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
 | `builtin:visceral_fat_index:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
 | `builtin:basal_metabolic_rate:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
+| `builtin:bmi:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
+| `builtin:lean_body_mass:1` | local_day | first_available · follow `weight` (E5) | `scale` › `scale_apps` › `manual` | Same scale as that day's weight (each vendor's body model differs). |
 | `builtin:sleep:1` | local_night | event_priority · max_staleness 36h · match_overlap 0.5 · min_episode_coverage 0.7 | `oura` › `oura_apple` › `apple_watch` › `fitbit` › `under_mattress` › `samsung` › `whoop` › `garmin` › `garmin_apple` › `polar` › `xiaomi` › `amazfit` | One night comes from one source, ranked by independent four-stage agreement with PSG; a device on the charger fails the coverage gate. |
 
 ## Groups
@@ -79,5 +81,35 @@ A group id means the same selectors in every built-in. Fields of one selector ar
 ## Coverage
 
 - `metric: sleep` covers every `sleep_derived` code; `metric: blood_pressure` covers the `bp_reading` components.
+- No built-in for `basal_body_temperature`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `basal_energy`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `blood_glucose`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `breathing_disturbances`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `diet_caffeine`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `diet_carbohydrate`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `diet_cholesterol`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `diet_energy`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `diet_fat_monounsaturated`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `diet_fat_polyunsaturated`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `diet_fat_saturated`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `diet_fat_total`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `diet_fiber`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `diet_protein`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `diet_sugar`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `diet_water`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `distance_cycling`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `distance_swimming`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `distance_wheelchair`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `exercise_time`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `floors_climbed`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `skin_temperature`: the value depends on where the device is worn, so there is no neutral order; the owner picks one source.
+- No built-in for `stand_hours`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `stand_time`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `waist_circumference`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `walking_asymmetry`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `walking_double_support`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `walking_heart_rate`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `walking_steadiness`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `walking_step_length`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `wrist_temperature_sleeping`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - Codes not in [metrics.md](metrics.md) get their built-in together with the code.

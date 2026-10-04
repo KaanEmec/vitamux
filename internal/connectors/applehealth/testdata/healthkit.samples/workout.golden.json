@@ -1,0 +1,74 @@
+{
+  "synthetic": true,
+  "normalizer": "healthkit.samples",
+  "version": 2,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "hk:8c276a1752032d9239564b36a5cc782e",
+        "type": "watch",
+        "manufacturer": "Garmin",
+        "model": "Forerunner 965"
+      },
+      {
+        "fingerprint": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "type": "watch",
+        "manufacturer": "Apple Inc.",
+        "model": "Watch",
+        "hardware_version": "Watch7,1",
+        "software_version": "11.0"
+      }
+    ],
+    "origins": [
+      {
+        "key": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "name": "Synthetic Watch",
+        "native": true
+      },
+      {
+        "key": "com.garmin.connect.mobile",
+        "name": "Connect"
+      }
+    ],
+    "workouts": [
+      {
+        "start": "2026-09-14T18:00:00+02:00",
+        "end": "2026-09-14T18:46:30+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "sport": "running",
+        "provider_sport": "running",
+        "distance_m": 8012.5,
+        "energy_kcal": 612.4,
+        "device": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "key": {
+          "record_type": "HKWorkoutTypeIdentifier",
+          "external_id": "6F0D0000-0000-4000-8000-000000000017"
+        }
+      },
+      {
+        "start": "2026-09-14T19:00:00+02:00",
+        "end": "2026-09-14T19:20:00+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "sport": "other",
+        "provider_sport": "hk_activity_999",
+        "device": "hk:8c276a1752032d9239564b36a5cc782e",
+        "origin": "com.garmin.connect.mobile",
+        "key": {
+          "record_type": "HKWorkoutTypeIdentifier",
+          "external_id": "6F0D0000-0000-4000-8000-000000000018"
+        }
+      }
+    ],
+    "warnings": [
+      {
+        "code": "unknown_activity_type",
+        "detail": "hk_activity_999"
+      }
+    ]
+  }
+}

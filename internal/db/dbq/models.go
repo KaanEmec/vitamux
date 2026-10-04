@@ -114,6 +114,8 @@ type Client struct {
 	CreatedAt    time.Time
 	LastSeenAt   *time.Time
 	RevokedAt    *time.Time
+	// Device anchor resets the owner requested: HealthKit type identifier (or * for every type) to the latest request time. The device applies those newer than the last it applied.
+	AnchorResets json.RawMessage
 }
 
 type Connection struct {
@@ -258,6 +260,38 @@ type ExtractionRun struct {
 	CreatedAt  time.Time
 	StartedAt  *time.Time
 	FinishedAt *time.Time
+}
+
+// Typed events (alerts, results) with a level or value; codes are owned by internal/catalog (Events).
+type HealthEvent struct {
+	ID          uuid.UUID
+	UserID      uuid.UUID
+	Code        string
+	StartAt     time.Time
+	EndAt       *time.Time
+	TzOffsetMin *int16
+	LocalDate   time.Time
+	Value       *float64
+	// Provider level mapped to a code-owned word, e.g. initial_low; null when the event has none.
+	Level *string
+	// Source metadata kept as given, e.g. HealthKit thresholds.
+	Context json.RawMessage
+	// measurements.quality_flags bitset (manual_entry, relayed).
+	QualityFlags        int32
+	ProviderID          int16
+	ConnectionID        uuid.UUID
+	DeviceID            *uuid.UUID
+	OriginID            *uuid.UUID
+	ExternalID          *string
+	DedupeKey           []byte
+	RawPayloadID        *int64
+	NormalizerVersionID int32
+	IngestedAt          time.Time
+	NormalizedAt        time.Time
+	SupersededAt        *time.Time
+	SupersededBy        *uuid.UUID
+	DeletedAt           *time.Time
+	DeletedByRawID      *int64
 }
 
 // First successful response per (client, Idempotency-Key), replayed for the same request; another request with the key is a conflict.
@@ -565,6 +599,16 @@ type OauthState struct {
 	CreatedAt    time.Time
 	// Opaque connector continuation (e.g. a PKCE verifier or a login session), sealed by internal/crypto (purpose credentials, AAD auth-session:<id>). Never sent to the browser; rows live minutes, so key rotation skips them.
 	Session []byte
+}
+
+// Short-lived, single-use codes a device exchanges for a client token at POST /api/ingest/v1/devices/pair. Only the code's SHA-256 is stored.
+type PairingCode struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	CodeHash  []byte
+	CreatedAt time.Time
+	ExpiresAt time.Time
+	UsedAt    *time.Time
 }
 
 // Data vendors and transports. Seeded by migrations; read-only for the app role.

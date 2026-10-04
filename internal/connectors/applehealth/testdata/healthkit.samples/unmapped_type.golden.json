@@ -1,0 +1,19 @@
+{
+  "synthetic": true,
+  "normalizer": "healthkit.samples",
+  "version": 2,
+  "output": {
+    "tombstones": [
+      {
+        "record_type": "HKQuantityTypeIdentifierUVExposure",
+        "external_id": "0A1B0000-0000-4000-8000-000000000005"
+      }
+    ],
+    "warnings": [
+      {
+        "code": "unmapped_type",
+        "detail": "HKQuantityTypeIdentifierUVExposure"
+      }
+    ]
+  }
+}

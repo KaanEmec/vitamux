@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -264,6 +265,22 @@ func TestCoverage(t *testing.T) {
 	}
 	if full == 0 {
 		t.Fatalf("no heart_rate day with full coverage: %+v", hr.Rows)
+	}
+
+	// An origin filter keeps only the hours that app contributed; an unknown origin has none.
+	var nobody oapi.Coverage
+	e.get(stats.UserID, query+"&origin=com.example.nobody", http.StatusOK, &nobody)
+	if len(nobody.Rows) != 0 {
+		t.Fatalf("unknown origin: %d rows", len(nobody.Rows))
+	}
+	var origin string
+	if err := app.QueryRow(t.Context(), `SELECT o.origin_key FROM data_origins o
+		WHERE EXISTS (SELECT 1 FROM source_hourly_aggregates a WHERE a.origin_id = o.id) LIMIT 1`).Scan(&origin); err == nil {
+		var byOrigin oapi.Coverage
+		e.get(stats.UserID, query+"&origin="+url.QueryEscape(origin), http.StatusOK, &byOrigin)
+		if len(byOrigin.Rows) == 0 || len(byOrigin.Rows) > len(cov.Rows) {
+			t.Fatalf("origin %q: %d rows of %d", origin, len(byOrigin.Rows), len(cov.Rows))
+		}
 	}
 
 	// Another owner sees nothing; bad input is a 422.

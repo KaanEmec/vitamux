@@ -31,7 +31,13 @@ var units = []Unit{
 	base("°C"), conv("°F", "°C", 5.0/9, -160.0/9),
 	base("index"),
 	base("kcal/day"),
+
+	// E15 (J15.2). A mass concentration converts to mmol/L only per substance, so glucose has its own unit.
+	hk(base("events/h")), hk(base("kg/m²")), hk(base("mmol/L")), hk(conv("mg/dL glucose", "mmol/L", 10/180.156, 0)),
+	hk(conv("mg", "kg", 1e-6, 0)), hk(base("L")), hk(conv("mL", "L", 0.001, 0)),
 }
+
+func hk(u Unit) Unit { u.Since = SeedHealthKit; return u }
 
 func base(code string) Unit { return Unit{Code: code, Base: code, Factor: 1} }
 

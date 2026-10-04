@@ -23,7 +23,7 @@ func TestMetricsWellFormed(t *testing.T) {
 		if !(m.Min < m.Max) {
 			t.Errorf("%s: plausible range %v..%v", m.Code, m.Min, m.Max)
 		}
-		if m.Section == "" || len(m.Windows()) == 0 || len(m.Strategies()) == 0 {
+		if !slices.Contains(sections, m.Section) || len(m.Windows()) == 0 || len(m.Strategies()) == 0 {
 			t.Errorf("%s: missing section, windows or strategies", m.Code)
 		}
 		switch m.Agg {
@@ -107,24 +107,27 @@ func TestStrategiesAndWindows(t *testing.T) {
 // wantBase lists, for every unit that is not its own base, one value converted to the base unit.
 // TestEveryConversionIsTested fails when a unit is added without an entry here.
 var wantBase = map[string]struct{ in, want float64 }{
-	"ms":       {1500, 1.5},
-	"min":      {2, 120},
-	"h":        {1.5, 5400},
-	"km":       {2.5, 2500},
-	"cm":       {172, 1.72},
-	"mi":       {1, 1609.344},
-	"ft":       {6, 1.8288},
-	"in":       {10, 0.254},
-	"kJ":       {4.184, 1},
-	"g":        {2500, 2.5},
-	"lb":       {154.3235835, 70},
-	"oz":       {16, 0.45359237},
-	"st":       {11, 69.85323498},
-	"km/h":     {36, 10},
-	"mph":      {10, 4.4704},
-	"kPa":      {13.3322387415, 100},
-	"fraction": {0.185, 18.5},
-	"°F":       {98.6, 37},
+	"ms":            {1500, 1.5},
+	"min":           {2, 120},
+	"h":             {1.5, 5400},
+	"km":            {2.5, 2500},
+	"cm":            {172, 1.72},
+	"mi":            {1, 1609.344},
+	"ft":            {6, 1.8288},
+	"in":            {10, 0.254},
+	"kJ":            {4.184, 1},
+	"g":             {2500, 2.5},
+	"lb":            {154.3235835, 70},
+	"oz":            {16, 0.45359237},
+	"st":            {11, 69.85323498},
+	"km/h":          {36, 10},
+	"mph":           {10, 4.4704},
+	"kPa":           {13.3322387415, 100},
+	"fraction":      {0.185, 18.5},
+	"°F":            {98.6, 37},
+	"mg/dL glucose": {90, 4.99567},
+	"mg":            {2500, 0.0025},
+	"mL":            {250, 0.25},
 }
 
 func close(a, b float64) bool { return math.Abs(a-b) <= 1e-6*math.Max(1, math.Abs(b)) }
@@ -209,6 +212,26 @@ func TestToCanonical(t *testing.T) {
 	}
 	if _, _, err = ToCanonical("nope", 1, "kg"); err == nil {
 		t.Error("unknown metric must fail")
+	}
+}
+
+func TestEventsWellFormed(t *testing.T) {
+	codeRE := regexp.MustCompile(`^[a-z][a-z0-9_]*$`) // the health_events CHECK
+	seen := map[string]bool{}
+	for _, e := range events {
+		if !codeRE.MatchString(e.Code) || seen[e.Code] {
+			t.Errorf("%s: bad or duplicate event code", e.Code)
+		}
+		if _, clash := Lookup(e.Code); clash {
+			t.Errorf("%s is both a metric and an event", e.Code)
+		}
+		seen[e.Code] = true
+	}
+	if e, ok := LookupEvent("walking_steadiness_alert"); !ok || !e.AllowsLevel("repeat_low") || !e.AllowsLevel("") || e.AllowsLevel("low") {
+		t.Error("walking_steadiness_alert levels")
+	}
+	if _, ok := LookupEvent("heart_rate"); ok {
+		t.Error("a metric is not an event")
 	}
 }
 

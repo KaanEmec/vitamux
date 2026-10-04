@@ -1,0 +1,130 @@
+{
+  "synthetic": true,
+  "normalizer": "healthkit.samples",
+  "version": 2,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "hk:6505da02fcd835c932e75a0bdbdc7cd2",
+        "type": "phone",
+        "manufacturer": "Apple Inc.",
+        "model": "iPhone",
+        "hardware_version": "iPhone17,1",
+        "software_version": "26.0"
+      },
+      {
+        "fingerprint": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "type": "watch",
+        "manufacturer": "Apple Inc.",
+        "model": "Watch",
+        "hardware_version": "Watch7,1",
+        "software_version": "11.0"
+      }
+    ],
+    "origins": [
+      {
+        "key": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "name": "Synthetic Watch",
+        "native": true
+      },
+      {
+        "key": "com.apple.health.00000000-0000-4000-8000-0000000000A2",
+        "name": "Synthetic Phone",
+        "native": true
+      }
+    ],
+    "sleep": [
+      {
+        "start": "2026-09-13T23:10:00+02:00",
+        "end": "2026-09-14T06:45:00+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "stages": [
+          {
+            "stage": "light",
+            "start": "2026-09-13T23:10:00+02:00",
+            "end": "2026-09-13T23:40:00+02:00"
+          },
+          {
+            "stage": "deep",
+            "start": "2026-09-13T23:40:00+02:00",
+            "end": "2026-09-14T00:30:00+02:00"
+          },
+          {
+            "stage": "light",
+            "start": "2026-09-14T00:30:00+02:00",
+            "end": "2026-09-14T02:00:00+02:00"
+          },
+          {
+            "stage": "rem",
+            "start": "2026-09-14T02:00:00+02:00",
+            "end": "2026-09-14T02:40:00+02:00"
+          },
+          {
+            "stage": "awake",
+            "start": "2026-09-14T02:40:00+02:00",
+            "end": "2026-09-14T02:50:00+02:00"
+          },
+          {
+            "stage": "light",
+            "start": "2026-09-14T02:50:00+02:00",
+            "end": "2026-09-14T06:45:00+02:00"
+          }
+        ],
+        "device": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "key": {
+          "record_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "external_id": "6F0D0000-0000-4000-8000-00000000000C"
+        }
+      },
+      {
+        "start": "2026-09-14T14:00:00+02:00",
+        "end": "2026-09-14T14:35:00+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "stages": [
+          {
+            "stage": "asleep_unspecified",
+            "start": "2026-09-14T14:00:00+02:00",
+            "end": "2026-09-14T14:35:00+02:00"
+          }
+        ],
+        "device": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "key": {
+          "record_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "external_id": "6F0D0000-0000-4000-8000-000000000012"
+        }
+      },
+      {
+        "start": "2026-09-13T22:55:00+02:00",
+        "end": "2026-09-14T06:50:00+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "stages": [
+          {
+            "stage": "in_bed",
+            "start": "2026-09-13T22:55:00+02:00",
+            "end": "2026-09-14T06:50:00+02:00"
+          }
+        ],
+        "device": "hk:6505da02fcd835c932e75a0bdbdc7cd2",
+        "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A2",
+        "key": {
+          "record_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "external_id": "6F0D0000-0000-4000-8000-000000000013"
+        }
+      }
+    ],
+    "warnings": [
+      {
+        "code": "unknown_category_value",
+        "detail": "6F0D0000-0000-4000-8000-000000000014"
+      }
+    ]
+  }
+}

@@ -13,6 +13,7 @@
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import StatusIcon from '#lib/components/StatusIcon.svelte';
 	import TextField from '#lib/components/TextField.svelte';
+	import { selectorChips, seenValues } from '#lib/rules/chips.ts';
 	import PreviewTable from '#lib/rules/PreviewTable.svelte';
 	import RuleDiff from '#lib/rules/RuleDiff.svelte';
 	import SelectorList from '#lib/rules/SelectorList.svelte';
@@ -42,6 +43,10 @@
 	let active = $state<Schemas['RuleVersion'][]>([]);
 	let metrics = $state<string[]>([]);
 	let loadProblem = $state<Problem | null>(null);
+	// Origins and devices data came from, for one-click selectors; the builder works without them.
+	let origins = $state<Schemas['DataOrigin'][]>([]);
+	let sourceDevices = $state<Schemas['SourceDevice'][]>([]);
+	const chips = $derived(selectorChips(origins, sourceDevices));
 
 	let metric = $state('');
 	let startFrom = $state<'current' | 'blank'>('current');
@@ -68,9 +73,9 @@
 	const currentSpec = $derived(form ? (activeRule(form.metric)?.spec as unknown as Rule | undefined) : undefined);
 	const draft = $derived(form ? toSpec(form) : null);
 
-	// Values seen in the rules in effect, offered as suggestions in the selector inputs.
+	// Values seen in the data and in the rules in effect, offered as suggestions in the selector inputs.
 	const suggestions = $derived.by(() => {
-		const out: Partial<Record<SelectorField, string[]>> = {};
+		const out: Partial<Record<SelectorField, string[]>> = seenValues(origins, sourceDevices);
 		for (const r of active) {
 			const spec = r.spec as unknown as Rule;
 			for (const s of [...spec.groups.flatMap((g) => g.match), ...(spec.exclude ?? [])]) {
@@ -85,6 +90,10 @@
 	});
 
 	onMount(async () => {
+		void Promise.all([api.GET('/api/v1/origins'), api.GET('/api/v1/source-devices')]).then(([o, d]) => {
+			origins = o.data?.origins ?? [];
+			sourceDevices = d.data?.devices ?? [];
+		});
 		const [rules, cat] = await Promise.all([api.GET('/api/v1/rules'), api.GET('/api/v1/metrics')]);
 		if (rules.error) {
 			loadProblem = rules.error;
@@ -271,7 +280,7 @@
 					</div>
 				</div>
 				{#if errors[`spec.groups.${i}`]}<p class="error">{errors[`spec.groups.${i}`]}</p>{/if}
-				<SelectorList bind:list={g.match} kind="Match" errorPrefix="spec.groups.{i}.match" {errors} {suggestions} />
+				<SelectorList bind:list={g.match} kind="Match" errorPrefix="spec.groups.{i}.match" {errors} {suggestions} {chips} />
 			</fieldset>
 		{/each}
 		<button class="btn add" type="button" onclick={() => form?.groups.push({ key: groupKey(), id: '', match: [{ provider: '' }] })}>Add group</button>
@@ -285,7 +294,7 @@
 					<button class="btn" type="button" onclick={() => form?.exclude.push({ provider: 'apple_health', relayed: true })}>Exclude Apple Health relays</button>
 				</p>
 			{/if}
-			<SelectorList bind:list={form.exclude} kind="Exclusion" errorPrefix="spec.exclude" {errors} {suggestions} />
+			<SelectorList bind:list={form.exclude} kind="Exclusion" errorPrefix="spec.exclude" {errors} {suggestions} {chips} />
 		</fieldset>
 	{:else if form && step === 2}
 		<fieldset class="ops">

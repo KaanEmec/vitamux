@@ -218,6 +218,9 @@ func PruneSuperseded(ctx context.Context, d *db.DB, now time.Time) (map[string]i
 			{"workouts", func() (int64, error) {
 				return q.PruneSupersededWorkouts(ctx, dbq.PruneSupersededWorkoutsParams{UserID: user, Cutoff: cutoff, MaxRows: pruneBatch})
 			}},
+			{"health_events", func() (int64, error) {
+				return q.PruneSupersededEvents(ctx, dbq.PruneSupersededEventsParams{UserID: user, Cutoff: cutoff, MaxRows: pruneBatch})
+			}},
 		} {
 			var n int64
 			for {
@@ -287,7 +290,7 @@ func Register(runner *jobs.Runner, sch *jobs.Scheduler, d *db.DB, log *slog.Logg
 		KindPruneSuperseded: func(ctx context.Context, _ jobs.Job) error {
 			n, err := PruneSuperseded(ctx, d, time.Now())
 			log.Info("superseded retention", "measurements", n["measurements"], "measurement_groups", n["measurement_groups"],
-				"sleep_sessions", n["sleep_sessions"], "workouts", n["workouts"])
+				"sleep_sessions", n["sleep_sessions"], "workouts", n["workouts"], "health_events", n["health_events"])
 			return err
 		},
 		KindPruneIdempotencyKeys: func(ctx context.Context, _ jobs.Job) error {

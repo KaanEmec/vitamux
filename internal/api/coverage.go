@@ -45,7 +45,7 @@ func (o *owner) GetCoverage(ctx context.Context, req oapi.GetCoverageRequestObje
 	}
 	userID := auth.PrincipalFrom(ctx).UserID
 	rows, err := d.Q().CoverageHours(ctx, dbq.CoverageHoursParams{UserID: userID,
-		FromAt: from.AddDate(0, 0, -2), ToAt: to.AddDate(0, 0, 3), FromDate: from, ToDate: to, Metrics: metrics})
+		FromAt: from.AddDate(0, 0, -2), ToAt: to.AddDate(0, 0, 3), FromDate: from, ToDate: to, Metrics: metrics, Origins: ptrVal(req.Params.Origin)})
 	if err != nil {
 		return nil, db.MapErr(err)
 	}

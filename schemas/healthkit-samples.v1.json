@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Vitamux healthkit.samples.v1 item body",
+  "description": "Body of one ingest item of stream healthkit.samples.v1: one HKAnchoredObjectQuery page of one type, as sent by HealthBridgeKit (apple/HealthBridgeKit). Raw HealthKit values in the units of the type registry; the server converts. Percent types are fractions (0.97), as HealthKit reports them. Only additive, optional changes within v1. See docs/architecture/apple-health.md#payload.",
+  "type": "object",
+  "required": ["type", "anchor", "samples", "deleted"],
+  "properties": {
+    "type": {
+      "description": "Full HealthKit identifier, e.g. HKQuantityTypeIdentifierHeartRate, HKCorrelationTypeIdentifierBloodPressure, HKWorkoutTypeIdentifier.",
+      "type": "string",
+      "pattern": "^HK[A-Za-z0-9]+$"
+    },
+    "anchor": {
+      "type": "object",
+      "required": ["before_hash", "after_hash", "query_started_at"],
+      "properties": {
+        "before_hash": {"description": "Hash of the anchor the query started from; none for a full pull.", "type": "string"},
+        "after_hash": {"type": "string"},
+        "query_started_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "samples": {"type": "array", "maxItems": 2000, "items": {"$ref": "#/$defs/sample"}},
+    "deleted": {
+      "type": "array",
+      "items": {"type": "object", "required": ["uuid"], "properties": {"uuid": {"$ref": "#/$defs/uuid"}}}
+    }
+  },
+  "$defs": {
+    "uuid": {"type": "string", "pattern": "^[0-9A-Fa-f-]{36}$"},
+    "sample": {
+      "type": "object",
+      "required": ["uuid", "start", "end", "source_revision", "was_user_entered"],
+      "properties": {
+        "type": {"description": "HealthKit type identifier; set on correlation members only.", "type": "string", "pattern": "^HK[A-Za-z0-9]+$"},
+        "uuid": {"$ref": "#/$defs/uuid"},
+        "start": {"description": "RFC 3339 with the offset of HKTimeZone, else of the phone.", "type": "string", "format": "date-time"},
+        "end": {"type": "string", "format": "date-time"},
+        "value": {"description": "Quantity in unit, or the raw category value (no unit).", "type": "number"},
+        "unit": {"description": "HKUnit string, e.g. count/min, mmHg, %, degC, mg/dL.", "type": "string"},
+        "source_revision": {
+          "type": "object",
+          "required": ["bundle_id", "name"],
+          "properties": {
+            "bundle_id": {"type": "string"},
+            "name": {"type": "string"},
+            "version": {"type": "string"},
+            "product_type": {"type": "string"},
+            "os_version": {"type": "string"}
+          }
+        },
+        "device": {
+          "description": "HKDevice, when the writer set one.",
+          "type": "object",
+          "properties": {
+            "name": {"type": "string"},
+            "manufacturer": {"type": "string"},
+            "model": {"type": "string"},
+            "hardware_version": {"type": "string"},
+            "software_version": {"type": "string"}
+          }
+        },
+        "metadata": {
+          "description": "HealthKit metadata: numbers (booleans as 0/1), strings; dates as RFC 3339 UTC, quantities as their description.",
+          "type": "object",
+          "additionalProperties": {"type": ["string", "number"]}
+        },
+        "was_user_entered": {"type": "boolean"},
+        "objects": {"description": "Correlation members (blood pressure).", "type": "array", "items": {"$ref": "#/$defs/sample"}},
+        "workout": {
+          "type": "object",
+          "required": ["activity_type", "duration_s"],
+          "properties": {
+            "activity_type": {"description": "HKWorkoutActivityType raw value.", "type": "integer", "minimum": 0},
+            "duration_s": {"type": "number", "minimum": 0},
+            "totals": {"description": "Sums by quantity type identifier, in the registry unit.", "type": "object", "additionalProperties": {"type": "number"}}
+          }
+        }
+      }
+    }
+  }
+}

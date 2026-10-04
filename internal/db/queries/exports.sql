@@ -142,6 +142,10 @@ SELECT t.workout_id, t.seq, to_jsonb(t)::jsonb AS row FROM workout_segments t JO
 WHERE w.user_id = @user_id AND (t.workout_id, t.seq) > (@after_workout::uuid, @after_seq::integer)
 ORDER BY t.workout_id, t.seq LIMIT @lim;
 
+-- name: ExportHealthEvents :many
+SELECT id, to_jsonb(t)::jsonb AS row FROM health_events t
+WHERE user_id = @user_id AND id > @after::uuid ORDER BY id LIMIT @lim;
+
 -- name: ExportAuditEvents :many
 SELECT id, to_jsonb(t)::jsonb AS row FROM audit_events t
 WHERE user_id = @user_id AND id > @after::bigint ORDER BY id LIMIT @lim;
@@ -365,6 +369,12 @@ INSERT INTO workout_segments
 SELECT (p).* FROM jsonb_populate_recordset(NULL::workout_segments, @batch::jsonb) p
 ON CONFLICT DO NOTHING;
 
+-- name: ImportHealthEvents :execrows
+INSERT INTO health_events
+SELECT (p).* FROM jsonb_populate_recordset(NULL::health_events, @batch::jsonb) p
+WHERE NOT EXISTS (SELECT 1 FROM health_events t WHERE t.dedupe_key = p.dedupe_key AND t.superseded_at IS NULL)
+ON CONFLICT DO NOTHING;
+
 -- name: ImportAuditEvents :execrows
 INSERT INTO audit_events OVERRIDING SYSTEM VALUE
 SELECT (p).* FROM jsonb_populate_recordset(NULL::audit_events, @batch::jsonb) p;
@@ -393,6 +403,11 @@ WHERE t.id = v.id AND t.superseded_by IS NULL AND t.superseded_at IS NOT NULL;
 
 -- name: LinkImportedWorkouts :exec
 UPDATE workouts t SET superseded_by = v.new_id
+FROM (SELECT unnest(@ids::uuid[]) AS id, unnest(@new_ids::uuid[]) AS new_id) v
+WHERE t.id = v.id AND t.superseded_by IS NULL AND t.superseded_at IS NOT NULL;
+
+-- name: LinkImportedHealthEvents :exec
+UPDATE health_events t SET superseded_by = v.new_id
 FROM (SELECT unnest(@ids::uuid[]) AS id, unnest(@new_ids::uuid[]) AS new_id) v
 WHERE t.id = v.id AND t.superseded_by IS NULL AND t.superseded_at IS NOT NULL;
 

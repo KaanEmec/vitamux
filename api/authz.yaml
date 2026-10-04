@@ -16,6 +16,9 @@ routes:
   GET /api/ingest/v1/batches/{batch_id}: {allow: client}
   POST /api/ingest/v1/batches/{batch_id}/blobs: {allow: client}
   POST /api/ingest/v1/heartbeat: {allow: client}
+  POST /api/ingest/v1/devices/pair: {allow: public}
+  GET /api/ingest/v1/devices/self: {allow: client}
+  POST /api/ingest/v1/devices/self/rotate-token: {allow: client}
   GET /api/v1/metrics: {allow: read:health}
   GET /api/v1/metrics/{code}: {allow: read:health}
   GET /api/v1/measurements: {allow: read:health}
@@ -64,10 +67,13 @@ routes:
   POST /api/v1/connections/{id}/streams/{stream}/reset-cursor: {allow: write:config, csrf: true}
   GET /api/v1/schedules: {allow: read:config}
   PATCH /api/v1/schedules/{id}: {allow: write:config, csrf: true}
-  GET /api/v1/devices: {allow: read:config, planned: true}
-  POST /api/v1/devices/pairing-codes: {allow: write:config, csrf: true, planned: true}
-  POST /api/v1/devices/{id}/request-anchor-reset: {allow: write:config, csrf: true, planned: true}
-  POST /api/v1/devices/{id}/revoke: {allow: write:config, csrf: true, planned: true}
+  GET /api/v1/devices: {allow: read:config}
+  POST /api/v1/devices/pairing-codes: {allow: write:config, csrf: true}
+  POST /api/v1/devices/{id}/request-anchor-reset: {allow: write:config, csrf: true}
+  POST /api/v1/devices/{id}/revoke: {allow: write:config, csrf: true}
+  GET /api/v1/origins: {allow: read:config}
+  PATCH /api/v1/origins/{id}: {allow: write:config, csrf: true}
+  GET /api/v1/source-devices: {allow: read:config}
   GET /api/v1/documents: {allow: read:health}
   POST /api/v1/documents: {allow: write:documents, csrf: true}
   GET /api/v1/documents/{id}: {allow: read:health}

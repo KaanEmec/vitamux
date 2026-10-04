@@ -11,6 +11,14 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `steps` | count | interval, daily_value | additive | 0 to 200000 | bucket, hour, local_day |  | StepCount |  |
 | `distance_walk_run` | m | interval, daily_value | additive | 0 to 300000 | bucket, hour, local_day |  | DistanceWalkingRunning |  |
 | `active_energy` | kcal | interval, daily_value | additive | 0 to 20000 | bucket, hour, local_day |  | ActiveEnergyBurned |  |
+| `distance_cycling` | m | interval, daily_value | additive | 0 to 1000000 | bucket, hour, local_day |  | DistanceCycling |  |
+| `distance_swimming` | m | interval | additive | 0 to 100000 | bucket, hour, local_day |  | DistanceSwimming |  |
+| `distance_wheelchair` | m | interval | additive | 0 to 300000 | bucket, hour, local_day |  | DistanceWheelchair |  |
+| `floors_climbed` | count | interval, daily_value | additive | 0 to 3000 | bucket, hour, local_day |  | FlightsClimbed |  |
+| `basal_energy` | kcal | interval, daily_value | additive | 0 to 10000 | bucket, hour, local_day |  | BasalEnergyBurned |  |
+| `exercise_time` | s | interval, daily_value | additive | 0 to 86400 | bucket, hour, local_day |  | AppleExerciseTime |  |
+| `stand_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day |  | AppleStandTime |  |
+| `stand_hours` | count | interval, daily_value | additive | 0 to 24 | bucket, hour, local_day |  | AppleStandHour (category) |  |
 
 ## Heart and circulation
 
@@ -24,6 +32,7 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `vo2max` | mL/kg/min | sample | latest | 10 to 100 | local_day, latest |  | VO2Max | 123 |
 | `pulse_wave_velocity` | m/s | sample | latest | 2 to 30 | local_day, latest |  |  | 91 |
 | `vascular_age` | years | sample | latest | 10 to 120 | local_day, latest |  |  | 155 |
+| `walking_heart_rate` | bpm | daily_value | daily_summary | 20 to 250 | local_day, latest |  | WalkingHeartRateAverage |  |
 
 ## Blood pressure
 
@@ -39,6 +48,7 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `spo2` | % | sample | intensive | 50 to 100 | bucket, hour, local_day, local_night, sleep_episode, latest |  | OxygenSaturation | 54 |
 | `respiratory_rate` | breaths/min | sample | intensive | 4 to 60 | bucket, hour, local_day, local_night, sleep_episode, latest |  | RespiratoryRate |  |
+| `breathing_disturbances` | events/h | daily_value | daily_summary | 0 to 150 | local_day, latest |  | AppleSleepingBreathingDisturbances |  |
 
 ## Temperature
 
@@ -46,6 +56,8 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `body_temperature` | °C | sample | latest | 30 to 45 | local_day, latest |  | BodyTemperature | 71, 12 |
 | `skin_temperature` | °C | sample | intensive | 20 to 45 | bucket, hour, local_day, local_night, sleep_episode, latest |  |  | 73 |
+| `wrist_temperature_sleeping` | °C | daily_value | daily_summary | 25 to 45 | local_day, latest |  | AppleSleepingWristTemperature |  |
+| `basal_body_temperature` | °C | sample | latest | 30 to 45 | local_day, latest |  | BasalBodyTemperature |  |
 
 ## Body composition
 
@@ -63,6 +75,41 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `intracellular_water` | kg | sample | latest | 1 to 150 | local_day, latest, reading | body_composition |  | 169 |
 | `visceral_fat_index` | index | sample | latest | 0 to 60 | local_day, latest, reading | body_composition |  | 170 |
 | `basal_metabolic_rate` | kcal/day | sample | latest | 300 to 10000 | local_day, latest, reading | body_composition |  | 226 |
+| `bmi` | kg/m² | sample | latest | 8 to 100 | local_day, latest, reading | body_composition | BodyMassIndex |  |
+| `lean_body_mass` | kg | sample | latest | 1 to 300 | local_day, latest, reading | body_composition | LeanBodyMass |  |
+| `waist_circumference` | m | sample | latest | 0.3 to 3 | local_day, latest |  | WaistCircumference |  |
+
+## Glucose and metabolism
+
+| Code | Unit | Kinds | Aggregation | Plausible | Windows | Group | Apple HK | Withings |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `blood_glucose` | mmol/L | sample | intensive | 0.5 to 50 | bucket, hour, local_day, local_night, sleep_episode, latest |  | BloodGlucose |  |
+
+## Nutrition and intake
+
+| Code | Unit | Kinds | Aggregation | Plausible | Windows | Group | Apple HK | Withings |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `diet_energy` | kcal | interval | additive | 0 to 20000 | bucket, hour, local_day |  | DietaryEnergyConsumed |  |
+| `diet_protein` | g | interval | additive | 0 to 2000 | bucket, hour, local_day |  | DietaryProtein |  |
+| `diet_carbohydrate` | g | interval | additive | 0 to 3000 | bucket, hour, local_day |  | DietaryCarbohydrates |  |
+| `diet_fat_total` | g | interval | additive | 0 to 2000 | bucket, hour, local_day |  | DietaryFatTotal |  |
+| `diet_fat_saturated` | g | interval | additive | 0 to 1000 | bucket, hour, local_day |  | DietaryFatSaturated |  |
+| `diet_fat_monounsaturated` | g | interval | additive | 0 to 1000 | bucket, hour, local_day |  | DietaryFatMonounsaturated |  |
+| `diet_fat_polyunsaturated` | g | interval | additive | 0 to 1000 | bucket, hour, local_day |  | DietaryFatPolyunsaturated |  |
+| `diet_fiber` | g | interval | additive | 0 to 1000 | bucket, hour, local_day |  | DietaryFiber |  |
+| `diet_sugar` | g | interval | additive | 0 to 2000 | bucket, hour, local_day |  | DietarySugar |  |
+| `diet_cholesterol` | mg | interval | additive | 0 to 20000 | bucket, hour, local_day |  | DietaryCholesterol |  |
+| `diet_water` | mL | interval | additive | 0 to 20000 | bucket, hour, local_day |  | DietaryWater |  |
+| `diet_caffeine` | mg | interval | additive | 0 to 5000 | bucket, hour, local_day |  | DietaryCaffeine |  |
+
+## Mobility
+
+| Code | Unit | Kinds | Aggregation | Plausible | Windows | Group | Apple HK | Withings |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `walking_steadiness` | % | sample | latest | 0 to 100 | local_day, latest |  | AppleWalkingSteadiness |  |
+| `walking_asymmetry` | % | sample | intensive | 0 to 100 | bucket, hour, local_day, local_night, sleep_episode, latest |  | WalkingAsymmetryPercentage |  |
+| `walking_double_support` | % | sample | intensive | 0 to 100 | bucket, hour, local_day, local_night, sleep_episode, latest |  | WalkingDoubleSupportPercentage |  |
+| `walking_step_length` | m | sample | intensive | 0.1 to 3 | bucket, hour, local_day, local_night, sleep_episode, latest |  | WalkingStepLength |  |
 
 ## Sleep
 
@@ -85,6 +132,21 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `resting_heart_rate_nocturnal` | bpm | - (from `heart_rate`) | intensive | 20 to 150 | local_night, sleep_episode |  |  |  |
 | `spo2_night_min` | % | - (from `spo2`) | intensive | 50 to 100 | local_night, sleep_episode |  |  |  |
+
+## Events
+
+Typed events in `health_events`, never resolved like metrics ([metric-catalog](architecture/metric-catalog.md#events)). HK ids omit the `HKCategoryTypeIdentifier` prefix.
+
+| Code | Levels | Apple HK |
+| --- | --- | --- |
+| `high_heart_rate_alert` |  | HighHeartRateEvent |
+| `low_heart_rate_alert` |  | LowHeartRateEvent |
+| `low_cardio_fitness_alert` |  | LowCardioFitnessEvent |
+| `hypertension_alert` |  | HypertensionEvent |
+| `sleep_apnea_alert` |  | SleepApneaEvent |
+| `walking_steadiness_alert` | initial_low, initial_very_low, repeat_low, repeat_very_low | AppleWalkingSteadinessEvent |
+| `environment_audio_alert` | momentary_limit | AudioExposureEvent |
+| `headphone_audio_alert` | seven_day_limit | HeadphoneAudioExposureEvent |
 
 ## Windows and strategies by aggregation
 
@@ -139,3 +201,10 @@ A value converts to the base unit as `value * factor + offset`.
 | °F | °C | 0.5555555555555556 | -17.77777777777778 |
 | index | index | 1 | 0 |
 | kcal/day | kcal/day | 1 | 0 |
+| events/h | events/h | 1 | 0 |
+| kg/m² | kg/m² | 1 | 0 |
+| mmol/L | mmol/L | 1 | 0 |
+| mg/dL glucose | mmol/L | 0.055507449099669176 | 0 |
+| mg | kg | 0.000001 | 0 |
+| L | L | 1 | 0 |
+| mL | L | 0.001 | 0 |

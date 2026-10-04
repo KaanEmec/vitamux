@@ -1,0 +1,70 @@
+{
+  "synthetic": true,
+  "normalizer": "healthkit.samples",
+  "version": 2,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "hk:6505da02fcd835c932e75a0bdbdc7cd2",
+        "type": "phone",
+        "manufacturer": "Apple Inc.",
+        "model": "iPhone",
+        "hardware_version": "iPhone17,1",
+        "software_version": "26.0"
+      },
+      {
+        "fingerprint": "hk:8c276a1752032d9239564b36a5cc782e",
+        "type": "watch",
+        "manufacturer": "Garmin",
+        "model": "Forerunner 965"
+      }
+    ],
+    "origins": [
+      {
+        "key": "com.apple.health.00000000-0000-4000-8000-0000000000A2",
+        "name": "Synthetic Phone",
+        "native": true
+      },
+      {
+        "key": "com.garmin.connect.mobile",
+        "name": "Connect"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "steps",
+        "kind": "interval",
+        "start": "2026-09-14T09:00:00+02:00",
+        "end": "2026-09-14T09:15:00+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "value": 1250,
+        "unit": "count",
+        "device": "hk:8c276a1752032d9239564b36a5cc782e",
+        "origin": "com.garmin.connect.mobile",
+        "key": {
+          "record_type": "HKQuantityTypeIdentifierStepCount",
+          "external_id": "6F0D0000-0000-4000-8000-000000000005"
+        }
+      },
+      {
+        "metric": "steps",
+        "kind": "interval",
+        "start": "2026-09-14T09:00:00+02:00",
+        "end": "2026-09-14T09:10:00+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "value": 980,
+        "unit": "count",
+        "device": "hk:6505da02fcd835c932e75a0bdbdc7cd2",
+        "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A2",
+        "key": {
+          "record_type": "HKQuantityTypeIdentifierStepCount",
+          "external_id": "6F0D0000-0000-4000-8000-000000000006"
+        }
+      }
+    ]
+  }
+}

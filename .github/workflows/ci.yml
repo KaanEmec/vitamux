@@ -72,6 +72,12 @@ jobs:
         run: go test -count=1 ./deploy/compose/
       - run: CGO_ENABLED=0 go build -tags webui -trimpath -o bin/vitamux ./cmd/vitamux && ./bin/vitamux version
 
+  swift:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: swift test --package-path apple/HealthBridgeKit
+
   integration:
     runs-on: ubuntu-latest
     strategy:

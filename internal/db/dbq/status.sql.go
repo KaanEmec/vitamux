@@ -23,6 +23,8 @@ WHERE a.user_id = $1
   AND a.hour_start >= $2 AND a.hour_start < $3
   AND a.local_date BETWEEN $4 AND $5
   AND ($6::text[] IS NULL OR mc.code = ANY($6::text[]))
+  AND ($7::text[] IS NULL OR a.origin_id IN
+       (SELECT o.id FROM data_origins o WHERE o.user_id = $1 AND o.origin_key = ANY($7::text[])))
 GROUP BY mc.code, p.code, a.local_date
 ORDER BY mc.code, p.code, a.local_date
 `
@@ -34,6 +36,7 @@ type CoverageHoursParams struct {
 	FromDate time.Time
 	ToDate   time.Time
 	Metrics  []string
+	Origins  []string
 }
 
 type CoverageHoursRow struct {
@@ -47,7 +50,7 @@ type CoverageHoursRow struct {
 // Hours with data per provider, metric and local date, from the hourly aggregates. A provider
 // counts an hour once however many of its devices and apps contributed. The hour_start bounds
 // (the date range widened by a day on both sides) let the primary key narrow the scan; local_date
-// is the exact filter.
+// is the exact filter. origins (origin keys) narrows to the hours those apps contributed.
 func (q *Queries) CoverageHours(ctx context.Context, arg CoverageHoursParams) ([]CoverageHoursRow, error) {
 	rows, err := q.db.Query(ctx, coverageHours,
 		arg.UserID,
@@ -56,6 +59,7 @@ func (q *Queries) CoverageHours(ctx context.Context, arg CoverageHoursParams) ([
 		arg.FromDate,
 		arg.ToDate,
 		arg.Metrics,
+		arg.Origins,
 	)
 	if err != nil {
 		return nil, err

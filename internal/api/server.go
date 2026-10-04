@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/netip"
+	"net/url"
 	"sync"
 	"time"
 
@@ -55,6 +56,8 @@ type Options struct {
 	Withings *withings.Notifications
 	// Extract starts and lists document extractions; nil answers 503.
 	Extract *extract.Service
+	// PublicURL is VITAMUX_PUBLIC_URL, which pairing codes point devices at; nil answers 503.
+	PublicURL *url.URL
 	// BackupDir is VITAMUX_BACKUP_DIR; the status page reports its newest backup. Empty: none.
 	BackupDir string
 }
@@ -100,6 +103,7 @@ func newRouter(log *slog.Logger, ui fs.FS, opts Options) (*router, error) {
 	rt.accountRoutes()
 	rt.systemRoutes()
 	rt.ingestRoutes()
+	rt.deviceRoutes()
 	rt.oauthRoutes()
 	rt.sourceRoutes()
 	rt.webhookRoutes()

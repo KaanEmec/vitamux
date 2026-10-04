@@ -43,7 +43,8 @@ WHERE r.user_id = $1 AND p.code = $2 AND r.stored_at < $3::timestamptz
     OR EXISTS (SELECT 1 FROM measurements x WHERE x.raw_payload_id = r.id AND x.normalizer_version_id IN (SELECT id FROM stale))
     OR EXISTS (SELECT 1 FROM measurement_groups x WHERE x.raw_payload_id = r.id AND x.normalizer_version_id IN (SELECT id FROM stale))
     OR EXISTS (SELECT 1 FROM sleep_sessions x WHERE x.raw_payload_id = r.id AND x.normalizer_version_id IN (SELECT id FROM stale))
-    OR EXISTS (SELECT 1 FROM workouts x WHERE x.raw_payload_id = r.id AND x.normalizer_version_id IN (SELECT id FROM stale)))
+    OR EXISTS (SELECT 1 FROM workouts x WHERE x.raw_payload_id = r.id AND x.normalizer_version_id IN (SELECT id FROM stale))
+    OR EXISTS (SELECT 1 FROM health_events x WHERE x.raw_payload_id = r.id AND x.normalizer_version_id IN (SELECT id FROM stale)))
 `
 
 type CountRawRefusedStaleParams struct {
@@ -91,6 +92,11 @@ WITH m AS (
   WHERE raw_payload_id = ANY($1::bigint[]) OR deleted_by_raw_id = ANY($1::bigint[])
 ), w AS (
   UPDATE workouts SET
+    raw_payload_id = CASE WHEN raw_payload_id = ANY($1::bigint[]) THEN NULL ELSE raw_payload_id END,
+    deleted_by_raw_id = CASE WHEN deleted_by_raw_id = ANY($1::bigint[]) THEN NULL ELSE deleted_by_raw_id END
+  WHERE raw_payload_id = ANY($1::bigint[]) OR deleted_by_raw_id = ANY($1::bigint[])
+), e AS (
+  UPDATE health_events SET
     raw_payload_id = CASE WHEN raw_payload_id = ANY($1::bigint[]) THEN NULL ELSE raw_payload_id END,
     deleted_by_raw_id = CASE WHEN deleted_by_raw_id = ANY($1::bigint[]) THEN NULL ELSE deleted_by_raw_id END
   WHERE raw_payload_id = ANY($1::bigint[]) OR deleted_by_raw_id = ANY($1::bigint[])
@@ -188,6 +194,8 @@ WHERE r.user_id = $1 AND p.code = $2 AND r.stored_at < $3::timestamptz
     AND ((x.superseded_at IS NULL AND x.deleted_at IS NULL) OR x.normalizer_version_id IN (SELECT id FROM stale)))
   AND NOT EXISTS (SELECT 1 FROM workouts x WHERE x.raw_payload_id = r.id
     AND ((x.superseded_at IS NULL AND x.deleted_at IS NULL) OR x.normalizer_version_id IN (SELECT id FROM stale)))
+  AND NOT EXISTS (SELECT 1 FROM health_events x WHERE x.raw_payload_id = r.id
+    AND ((x.superseded_at IS NULL AND x.deleted_at IS NULL) OR x.normalizer_version_id IN (SELECT id FROM stale)))
 ORDER BY r.id
 LIMIT $4
 FOR UPDATE OF r SKIP LOCKED
@@ -278,6 +286,28 @@ type PruneIdempotencyKeysParams struct {
 
 func (q *Queries) PruneIdempotencyKeys(ctx context.Context, arg PruneIdempotencyKeysParams) (int64, error) {
 	result, err := q.db.Exec(ctx, pruneIdempotencyKeys, arg.UserID, arg.Cutoff)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const pruneSupersededEvents = `-- name: PruneSupersededEvents :execrows
+DELETE FROM health_events WHERE id IN (
+  SELECT e.id FROM health_events e
+  WHERE e.user_id = $1 AND e.superseded_at < $2::timestamptz
+    AND NOT EXISTS (SELECT 1 FROM health_events o WHERE o.superseded_by = e.id)
+  LIMIT $3)
+`
+
+type PruneSupersededEventsParams struct {
+	UserID  uuid.UUID
+	Cutoff  time.Time
+	MaxRows int32
+}
+
+func (q *Queries) PruneSupersededEvents(ctx context.Context, arg PruneSupersededEventsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, pruneSupersededEvents, arg.UserID, arg.Cutoff, arg.MaxRows)
 	if err != nil {
 		return 0, err
 	}
@@ -460,6 +490,18 @@ DELETE FROM documents WHERE user_id = $1
 // Extraction runs, review rows and lab results go with them (cascade).
 func (q *Queries) PurgeDocuments(ctx context.Context, userID uuid.UUID) (int64, error) {
 	result, err := q.db.Exec(ctx, purgeDocuments, userID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const purgeEvents = `-- name: PurgeEvents :execrows
+DELETE FROM health_events WHERE user_id = $1
+`
+
+func (q *Queries) PurgeEvents(ctx context.Context, userID uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, purgeEvents, userID)
 	if err != nil {
 		return 0, err
 	}

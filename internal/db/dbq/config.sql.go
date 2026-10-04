@@ -31,6 +31,18 @@ func (q *Queries) DeleteConnectionClients(ctx context.Context, connectionID uuid
 	return err
 }
 
+const deleteConnectionEvents = `-- name: DeleteConnectionEvents :execrows
+DELETE FROM health_events WHERE connection_id = $1
+`
+
+func (q *Queries) DeleteConnectionEvents(ctx context.Context, connectionID uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteConnectionEvents, connectionID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteConnectionGroups = `-- name: DeleteConnectionGroups :execrows
 DELETE FROM measurement_groups WHERE connection_id = $1
 `

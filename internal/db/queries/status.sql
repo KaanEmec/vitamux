@@ -4,7 +4,7 @@
 -- Hours with data per provider, metric and local date, from the hourly aggregates. A provider
 -- counts an hour once however many of its devices and apps contributed. The hour_start bounds
 -- (the date range widened by a day on both sides) let the primary key narrow the scan; local_date
--- is the exact filter.
+-- is the exact filter. origins (origin keys) narrows to the hours those apps contributed.
 SELECT mc.code AS metric, p.code AS source, a.local_date, count(DISTINCT a.hour_start)::int AS hours
 FROM source_hourly_aggregates a
 JOIN metric_catalog mc ON mc.id = a.metric_id
@@ -14,6 +14,8 @@ WHERE a.user_id = @user_id
   AND a.hour_start >= @from_at AND a.hour_start < @to_at
   AND a.local_date BETWEEN @from_date AND @to_date
   AND (sqlc.narg(metrics)::text[] IS NULL OR mc.code = ANY(sqlc.narg(metrics)::text[]))
+  AND (sqlc.narg(origins)::text[] IS NULL OR a.origin_id IN
+       (SELECT o.id FROM data_origins o WHERE o.user_id = @user_id AND o.origin_key = ANY(sqlc.narg(origins)::text[])))
 GROUP BY mc.code, p.code, a.local_date
 ORDER BY mc.code, p.code, a.local_date;
 

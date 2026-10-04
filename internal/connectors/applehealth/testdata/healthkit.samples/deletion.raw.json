@@ -1,0 +1,18 @@
+{
+ "synthetic": true,
+ "type": "HKQuantityTypeIdentifierHeartRate",
+ "anchor": {
+  "before_hash": "synthetic-before",
+  "after_hash": "synthetic-after",
+  "query_started_at": "2026-09-14T08:00:03+02:00"
+ },
+ "samples": [],
+ "deleted": [
+  {
+   "uuid": "0a1b0000-0000-4000-8000-000000000003"
+  },
+  {
+   "uuid": "0A1B0000-0000-4000-8000-000000000004"
+  }
+ ]
+}

@@ -14,6 +14,7 @@ ADRs record decisions that code depends on. Keep each one short and link to the 
 | [0011](0011-secrets-vault.md) | Master key file, HKDF purposes, AES-256-GCM sealed values with `key_id` | Accepted |
 | [0012](0012-mit-license-dco.md) | MIT license with DCO sign-off | Accepted |
 | [0013](0013-extraction-consent.md) | Extraction providers behind one interface; external ones need configuration, owner enablement and per-request consent naming provider and model | Accepted |
+| [0014](0014-healthkit-contract.md) | HealthKit device contract: frozen `healthkit.samples.v1`, raw units, commit-after-ack with `409` as accepted, one `health_events` table | Accepted |
 | [0015](0015-rest-openapi-conventions.md) | REST + OpenAPI 3.1 contract-first, problem+json, cursor pagination | Accepted |
 | [0016](0016-canonical-writer.md) | Account-scoped dedupe keys; corrections supersede; one canonical writer | Accepted |
 | [0017](0017-sidecar-protocol.md) | Sidecar protocol `vitamux-connector/1`: HTTP + JSON + NDJSON pages, frozen, additive only within v1 | Accepted |

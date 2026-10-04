@@ -1209,6 +1209,7 @@ Apache License
 | prelude-ls | 1.2.1 | MIT |
 | punycode | 2.3.1 | MIT |
 | qified | 0.10.1 | MIT |
+| qrcode-generator | 2.0.4 | MIT |
 | readdirp | 4.1.2 | MIT |
 | require-from-string | 2.0.2 | MIT |
 | rolldown | 1.2.12 | MIT |

@@ -53,6 +53,16 @@ func TestAuthzMatrixEnforced(t *testing.T) {
 	bearer := func(tok string) func(*http.Request) {
 		return func(req *http.Request) { req.Header.Set("Authorization", "Bearer "+tok) }
 	}
+	freshClient := func(conn uuid.UUID) func(*http.Request) {
+		return func(req *http.Request) {
+			_, tok, err := auth.CreateClientToken(ctx, e.d, e.userID, conn, "device", "phone")
+			if err != nil {
+				t.Fatal(err)
+			}
+			e.secrets = append(e.secrets, tok)
+			bearer(tok)(req)
+		}
+	}
 	public := func(e authzEntry) bool { return e.Allow == "public" }
 	principals := []matrixPrincipal{
 		{"anonymous", public, func(*http.Request) {}},
@@ -64,8 +74,10 @@ func TestAuthzMatrixEnforced(t *testing.T) {
 				req.AddCookie(&http.Cookie{Name: auth.SessionCookie, Value: tok})
 				req.Header.Set(csrfHeader, e.svc.CSRFToken(tok))
 			}},
-		{"client of the connection", func(e authzEntry) bool { return public(e) || e.Allow == "client" }, bearer(e.tok)},
-		{"client of another connection", public, bearer(e.otherTok)},
+		// Fresh tokens per request: rotate-token replaces the caller's token. A device's own
+		// routes (/devices/self) admit any client.
+		{"client of the connection", func(e authzEntry) bool { return public(e) || e.Allow == "client" }, freshClient(e.own)},
+		{"client of another connection", public, freshClient(e.otherConn)},
 	}
 	owner := &auth.Principal{Kind: auth.OwnerSession, UserID: e.userID}
 	for _, s := range auth.Scopes {
@@ -96,7 +108,7 @@ func TestAuthzMatrixEnforced(t *testing.T) {
 				res := serve(t, e.h, req)
 				body, _ := io.ReadAll(res.Body)
 				switch {
-				case p.admitted(entry):
+				case p.admitted(entry) || p.name == "client of another connection" && strings.Contains(key, "/devices/self"):
 					if s := res.StatusCode; s == http.StatusUnauthorized || s == http.StatusForbidden || s == http.StatusInternalServerError {
 						t.Errorf("%s: want admitted, got %d %s", p.name, s, body)
 					}

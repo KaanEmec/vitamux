@@ -1351,6 +1351,15 @@ type AnalyteAliasInput struct {
 	Label   string `json:"label"`
 }
 
+// AnchorReset defines model for AnchorReset.
+type AnchorReset struct {
+	// RequestedAt The latest request for this type.
+	RequestedAt time.Time `json:"requested_at"`
+
+	// Type A HealthKit type identifier, or * for every type.
+	Type string `json:"type"`
+}
+
 // AuthContinueInput defines model for AuthContinueInput.
 type AuthContinueInput struct {
 	State string `json:"state"`
@@ -1530,7 +1539,7 @@ type ConnectionPatch struct {
 // ConnectionPatchStatus Pause or resume; only between active/degraded and paused.
 type ConnectionPatchStatus string
 
-// Coverage Share of local hours with data per source and local day, from the hourly aggregates. A source is a provider; its row of a metric has one entry per day from start_date.
+// Coverage Share of local hours with data per source and local day, from the hourly aggregates. A source is a provider; its row of a metric has one entry per day from start_date. With origin, only the hours those apps contributed count.
 type Coverage struct {
 	EndDate   openapi_types.Date `json:"end_date"`
 	Rows      []CoverageRow      `json:"rows"`
@@ -1559,6 +1568,26 @@ type CreatedAPIKey struct {
 
 	// Token Shown in this response only.
 	Token string `json:"token"`
+}
+
+// DataOrigin An app that recorded data inside a transport provider, e.g. a HealthKit bundle id.
+type DataOrigin struct {
+	// CreatedAt When the origin was first seen.
+	CreatedAt time.Time          `json:"created_at"`
+	ID        openapi_types.UUID `json:"id"`
+
+	// IsNative Recorded by the platform itself
+	IsNative bool    `json:"is_native"`
+	Name     *string `json:"name"`
+
+	// OriginKey The `origin_key` rule selector value.
+	OriginKey string `json:"origin_key"`
+
+	// Provider The transport provider code
+	Provider string `json:"provider"`
+
+	// RelayedProvider The vendor whose data the app relays; null when it records its own.
+	RelayedProvider *string `json:"relayed_provider"`
 }
 
 // DeviceID defines model for DeviceID.
@@ -2173,11 +2202,42 @@ type PageInfo struct {
 	NextCursor *string `json:"next_cursor,omitempty"`
 }
 
-// PairedDevice Open object.
-type PairedDevice = map[string]interface{}
+// PairedDevice A device paired with a pairing code (an ingest client of kind device).
+type PairedDevice struct {
+	AnchorResets []AnchorReset `json:"anchor_resets"`
+	ConnectionID string        `json:"connection_id"`
+	CreatedAt    time.Time     `json:"created_at"`
 
-// PairingCode Open object.
-type PairingCode = map[string]interface{}
+	// ID The device_id returned by pairing.
+	ID openapi_types.UUID `json:"id"`
+
+	// LastSeenAt Last authenticated request (to the minute).
+	LastSeenAt *time.Time `json:"last_seen_at"`
+
+	// LastSyncAt When its newest batch arrived.
+	LastSyncAt *time.Time `json:"last_sync_at"`
+	Name       string     `json:"name"`
+
+	// PossiblyDenied Requested types the connection stored nothing for in the last 7 days, while the device was paired for longer and seen within them. HealthKit does not reveal read denial, so this is a hint: a type can also be silent because there is nothing new to record. Types are tracked per connection, which paired devices share. Empty for a revoked device.
+	PossiblyDenied []string   `json:"possibly_denied"`
+	RevokedAt      *time.Time `json:"revoked_at"`
+
+	// Types HealthKit types in the connection's last healthkit.samples.v1 heartbeat checkpoint; empty until the device sends one.
+	Types []string `json:"types"`
+}
+
+// PairingCode defines model for PairingCode.
+type PairingCode struct {
+	// Code Crockford base32; single use.
+	Code      string    `json:"code"`
+	ExpiresAt time.Time `json:"expires_at"`
+
+	// QrPayload Text for the QR code: the JSON object {"url", "code"} and nothing else.
+	QrPayload string `json:"qr_payload"`
+
+	// URL The public base URL (VITAMUX_PUBLIC_URL) the app pairs against.
+	URL string `json:"url"`
+}
 
 // PreviewDay defines model for PreviewDay.
 type PreviewDay struct {
@@ -2347,6 +2407,12 @@ type RecordProvenance struct {
 type RecordsLink struct {
 	// Href The source's rows in the window on GET /measurements.
 	Href string `json:"href"`
+}
+
+// RelayTarget defines model for RelayTarget.
+type RelayTarget struct {
+	Code string `json:"code"`
+	Name string `json:"name"`
 }
 
 // ResolutionPreview defines model for ResolutionPreview.
@@ -2815,6 +2881,18 @@ type SleepStage struct {
 // SleepStageStage defines model for SleepStage.Stage.
 type SleepStageStage string
 
+// SourceDevice defines model for SourceDevice.
+type SourceDevice struct {
+	// DeviceType The `device_type` rule selector value, e.g. watch.
+	DeviceType   *string  `json:"device_type"`
+	ID           DeviceID `json:"id"`
+	Manufacturer *string  `json:"manufacturer"`
+
+	// Model The `device_model` rule selector value.
+	Model    *string `json:"model"`
+	Provider string  `json:"provider"`
+}
+
 // SourceRef Where a canonical row came from. device and origin are the values the device and origin filters take.
 type SourceRef struct {
 	ConnectionID ConnectionID `json:"connection_id"`
@@ -3220,6 +3298,15 @@ type GetCoverageParams struct {
 
 	// Metric Metric code; repeatable.
 	Metric *MetricFilter `form:"metric,omitempty" json:"metric,omitempty"`
+
+	// Origin Origin key (e.g. a HealthKit bundle id); repeatable.
+	Origin *OriginFilter `form:"origin,omitempty" json:"origin,omitempty"`
+}
+
+// RequestDeviceAnchorResetJSONBody defines parameters for RequestDeviceAnchorReset.
+type RequestDeviceAnchorResetJSONBody struct {
+	// Types HealthKit type identifiers; omitted or empty resets every type.
+	Types *[]string `json:"types,omitempty"`
 }
 
 // ListDocumentsParams defines parameters for ListDocuments.
@@ -3378,6 +3465,12 @@ type ListMeasurementsParamsKind string
 
 // ListMeasurementsParamsInclude defines parameters for ListMeasurements.
 type ListMeasurementsParamsInclude string
+
+// ClassifyOriginJSONBody defines parameters for ClassifyOrigin.
+type ClassifyOriginJSONBody struct {
+	// RelayedProvider A code from relay_targets, or null for an origin that records its own data.
+	RelayedProvider *string `json:"relayed_provider"`
+}
 
 // ListOverridesParams defines parameters for ListOverrides.
 type ListOverridesParams struct {
@@ -3598,6 +3691,9 @@ type CreateBackfillJSONRequestBody = BackfillInput
 // RetryBackfillJSONRequestBody defines body for RetryBackfill for application/json ContentType.
 type RetryBackfillJSONRequestBody = BackfillRetryInput
 
+// RequestDeviceAnchorResetJSONRequestBody defines body for RequestDeviceAnchorReset for application/json ContentType.
+type RequestDeviceAnchorResetJSONRequestBody RequestDeviceAnchorResetJSONBody
+
 // UploadDocumentMultipartRequestBody defines body for UploadDocument for multipart/form-data ContentType.
 type UploadDocumentMultipartRequestBody UploadDocumentMultipartBody
 
@@ -3612,6 +3708,9 @@ type UpdateExtractionRowJSONRequestBody = ExtractionRowPatch
 
 // CreateManualMeasurementJSONRequestBody defines body for CreateManualMeasurement for application/json ContentType.
 type CreateManualMeasurementJSONRequestBody = ManualMeasurementInput
+
+// ClassifyOriginJSONRequestBody defines body for ClassifyOrigin for application/json ContentType.
+type ClassifyOriginJSONRequestBody ClassifyOriginJSONBody
 
 // CreateOverrideJSONRequestBody defines body for CreateOverride for application/json ContentType.
 type CreateOverrideJSONRequestBody = OverrideInput
@@ -3891,16 +3990,16 @@ type ServerInterface interface {
 	// GetCoverage Source × day coverage matrix
 	// (GET /api/v1/coverage)
 	GetCoverage(w http.ResponseWriter, r *http.Request, params GetCoverageParams)
-	// ListDevices List paired devices
+	// ListDevices List paired devices, newest first, including revoked ones
 	// (GET /api/v1/devices)
 	ListDevices(w http.ResponseWriter, r *http.Request)
-	// CreatePairingCode Create a short-lived pairing code
+	// CreatePairingCode Create a single-use pairing code, valid for 10 minutes
 	// (POST /api/v1/devices/pairing-codes)
 	CreatePairingCode(w http.ResponseWriter, r *http.Request)
-	// RequestDeviceAnchorReset Ask the device to resync from scratch on its next contact
+	// RequestDeviceAnchorReset Ask the device to resync types from scratch on its next contact
 	// (POST /api/v1/devices/{id}/request-anchor-reset)
 	RequestDeviceAnchorReset(w http.ResponseWriter, r *http.Request, id ID)
-	// RevokeDevice Revoke a device's token
+	// RevokeDevice Revoke a device's token; its next request is 401
 	// (POST /api/v1/devices/{id}/revoke)
 	RevokeDevice(w http.ResponseWriter, r *http.Request, id ID)
 	// ListDocuments List documents
@@ -3972,6 +4071,12 @@ type ServerInterface interface {
 	// GetMetric Get one catalogue metric
 	// (GET /api/v1/metrics/{code})
 	GetMetric(w http.ResponseWriter, r *http.Request, code MetricCodePath)
+	// ListOrigins List the apps (origins) data was recorded by, with their native or relayed state
+	// (GET /api/v1/origins)
+	ListOrigins(w http.ResponseWriter, r *http.Request)
+	// ClassifyOrigin Set or clear the vendor an origin relays
+	// (PATCH /api/v1/origins/{id})
+	ClassifyOrigin(w http.ResponseWriter, r *http.Request, id ID)
 	// ListOverrides List manual overrides
 	// (GET /api/v1/overrides)
 	ListOverrides(w http.ResponseWriter, r *http.Request, params ListOverridesParams)
@@ -4041,6 +4146,9 @@ type ServerInterface interface {
 	// GetSleep Get one sleep session
 	// (GET /api/v1/sleep/{id})
 	GetSleep(w http.ResponseWriter, r *http.Request, id ID, params GetSleepParams)
+	// ListSourceDevices List the devices measurements were recorded on (not the paired apps)
+	// (GET /api/v1/source-devices)
+	ListSourceDevices(w http.ResponseWriter, r *http.Request)
 	// GetSystemStatus Instance diagnostics
 	// (GET /api/v1/system/status)
 	GetSystemStatus(w http.ResponseWriter, r *http.Request)
@@ -5033,6 +5141,19 @@ func (siw *ServerInterfaceWrapper) GetCoverage(w http.ResponseWriter, r *http.Re
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "metric"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "metric", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "origin" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "origin", r.URL.Query(), &params.Origin, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "origin"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "origin", Err: err})
 		}
 		return
 	}
@@ -6170,6 +6291,46 @@ func (siw *ServerInterfaceWrapper) GetMetric(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// ListOrigins operation middleware
+func (siw *ServerInterfaceWrapper) ListOrigins(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListOrigins(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ClassifyOrigin operation middleware
+func (siw *ServerInterfaceWrapper) ClassifyOrigin(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ClassifyOrigin(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListOverrides operation middleware
 func (siw *ServerInterfaceWrapper) ListOverrides(w http.ResponseWriter, r *http.Request) {
 
@@ -7068,6 +7229,20 @@ func (siw *ServerInterfaceWrapper) GetSleep(w http.ResponseWriter, r *http.Reque
 	handler.ServeHTTP(w, r)
 }
 
+// ListSourceDevices operation middleware
+func (siw *ServerInterfaceWrapper) ListSourceDevices(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSourceDevices(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetSystemStatus operation middleware
 func (siw *ServerInterfaceWrapper) GetSystemStatus(w http.ResponseWriter, r *http.Request) {
 
@@ -7660,6 +7835,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/devices/pairing-codes", wrapper.CreatePairingCode)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/devices/{id}/request-anchor-reset", wrapper.RequestDeviceAnchorReset)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/devices/{id}/revoke", wrapper.RevokeDevice)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/origins", wrapper.ListOrigins)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/origins/{id}", wrapper.ClassifyOrigin)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/source-devices", wrapper.ListSourceDevices)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/documents", wrapper.ListDocuments)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/documents", wrapper.UploadDocument)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/documents/{id}", wrapper.DeleteDocument)
@@ -10201,8 +10379,37 @@ func (response CreatePairingCode403ApplicationProblemPlusJSONResponse) VisitCrea
 	return err
 }
 
+type CreatePairingCode429ApplicationProblemPlusJSONResponse Problem
+
+func (response CreatePairingCode429ApplicationProblemPlusJSONResponse) VisitCreatePairingCodeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePairingCode503ApplicationProblemPlusJSONResponse Problem
+
+func (response CreatePairingCode503ApplicationProblemPlusJSONResponse) VisitCreatePairingCodeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RequestDeviceAnchorResetRequestObject struct {
-	ID ID `json:"id"`
+	ID   ID `json:"id"`
+	Body *RequestDeviceAnchorResetJSONRequestBody
 }
 
 type RequestDeviceAnchorResetResponseObject interface {
@@ -10257,6 +10464,20 @@ func (response RequestDeviceAnchorReset404ApplicationProblemPlusJSONResponse) Vi
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RequestDeviceAnchorReset422ApplicationProblemPlusJSONResponse Problem
+
+func (response RequestDeviceAnchorReset422ApplicationProblemPlusJSONResponse) VisitRequestDeviceAnchorResetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -12111,6 +12332,135 @@ func (response GetMetric404ApplicationProblemPlusJSONResponse) VisitGetMetricRes
 	return err
 }
 
+type ListOriginsRequestObject struct {
+}
+
+type ListOriginsResponseObject interface {
+	VisitListOriginsResponse(w http.ResponseWriter) error
+}
+
+type ListOrigins200JSONResponse struct {
+	Origins      []DataOrigin  `json:"origins"`
+	RelayTargets []RelayTarget `json:"relay_targets"`
+}
+
+func (response ListOrigins200JSONResponse) VisitListOriginsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListOrigins401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response ListOrigins401ApplicationProblemPlusJSONResponse) VisitListOriginsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListOrigins403ApplicationProblemPlusJSONResponse Problem
+
+func (response ListOrigins403ApplicationProblemPlusJSONResponse) VisitListOriginsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ClassifyOriginRequestObject struct {
+	ID   ID `json:"id"`
+	Body *ClassifyOriginJSONRequestBody
+}
+
+type ClassifyOriginResponseObject interface {
+	VisitClassifyOriginResponse(w http.ResponseWriter) error
+}
+
+type ClassifyOrigin204Response struct {
+}
+
+func (response ClassifyOrigin204Response) VisitClassifyOriginResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ClassifyOrigin401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response ClassifyOrigin401ApplicationProblemPlusJSONResponse) VisitClassifyOriginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ClassifyOrigin403ApplicationProblemPlusJSONResponse Problem
+
+func (response ClassifyOrigin403ApplicationProblemPlusJSONResponse) VisitClassifyOriginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ClassifyOrigin404ApplicationProblemPlusJSONResponse Problem
+
+func (response ClassifyOrigin404ApplicationProblemPlusJSONResponse) VisitClassifyOriginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ClassifyOrigin422ApplicationProblemPlusJSONResponse Problem
+
+func (response ClassifyOrigin422ApplicationProblemPlusJSONResponse) VisitClassifyOriginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListOverridesRequestObject struct {
 	Params ListOverridesParams
 }
@@ -13846,6 +14196,59 @@ func (response GetSleep422ApplicationProblemPlusJSONResponse) VisitGetSleepRespo
 	return err
 }
 
+type ListSourceDevicesRequestObject struct {
+}
+
+type ListSourceDevicesResponseObject interface {
+	VisitListSourceDevicesResponse(w http.ResponseWriter) error
+}
+
+type ListSourceDevices200JSONResponse struct {
+	Devices []SourceDevice `json:"devices"`
+}
+
+func (response ListSourceDevices200JSONResponse) VisitListSourceDevicesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSourceDevices401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response ListSourceDevices401ApplicationProblemPlusJSONResponse) VisitListSourceDevicesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSourceDevices403ApplicationProblemPlusJSONResponse Problem
+
+func (response ListSourceDevices403ApplicationProblemPlusJSONResponse) VisitListSourceDevicesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetSystemStatusRequestObject struct {
 }
 
@@ -14601,16 +15004,16 @@ type StrictServerInterface interface {
 	// GetCoverage Source × day coverage matrix
 	// (GET /api/v1/coverage)
 	GetCoverage(ctx context.Context, request GetCoverageRequestObject) (GetCoverageResponseObject, error)
-	// ListDevices List paired devices
+	// ListDevices List paired devices, newest first, including revoked ones
 	// (GET /api/v1/devices)
 	ListDevices(ctx context.Context, request ListDevicesRequestObject) (ListDevicesResponseObject, error)
-	// CreatePairingCode Create a short-lived pairing code
+	// CreatePairingCode Create a single-use pairing code, valid for 10 minutes
 	// (POST /api/v1/devices/pairing-codes)
 	CreatePairingCode(ctx context.Context, request CreatePairingCodeRequestObject) (CreatePairingCodeResponseObject, error)
-	// RequestDeviceAnchorReset Ask the device to resync from scratch on its next contact
+	// RequestDeviceAnchorReset Ask the device to resync types from scratch on its next contact
 	// (POST /api/v1/devices/{id}/request-anchor-reset)
 	RequestDeviceAnchorReset(ctx context.Context, request RequestDeviceAnchorResetRequestObject) (RequestDeviceAnchorResetResponseObject, error)
-	// RevokeDevice Revoke a device's token
+	// RevokeDevice Revoke a device's token; its next request is 401
 	// (POST /api/v1/devices/{id}/revoke)
 	RevokeDevice(ctx context.Context, request RevokeDeviceRequestObject) (RevokeDeviceResponseObject, error)
 	// ListDocuments List documents
@@ -14682,6 +15085,12 @@ type StrictServerInterface interface {
 	// GetMetric Get one catalogue metric
 	// (GET /api/v1/metrics/{code})
 	GetMetric(ctx context.Context, request GetMetricRequestObject) (GetMetricResponseObject, error)
+	// ListOrigins List the apps (origins) data was recorded by, with their native or relayed state
+	// (GET /api/v1/origins)
+	ListOrigins(ctx context.Context, request ListOriginsRequestObject) (ListOriginsResponseObject, error)
+	// ClassifyOrigin Set or clear the vendor an origin relays
+	// (PATCH /api/v1/origins/{id})
+	ClassifyOrigin(ctx context.Context, request ClassifyOriginRequestObject) (ClassifyOriginResponseObject, error)
 	// ListOverrides List manual overrides
 	// (GET /api/v1/overrides)
 	ListOverrides(ctx context.Context, request ListOverridesRequestObject) (ListOverridesResponseObject, error)
@@ -14751,6 +15160,9 @@ type StrictServerInterface interface {
 	// GetSleep Get one sleep session
 	// (GET /api/v1/sleep/{id})
 	GetSleep(ctx context.Context, request GetSleepRequestObject) (GetSleepResponseObject, error)
+	// ListSourceDevices List the devices measurements were recorded on (not the paired apps)
+	// (GET /api/v1/source-devices)
+	ListSourceDevices(ctx context.Context, request ListSourceDevicesRequestObject) (ListSourceDevicesResponseObject, error)
 	// GetSystemStatus Instance diagnostics
 	// (GET /api/v1/system/status)
 	GetSystemStatus(ctx context.Context, request GetSystemStatusRequestObject) (GetSystemStatusResponseObject, error)
@@ -15764,6 +16176,16 @@ func (sh *strictHandler) RequestDeviceAnchorReset(w http.ResponseWriter, r *http
 
 	request.ID = id
 
+	var body RequestDeviceAnchorResetJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
+
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.RequestDeviceAnchorReset(ctx, request.(RequestDeviceAnchorResetRequestObject))
 	}
@@ -16444,6 +16866,63 @@ func (sh *strictHandler) GetMetric(w http.ResponseWriter, r *http.Request, code 
 	}
 }
 
+// ListOrigins operation middleware
+func (sh *strictHandler) ListOrigins(w http.ResponseWriter, r *http.Request) {
+	var request ListOriginsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListOrigins(ctx, request.(ListOriginsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListOrigins")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListOriginsResponseObject); ok {
+		if err := validResponse.VisitListOriginsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ClassifyOrigin operation middleware
+func (sh *strictHandler) ClassifyOrigin(w http.ResponseWriter, r *http.Request, id ID) {
+	var request ClassifyOriginRequestObject
+
+	request.ID = id
+
+	var body ClassifyOriginJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ClassifyOrigin(ctx, request.(ClassifyOriginRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ClassifyOrigin")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ClassifyOriginResponseObject); ok {
+		if err := validResponse.VisitClassifyOriginResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListOverrides operation middleware
 func (sh *strictHandler) ListOverrides(w http.ResponseWriter, r *http.Request, params ListOverridesParams) {
 	var request ListOverridesRequestObject
@@ -17076,6 +17555,30 @@ func (sh *strictHandler) GetSleep(w http.ResponseWriter, r *http.Request, id ID,
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetSleepResponseObject); ok {
 		if err := validResponse.VisitGetSleepResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListSourceDevices operation middleware
+func (sh *strictHandler) ListSourceDevices(w http.ResponseWriter, r *http.Request) {
+	var request ListSourceDevicesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListSourceDevices(ctx, request.(ListSourceDevicesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListSourceDevices")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListSourceDevicesResponseObject); ok {
+		if err := validResponse.VisitListSourceDevicesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

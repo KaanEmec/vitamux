@@ -9,6 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -91,7 +92,7 @@ func newAuthEnv(t *testing.T, development bool, configure ...func(*Options, *cry
 		t.Fatal(err)
 	}
 	logs := &syncBuffer{}
-	opts := Options{Auth: svc, Development: development, DB: d, Blobs: blobs}
+	opts := Options{Auth: svc, Development: development, DB: d, Blobs: blobs, PublicURL: &url.URL{Scheme: "https", Host: "vitamux.example.test"}}
 	for _, c := range configure {
 		c(&opts, kr)
 	}

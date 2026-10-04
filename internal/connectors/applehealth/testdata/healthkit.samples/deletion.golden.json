@@ -1,0 +1,17 @@
+{
+  "synthetic": true,
+  "normalizer": "healthkit.samples",
+  "version": 2,
+  "output": {
+    "tombstones": [
+      {
+        "record_type": "HKQuantityTypeIdentifierHeartRate",
+        "external_id": "0A1B0000-0000-4000-8000-000000000003"
+      },
+      {
+        "record_type": "HKQuantityTypeIdentifierHeartRate",
+        "external_id": "0A1B0000-0000-4000-8000-000000000004"
+      }
+    ]
+  }
+}

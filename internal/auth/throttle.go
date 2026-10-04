@@ -42,13 +42,18 @@ func newThrottle() *throttle { return &throttle{m: map[string]*attempts{}, now: 
 // are grouped by /64, which one host usually controls entirely.
 func throttleKeys(username string, ip netip.Addr) []string {
 	keys := []string{"user:" + strings.ToLower(strings.TrimSpace(username))}
+	if ip.IsValid() {
+		keys = append(keys, "ip:"+addrKey(ip))
+	}
+	return keys
+}
+
+// addrKey names a client address for throttling; IPv6 is grouped by /64.
+func addrKey(ip netip.Addr) string {
 	if ip.Is6() && !ip.Is4In6() {
 		ip = netip.PrefixFrom(ip, 64).Masked().Addr()
 	}
-	if ip.IsValid() {
-		keys = append(keys, "ip:"+ip.Unmap().String())
-	}
-	return keys
+	return ip.Unmap().String()
 }
 
 // Wait returns how long the caller must wait before the next attempt for any of keys.

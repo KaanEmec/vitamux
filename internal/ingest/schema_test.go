@@ -66,6 +66,15 @@ func TestExamplesValidate(t *testing.T) {
 			}
 		}
 	}
+	var hk struct {
+		Items []struct{ Body json.RawMessage }
+	}
+	if err := json.Unmarshal(readExample(t, "ingest-batch.v1.healthkit.json"), &hk); err != nil {
+		t.Fatal(err)
+	}
+	if !schemaValid(t, compile(t, "healthkit-samples.v1.json"), hk.Items[0].Body) {
+		t.Error("healthkit example body rejected by healthkit-samples.v1.json")
+	}
 	doc := readExample(t, "heartbeat.v1.json")
 	if !schemaValid(t, hb, doc) {
 		t.Error("heartbeat example rejected by the JSON Schema")

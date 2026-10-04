@@ -13,6 +13,24 @@ import (
 	"github.com/google/uuid"
 )
 
+const deleteEventsByKey = `-- name: DeleteEventsByKey :execrows
+UPDATE health_events SET deleted_at = now(), deleted_by_raw_id = $1
+WHERE dedupe_key = ANY($2::bytea[]) AND superseded_at IS NULL AND deleted_at IS NULL
+`
+
+type DeleteEventsByKeyParams struct {
+	RawPayloadID *int64
+	Keys         [][]byte
+}
+
+func (q *Queries) DeleteEventsByKey(ctx context.Context, arg DeleteEventsByKeyParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteEventsByKey, arg.RawPayloadID, arg.Keys)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteGroupComponents = `-- name: DeleteGroupComponents :many
 UPDATE measurements SET deleted_at = now(), deleted_by_raw_id = $1
 WHERE group_id = ANY($2::bigint[]) AND superseded_at IS NULL AND deleted_at IS NULL
@@ -163,6 +181,53 @@ func (q *Queries) DeleteWorkoutsByKey(ctx context.Context, arg DeleteWorkoutsByK
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const getActiveEvent = `-- name: GetActiveEvent :one
+SELECT id, code, start_at, end_at, tz_offset_min, local_date, value, level, context, quality_flags, device_id,
+       origin_id, external_id, normalizer_version_id, deleted_at
+FROM health_events WHERE dedupe_key = $1 AND superseded_at IS NULL
+`
+
+type GetActiveEventRow struct {
+	ID                  uuid.UUID
+	Code                string
+	StartAt             time.Time
+	EndAt               *time.Time
+	TzOffsetMin         *int16
+	LocalDate           time.Time
+	Value               *float64
+	Level               *string
+	Context             json.RawMessage
+	QualityFlags        int32
+	DeviceID            *uuid.UUID
+	OriginID            *uuid.UUID
+	ExternalID          *string
+	NormalizerVersionID int32
+	DeletedAt           *time.Time
+}
+
+func (q *Queries) GetActiveEvent(ctx context.Context, dedupeKey []byte) (GetActiveEventRow, error) {
+	row := q.db.QueryRow(ctx, getActiveEvent, dedupeKey)
+	var i GetActiveEventRow
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.StartAt,
+		&i.EndAt,
+		&i.TzOffsetMin,
+		&i.LocalDate,
+		&i.Value,
+		&i.Level,
+		&i.Context,
+		&i.QualityFlags,
+		&i.DeviceID,
+		&i.OriginID,
+		&i.ExternalID,
+		&i.NormalizerVersionID,
+		&i.DeletedAt,
+	)
+	return i, err
 }
 
 const getActiveGroup = `-- name: GetActiveGroup :one
@@ -333,6 +398,62 @@ func (q *Queries) GetWriteConnection(ctx context.Context, id uuid.UUID) (GetWrit
 		&i.AccountKey,
 	)
 	return i, err
+}
+
+const insertEvent = `-- name: InsertEvent :exec
+INSERT INTO health_events (id, user_id, code, start_at, end_at, tz_offset_min, local_date, value, level, context,
+                           quality_flags, provider_id, connection_id, device_id, origin_id, external_id, dedupe_key,
+                           raw_payload_id, normalizer_version_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        $11, $12, $13, $14, $15, $16, $17,
+        $18, $19)
+`
+
+type InsertEventParams struct {
+	ID                  uuid.UUID
+	UserID              uuid.UUID
+	Code                string
+	StartAt             time.Time
+	EndAt               *time.Time
+	TzOffsetMin         *int16
+	LocalDate           time.Time
+	Value               *float64
+	Level               *string
+	Context             json.RawMessage
+	QualityFlags        int32
+	ProviderID          int16
+	ConnectionID        uuid.UUID
+	DeviceID            *uuid.UUID
+	OriginID            *uuid.UUID
+	ExternalID          *string
+	DedupeKey           []byte
+	RawPayloadID        *int64
+	NormalizerVersionID int32
+}
+
+func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) error {
+	_, err := q.db.Exec(ctx, insertEvent,
+		arg.ID,
+		arg.UserID,
+		arg.Code,
+		arg.StartAt,
+		arg.EndAt,
+		arg.TzOffsetMin,
+		arg.LocalDate,
+		arg.Value,
+		arg.Level,
+		arg.Context,
+		arg.QualityFlags,
+		arg.ProviderID,
+		arg.ConnectionID,
+		arg.DeviceID,
+		arg.OriginID,
+		arg.ExternalID,
+		arg.DedupeKey,
+		arg.RawPayloadID,
+		arg.NormalizerVersionID,
+	)
+	return err
 }
 
 const insertGroup = `-- name: InsertGroup :one
@@ -600,6 +721,20 @@ type InsertWorkoutSegmentsParams struct {
 
 func (q *Queries) InsertWorkoutSegments(ctx context.Context, arg InsertWorkoutSegmentsParams) error {
 	_, err := q.db.Exec(ctx, insertWorkoutSegments, arg.WorkoutID, arg.Rows)
+	return err
+}
+
+const linkEventSuccessor = `-- name: LinkEventSuccessor :exec
+UPDATE health_events SET superseded_by = $1 WHERE id = $2
+`
+
+type LinkEventSuccessorParams struct {
+	NewID *uuid.UUID
+	ID    uuid.UUID
+}
+
+func (q *Queries) LinkEventSuccessor(ctx context.Context, arg LinkEventSuccessorParams) error {
+	_, err := q.db.Exec(ctx, linkEventSuccessor, arg.NewID, arg.ID)
 	return err
 }
 
@@ -896,6 +1031,15 @@ func (q *Queries) RegisterNormalizerVersion(ctx context.Context, arg RegisterNor
 	return id, err
 }
 
+const supersedeEvent = `-- name: SupersedeEvent :exec
+UPDATE health_events SET superseded_at = now() WHERE id = $1
+`
+
+func (q *Queries) SupersedeEvent(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, supersedeEvent, id)
+	return err
+}
+
 const supersedeGroup = `-- name: SupersedeGroup :exec
 UPDATE measurement_groups SET superseded_at = now() WHERE id = $1
 `
@@ -929,6 +1073,20 @@ UPDATE workouts SET superseded_at = now() WHERE id = $1
 
 func (q *Queries) SupersedeWorkout(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, supersedeWorkout, id)
+	return err
+}
+
+const touchEvent = `-- name: TouchEvent :exec
+UPDATE health_events SET normalizer_version_id = $1, normalized_at = now() WHERE id = $2
+`
+
+type TouchEventParams struct {
+	NormalizerVersionID int32
+	ID                  uuid.UUID
+}
+
+func (q *Queries) TouchEvent(ctx context.Context, arg TouchEventParams) error {
+	_, err := q.db.Exec(ctx, touchEvent, arg.NormalizerVersionID, arg.ID)
 	return err
 }
 

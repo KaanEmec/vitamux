@@ -34,6 +34,7 @@ func DeleteConnection(ctx context.Context, q *dbq.Queries, user, id uuid.UUID) (
 	}{
 		{"measurements", q.DeleteConnectionMeasurements}, {"groups", q.DeleteConnectionGroups},
 		{"sleep_sessions", q.DeleteConnectionSleep}, {"workouts", q.DeleteConnectionWorkouts},
+		{"health_events", q.DeleteConnectionEvents},
 	} {
 		n, err := del.fn(ctx, id)
 		if err != nil {

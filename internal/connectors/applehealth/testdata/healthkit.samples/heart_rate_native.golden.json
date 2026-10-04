@@ -1,0 +1,78 @@
+{
+  "synthetic": true,
+  "normalizer": "healthkit.samples",
+  "version": 2,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "type": "watch",
+        "manufacturer": "Apple Inc.",
+        "model": "Watch",
+        "hardware_version": "Watch7,1",
+        "software_version": "11.0"
+      }
+    ],
+    "origins": [
+      {
+        "key": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "name": "Synthetic Watch",
+        "native": true
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "heart_rate",
+        "kind": "sample",
+        "start": "2026-09-14T07:31:05.12+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "value": 61,
+        "unit": "bpm",
+        "device": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "key": {
+          "record_type": "HKQuantityTypeIdentifierHeartRate",
+          "external_id": "6F0D0000-0000-4000-8000-000000000001"
+        }
+      },
+      {
+        "metric": "heart_rate",
+        "kind": "sample",
+        "start": "2026-09-14T18:02:00+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "value": 142,
+        "unit": "bpm",
+        "flags": 2,
+        "device": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "key": {
+          "record_type": "HKQuantityTypeIdentifierHeartRate",
+          "external_id": "6F0D0000-0000-4000-8000-000000000002"
+        }
+      },
+      {
+        "metric": "heart_rate",
+        "kind": "sample",
+        "start": "2026-09-14T23:40:00+02:00",
+        "value": 55,
+        "unit": "bpm",
+        "device": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "key": {
+          "record_type": "HKQuantityTypeIdentifierHeartRate",
+          "external_id": "6F0D0000-0000-4000-8000-000000000003"
+        }
+      }
+    ],
+    "warnings": [
+      {
+        "code": "unexpected_value_or_unit",
+        "detail": "6F0D0000-0000-4000-8000-000000000004"
+      }
+    ]
+  }
+}

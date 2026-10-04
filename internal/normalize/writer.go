@@ -83,6 +83,11 @@ func Write(ctx context.Context, q *dbq.Queries, src Source, out Output) (WriteSt
 			return w.stats, err
 		}
 	}
+	for _, e := range out.Events {
+		if err := w.healthEvent(e); err != nil {
+			return w.stats, err
+		}
+	}
 	if err := w.tombstones(out.Tombstones); err != nil {
 		return w.stats, err
 	}
@@ -415,7 +420,7 @@ func (w *writer) measurements(rows []mrow) error {
 	return db.MapErr(w.q.LinkMeasurementSuccessors(w.ctx, dbq.LinkMeasurementSuccessorsParams{OldIds: oldIDs, NewIds: newIDs}))
 }
 
-// event applies the upsert rule to one event row (group, sleep session, workout). insert must
+// event applies the upsert rule to one event row (group, sleep session, workout, health event). insert must
 // create the new row; it runs after the old row is superseded and before link points at it.
 func (w *writer) event(found, same bool, oldVersion int32, touch, supersede, insert, link func() error) (inserted bool, err error) {
 	if found && same {
@@ -697,6 +702,59 @@ func (w *writer) workout(x Workout) error {
 	return err
 }
 
+// healthEvent upserts one health event. Events have no catalogue metric, so they mark nothing dirty.
+func (w *writer) healthEvent(e Event) error {
+	start, end := micro(e.Start), microp(e.End)
+	loc, err := LocalDate(start, e.Zone, w.tl)
+	if err != nil {
+		return err
+	}
+	ctxJSON := e.Context
+	if len(ctxJSON) == 0 {
+		ctxJSON = json.RawMessage(`{}`)
+	}
+	flags := e.Flags &^ (FlagImplausible | FlagRelayed) // the writer owns these two
+	org, relayed := w.origin(e.Origin)
+	if relayed {
+		flags |= FlagRelayed
+	}
+	dev := w.device(e.Device)
+	ext, level := strp(e.Key.ExternalID), strp(e.Level)
+	dk := w.keys.key(e.Key, e.Code, "event", start, end, e.Device, e.Origin)
+
+	old, err := w.q.GetActiveEvent(w.ctx, dk)
+	found, err := active(err)
+	if err != nil {
+		return err
+	}
+	same := found && old.DeletedAt == nil && old.Code == e.Code && old.StartAt.Equal(start) && eqTime(old.EndAt, end) &&
+		eq(old.TzOffsetMin, loc.OffsetMin) && old.LocalDate.Equal(loc.Date) && eq(old.Value, e.Value) &&
+		eq(old.Level, level) && jsonEqual(old.Context, ctxJSON) && old.QualityFlags == int32(flags) &&
+		eq(old.DeviceID, dev) && eq(old.OriginID, org) && eq(old.ExternalID, ext)
+	id, err := newID()
+	if err != nil {
+		return err
+	}
+	raw := w.src.RawPayloadID
+	_, err = w.event(found, same, old.NormalizerVersionID,
+		func() error {
+			return w.q.TouchEvent(w.ctx, dbq.TouchEventParams{NormalizerVersionID: w.src.NormalizerVersionID, ID: old.ID})
+		},
+		func() error { return w.q.SupersedeEvent(w.ctx, old.ID) },
+		func() error {
+			return w.q.InsertEvent(w.ctx, dbq.InsertEventParams{ID: id, UserID: w.user, Code: e.Code, StartAt: start,
+				EndAt: end, TzOffsetMin: loc.OffsetMin, LocalDate: loc.Date, Value: e.Value, Level: level,
+				Context: ctxJSON, QualityFlags: int32(flags), ProviderID: w.provider, ConnectionID: w.src.ConnectionID,
+				DeviceID: dev, OriginID: org, ExternalID: ext, DedupeKey: dk, RawPayloadID: &raw,
+				NormalizerVersionID: w.src.NormalizerVersionID})
+		},
+		func() error {
+			return w.q.LinkEventSuccessor(w.ctx, dbq.LinkEventSuccessorParams{ID: old.ID, NewID: &id})
+		},
+	)
+	return err
+}
+
 // tombstones marks the active rows with these upstream ids deleted, in every canonical table;
 // deleting a group deletes its components. Unknown ids are ignored.
 func (w *writer) tombstones(ks []Key) error {
@@ -737,7 +795,11 @@ func (w *writer) tombstones(ks []Key) error {
 	if err != nil {
 		return db.MapErr(err)
 	}
-	w.stats.Deleted += len(ms) + len(gids) + len(comps) + len(dates) + int(nw)
+	ne, err := w.q.DeleteEventsByKey(w.ctx, dbq.DeleteEventsByKeyParams{RawPayloadID: raw, Keys: keys})
+	if err != nil {
+		return db.MapErr(err)
+	}
+	w.stats.Deleted += len(ms) + len(gids) + len(comps) + len(dates) + int(nw) + int(ne)
 	return nil
 }
 

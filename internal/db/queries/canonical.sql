@@ -210,3 +210,29 @@ UPDATE workouts SET superseded_by = @new_id WHERE id = @id;
 -- name: DeleteWorkoutsByKey :execrows
 UPDATE workouts SET deleted_at = now(), deleted_by_raw_id = @raw_payload_id
 WHERE dedupe_key = ANY(@keys::bytea[]) AND superseded_at IS NULL AND deleted_at IS NULL;
+
+-- name: GetActiveEvent :one
+SELECT id, code, start_at, end_at, tz_offset_min, local_date, value, level, context, quality_flags, device_id,
+       origin_id, external_id, normalizer_version_id, deleted_at
+FROM health_events WHERE dedupe_key = @dedupe_key AND superseded_at IS NULL;
+
+-- name: InsertEvent :exec
+INSERT INTO health_events (id, user_id, code, start_at, end_at, tz_offset_min, local_date, value, level, context,
+                           quality_flags, provider_id, connection_id, device_id, origin_id, external_id, dedupe_key,
+                           raw_payload_id, normalizer_version_id)
+VALUES (@id, @user_id, @code, @start_at, @end_at, @tz_offset_min, @local_date, @value, @level, @context,
+        @quality_flags, @provider_id, @connection_id, @device_id, @origin_id, @external_id, @dedupe_key,
+        @raw_payload_id, @normalizer_version_id);
+
+-- name: TouchEvent :exec
+UPDATE health_events SET normalizer_version_id = @normalizer_version_id, normalized_at = now() WHERE id = @id;
+
+-- name: SupersedeEvent :exec
+UPDATE health_events SET superseded_at = now() WHERE id = @id;
+
+-- name: LinkEventSuccessor :exec
+UPDATE health_events SET superseded_by = @new_id WHERE id = @id;
+
+-- name: DeleteEventsByKey :execrows
+UPDATE health_events SET deleted_at = now(), deleted_by_raw_id = @raw_payload_id
+WHERE dedupe_key = ANY(@keys::bytea[]) AND superseded_at IS NULL AND deleted_at IS NULL;

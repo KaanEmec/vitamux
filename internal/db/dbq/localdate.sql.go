@@ -50,6 +50,58 @@ func (q *Queries) InsertTimezonePeriod(ctx context.Context, arg InsertTimezonePe
 	return err
 }
 
+const listEventsForLocalDate = `-- name: ListEventsForLocalDate :many
+SELECT id, start_at AS at, local_date FROM health_events
+WHERE user_id = $1
+  AND tz_offset_min IS NULL AND superseded_at IS NULL AND deleted_at IS NULL
+  AND start_at >= $2 AND start_at < $3
+  AND (start_at, id) > ($4::timestamptz, $5::uuid)
+ORDER BY start_at, id
+LIMIT $6
+`
+
+type ListEventsForLocalDateParams struct {
+	UserID  uuid.UUID
+	FromAt  time.Time
+	UntilAt time.Time
+	AfterAt time.Time
+	AfterID uuid.UUID
+	Batch   int32
+}
+
+type ListEventsForLocalDateRow struct {
+	ID        uuid.UUID
+	At        time.Time
+	LocalDate time.Time
+}
+
+func (q *Queries) ListEventsForLocalDate(ctx context.Context, arg ListEventsForLocalDateParams) ([]ListEventsForLocalDateRow, error) {
+	rows, err := q.db.Query(ctx, listEventsForLocalDate,
+		arg.UserID,
+		arg.FromAt,
+		arg.UntilAt,
+		arg.AfterAt,
+		arg.AfterID,
+		arg.Batch,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListEventsForLocalDateRow
+	for rows.Next() {
+		var i ListEventsForLocalDateRow
+		if err := rows.Scan(&i.ID, &i.At, &i.LocalDate); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMeasurementGroupsForLocalDate = `-- name: ListMeasurementGroupsForLocalDate :many
 SELECT id, measured_at AS at, local_date FROM measurement_groups
 WHERE user_id = $1
@@ -334,6 +386,21 @@ type MarkLocalDatesDirtyParams struct {
 
 func (q *Queries) MarkLocalDatesDirty(ctx context.Context, arg MarkLocalDatesDirtyParams) error {
 	_, err := q.db.Exec(ctx, markLocalDatesDirty, arg.UserID, arg.MetricID, arg.Dates)
+	return err
+}
+
+const setEventLocalDates = `-- name: SetEventLocalDates :exec
+UPDATE health_events e SET local_date = v.d
+FROM (SELECT unnest($1::uuid[]) AS id, unnest($2::date[]) AS d) AS v WHERE e.id = v.id
+`
+
+type SetEventLocalDatesParams struct {
+	Ids   []uuid.UUID
+	Dates []time.Time
+}
+
+func (q *Queries) SetEventLocalDates(ctx context.Context, arg SetEventLocalDatesParams) error {
+	_, err := q.db.Exec(ctx, setEventLocalDates, arg.Ids, arg.Dates)
 	return err
 }
 
