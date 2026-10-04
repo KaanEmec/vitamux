@@ -27,7 +27,7 @@ A provider-shaped writer (Withings in J08.1, HealthKit in E15) implements `Shape
 
 ## Sources
 
-`garmin_watch` (6 s HR, 15 min steps + daily totals, resting HR, staged sleep, naps) · `apple_watch` (irregular HR, dense in workouts; variable step intervals; partial sleep) · `iphone` (steps while carried) · `garmin_via_healthkit` (the same watch relayed: minute HR, hourly steps; origin `com.garmin.connect.mobile`) · `withings_bp` (BP groups) · `withings_scale` (body composition groups) · `withings_via_healthkit` (relayed weigh-ins) · `manual_entry` (typed HR). About 6.1 M heart rate rows per year.
+Devices carry realistic manufacturers (`Apple Inc.` with model `Watch` or `iPhone`, `Garmin`, `Withings`) so brand selectors match. `garmin_watch` (6 s HR, 15 min steps + daily totals, resting HR, staged sleep, naps) · `apple_watch` (irregular HR, dense in workouts; variable step intervals; partial sleep) · `iphone` (steps while carried) · `garmin_via_healthkit` (the same watch relayed: minute HR, hourly steps; origin `com.garmin.connect.mobile`) · `withings_bp` (BP groups) · `withings_scale` (body composition groups) · `withings_via_healthkit` (relayed weigh-ins) · `manual_entry` (typed HR). About 6.1 M heart rate rows per year.
 
 ## Scenarios and resolution edge cases
 

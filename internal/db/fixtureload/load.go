@@ -45,6 +45,7 @@ type srcRec struct {
 	Provider        string `json:"provider"`
 	DeviceType      string `json:"device_type"`
 	Fingerprint     string `json:"fingerprint"`
+	Manufacturer    string `json:"manufacturer"`
 	Model           string `json:"model"`
 	OriginKey       string `json:"origin_key"`
 	RelayedProvider string `json:"relayed_provider"`
@@ -165,8 +166,8 @@ func (l *loader) seed(ctx context.Context, dir string) error {
 		}
 		if s.Fingerprint != "" {
 			id := uuid.Must(uuid.NewV7())
-			if _, err := p.Exec(ctx, `INSERT INTO devices (id, user_id, provider_id, fingerprint, device_type, manufacturer, model) VALUES ($1, $2, $3, $4, $5, 'Synthetic', $6)
-				ON CONFLICT (user_id, provider_id, fingerprint) DO NOTHING`, id, l.user, src.provider, s.Fingerprint, s.DeviceType, s.Model); err != nil {
+			if _, err := p.Exec(ctx, `INSERT INTO devices (id, user_id, provider_id, fingerprint, device_type, manufacturer, model) VALUES ($1, $2, $3, $4, $5, $6, $7)
+				ON CONFLICT (user_id, provider_id, fingerprint) DO NOTHING`, id, l.user, src.provider, s.Fingerprint, s.DeviceType, s.Manufacturer, s.Model); err != nil {
 				return err
 			}
 			var dev uuid.UUID

@@ -120,7 +120,7 @@ func (c *canonicalWriter) Source(s Source) error {
 	b = appendStr(b, "key", s.Key)
 	b = append(b, ',')
 	b = appendStr(b, "provider", s.Provider)
-	for _, kv := range [][2]string{{"device_type", s.DeviceType}, {"fingerprint", s.Fingerprint}, {"model", s.Model}, {"origin_key", s.OriginKey}, {"relayed_provider", s.RelayedProvider}} {
+	for _, kv := range [][2]string{{"device_type", s.DeviceType}, {"fingerprint", s.Fingerprint}, {"manufacturer", s.Manufacturer}, {"model", s.Model}, {"origin_key", s.OriginKey}, {"relayed_provider", s.RelayedProvider}} {
 		if kv[1] != "" {
 			b = append(b, ',')
 			b = appendStr(b, kv[0], kv[1])

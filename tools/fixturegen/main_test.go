@@ -37,8 +37,8 @@ func TestDeterministic(t *testing.T) {
 		days        int
 		want        string
 	}{
-		{"dst", "2025-03-28", 4, "abc193c14d14a52acc93cf576923d93cebbb728f36f1f7a4774b00034ac1a5e9"},
-		{"trip", "2025-05-09", 16, "cdff5b92b7472a390bdd511323af319aeb9cdb27a289d31bdd96ee0ef936c447"},
+		{"dst", "2025-03-28", 4, "b943979482a06edaede194011aad8175125647abf9df475e70be424fde2a30e9"},
+		{"trip", "2025-05-09", 16, "aa02da98ba2f8af2d46e7fc5a04c636f470a2d337de5d2968a7123105a4efabe"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
