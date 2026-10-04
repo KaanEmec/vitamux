@@ -24,6 +24,7 @@ Run before a v0.2.0 release ([J15.7](plan/E15-apple-health/J15.7-device-campaign
 | D9 | Reinstall | Delete and reinstall the app | Record whether the Keychain token survives; anchors are lost, so a full pull follows and is deduplicated by UUID | Token survived (yes/no), duplicate rows after the re-pull (expect 0) |
 | D10 | Source bundle ids | Connect the brand apps the tester owns and read the origins list | Each brand appears as an origin with its bundle id | Observed bundle id and device name per brand, compared with the [brand table](architecture/apple-health.md#brand-origin-sets); which types it wrote |
 | D11 | Free-account build | Build with a free Personal Team, if available | Record whether the Background Delivery capability and entitlement are accepted, and when the profile expires | Accepted (yes/no), error text, days until expiry; closes the open point in [Distribution](architecture/apple-health.md#distribution) |
+| D12 | Sleeping breathing disturbances unit | On a watch with sleep apnea notifications, read `AppleSleepingBreathingDisturbances` for a few nights | The bridge reads it as `count` and the catalogue stores it as `events/h` ([`breathing_disturbances`](metrics.md)); confirm the value is Apple's per-hour index and not a night total | Unit string the sample carries, whether values look like a rate or a count (no values), the source of truth used |
 
 ## Results
 
@@ -42,5 +43,6 @@ Copy one block per run. Leave health values out.
 | | | | | D9 | | | |
 | | | | | D10 | | | |
 | | | | | D11 | | | |
+| | | | | D12 | | | |
 
 Observed behaviour that differs from [apple-health.md](architecture/apple-health.md) goes into the known-limitations doc (J15.7, T15.7.4), and the architecture doc is corrected in place.

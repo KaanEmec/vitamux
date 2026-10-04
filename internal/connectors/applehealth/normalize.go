@@ -40,7 +40,7 @@ var errUnreadable = errors.New("healthkit.samples: unreadable page")
 type Normalizer struct{}
 
 func (Normalizer) ID() string                    { return NormalizerID }
-func (Normalizer) Version() int                  { return 2 }
+func (Normalizer) Version() int                  { return 3 }
 func (Normalizer) Accepts(stream, _ string) bool { return stream == StreamSamples }
 
 type page struct {
@@ -130,6 +130,10 @@ func normalizePage(p page) normalize.Output {
 	case p.Type == typeStandHour:
 		for _, s := range p.Samples {
 			b.standHour(s)
+		}
+	case p.Type == typeInsulin:
+		for _, s := range p.Samples {
+			b.insulin(s)
 		}
 	case p.Type == typeSleep:
 		b.sleep(p.Samples)
@@ -262,6 +266,20 @@ func (b *builder) quantity(s sample, q quantity) {
 		m.End = &s.End
 	}
 	b.measurement(s, m)
+}
+
+// insulin maps a dose to basal or bolus by its delivery reason.
+func (b *builder) insulin(s sample) {
+	var reason float64
+	var code string
+	if raw, ok := s.Metadata[insulinReasonKey]; ok && json.Unmarshal(raw, &reason) == nil {
+		code = insulinReasons[int(reason)]
+	}
+	if code == "" {
+		b.warn("unknown_insulin_reason", s.UUID)
+		return
+	}
+	b.quantity(s, q(code, catalog.Interval, "IU", "IU"))
 }
 
 // category returns the raw category value; ok is false when it is missing or not an integer.

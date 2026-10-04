@@ -147,6 +147,8 @@ func exportSample(typ string, r ExportRecord) sample {
 	switch {
 	case isQuantity:
 		s.Value, s.Unit = convert(number(a["value"]), a["unit"], q.hkUnit)
+	case typ == typeInsulin:
+		s.Value, s.Unit = convert(number(a["value"]), a["unit"], "IU")
 	case typ == typeWorkout:
 		s.Workout = exportWorkout(r)
 	case len(r.Records) > 0:

@@ -56,11 +56,11 @@ func TestRegistryIsMapped(t *testing.T) {
 	}
 	qs := regexp.MustCompile(`\bq\("(\w+)", \.\w+, "([^"]+)"\)`).FindAllStringSubmatch(string(src), -1)
 	cs := regexp.MustCompile(`\bc\("(\w+)", \.\w+\)`).FindAllStringSubmatch(string(src), -1)
-	if len(qs) < 40 || len(cs) < 8 {
+	if len(qs) < 80 || len(cs) < 8 {
 		t.Fatalf("parsed %d quantities and %d categories; has Registry.swift changed shape?", len(qs), len(cs))
 	}
 	for _, m := range qs {
-		if q, ok := quantities[hkQuantity+m[1]]; !ok || q.hkUnit != m[2] {
+		if q, ok := quantities[hkQuantity+m[1]]; hkQuantity+m[1] != typeInsulin && (!ok || q.hkUnit != m[2]) {
 			t.Errorf("quantity %s in %s is not mapped", m[1], m[2])
 		}
 	}

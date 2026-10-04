@@ -1,0 +1,53 @@
+{
+  "synthetic": true,
+  "normalizer": "healthkit.samples",
+  "version": 3,
+  "output": {
+    "origins": [
+      {
+        "key": "com.example.synthetic-pump",
+        "name": "Synthetic Pump App"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "insulin_basal",
+        "kind": "interval",
+        "start": "2026-09-14T07:00:00+02:00",
+        "end": "2026-09-14T07:30:00+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "value": 0.5,
+        "unit": "IU",
+        "origin": "com.example.synthetic-pump",
+        "key": {
+          "record_type": "HKQuantityTypeIdentifierInsulinDelivery",
+          "external_id": "6F0D0000-0000-4000-8000-000000000030"
+        }
+      },
+      {
+        "metric": "insulin_bolus",
+        "kind": "interval",
+        "start": "2026-09-14T12:00:00+02:00",
+        "end": "2026-09-14T12:05:00+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "value": 3,
+        "unit": "IU",
+        "origin": "com.example.synthetic-pump",
+        "key": {
+          "record_type": "HKQuantityTypeIdentifierInsulinDelivery",
+          "external_id": "6F0D0000-0000-4000-8000-000000000031"
+        }
+      }
+    ],
+    "warnings": [
+      {
+        "code": "unknown_insulin_reason",
+        "detail": "6F0D0000-0000-4000-8000-000000000032"
+      }
+    ]
+  }
+}

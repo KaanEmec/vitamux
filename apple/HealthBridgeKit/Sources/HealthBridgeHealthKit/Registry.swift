@@ -27,7 +27,7 @@ public struct HealthType: Hashable, Sendable {
     }
 }
 
-/// Type registry v1: the `v1` and `E15` rows of docs/architecture/metric-catalog.md that have an HK id.
+/// Type registry v1: the `v1`, `E15` and `E25` rows of docs/architecture/metric-catalog.md that have an HK id.
 public enum Registry {
     public static let v1: [HealthType] = [
         q("StepCount", .activity, "count"), q("DistanceWalkingRunning", .activity, "m"), q("DistanceCycling", .activity, "m"),
@@ -37,18 +37,37 @@ public enum Registry {
         q("AppleWalkingSteadiness", .activity, "%"), q("WalkingAsymmetryPercentage", .activity, "%"),
         q("WalkingDoubleSupportPercentage", .activity, "%"), q("WalkingStepLength", .activity, "m"),
         c("AppleWalkingSteadinessEvent", .activity),
+        q("DistanceRowing", .activity, "m"), q("DistancePaddleSports", .activity, "m"), q("DistanceSkatingSports", .activity, "m"),
+        q("DistanceCrossCountrySkiing", .activity, "m"), q("DistanceDownhillSnowSports", .activity, "m"),
+        q("AppleMoveTime", .activity, "s"), q("TimeInDaylight", .activity, "s"), q("PushCount", .activity, "count"),
+        q("SwimmingStrokeCount", .activity, "count"), q("WalkingSpeed", .activity, "m/s"), q("RunningSpeed", .activity, "m/s"),
+        q("CyclingSpeed", .activity, "m/s"), q("RowingSpeed", .activity, "m/s"), q("PaddleSportsSpeed", .activity, "m/s"),
+        q("CyclingCadence", .activity, "count/min"), q("RunningPower", .activity, "W"), q("CyclingPower", .activity, "W"),
+        q("CyclingFunctionalThresholdPower", .activity, "W"), q("RunningStrideLength", .activity, "m"),
+        q("RunningVerticalOscillation", .activity, "m"), q("RunningGroundContactTime", .activity, "s"),
+        q("PhysicalEffort", .activity, "kcal/(kg*hr)"), q("StairAscentSpeed", .activity, "m/s"),
+        q("StairDescentSpeed", .activity, "m/s"), q("SixMinuteWalkTestDistance", .activity, "m"),
+        q("NumberOfTimesFallen", .activity, "count"),
 
         q("HeartRate", .heart, "count/min"), q("RestingHeartRate", .heart, "count/min"),
         q("WalkingHeartRateAverage", .heart, "count/min"), q("HeartRateVariabilitySDNN", .heart, "ms"),
         q("VO2Max", .heart, "ml/kg*min"), c("HighHeartRateEvent", .heart), c("LowHeartRateEvent", .heart),
         c("LowCardioFitnessEvent", .heart), c("HypertensionEvent", .heart),
         HealthType(id: HKCorrelationTypeIdentifier.bloodPressure.rawValue, group: .heart, unit: nil),
+        q("HeartRateRecoveryOneMinute", .heart, "count/min"), q("AtrialFibrillationBurden", .heart, "%"),
+        q("PeripheralPerfusionIndex", .heart, "%"),
 
         q("OxygenSaturation", .vitals, "%"), q("RespiratoryRate", .vitals, "count/min"), q("BodyTemperature", .vitals, "degC"),
         q("BasalBodyTemperature", .vitals, "degC"), q("BloodGlucose", .vitals, "mg/dL"),
         // The raw value of `.environmentalAudioExposureEvent` is the older "HKCategoryTypeIdentifierAudioExposureEvent".
         HealthType(id: HKCategoryTypeIdentifier.environmentalAudioExposureEvent.rawValue, group: .vitals, unit: nil),
         c("HeadphoneAudioExposureEvent", .vitals),
+        q("ForcedExpiratoryVolume1", .vitals, "L"), q("ForcedVitalCapacity", .vitals, "L"),
+        q("PeakExpiratoryFlowRate", .vitals, "L/min"), q("InhalerUsage", .vitals, "count"), q("InsulinDelivery", .vitals, "IU"),
+        q("BloodAlcoholContent", .vitals, "%"), q("EnvironmentalAudioExposure", .vitals, "dBASPL"),
+        q("HeadphoneAudioExposure", .vitals, "dBASPL"), q("EnvironmentalSoundReduction", .vitals, "dBASPL"),
+        q("UVExposure", .vitals, "count"), q("WaterTemperature", .vitals, "degC"), q("UnderwaterDepth", .vitals, "m"),
+        q("ElectrodermalActivity", .vitals, "mcS"),
 
         q("BodyMass", .body, "kg"), q("Height", .body, "m"), q("BodyFatPercentage", .body, "%"), q("BodyMassIndex", .body, "count"),
         q("LeanBodyMass", .body, "kg"), q("WaistCircumference", .body, "m"),
@@ -62,6 +81,7 @@ public enum Registry {
         q("DietaryFatTotal", .nutrition, "g"), q("DietaryFatSaturated", .nutrition, "g"), q("DietaryFatMonounsaturated", .nutrition, "g"),
         q("DietaryFatPolyunsaturated", .nutrition, "g"), q("DietaryFiber", .nutrition, "g"), q("DietarySugar", .nutrition, "g"),
         q("DietaryCholesterol", .nutrition, "mg"), q("DietaryWater", .nutrition, "mL"), q("DietaryCaffeine", .nutrition, "mg"),
+        q("NumberOfAlcoholicBeverages", .nutrition, "count"),
     ]
 
     /// Correlation members are read in these units.

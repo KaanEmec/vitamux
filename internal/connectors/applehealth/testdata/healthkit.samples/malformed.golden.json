@@ -1,6 +1,6 @@
 {
   "synthetic": true,
   "normalizer": "healthkit.samples",
-  "version": 2,
+  "version": 3,
   "error": "healthkit.samples: unreadable page"
 }

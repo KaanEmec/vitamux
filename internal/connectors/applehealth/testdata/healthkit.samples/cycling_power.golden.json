@@ -20,23 +20,21 @@
         "native": true
       }
     ],
-    "events": [
+    "measurements": [
       {
-        "code": "high_heart_rate_alert",
-        "start": "2026-09-14T15:20:00+02:00",
-        "end": "2026-09-14T15:30:00+02:00",
+        "metric": "power_cycling",
+        "kind": "sample",
+        "start": "2026-09-14T17:00:00+02:00",
         "zone": {
           "tz": "Europe/Amsterdam"
         },
-        "context": {
-          "HKMetadataKeyHeartRateEventThreshold": "120 count/min",
-          "HKTimeZone": "Europe/Amsterdam"
-        },
+        "value": 180,
+        "unit": "W",
         "device": "hk:c40e68bf1752360dac478eb36a21a6c3",
         "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
         "key": {
-          "record_type": "HKCategoryTypeIdentifierHighHeartRateEvent",
-          "external_id": "6F0D0000-0000-4000-8000-000000000009"
+          "record_type": "HKQuantityTypeIdentifierCyclingPower",
+          "external_id": "6F0D0000-0000-4000-8000-000000000035"
         }
       }
     ]

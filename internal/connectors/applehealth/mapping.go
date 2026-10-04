@@ -18,6 +18,7 @@ const (
 	typeSystolic      = hkQuantity + "BloodPressureSystolic"
 	typeDiastolic     = hkQuantity + "BloodPressureDiastolic"
 	typeHeartRate     = hkQuantity + "HeartRate"
+	typeInsulin       = hkQuantity + "InsulinDelivery"
 )
 
 // quantity maps one HealthKit quantity type: the catalogue code, the kind a sample becomes, the
@@ -33,7 +34,7 @@ func q(metric string, kind catalog.Kind, hkUnit, unit string) quantity {
 	return quantity{metric, kind, hkUnit, unit}
 }
 
-// quantities is the HK column of docs/metrics.md for the type registry v1. Percent types arrive
+// quantities is the HK column of docs/metrics.md for the type registry v1 (insulin: typeInsulin). Percent types arrive
 // as fractions; daily values are HealthKit's own per-day or per-night summaries.
 var quantities = map[string]quantity{
 	hkQuantity + "StepCount":                      q("steps", catalog.Interval, "count", "count"),
@@ -82,7 +83,57 @@ var quantities = map[string]quantity{
 	hkQuantity + "DietaryCholesterol":        q("diet_cholesterol", catalog.Interval, "mg", "mg"),
 	hkQuantity + "DietaryWater":              q("diet_water", catalog.Interval, "mL", "mL"),
 	hkQuantity + "DietaryCaffeine":           q("diet_caffeine", catalog.Interval, "mg", "mg"),
+
+	// E25 (J25.7): the types the catalogue gained with the mapping seed.
+	hkQuantity + "DistanceRowing":                  q("distance_rowing", catalog.Interval, "m", "m"),
+	hkQuantity + "DistancePaddleSports":            q("distance_paddle", catalog.Interval, "m", "m"),
+	hkQuantity + "DistanceSkatingSports":           q("distance_skating", catalog.Interval, "m", "m"),
+	hkQuantity + "DistanceCrossCountrySkiing":      q("distance_xc_ski", catalog.Interval, "m", "m"),
+	hkQuantity + "DistanceDownhillSnowSports":      q("distance_downhill_snow", catalog.Interval, "m", "m"),
+	hkQuantity + "AppleMoveTime":                   q("move_time", catalog.Interval, "s", "s"),
+	hkQuantity + "TimeInDaylight":                  q("daylight_time", catalog.Interval, "s", "s"),
+	hkQuantity + "PushCount":                       q("wheelchair_pushes", catalog.Interval, "count", "count"),
+	hkQuantity + "SwimmingStrokeCount":             q("swim_strokes", catalog.Interval, "count", "count"),
+	hkQuantity + "WalkingSpeed":                    q("speed_walking", catalog.Sample, "m/s", "m/s"),
+	hkQuantity + "RunningSpeed":                    q("speed_running", catalog.Sample, "m/s", "m/s"),
+	hkQuantity + "CyclingSpeed":                    q("speed_cycling", catalog.Sample, "m/s", "m/s"),
+	hkQuantity + "RowingSpeed":                     q("speed_rowing", catalog.Sample, "m/s", "m/s"),
+	hkQuantity + "PaddleSportsSpeed":               q("speed_paddle", catalog.Sample, "m/s", "m/s"),
+	hkQuantity + "CyclingCadence":                  q("cadence_cycling", catalog.Sample, "count/min", "rpm"),
+	hkQuantity + "RunningPower":                    q("power_running", catalog.Sample, "W", "W"),
+	hkQuantity + "CyclingPower":                    q("power_cycling", catalog.Sample, "W", "W"),
+	hkQuantity + "CyclingFunctionalThresholdPower": q("ftp_cycling", catalog.Sample, "W", "W"),
+	hkQuantity + "RunningStrideLength":             q("running_stride_length", catalog.Sample, "m", "m"),
+	hkQuantity + "RunningVerticalOscillation":      q("running_vertical_oscillation", catalog.Sample, "m", "m"),
+	hkQuantity + "RunningGroundContactTime":        q("running_ground_contact_time", catalog.Sample, "s", "s"),
+	hkQuantity + "PhysicalEffort":                  q("physical_effort", catalog.Sample, "kcal/(kg*hr)", "kcal/kg/h"),
+	hkQuantity + "HeartRateRecoveryOneMinute":      q("heart_rate_recovery_1min", catalog.Sample, "count/min", "bpm"),
+	hkQuantity + "AtrialFibrillationBurden":        q("afib_burden", catalog.DailyValue, "%", "fraction"),
+	hkQuantity + "PeripheralPerfusionIndex":        q("perfusion_index", catalog.Sample, "%", "fraction"),
+	hkQuantity + "ForcedExpiratoryVolume1":         q("fev1", catalog.Sample, "L", "L"),
+	hkQuantity + "ForcedVitalCapacity":             q("fvc", catalog.Sample, "L", "L"),
+	hkQuantity + "PeakExpiratoryFlowRate":          q("peak_expiratory_flow", catalog.Sample, "L/min", "L/min"),
+	hkQuantity + "InhalerUsage":                    q("inhaler_uses", catalog.Interval, "count", "count"),
+	hkQuantity + "BloodAlcoholContent":             q("blood_alcohol", catalog.Sample, "%", "fraction"),
+	hkQuantity + "NumberOfAlcoholicBeverages":      q("alcoholic_drinks", catalog.Interval, "count", "count"),
+	hkQuantity + "StairAscentSpeed":                q("stair_ascent_speed", catalog.Sample, "m/s", "m/s"),
+	hkQuantity + "StairDescentSpeed":               q("stair_descent_speed", catalog.Sample, "m/s", "m/s"),
+	hkQuantity + "SixMinuteWalkTestDistance":       q("six_minute_walk_distance", catalog.Sample, "m", "m"),
+	hkQuantity + "NumberOfTimesFallen":             q("falls", catalog.Interval, "count", "count"),
+	hkQuantity + "EnvironmentalAudioExposure":      q("environment_audio_exposure", catalog.Sample, "dBASPL", "dBA"),
+	hkQuantity + "HeadphoneAudioExposure":          q("headphone_audio_exposure", catalog.Sample, "dBASPL", "dBA"),
+	hkQuantity + "EnvironmentalSoundReduction":     q("environment_sound_reduction", catalog.Sample, "dBASPL", "dB"),
+	hkQuantity + "UVExposure":                      q("uv_exposure", catalog.Sample, "count", "index"),
+	hkQuantity + "WaterTemperature":                q("water_temperature", catalog.Sample, "degC", "°C"),
+	hkQuantity + "UnderwaterDepth":                 q("underwater_depth", catalog.Sample, "m", "m"),
+	hkQuantity + "ElectrodermalActivity":           q("electrodermal_activity", catalog.Sample, "mcS", "µS"),
 }
+
+// insulinReasonKey is the metadata key of an insulin dose's HKInsulinDeliveryReason; insulinReasons
+// maps its value to the dose's code. A dose without a known reason is refused.
+const insulinReasonKey = "HKInsulinDeliveryReason"
+
+var insulinReasons = map[int]string{1: "insulin_basal", 2: "insulin_bolus"}
 
 // event maps one HealthKit category type to a catalogue event code; levels maps the raw
 // category value to the level word (none: the type's only value is notApplicable).
