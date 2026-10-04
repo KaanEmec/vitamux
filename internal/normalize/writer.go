@@ -574,10 +574,9 @@ func (w *writer) sleep(s SleepSession) error {
 		if err != nil {
 			return db.MapErr(err)
 		}
-		same = len(have) == len(stages)
-		for i := 0; same && i < len(have); i++ {
-			same = have[i].Stage == stages[i].Stage && have[i].StartAt.Equal(stages[i].Start) && have[i].EndAt.Equal(stages[i].End)
-		}
+		same = slices.EqualFunc(have, stages, func(h dbq.ListSleepStagesRow, st SleepStage) bool {
+			return h.Stage == st.Stage && h.StartAt.Equal(st.Start) && h.EndAt.Equal(st.End)
+		})
 	}
 	id, err := newID()
 	if err != nil {
@@ -658,11 +657,9 @@ func (w *writer) workout(x Workout) error {
 		if err != nil {
 			return db.MapErr(err)
 		}
-		same = len(have) == len(segs)
-		for i := 0; same && i < len(have); i++ {
-			h, s := have[i], segs[i]
-			same = h.Seq == s.Seq && h.Kind == s.Kind && h.StartAt.Equal(s.Start) && eqTime(h.EndAt, s.End) && jsonEqual(h.Data, s.Data)
-		}
+		same = slices.EqualFunc(have, segs, func(h dbq.ListWorkoutSegmentsRow, s segRow) bool {
+			return h.Seq == s.Seq && h.Kind == s.Kind && h.StartAt.Equal(s.Start) && eqTime(h.EndAt, s.End) && jsonEqual(h.Data, s.Data)
+		})
 	}
 	id, err := newID()
 	if err != nil {
