@@ -86,6 +86,20 @@ test("SMS-MFA sign-in", async (t) => {
   assert.equal(s.calls.find((x) => x.key === "RespondToAuthChallenge").body.ChallengeResponses.SMS_MFA_CODE, CODE);
 });
 
+test("email-code sign-in answers EMAIL_OTP", async (t) => {
+  const s = await start({
+    InitiateAuth: () => json({ ChallengeName: "EMAIL_OTP", Session: "email-session" }),
+    RespondToAuthChallenge: (c) => (c.body.ChallengeName === "EMAIL_OTP" && c.body.ChallengeResponses.EMAIL_OTP_CODE === CODE ? authResult() : cognitoError("CodeMismatchException")),
+    "/users-service/v2/bootstrap/": bootstrap,
+  });
+  t.after(s.stop);
+  const b = (await s.call("POST", "/v1/auth/continue", login())).json();
+  assert.match(b.step.prompt.message, /emailed/);
+  const r = (await s.call("POST", "/v1/auth/continue", { redirect_url: BEGIN.redirect_url, session: b.step.session, values: { code: CODE } })).json();
+  assert.equal(r.authorized.account_id, String(USER_ID));
+  assert.deepEqual(s.calls.find((x) => x.key === "RespondToAuthChallenge").body.ChallengeResponses, { USERNAME: "a@example.com", EMAIL_OTP_CODE: CODE });
+});
+
 test("sign-in without MFA is authorized at once", async (t) => {
   const s = await start({ InitiateAuth: () => authResult(), "/users-service/v2/bootstrap/": bootstrap });
   t.after(s.stop);

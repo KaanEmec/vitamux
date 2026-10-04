@@ -10,7 +10,7 @@ Sources: [package source](https://github.com/Asherlc/dofek/tree/main/packages/wh
 
 | Assumption | Result |
 | --- | --- |
-| Cognito sign-in with app or SMS MFA | **Confirmed in code**: `InitiateAuth` `USER_PASSWORD_AUTH` through WHOOP's proxy; challenge `SOFTWARE_TOKEN_MFA` (method `totp`) or `SMS_MFA` (`sms`); answered with `RespondToAuthChallenge`. |
+| Cognito sign-in with app, SMS or email codes | **Confirmed in code**: `InitiateAuth` `USER_PASSWORD_AUTH` through WHOOP's proxy, answered with `RespondToAuthChallenge`. **Confirmed by the owner (2026-10-04)**: WHOOP also emails codes (Cognito `EMAIL_OTP`), which `@dofek/whoop` 0.1.65 answers as `SMS_MFA` and Cognito refuses. The sidecar therefore records the challenge Cognito names and answers `<CHALLENGE>` with `<CHALLENGE>_CODE`. |
 | Rotating refresh tokens | **Corrected**: `REFRESH_TOKEN_AUTH` is observed *not* to return a new refresh token; the client reuses the old one. The sidecar still stores whatever comes back, so rotation would need no change. |
 | Token lifetimes | **Unverified**: the access token's life is Cognito's `ExpiresIn` (the client stores it, the value is not documented; typically one hour). The refresh token's life is unknown. The sidecar refreshes 60 s before expiry, and once after a 401. |
 | Response JSON can be kept verbatim | **Corrected for the client's return values, solved in the sidecar**: `getCycles` unwraps or normalises the body, `getMetricValues` returns only `values`, `listDeveloperWorkouts` re-builds `{records, next_token}` after a zod parse (`passthrough`, so extra fields survive, but `next_token` is defaulted). The other methods return `response.json()` as is. The sidecar therefore wraps the injected `fetch` and keeps the **response text** of each request, which is embedded unparsed in the raw: byte-exact, large integers and key order included. |
@@ -21,9 +21,9 @@ Sources: [package source](https://github.com/Asherlc/dofek/tree/main/packages/wh
 ## Auth
 
 - Base: `https://api.prod.whoop.com`, auth proxy `/auth-service/v3/whoop/` with header `X-Amz-Target: AWSCognitoIdentityProviderService.<action>` and a public app client id baked into the client. Data requests carry `Authorization: Bearer <access token>`, `User-Agent: WHOOP/4.0` and the query `apiVersion=7`.
-- Sign-in with email and password returns tokens (no MFA) or `ChallengeName` plus `Session`. The code is submitted with the session, the email and the method. A wrong code gives Cognito `CodeMismatchException`; an expired session `NotAuthorizedException`.
+- Sign-in with email and password returns tokens (no MFA) or `ChallengeName` plus `Session`. The code is submitted with the session, the email and the challenge Cognito named. A wrong code gives Cognito `CodeMismatchException`; an expired session `NotAuthorizedException`.
 - The numeric WHOOP user id comes from `GET /users-service/v2/bootstrap/?accountType=users&apiVersion=7&include=profile` (`user.id`). It is the account id (`account_id`) and is part of the metrics and cycles requests. After a refresh it is fetched best-effort; the stored one is kept if that fails.
-- `auth/begin` asks for email and password and does not call WHOOP. The first `auth/continue` signs in; with MFA it returns a `code` prompt, and the MFA session (Cognito session, email, method) is sealed into the opaque `session` (base64) the core holds until the second `auth/continue`.
+- `auth/begin` asks for email and password and does not call WHOOP. The first `auth/continue` signs in; with MFA it returns a `code` prompt, and the MFA session (Cognito session, email, method, challenge) is sealed into the opaque `session` (base64) the core holds until the second `auth/continue`.
 - Credentials on the wire: `access_token`, `refresh_token`, `expires_at` (RFC 3339) and `extra: {user_id}`.
 
 ## Data: methods and endpoints
@@ -94,7 +94,7 @@ The core drives everything through `describe`, `auth/*` and `fetch` ([protocol](
 The owner runs this once with their own WHOOP account (J19.1 shape check, J19.7 acceptance). Never paste credentials, MFA codes, tokens, ids or values into issues, logs or docs; report pass or fail and field names only.
 
 1. Start the sidecar with a secret file; confirm `GET /v1/describe` shows the installed upstream version.
-2. Connect WHOOP from Vitamux with email and password; complete the MFA step (app code, or SMS if your account uses it). Expect an active connection. Try a wrong code once: expect a retryable refusal, not a crash.
+2. Connect WHOOP from Vitamux with email and password; complete the MFA step (app, SMS or emailed code). Expect an active connection. Try a wrong code once: expect a retryable refusal, not a crash.
 3. Record only the field lists (key paths and value kinds) of one cycle, one sleep, one developer workout, one weightlifting workout, and one strain deep dive, and diff them against this page. Fix any **unverified** item above.
 4. Fetch one HR day at 6 s. Note the sample count (about 14,400 expected), whether WHOOP truncates, and the oldest day it still answers for. Same for steps at 300 s.
 5. Check a cycle that spans midnight and a travel day: `days`, `recovery.created_at` and the sleep `timezone_offset` against the WHOOP app.

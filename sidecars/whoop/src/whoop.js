@@ -121,7 +121,7 @@ const seal = (o) => Buffer.from(JSON.stringify(o)).toString("base64");
 function unseal(s) {
   try {
     const o = JSON.parse(Buffer.from(String(s), "base64").toString());
-    if (o.session && o.username && (o.method === "totp" || o.method === "sms")) return o;
+    if (o.session && o.username && (o.method === "totp" || o.method === "sms") && CODE_CHALLENGE.test(o.challenge)) return o;
   } catch {}
   throw bad("invalid session");
 }
@@ -132,6 +132,32 @@ const str = (v, name) => {
 };
 
 const field = (name, label, kind) => ({ name, label, kind });
+
+// @dofek/whoop answers every challenge but the app's as SMS_MFA, yet WHOOP also sends codes by
+// email (Cognito EMAIL_OTP). So sign-in records the challenge Cognito names, and the answer is
+// relabelled to it: <CHALLENGE> with the code in <CHALLENGE>_CODE.
+const CODE_CHALLENGE = /^[A-Z_]+_(MFA|OTP)$/;
+const target = (init) => new Headers(init?.headers).get("x-amz-target") ?? "";
+const HOW = { SOFTWARE_TOKEN_MFA: "the authenticator app code", SMS_MFA: "the SMS code WHOOP sent you", EMAIL_OTP: "the code WHOOP emailed you" };
+
+function recordChallenge(f, seen) {
+  return async (url, init) => {
+    const res = await f(url, init);
+    if (target(init).endsWith(".InitiateAuth")) seen.challenge = (await res.clone().json().catch(() => ({}))).ChallengeName;
+    return res;
+  };
+}
+
+function answerAs(f, challenge) {
+  return (url, init) => {
+    if (!target(init).endsWith(".RespondToAuthChallenge")) return f(url, init);
+    const b = JSON.parse(init.body);
+    const { USERNAME, ...code } = b.ChallengeResponses;
+    b.ChallengeName = challenge;
+    b.ChallengeResponses = { USERNAME, [`${challenge}_CODE`]: Object.values(code)[0] };
+    return f(url, { ...init, body: JSON.stringify(b) });
+  };
+}
 
 // Does not call WHOOP: the first step asks for the sign-in.
 export async function authBegin() {
@@ -144,13 +170,15 @@ export async function authContinue(input, deps) {
   try {
     if (!input?.session) {
       const username = str(values.username, "username");
-      const r = await WhoopClient.signIn(username, str(values.password, "password"), deps.fetch);
+      const seen = {};
+      const r = await WhoopClient.signIn(username, str(values.password, "password"), recordChallenge(deps.fetch ?? globalThis.fetch, seen));
       if (r.type !== "verification_required") return done(r.token);
-      const how = r.method === "sms" ? "the SMS code" : "the authenticator app code";
-      return { step: { prompt: { message: `Enter ${how} WHOOP asks for.`, fields: [field("code", "Verification code", "code")] }, session: seal({ session: r.session, username, method: r.method }) } };
+      if (!CODE_CHALLENGE.test(seen.challenge)) throw bad(`WHOOP asks for ${seen.challenge ?? "an unknown step"}, which Vitamux cannot answer yet`);
+      const how = HOW[seen.challenge] ?? "the verification code";
+      return { step: { prompt: { message: `Enter ${how}.`, fields: [field("code", "Verification code", "code")] }, session: seal({ session: r.session, username, method: r.method, challenge: seen.challenge }) } };
     }
     const s = unseal(input.session);
-    return done(await WhoopClient.verifyCode(s.session, str(values.code, "code"), s.username, s.method, deps.fetch));
+    return done(await WhoopClient.verifyCode(s.session, str(values.code, "code"), s.username, s.method, answerAs(deps.fetch ?? globalThis.fetch, s.challenge)));
   } catch (err) {
     throw classify(err);
   }
