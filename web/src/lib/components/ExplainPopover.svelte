@@ -26,7 +26,7 @@
 	<button class="btn link" type="button" aria-expanded={open} aria-controls={panelId} onclick={() => (open = !open)}>
 		{label}
 	</button>
-	<div id={panelId} class="panel" hidden={!open} role="region" aria-label="Explanation">
+	<div id={panelId} class="panel popover" hidden={!open} role="region" aria-label="Explanation">
 		<p>{text}</p>
 		{#if warnings.length}
 			<p class="warnings">Warnings: {warnings.join(', ')}</p>
@@ -46,13 +46,7 @@
 		right: 0;
 		width: 22rem;
 		max-width: 80vw;
-		padding: var(--space-3) var(--space-4);
 		margin-top: var(--space-1);
-		background: var(--color-surface);
-		border: 1px solid var(--color-border-strong);
-		border-radius: var(--radius-md);
-		box-shadow: var(--shadow-2);
-		font-size: var(--text-sm);
 		white-space: normal;
 	}
 	.panel[hidden] {
