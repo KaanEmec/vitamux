@@ -20,7 +20,7 @@
 		onselect
 	}: {
 		xs: number[];
-		stacks: { label: string; ys: (number | null)[]; color?: StageColor }[];
+		stacks: { label: string; ys: (number | null)[]; color?: StageColor | 'accent' | 'info' }[];
 		label: string;
 		unit?: string;
 		timezone?: string;
@@ -113,6 +113,14 @@
 	.other {
 		fill: var(--stage-other);
 		background: var(--stage-other);
+	}
+	.accent {
+		fill: var(--color-accent);
+		background: var(--color-accent);
+	}
+	.info {
+		fill: var(--color-info);
+		background: var(--color-info);
 	}
 	.baseline {
 		stroke: var(--color-text);

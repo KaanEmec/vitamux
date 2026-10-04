@@ -41,7 +41,8 @@
 		marks,
 		legend,
 		onselect,
-		yFormat = (v: number) => formatNumber(v)
+		yFormat = (v: number) => formatNumber(v),
+		yTicks: fixedTicks
 	}: {
 		/** Accessible name of the chart. */
 		label: string;
@@ -60,6 +61,8 @@
 		legend?: Snippet;
 		onselect?: (i: number) => void;
 		yFormat?: (v: number) => string;
+		/** Y tick values, when round numbers are not the right marks (a clock axis). */
+		yTicks?: number[];
 	} = $props();
 
 	const margin = { top: 12, right: 12, bottom: 26, left: 48 };
@@ -76,7 +79,7 @@
 	const bottom = $derived(height - margin.bottom);
 	const sx = $derived(linear(xd, [margin.left, right]));
 	const sy = $derived(linear(y, [bottom, margin.top]));
-	const yTicks = $derived(ticks(y, Math.max(2, Math.round((bottom - margin.top) / 56))));
+	const yTicks = $derived(fixedTicks ?? ticks(y, Math.max(2, Math.round((bottom - margin.top) / 56))));
 	const xAxis = $derived.by(() => {
 		const count = Math.max(2, Math.floor((right - margin.left) / 96));
 		if (time) return timeTicks(xd, count, timezone);
