@@ -10,7 +10,7 @@
 	import StatusIcon from '#lib/components/StatusIcon.svelte';
 	import RuleDiff from '#lib/rules/RuleDiff.svelte';
 	import RuleLens from '#lib/rules/RuleLens.svelte';
-	import { lastDays, selectorText, type Rule } from '#lib/rules/rule.ts';
+	import { groupLabel, lastDays, selectorText, type Rule } from '#lib/rules/rule.ts';
 	import { ruleSentence } from '#lib/rules/sentence.ts';
 	import { getCoverage, type Coverage } from '#lib/rules/stubs.ts';
 	import Badge from '#lib/ui/Badge.svelte';
@@ -119,11 +119,11 @@
 					<p class="sentence">{ruleSentence(r)}</p>
 					<ol class="groups" aria-label="Source order">
 						{#each r.groups as g, i (i)}
-							<li><Chip source={provider(g)}>{g.id}</Chip> <span class="muted">{g.match.map(selectorText).join(' or ')}</span></li>
+							<li><Chip source={provider(g)}>{groupLabel(g.id)}</Chip> <span class="muted">{g.match.map((s) => selectorText(s)).join(' or ')}</span></li>
 						{/each}
 					</ol>
 					{#if r.exclude?.length}
-						<p><span class="muted">Never used:</span> {r.exclude.map(selectorText).join('; ')}</p>
+						<p><span class="muted">Never used:</span> {r.exclude.map((s) => selectorText(s)).join('; ')}</p>
 					{/if}
 					{#if current.builtin}
 						<p class="muted">
