@@ -1,0 +1,38 @@
+{
+  "synthetic": true,
+  "normalizer": "whoop.cycles",
+  "version": 2,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "whoop:strap",
+        "type": "band",
+        "manufacturer": "WHOOP"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "respiratory_rate",
+        "kind": "sample",
+        "start": "2026-03-02T11:10:00Z",
+        "zone": {
+          "offset_min": 180
+        },
+        "value": 15.4,
+        "unit": "breaths/min",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "sleep",
+          "external_id": "00000000-0000-4000-8000-000000000004",
+          "component": "respiratory_rate"
+        }
+      }
+    ],
+    "warnings": [
+      {
+        "code": "cycle_without_main_sleep",
+        "detail": "101"
+      }
+    ]
+  }
+}

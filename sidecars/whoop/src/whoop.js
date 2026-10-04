@@ -72,7 +72,6 @@ const d = (n) => n * 86400;
 // behaviours) is left out until the protocol can mark a stream off by default.
 const STREAMS = [
   { name: "whoop.heart_rate", interval_s: h(1), lookback_s: h(48), unit_size_s: h(168), max_backfill_s: d(90) },
-  { name: "whoop.steps", interval_s: h(1), lookback_s: h(48), unit_size_s: h(720), max_backfill_s: d(365) },
   { name: "whoop.cycles", interval_s: h(1), lookback_s: h(72), unit_size_s: h(720), max_backfill_s: d(3650) },
   { name: "whoop.sleep", interval_s: h(1), lookback_s: h(72), unit_size_s: h(720), max_backfill_s: d(3650) },
   { name: "whoop.workouts", interval_s: h(1), lookback_s: h(72), unit_size_s: h(720), max_backfill_s: d(3650) },
@@ -311,9 +310,9 @@ const item = (key, unit, c) => ({ external_key: key, unit, request: { endpoint: 
 // A grid window's raw: its unit is the whole window, so unchanged data hashes the same however the window was clipped.
 const windowItem = (name, w, c) => item(`${name}:${iso(w.from)}`, { start: iso(w.from), end: iso(w.to) }, c);
 
-// Window per grid stream: 1 day for steps, 7 days for cycles and sleep;
+// Window per grid stream: 7 days for cycles and sleep;
 // heart rate's is VITAMUX_WHOOP_HR_WINDOW_H (deps.hrWindowH).
-const GRID = { "whoop.steps": DAY, "whoop.cycles": 7 * DAY, "whoop.sleep": 7 * DAY };
+const GRID = { "whoop.cycles": 7 * DAY, "whoop.sleep": 7 * DAY };
 
 // Fixed UTC grid so the same window is fetched, keyed and hashed identically on every run.
 function gridWindow(cursor, start, end, grid) {
@@ -382,23 +381,22 @@ async function cyclesIn(client, take, w) {
   return { cycles, c };
 }
 
-// The cycle's main sleep (its recovery's sleep, else its own sleep: one id, as the Go cycles
-// normalizer picks it, so one episode is never fetched and written under two ids) and its sleep activities.
-function sleepIds(cycles) {
-  const ids = new Set();
+// Every sleep of the window's cycles, naps included, once each: sleeps[] lists them all by
+// activity_id (the main sleep too, so recovery.activity_id adds nothing). The unit carries the
+// nap flag and offset the stage events lack; the Go sleep normalizer writes the session from them.
+function sleepUnits(cycles) {
+  const units = new Map();
   for (const cy of cycles) {
-    const main = cy?.recovery?.sleep_id ?? cy?.sleep?.id;
-    if (main != null) ids.add(String(main));
-    for (const a of cy?.v2_activities ?? []) {
-      if (a?.id && (String(a.score_type).toLowerCase() === "sleep" || String(a.type).toLowerCase().includes("sleep"))) ids.add(String(a.id));
+    for (const s of cy?.sleeps ?? []) {
+      if (typeof s?.activity_id !== "string" || s.activity_id === "" || typeof s.is_nap !== "boolean") throw drift("sleep without activity_id or is_nap");
+      units.set(s.activity_id, { id: s.activity_id, is_nap: s.is_nap, timezone_offset: typeof s.timezone_offset === "string" ? s.timezone_offset : undefined });
     }
   }
-  return [...ids];
+  return [...units.values()];
 }
 
 const STREAM_PAGES = {
   "whoop.heart_rate": metric("whoop.heart_rate", (cl, s, e, deps) => cl.getHeartRate(s, e, deps.hrStep)),
-  "whoop.steps": metric("whoop.steps", (cl, s, e) => cl.getSteps(s, e)),
 
   async "whoop.cycles"({ client, take, start, end, cursor, grid }) {
     const w = gridWindow(cursor, start, end, grid);
@@ -411,17 +409,17 @@ const STREAM_PAGES = {
     const w = gridWindow(cursor, start, end, grid);
     if (!w) return EMPTY;
     const items = [];
-    for (const id of sleepIds((await cyclesIn(client, take, w)).cycles)) {
-      let rec;
+    for (const unit of sleepUnits((await cyclesIn(client, take, w)).cycles)) {
+      let events;
       try {
-        rec = await client.getSleep(id);
+        events = await client.getSleep(unit.id);
       } catch (err) {
         if (apiStatus(err) === 404) continue; // gone upstream: nothing to store
         throw err;
       }
       const c = take();
-      if (!c || rec == null || typeof rec !== "object") throw drift("sleep");
-      items.push(item(`whoop.sleep:${id}`, { id }, c));
+      if (!c || !Array.isArray(events)) throw drift("sleep events");
+      items.push(item(`whoop.sleep:${unit.id}`, unit, c));
     }
     return finish(w, items);
   },

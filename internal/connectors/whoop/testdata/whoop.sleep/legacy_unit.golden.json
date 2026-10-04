@@ -1,0 +1,13 @@
+{
+  "synthetic": true,
+  "normalizer": "whoop.sleep",
+  "version": 2,
+  "output": {
+    "warnings": [
+      {
+        "code": "sleep_unit_without_is_nap",
+        "detail": "fetched by an older sidecar: sync whoop.sleep again"
+      }
+    ]
+  }
+}

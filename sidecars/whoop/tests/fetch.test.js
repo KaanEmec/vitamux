@@ -51,19 +51,12 @@ test("heart rate: step is configurable, end is clipped, empty windows emit nothi
   assert.equal(lines[0].body.unit.end, "2026-01-02T00:00:00.000Z"); // unit stays the full window: unchanged data hashes the same
 });
 
-test("steps use the 300 s step", async (t) => {
-  const s = await start({ [METRICS]: () => json({ values: [{ time: 1, data: 10 }] }) });
-  t.after(s.stop);
-  const [raw] = (await s.call("POST", "/v1/fetch", req({ stream: "whoop.steps" }))).lines();
-  assert.equal(raw.external_key, "whoop.steps:2026-01-01T00:00:00.000Z");
-  assert.equal(raw.request.params.name, "steps");
-  assert.equal(raw.request.params.step, "300");
-});
-
+// The cycles BFF's real shape (synthetic values): {records: [{cycle, recovery, sleeps, workouts, v2_activities}]}.
+const SLEEP = (activity_id, is_nap, extra = {}) => ({ activity_id, during: "['2026-01-01T22:00:00.000Z','2026-01-02T06:00:00.000Z')", timezone_offset: "+03:00", is_nap, significant: !is_nap, score: 80, ...extra });
 const CYCLES = [
-  { id: 1, days: ["2026-01-01"], sleep: { id: 111 }, recovery: { sleep_id: 111, score: { recovery_score: 70 } }, v2_activities: [{ id: "uuid-nap", type: "SLEEP", score_type: "sleep" }, { id: "uuid-run", type: "RUNNING", score_type: "strain" }] },
-  { id: 2, days: ["2026-01-02"], sleep: { id: 222 } },
-  { id: 3, days: ["2026-01-03"], sleep: { id: 333 }, recovery: { sleep_id: 334 } }, // two ids: only the recovery's
+  { cycle: { id: 1, days: "['2026-01-02','2026-01-03')", timezone_offset: "+03:00" }, recovery: { activity_id: "s-main", recovery_score: 70 }, sleeps: [SLEEP("s-main", false), SLEEP("s-nap", true)], v2_activities: [{ id: "s-main", type: "sleep", score_type: "SLEEP" }, { id: "w-run", type: "running", score_type: "CARDIO" }] },
+  { cycle: { id: 2, days: "['2026-01-03','2026-01-04')" }, recovery: null, sleeps: [SLEEP("s-gone", false, { timezone_offset: undefined })] },
+  { cycle: { id: 3, days: "['2026-01-03','2026-01-04')" }, recovery: { activity_id: "s-main" }, sleeps: [SLEEP("s-main", false)] }, // seen twice: fetched once
 ];
 
 test("cycles: the window response verbatim, one item", async (t) => {
@@ -77,21 +70,33 @@ test("cycles: the window response verbatim, one item", async (t) => {
   assert.equal(result.done, true);
 });
 
-test("sleep: one raw per sleep id found in the window's cycles", async (t) => {
-  const sleeps = { 111: { id: 111, stages: [{ stage: "light", during: "['2026-01-01T22:00:00.000Z','2026-01-01T23:00:00.000Z')" }] }, "uuid-nap": { id: "uuid-nap" }, 334: { id: 334 } };
+test("sleep: one raw per sleep of the window's cycles, naps included, each fetched once", async (t) => {
+  const events = [{ during: "['2026-01-01T22:00:00.000Z','2026-01-01T23:00:00.000Z')", type: "light" }];
   const s = await start({
-    "/core-details-bff/v0/cycles/details": () => json(CYCLES),
-    "/sleep-service/v1/sleep-events": ({ params }) => (params.activityId === "222" ? json({}, 404) : json(sleeps[params.activityId])),
+    "/core-details-bff/v0/cycles/details": () => json({ records: CYCLES }),
+    "/sleep-service/v1/sleep-events": ({ params }) => (params.activityId === "s-gone" ? json({}, 404) : json(events)),
   });
   t.after(s.stop);
   const lines = (await s.call("POST", "/v1/fetch", req({ stream: "whoop.sleep", to: "2026-01-04T00:00:00Z" }))).lines();
   const raws = lines.slice(0, -1);
-  assert.deepEqual(raws.map((x) => x.external_key), ["whoop.sleep:111", "whoop.sleep:uuid-nap", "whoop.sleep:334"]); // 222 is 404: skipped
-  assert.ok(!s.calls.some((c) => c.params.activityId === "333"));
-  assert.deepEqual(raws[0].body.unit, { id: "111" });
-  assert.equal(raws[0].body.response.stages.length, 1);
-  assert.deepEqual(raws[0].request, { endpoint: "/sleep-service/v1/sleep-events", params: { activityId: "111", apiVersion: "7" } });
+  assert.deepEqual(raws.map((x) => x.external_key), ["whoop.sleep:s-main", "whoop.sleep:s-nap"]); // s-gone is 404: skipped
+  assert.deepEqual(s.calls.filter((c) => c.key === "/sleep-service/v1/sleep-events").map((c) => c.params.activityId), ["s-main", "s-nap", "s-gone"]);
+  assert.deepEqual(raws[0].body.unit, { id: "s-main", is_nap: false, timezone_offset: "+03:00" });
+  assert.deepEqual(raws[1].body.unit, { id: "s-nap", is_nap: true, timezone_offset: "+03:00" });
+  assert.deepEqual(raws[0].body.response, events);
+  assert.deepEqual(raws[0].request, { endpoint: "/sleep-service/v1/sleep-events", params: { activityId: "s-main", apiVersion: "7" } });
   assert.equal(lines.at(-1).done, true);
+});
+
+test("sleep: a sleep without activity_id or is_nap, or events that are not an array, is schema_drift", async (t) => {
+  let records = [{ cycle: { id: 1 }, sleeps: [{ activity_id: "s-1" }] }];
+  const s = await start({ "/core-details-bff/v0/cycles/details": () => json({ records }), "/sleep-service/v1/sleep-events": () => json({ stages: [] }) });
+  t.after(s.stop);
+  let r = await s.call("POST", "/v1/fetch", req({ stream: "whoop.sleep", to: "2026-01-04T00:00:00Z" }));
+  assert.equal(r.json().code, "schema_drift");
+  records = [{ cycle: { id: 1 }, sleeps: [SLEEP("s-1", false)] }];
+  r = await s.call("POST", "/v1/fetch", req({ stream: "whoop.sleep", to: "2026-01-04T00:00:00Z" }));
+  assert.deepEqual([r.json().code, r.json().endpoint], ["schema_drift", "/sleep-service/v1/sleep-events"]);
 });
 
 const DEV = (records, next_token = null) => ({ records, next_token });

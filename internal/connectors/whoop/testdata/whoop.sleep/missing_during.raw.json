@@ -1,0 +1,1 @@
+{"synthetic": true, "unit": {"id": "00000000-0000-4000-8000-000000000001", "is_nap": false, "timezone_offset": "+03:00"}, "response": [{"during": "['2026-02-28T20:00:00.000Z','2026-02-28T20:12:00.000Z')", "type": "awake"}, {"type": "light"}]}

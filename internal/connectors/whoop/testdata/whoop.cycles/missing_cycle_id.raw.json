@@ -1,0 +1,1 @@
+{"synthetic": true, "unit": {"start": "2026-02-26T00:00:00.000Z", "end": "2026-03-05T00:00:00.000Z"}, "response": {"records": [{"cycle": {"user_id": 1, "days": "['2026-03-01','2026-03-02')", "during": "['2026-02-28T20:00:00.000Z',)", "timezone_offset": "+03:00", "day_strain": 4.2}, "recovery": null, "sleeps": [], "workouts": [], "v2_activities": []}]}}

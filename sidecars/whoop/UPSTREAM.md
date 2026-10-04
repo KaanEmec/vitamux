@@ -20,4 +20,4 @@ Rules: [docs/sidecars.md#license-gate](../../docs/sidecars.md#license-gate).
 - Why this upstream and not WHOOP's official API: [ADR-0019](../../docs/adr/0019-whoop-upstream.md). Verified facts: [providers/whoop.md](../../docs/providers/whoop.md).
 - The canary (`UPSTREAM_GIT`) cannot install one package of a monorepo from git with npm, so it has no useful source for this sidecar.
 
-What the sidecar uses: `WhoopClient.signIn`, `verifyCode`, `refreshAccessToken`, `getHeartRate`, `getSteps`, `getCycles`, `getSleep`, `listDeveloperWorkouts`, `getWeightliftingWorkout`, `getStrainDeepDive`, `getJournal`, and `WHOOP_API_THROTTLE_MS`. The client's own parsing is bypassed for the raw: the sidecar keeps the response text from the injected `fetch`.
+What the sidecar uses: `WhoopClient.signIn`, `verifyCode`, `refreshAccessToken`, `getHeartRate`, `getCycles`, `getSleep`, `listDeveloperWorkouts`, `getWeightliftingWorkout`, `getStrainDeepDive`, `getJournal`, and `WHOOP_API_THROTTLE_MS`. The client's own parsing is bypassed for the raw: the sidecar keeps the response text from the injected `fetch`.
