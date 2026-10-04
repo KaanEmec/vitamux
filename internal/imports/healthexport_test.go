@@ -59,7 +59,7 @@ func TestParseSyntheticExport(t *testing.T) {
 		t.Errorf("heart rate: %+v", hr[0])
 	}
 
-	// Every mapped family normalizes; the unmapped type and the top-level BP members only warn.
+	// Every mapped family normalizes; the top-level BP members only warn.
 	var out normalize.Output
 	for typ, rs := range byType {
 		o := applehealth.ExportOutput(typ, rs)
@@ -73,8 +73,8 @@ func TestParseSyntheticExport(t *testing.T) {
 		out.Events = append(out.Events, o.Events...)
 		out.Warnings = append(out.Warnings, o.Warnings...)
 	}
-	if len(out.Measurements) != 7 || len(out.Groups) != 2 || len(out.Sleep) != 1 || len(out.Sleep[0].Stages) != 5 ||
-		len(out.Workouts) != 1 || len(out.Events) != 1 || len(out.Warnings) != 3 {
+	if len(out.Measurements) != 8 || len(out.Groups) != 2 || len(out.Sleep) != 1 || len(out.Sleep[0].Stages) != 5 ||
+		len(out.Workouts) != 1 || len(out.Events) != 1 || len(out.Warnings) != 2 {
 		t.Errorf("output: %d measurements, %d groups, %d sleep, %d workouts, %d events, warnings %v",
 			len(out.Measurements), len(out.Groups), len(out.Sleep), len(out.Workouts), len(out.Events), out.Warnings)
 	}

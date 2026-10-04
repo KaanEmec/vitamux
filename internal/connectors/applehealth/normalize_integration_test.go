@@ -116,7 +116,7 @@ func TestReplayIsNoOp(t *testing.T) {
 			t.Errorf("%s: replay changed rows: first %+v, again %+v", name, first, again)
 		}
 	}
-	for table, want := range map[string]int{"measurements": 14, "measurement_groups": 3, "sleep_sessions": 3,
+	for table, want := range map[string]int{"measurements": 19, "measurement_groups": 3, "sleep_sessions": 3,
 		"sleep_stages": 8, "workouts": 2, "health_events": 2} {
 		if n := e.int(`SELECT count(*) FROM ` + table); n != want {
 			t.Errorf("%s: %d rows, want %d", table, n, want)
