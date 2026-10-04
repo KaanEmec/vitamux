@@ -2,8 +2,8 @@ package whoop
 
 import (
 	"errors"
-	"time"
 	"testing"
+	"time"
 
 	"github.com/KaanEmec/vitamux/internal/normalize"
 	"github.com/KaanEmec/vitamux/internal/normalize/normtest"
