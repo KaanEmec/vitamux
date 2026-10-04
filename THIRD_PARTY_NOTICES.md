@@ -1012,6 +1012,8 @@ Apache License
 | @babel/helper-validator-identifier | 7.29.7 | MIT |
 | @cacheable/memory | 2.2.0 | MIT |
 | @cacheable/utils | 2.5.0 | MIT |
+| @dagrejs/dagre | 2.0.4 | MIT |
+| @dagrejs/graphlib | 3.0.4 | MIT |
 | @eslint-community/eslint-utils | 4.10.1 | MIT |
 | @eslint-community/regexpp | 4.12.2 | MIT |
 | @eslint/config-array | 0.23.5 | Apache-2.0 |
@@ -1020,6 +1022,9 @@ Apache License
 | @eslint/js | 10.0.1 | MIT |
 | @eslint/object-schema | 3.0.5 | Apache-2.0 |
 | @eslint/plugin-kit | 0.7.3 | Apache-2.0 |
+| @floating-ui/core | 1.8.0 | MIT |
+| @floating-ui/dom | 1.8.0 | MIT |
+| @floating-ui/utils | 0.2.12 | MIT |
 | @fontsource-variable/geist | 5.3.0 | OFL-1.1 |
 | @fontsource-variable/geist-mono | 5.3.0 | OFL-1.1 |
 | @humanfs/core | 0.19.2 | Apache-2.0 |
@@ -1034,6 +1039,10 @@ Apache License
 | @jridgewell/trace-mapping | 0.3.31 | MIT |
 | @keyv/bigmap | 1.3.1 | MIT |
 | @keyv/serialize | 1.1.1 | MIT |
+| @layerstack/svelte-actions | 1.0.1-next.20 | MIT |
+| @layerstack/svelte-state | 0.1.0-next.25 | MIT |
+| @layerstack/tailwind | 2.0.0-next.21 | MIT |
+| @layerstack/utils | 2.0.0-next.19 | MIT |
 | @napi-rs/canvas | 1.0.10 | MIT |
 | @napi-rs/canvas-android-arm64 | 1.0.10 | MIT |
 | @napi-rs/canvas-darwin-arm64 | 1.0.10 | MIT |
@@ -1074,8 +1083,11 @@ Apache License
 | @sveltejs/kit | 3.0.0 | MIT |
 | @sveltejs/load-config | 0.2.3 | MIT |
 | @sveltejs/vite-plugin-svelte | 7.3.1 | MIT |
+| @types/d3-array | 3.2.2 | MIT |
+| @types/d3-contour | 3.0.6 | MIT |
 | @types/esrecurse | 4.3.1 | MIT |
 | @types/estree | 1.0.9 | MIT |
+| @types/geojson | 7946.0.16 | MIT |
 | @types/json-schema | 7.0.15 | MIT |
 | @types/node | 26.6.4 | MIT |
 | @typescript-eslint/eslint-plugin | 8.71.0 | MIT |
@@ -1106,12 +1118,45 @@ Apache License
 | chokidar | 4.0.3 | MIT |
 | clsx | 2.1.1 | MIT |
 | colorette | 1.4.0 | MIT |
+| commander | 7.2.0 | MIT |
 | cookie | 2.0.1 | MIT |
 | cross-spawn | 7.0.6 | MIT |
 | cssesc | 3.0.0 | MIT |
+| d3-array | 2.12.1 | BSD-3-Clause |
+| d3-array | 3.2.4 | ISC |
+| d3-chord | 3.0.1 | ISC |
+| d3-color | 3.1.0 | ISC |
+| d3-contour | 4.0.2 | ISC |
+| d3-delaunay | 6.0.4 | ISC |
+| d3-dispatch | 3.0.1 | ISC |
+| d3-dsv | 3.0.1 | ISC |
+| d3-force | 3.0.0 | ISC |
+| d3-format | 3.1.2 | ISC |
+| d3-geo | 3.1.1 | ISC |
+| d3-geo-voronoi | 2.1.0 | ISC |
+| d3-hierarchy | 3.1.2 | ISC |
+| d3-interpolate | 3.0.1 | ISC |
+| d3-interpolate-path | 2.3.0 | BSD-3-Clause |
+| d3-path | 1.0.9 | BSD-3-Clause |
+| d3-path | 3.1.0 | ISC |
+| d3-polygon | 3.0.1 | ISC |
+| d3-quadtree | 3.0.1 | ISC |
+| d3-random | 3.0.1 | ISC |
+| d3-sankey | 0.12.3 | BSD-3-Clause |
+| d3-scale | 4.0.2 | ISC |
+| d3-scale-chromatic | 3.1.0 | ISC |
+| d3-shape | 1.3.7 | BSD-3-Clause |
+| d3-shape | 3.2.0 | ISC |
+| d3-tile | 1.0.0 | BSD-3-Clause |
+| d3-time | 3.1.0 | ISC |
+| d3-time-format | 4.1.0 | ISC |
+| d3-timer | 3.0.1 | ISC |
+| d3-tricontour | 1.1.0 | ISC |
 | debug | 4.4.3 | MIT |
 | deep-is | 0.1.4 | MIT |
 | deepmerge | 4.3.1 | MIT |
+| delaunator | 5.1.0 | ISC |
+| dequal | 2.0.3 | MIT |
 | detect-libc | 2.1.2 | Apache-2.0 |
 | devalue | 5.9.4 | MIT |
 | escape-string-regexp | 4.0.0 | MIT |
@@ -1146,10 +1191,13 @@ Apache License
 | hookified | 1.15.1 | MIT |
 | hookified | 2.2.0 | MIT |
 | https-proxy-agent | 7.0.6 | MIT |
+| iconv-lite | 0.6.3 | MIT |
 | ignore | 5.3.2 | MIT |
 | ignore | 7.0.12 | MIT |
 | imurmurhash | 0.1.4 | MIT |
 | index-to-position | 1.2.0 | MIT |
+| internmap | 1.0.1 | ISC |
+| internmap | 2.0.3 | ISC |
 | is-extglob | 2.1.1 | MIT |
 | is-glob | 4.0.3 | MIT |
 | is-reference | 3.0.3 | MIT |
@@ -1162,6 +1210,7 @@ Apache License
 | json-stable-stringify-without-jsonify | 1.0.1 | MIT |
 | keyv | 5.6.0 | MIT |
 | known-css-properties | 0.37.0 | MIT |
+| layerchart | 2.5.1 | MIT |
 | levn | 0.4.1 | MIT |
 | lightningcss | 1.33.0 | MPL-2.0 |
 | lightningcss-android-arm64 | 1.33.0 | MPL-2.0 |
@@ -1178,8 +1227,11 @@ Apache License
 | lilconfig | 2.1.0 | MIT |
 | locate-character | 3.0.0 | MIT |
 | locate-path | 6.0.0 | MIT |
+| lz-string | 1.5.0 | MIT |
 | magic-string | 0.30.21 | MIT |
 | magic-string | 1.4.2 | MIT |
+| memoize | 10.2.0 | MIT |
+| mimic-function | 5.0.1 | MIT |
 | minimatch | 10.2.6 | BlueOak-1.0.0 |
 | minimatch | 5.1.9 | ISC |
 | mri | 1.2.0 | MIT |
@@ -1214,8 +1266,12 @@ Apache License
 | qrcode-generator | 2.0.4 | MIT |
 | readdirp | 4.1.2 | MIT |
 | require-from-string | 2.0.2 | MIT |
+| robust-predicates | 3.0.3 | Unlicense |
 | rolldown | 1.2.12 | MIT |
+| runed | 0.37.1 | MIT |
+| rw | 1.3.3 | BSD-3-Clause |
 | sade | 1.8.1 | MIT |
+| safer-buffer | 2.1.2 | MIT |
 | semver | 7.8.5 | ISC |
 | shebang-command | 2.0.0 | MIT |
 | shebang-regex | 3.0.0 | MIT |
@@ -1225,6 +1281,7 @@ Apache License
 | svelte | 5.57.1 | MIT |
 | svelte-check | 4.7.6 | MIT |
 | svelte-eslint-parser | 1.8.1 | MIT |
+| tailwind-merge | 3.7.0 | MIT |
 | tinyglobby | 0.2.17 | MIT |
 | totalist | 3.0.1 | MIT |
 | ts-api-utils | 2.5.0 | MIT |
@@ -1663,6 +1720,9 @@ Used by:
 - known-css-properties 0.37.0: Copyright (c) 2017 Mavrix Technologies
 - lilconfig 2.1.0: Copyright (c) 2022 Anton Kastritskiy
 - locate-path 6.0.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- lz-string 1.5.0: Copyright (c) 2013 pieroxy
+- memoize 10.2.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+- mimic-function 5.0.1: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 - openapi-fetch 0.17.0: Copyright (c) 2023 Drew Powers
 - openapi-typescript 7.13.0: Copyright (c) 2020 Drew Powers
 - openapi-typescript-helpers 0.1.0: Copyright (c) 2023 Drew Powers
@@ -1672,10 +1732,13 @@ Used by:
 - path-exists 4.0.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
 - path-key 3.1.1: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
 - readdirp 4.1.2: Copyright (c) 2012-2019 Thorsten Lorenz, Paul Miller (https://paulmillr.com)
+- runed 0.37.1: Copyright (c) 2024 Hunter Johnston <https://github.com/huntabyte>; Copyright (c) 2024 Thomas G. Lopes <https://github.com/tglide>
+- safer-buffer 2.1.2: Copyright (c) 2018 Nikita Skovoroda <chalkerx@gmail.com>
 - shebang-command 2.0.0: Copyright (c) Kevin Mårtensson <kevinmartensson@gmail.com> (github.com/kevva)
 - shebang-regex 3.0.0: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
 - supports-color 10.2.2: Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 - svelte-eslint-parser 1.8.1: Copyright (c) 2021 Yosuke Ota
+- tailwind-merge 3.7.0: Copyright (c) 2021 Dany Castillo
 - tinyglobby 0.2.17: Copyright (c) 2024 Madeline Gurriarán
 - typescript-eslint 8.71.0: Copyright (c) 2019 typescript-eslint and other contributors
 - undici-types 8.9.0: Copyright (c) Matteo Collina and Undici contributors
@@ -1743,7 +1806,63 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-#### Text 4 (Apache-2.0)
+#### Text 4 (MIT)
+
+Used by:
+
+- @dagrejs/dagre 2.0.4: Copyright (c) 2012-2014 Chris Pettitt
+- @dagrejs/graphlib 3.0.4: Copyright (c) 2012-2014 Chris Pettitt
+- @eslint/js 10.0.1: Copyright OpenJS Foundation and other contributors, <www.openjsf.org>
+- @jridgewell/gen-mapping 0.3.13: Copyright 2024 Justin Ridgewell <justin@ridgewell.name>
+- @jridgewell/remapping 2.3.5: Copyright 2024 Justin Ridgewell <justin@ridgewell.name>
+- @jridgewell/resolve-uri 3.1.2: Copyright 2019 Justin Ridgewell <jridgewell@google.com>
+- @jridgewell/sourcemap-codec 1.6.0: Copyright 2024 Justin Ridgewell <justin@ridgewell.name>
+- @jridgewell/trace-mapping 0.3.31: Copyright 2024 Justin Ridgewell <justin@ridgewell.name>
+- @redocly/config 0.22.0: Copyright 2024 Redocly Inc.
+- @sveltejs/adapter-static 4.0.0: Copyright (c) 2020 [these people](https://github.com/sveltejs/kit/graphs/contributors)
+- @sveltejs/kit 3.0.0: Copyright (c) 2020 [these people](https://github.com/sveltejs/kit/graphs/contributors)
+- @sveltejs/load-config 0.2.3: Copyright (c) 2020-Present [these people](https://github.com/sveltejs/language-tools/graphs/contributors)
+- acorn-jsx 5.3.2: Copyright (C) 2012-2017 by Ingvar Stepanyan
+- cssesc 3.0.0: Copyright Mathias Bynens <https://mathiasbynens.be/>
+- devalue 5.9.4: Copyright (c) 2018-19 [these people](https://github.com/rich-harris/devalue/graphs/contributors)
+- eslint 10.12.0: Copyright OpenJS Foundation and other contributors, <www.openjsf.org>
+- esrap 2.4.0: Copyright (c) 2023-2025 [these people](https://github.com/sveltejs/esrap/graphs/contributors)
+- fdir 6.5.0: Copyright 2023 Abdullah Atta
+- iconv-lite 0.6.3: Copyright (c) 2011 Alexander Shtuchkin
+- levn 0.4.1: Copyright (c) George Zahariev
+- magic-string 0.30.21: Copyright 2018 Rich Harris
+- magic-string 1.4.2: Copyright 2018 Rich Harris
+- optionator 0.9.4: Copyright (c) George Zahariev
+- postcss-selector-parser 7.1.6: Copyright (c) Ben Briggs <beneb.info@gmail.com> (http://beneb.info)
+- prelude-ls 1.2.1: Copyright (c) George Zahariev
+- punycode 2.3.1: Copyright Mathias Bynens <https://mathiasbynens.be/>
+- svelte 5.57.1: Copyright (c) 2016-2025 [Svelte Contributors](https://github.com/sveltejs/svelte/graphs/contributors)
+- svelte-check 4.7.6: Copyright (c) 2020-Present [these people](https://github.com/sveltejs/language-tools/graphs/contributors)
+- type-check 0.4.0: Copyright (c) George Zahariev
+
+```text
+Copyright (c) 2012-2014 Chris Pettitt
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+```
+
+#### Text 5 (Apache-2.0)
 
 Used by:
 
@@ -1961,60 +2080,38 @@ Apache License
    limitations under the License.
 ```
 
-#### Text 5 (MIT)
+#### Text 6 (MIT)
 
 Used by:
 
-- @eslint/js 10.0.1: Copyright OpenJS Foundation and other contributors, <www.openjsf.org>
-- @jridgewell/gen-mapping 0.3.13: Copyright 2024 Justin Ridgewell <justin@ridgewell.name>
-- @jridgewell/remapping 2.3.5: Copyright 2024 Justin Ridgewell <justin@ridgewell.name>
-- @jridgewell/resolve-uri 3.1.2: Copyright 2019 Justin Ridgewell <jridgewell@google.com>
-- @jridgewell/sourcemap-codec 1.6.0: Copyright 2024 Justin Ridgewell <justin@ridgewell.name>
-- @jridgewell/trace-mapping 0.3.31: Copyright 2024 Justin Ridgewell <justin@ridgewell.name>
-- @redocly/config 0.22.0: Copyright 2024 Redocly Inc.
-- @sveltejs/adapter-static 4.0.0: Copyright (c) 2020 [these people](https://github.com/sveltejs/kit/graphs/contributors)
-- @sveltejs/kit 3.0.0: Copyright (c) 2020 [these people](https://github.com/sveltejs/kit/graphs/contributors)
-- @sveltejs/load-config 0.2.3: Copyright (c) 2020-Present [these people](https://github.com/sveltejs/language-tools/graphs/contributors)
-- acorn-jsx 5.3.2: Copyright (C) 2012-2017 by Ingvar Stepanyan
-- cssesc 3.0.0: Copyright Mathias Bynens <https://mathiasbynens.be/>
-- devalue 5.9.4: Copyright (c) 2018-19 [these people](https://github.com/rich-harris/devalue/graphs/contributors)
-- eslint 10.12.0: Copyright OpenJS Foundation and other contributors, <www.openjsf.org>
-- esrap 2.4.0: Copyright (c) 2023-2025 [these people](https://github.com/sveltejs/esrap/graphs/contributors)
-- fdir 6.5.0: Copyright 2023 Abdullah Atta
-- levn 0.4.1: Copyright (c) George Zahariev
-- magic-string 0.30.21: Copyright 2018 Rich Harris
-- magic-string 1.4.2: Copyright 2018 Rich Harris
-- optionator 0.9.4: Copyright (c) George Zahariev
-- postcss-selector-parser 7.1.6: Copyright (c) Ben Briggs <beneb.info@gmail.com> (http://beneb.info)
-- prelude-ls 1.2.1: Copyright (c) George Zahariev
-- punycode 2.3.1: Copyright Mathias Bynens <https://mathiasbynens.be/>
-- svelte 5.57.1: Copyright (c) 2016-2025 [Svelte Contributors](https://github.com/sveltejs/svelte/graphs/contributors)
-- svelte-check 4.7.6: Copyright (c) 2020-Present [these people](https://github.com/sveltejs/language-tools/graphs/contributors)
-- type-check 0.4.0: Copyright (c) George Zahariev
+- @floating-ui/core 1.8.0: Copyright (c) 2021-present Floating UI contributors; COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+- @floating-ui/dom 1.8.0: Copyright (c) 2021-present Floating UI contributors; COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+- @floating-ui/utils 0.2.12: Copyright (c) 2021-present Floating UI contributors; COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 
 ```text
-Copyright OpenJS Foundation and other contributors, <www.openjsf.org>
+MIT License
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Copyright (c) 2021-present Floating UI contributors
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-#### Text 6 (OFL-1.1)
+#### Text 7 (OFL-1.1)
 
 Used by:
 
@@ -2117,7 +2214,60 @@ FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 ```
 
-#### Text 7 (Apache-2.0)
+#### Text 8 (MIT)
+
+Used by:
+
+- @layerstack/svelte-actions 1.0.1-next.20: Copyright (c) 2024 Sean Lynch
+- @layerstack/svelte-state 0.1.0-next.25: Copyright (c) 2024 Sean Lynch
+- @layerstack/tailwind 2.0.0-next.21: Copyright (c) 2024 Sean Lynch
+- @layerstack/utils 2.0.0-next.19: Copyright (c) 2024 Sean Lynch
+- @redocly/ajv 8.11.2: Copyright (c) 2015-2021 Evgeny Poberezkin
+- ajv 6.15.0: Copyright (c) 2015-2017 Evgeny Poberezkin
+- ansi-colors 4.1.3: Copyright (c) 2015-present, Brian Woodward.
+- cross-spawn 7.0.6: Copyright (c) 2018 Made With MOXY Lda <hello@moxy.studio>
+- deepmerge 4.3.1: Copyright (c) 2012 James Halliday, Josh Duff, and other contributors
+- dequal 2.0.3: Copyright (c) Luke Edwards <luke.edwards05@gmail.com> (lukeed.com)
+- is-extglob 2.1.1: Copyright (c) 2014-2016, Jon Schlinkert
+- is-glob 4.0.3: Copyright (c) 2014-2017, Jon Schlinkert.
+- js-tokens 4.0.0: Copyright (c) 2014, 2015, 2016, 2017, 2018 Simon Lydell
+- layerchart 2.5.1: Copyright (c) 2026 Sean Lynch
+- mri 1.2.0: Copyright (c) Luke Edwards <luke.edwards05@gmail.com> (lukeed.com)
+- mrmime 2.0.1: Copyright (c) Luke Edwards <luke.edwards05@gmail.com> (https://lukeed.com)
+- ms 2.1.3: Copyright (c) 2020 Vercel, Inc.
+- obug 2.2.1: Copyright © 2025-PRESENT Kevin Deng (https://github.com/sxzz); Copyright (c) 2014-2017 TJ Holowaychuk <tj@vision-media.ca>; Copyright (c) 2018-2021 Josh Junon
+- picomatch 4.0.7: Copyright (c) 2017-present, Jon Schlinkert.
+- pluralize 8.0.0: Copyright (c) 2013 Blake Embrey (hello@blakeembrey.com)
+- require-from-string 2.0.2: Copyright (c) Vsevolod Strukchinsky <floatdrop@gmail.com> (github.com/floatdrop)
+- sade 1.8.1: Copyright (c) Luke Edwards <luke.edwards05@gmail.com> (https://lukeed.com)
+- totalist 3.0.1: Copyright (c) Luke Edwards <luke.edwards05@gmail.com> (lukeed.com)
+- word-wrap 1.2.5: Copyright (c) 2014-2016, Jon Schlinkert
+
+```text
+The MIT License (MIT)
+
+Copyright (c) 2024 Sean Lynch
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+```
+
+#### Text 9 (Apache-2.0)
 
 Used by:
 
@@ -2330,59 +2480,15 @@ Apache License
    limitations under the License.
 ```
 
-#### Text 8 (MIT)
+#### Text 10 (MIT)
 
 Used by:
 
-- @redocly/ajv 8.11.2: Copyright (c) 2015-2021 Evgeny Poberezkin
-- ajv 6.15.0: Copyright (c) 2015-2017 Evgeny Poberezkin
-- ansi-colors 4.1.3: Copyright (c) 2015-present, Brian Woodward.
-- cross-spawn 7.0.6: Copyright (c) 2018 Made With MOXY Lda <hello@moxy.studio>
-- deepmerge 4.3.1: Copyright (c) 2012 James Halliday, Josh Duff, and other contributors
-- is-extglob 2.1.1: Copyright (c) 2014-2016, Jon Schlinkert
-- is-glob 4.0.3: Copyright (c) 2014-2017, Jon Schlinkert.
-- js-tokens 4.0.0: Copyright (c) 2014, 2015, 2016, 2017, 2018 Simon Lydell
-- mri 1.2.0: Copyright (c) Luke Edwards <luke.edwards05@gmail.com> (lukeed.com)
-- mrmime 2.0.1: Copyright (c) Luke Edwards <luke.edwards05@gmail.com> (https://lukeed.com)
-- ms 2.1.3: Copyright (c) 2020 Vercel, Inc.
-- obug 2.2.1: Copyright © 2025-PRESENT Kevin Deng (https://github.com/sxzz); Copyright (c) 2014-2017 TJ Holowaychuk <tj@vision-media.ca>; Copyright (c) 2018-2021 Josh Junon
-- picomatch 4.0.7: Copyright (c) 2017-present, Jon Schlinkert.
-- pluralize 8.0.0: Copyright (c) 2013 Blake Embrey (hello@blakeembrey.com)
-- require-from-string 2.0.2: Copyright (c) Vsevolod Strukchinsky <floatdrop@gmail.com> (github.com/floatdrop)
-- sade 1.8.1: Copyright (c) Luke Edwards <luke.edwards05@gmail.com> (https://lukeed.com)
-- totalist 3.0.1: Copyright (c) Luke Edwards <luke.edwards05@gmail.com> (lukeed.com)
-- word-wrap 1.2.5: Copyright (c) 2014-2016, Jon Schlinkert
-
-```text
-The MIT License (MIT)
-
-Copyright (c) 2015-2021 Evgeny Poberezkin
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
-#### Text 9 (MIT)
-
-Used by:
-
+- @types/d3-array 3.2.2: Copyright (c) Microsoft Corporation.
+- @types/d3-contour 3.0.6: Copyright (c) Microsoft Corporation.
 - @types/esrecurse 4.3.1: Copyright (c) Microsoft Corporation.
 - @types/estree 1.0.9: Copyright (c) Microsoft Corporation.
+- @types/geojson 7946.0.16: Copyright (c) Microsoft Corporation.
 - @types/json-schema 7.0.15: Copyright (c) Microsoft Corporation.
 - @types/node 26.6.4: Copyright (c) Microsoft Corporation.
 
@@ -2410,11 +2516,12 @@ MIT License
     SOFTWARE
 ```
 
-#### Text 10 (MIT)
+#### Text 11 (MIT)
 
 Used by:
 
 - agent-base 7.1.4: Copyright (c) 2013 Nathan Rajlich <nathan@tootallnate.net>
+- commander 7.2.0: Copyright (c) 2011 TJ Holowaychuk <tj@vision-media.ca>
 - cookie 2.0.1: Copyright (c) 2012-2014 Roman Shtylman <shtylman@gmail.com>; Copyright (c) 2015 Douglas Christopher Wilson <doug@somethingdoug.com>
 - debug 4.4.3: Copyright (c) 2014-2017 TJ Holowaychuk <tj@vision-media.ca>; Copyright (c) 2018-2021 Josh Junon
 - https-proxy-agent 7.0.6: Copyright (c) 2013 Nathan Rajlich <nathan@tootallnate.net>
@@ -2444,7 +2551,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-#### Text 11 (Python-2.0)
+#### Text 12 (Python-2.0)
 
 Used by:
 
@@ -2707,7 +2814,7 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
 OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ```
 
-#### Text 12 (Apache-2.0)
+#### Text 13 (Apache-2.0)
 
 Used by:
 
@@ -2918,7 +3025,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-#### Text 13 (MIT)
+#### Text 14 (MIT)
 
 Used by:
 
@@ -2948,7 +3055,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-#### Text 14 (MIT)
+#### Text 15 (MIT)
 
 Used by:
 
@@ -2980,7 +3087,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-#### Text 15 (MIT)
+#### Text 16 (MIT)
 
 Used by:
 
@@ -3012,7 +3119,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-#### Text 16 (MIT)
+#### Text 17 (MIT)
 
 Used by:
 
@@ -3042,7 +3149,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-#### Text 17 (MIT)
+#### Text 18 (MIT)
 
 Used by:
 
@@ -3058,7 +3165,175 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-#### Text 18 (MIT)
+#### Text 19 (BSD-3-Clause)
+
+Used by:
+
+- d3-array 2.12.1: Copyright 2010-2020 Mike Bostock
+- d3-interpolate-path 2.3.0: Copyright 2016, Peter Beshai
+- d3-path 1.0.9: Copyright 2015-2016 Mike Bostock
+- d3-sankey 0.12.3: Copyright 2015, Mike Bostock
+- d3-shape 1.3.7: Copyright 2010-2015 Mike Bostock
+- d3-tile 1.0.0: Copyright 2016 Mike Bostock
+
+```text
+Copyright 2010-2020 Mike Bostock
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of the author nor the names of contributors may be used to
+  endorse or promote products derived from this software without specific prior
+  written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
+
+#### Text 20 (ISC)
+
+Used by:
+
+- d3-array 3.2.4: Copyright 2010-2023 Mike Bostock
+- d3-chord 3.0.1: Copyright 2010-2021 Mike Bostock
+- d3-color 3.1.0: Copyright 2010-2022 Mike Bostock
+- d3-contour 4.0.2: Copyright 2012-2023 Mike Bostock
+- d3-delaunay 6.0.4: Copyright 2018-2021 Observable, Inc.; Copyright 2021 Mapbox
+- d3-dispatch 3.0.1: Copyright 2010-2021 Mike Bostock
+- d3-dsv 3.0.1: Copyright 2013-2021 Mike Bostock
+- d3-force 3.0.0: Copyright 2010-2021 Mike Bostock
+- d3-format 3.1.2: Copyright 2010-2026 Mike Bostock
+- d3-geo-voronoi 2.1.0: Copyright 2018-2021 Philippe Rivière
+- d3-hierarchy 3.1.2: Copyright 2010-2021 Mike Bostock
+- d3-interpolate 3.0.1: Copyright 2010-2021 Mike Bostock
+- d3-path 3.1.0: Copyright 2015-2022 Mike Bostock
+- d3-polygon 3.0.1: Copyright 2010-2021 Mike Bostock
+- d3-quadtree 3.0.1: Copyright 2010-2021 Mike Bostock
+- d3-random 3.0.1: Copyright 2010-2021 Mike Bostock
+- d3-scale 4.0.2: Copyright 2010-2021 Mike Bostock
+- d3-shape 3.2.0: Copyright 2010-2022 Mike Bostock
+- d3-time 3.1.0: Copyright 2010-2022 Mike Bostock
+- d3-time-format 4.1.0: Copyright 2010-2021 Mike Bostock
+- d3-timer 3.0.1: Copyright 2010-2021 Mike Bostock
+- d3-tricontour 1.1.0: Copyright 2019-2021 Philippe Rivière
+- internmap 1.0.1: Copyright 2021 Mike Bostock
+- internmap 2.0.3: Copyright 2021 Mike Bostock
+- yaml 1.10.3: Copyright 2018 Eemeli Aro <eemeli@gmail.com>
+- yargs-parser 21.1.1: Copyright (c) 2016, Contributors
+
+```text
+Copyright 2010-2023 Mike Bostock
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
+```
+
+#### Text 21 (ISC)
+
+Used by:
+
+- d3-geo 3.1.1: Copyright 2010-2024 Mike Bostock; Copyright 2008-2012 Charles Karney; COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+
+```text
+Copyright 2010-2024 Mike Bostock
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
+
+This license applies to GeographicLib, versions 1.12 and later.
+
+Copyright 2008-2012 Charles Karney
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+
+#### Text 22 (ISC)
+
+Used by:
+
+- d3-scale-chromatic 3.1.0: Copyright 2010-2024 Mike Bostock; Copyright 2002 Cynthia Brewer, Mark Harrower, and The Pennsylvania State University
+
+```text
+Copyright 2010-2024 Mike Bostock
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
+
+Apache-Style Software License for ColorBrewer software and ColorBrewer Color Schemes
+
+Copyright 2002 Cynthia Brewer, Mark Harrower, and The Pennsylvania State University
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. See the License for the
+specific language governing permissions and limitations under the License.
+```
+
+#### Text 23 (MIT)
 
 Used by:
 
@@ -3091,7 +3366,33 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-#### Text 19 (Apache-2.0)
+#### Text 24 (ISC)
+
+Used by:
+
+- delaunator 5.1.0: Copyright (c) 2026, Mapbox
+- flatted 3.4.4: Copyright (c) 2018-2020, Andrea Giammarchi, @WebReflection
+- picocolors 1.1.1: Copyright (c) 2021-2024 Oleksii Raspopov, Kostiantyn Denysov, Anton Verinov
+
+```text
+ISC License
+
+Copyright (c) 2026, Mapbox
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
+```
+
+#### Text 25 (Apache-2.0)
 
 Used by:
 
@@ -3301,7 +3602,7 @@ Apache License
    limitations under the License.
 ```
 
-#### Text 20 (BSD-2-Clause)
+#### Text 26 (BSD-2-Clause)
 
 Used by:
 
@@ -3335,7 +3636,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-#### Text 21 (Apache-2.0)
+#### Text 27 (Apache-2.0)
 
 Used by:
 
@@ -3547,7 +3848,7 @@ Apache License
    limitations under the License.
 ```
 
-#### Text 22 (MIT)
+#### Text 28 (MIT)
 
 Used by:
 
@@ -3563,7 +3864,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-#### Text 23 (BSD-2-Clause)
+#### Text 29 (BSD-2-Clause)
 
 Used by:
 
@@ -3598,7 +3899,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-#### Text 24 (BSD-3-Clause)
+#### Text 30 (BSD-3-Clause)
 
 Used by:
 
@@ -3631,7 +3932,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-#### Text 25 (MIT)
+#### Text 31 (MIT)
 
 Used by:
 
@@ -3664,32 +3965,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-#### Text 26 (ISC)
-
-Used by:
-
-- flatted 3.4.4: Copyright (c) 2018-2020, Andrea Giammarchi, @WebReflection
-- picocolors 1.1.1: Copyright (c) 2021-2024 Oleksii Raspopov, Kostiantyn Denysov, Anton Verinov
-
-```text
-ISC License
-
-Copyright (c) 2018-2020, Andrea Giammarchi, @WebReflection
-
-Permission to use, copy, modify, and/or distribute this software for any
-purpose with or without fee is hereby granted, provided that the above
-copyright notice and this permission notice appear in all copies.
-
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
-AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
-INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
-OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-```
-
-#### Text 27 (ISC)
+#### Text 32 (ISC)
 
 Used by:
 
@@ -3717,7 +3993,7 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ```
 
-#### Text 28 (MIT)
+#### Text 33 (MIT)
 
 Used by:
 
@@ -3748,7 +4024,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-#### Text 29 (MIT)
+#### Text 34 (MIT)
 
 Used by:
 
@@ -3779,7 +4055,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-#### Text 30 (MPL-2.0)
+#### Text 35 (MPL-2.0)
 
 Used by:
 
@@ -4161,7 +4437,7 @@ This Source Code Form is "Incompatible With Secondary Licenses", as
 defined by the Mozilla Public License, v. 2.0.
 ```
 
-#### Text 31 (BlueOak-1.0.0)
+#### Text 36 (BlueOak-1.0.0)
 
 Used by:
 
@@ -4225,7 +4501,7 @@ will be liable to anyone for any damages related to this
 software or this license, under any kind of legal claim._**
 ```
 
-#### Text 32 (MIT)
+#### Text 37 (MIT)
 
 Used by:
 
@@ -4258,7 +4534,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-#### Text 33 (Apache-2.0)
+#### Text 38 (Apache-2.0)
 
 Used by:
 
@@ -4443,7 +4719,40 @@ Apache License
    END OF TERMS AND CONDITIONS
 ```
 
-#### Text 34 (MIT)
+#### Text 39 (Unlicense)
+
+Used by:
+
+- robust-predicates 3.0.3
+
+```text
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <http://unlicense.org>
+```
+
+#### Text 40 (MIT)
 
 Used by:
 
@@ -4477,7 +4786,42 @@ end of terms and conditions
 The licenses of externally maintained libraries from which parts of the Software is derived are listed [here](https://github.com/rolldown/rolldown/blob/main/THIRD-PARTY-LICENSE).
 ```
 
-#### Text 35 (BSD-3-Clause)
+#### Text 41 (BSD-3-Clause)
+
+Used by:
+
+- rw 1.3.3: Copyright (c) 2014-2016, Michael Bostock
+
+```text
+Copyright (c) 2014-2016, Michael Bostock
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* The name Michael Bostock may not be used to endorse or promote products
+  derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL MICHAEL BOSTOCK BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
+
+#### Text 42 (BSD-3-Clause)
 
 Used by:
 
@@ -4513,7 +4857,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-#### Text 36 (MIT)
+#### Text 43 (MIT)
 
 Used by:
 
@@ -4542,7 +4886,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-#### Text 37 ((MIT OR CC0-1.0))
+#### Text 44 ((MIT OR CC0-1.0))
 
 Used by:
 
@@ -4672,7 +5016,7 @@ express Statement of Purpose.
     this CC0 or use of the Work.
 ```
 
-#### Text 38 (Apache-2.0)
+#### Text 45 (Apache-2.0)
 
 Used by:
 
@@ -4736,7 +5080,7 @@ If the Work includes a "NOTICE" text file as part of its distribution, then any 
 END OF TERMS AND CONDITIONS
 ```
 
-#### Text 39 (BSD-2-Clause)
+#### Text 46 (BSD-2-Clause)
 
 Used by:
 
@@ -4756,7 +5100,7 @@ THIS SOFTWARE IS PROVIDED BY GARY COURT "AS IS" AND ANY EXPRESS OR IMPLIED WARRA
 The views and conclusions contained in the software and documentation are those of the authors and should not be interpreted as representing official policies, either expressed or implied, of Gary Court.
 ```
 
-#### Text 40 (MIT)
+#### Text 47 (MIT)
 
 Used by:
 
@@ -7030,30 +7374,7 @@ Repository: https://github.com/sveltejs/zimmerframe
 > SOFTWARE.
 ```
 
-#### Text 41 (ISC)
-
-Used by:
-
-- yaml 1.10.3: Copyright 2018 Eemeli Aro <eemeli@gmail.com>
-- yargs-parser 21.1.1: Copyright (c) 2016, Contributors
-
-```text
-Copyright 2018 Eemeli Aro <eemeli@gmail.com>
-
-Permission to use, copy, modify, and/or distribute this software for any purpose
-with or without fee is hereby granted, provided that the above copyright notice
-and this permission notice appear in all copies.
-
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
-FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
-INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
-OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-THIS SOFTWARE.
-```
-
-#### Text 42 (Apache-2.0)
+#### Text 48 (Apache-2.0)
 
 Used by:
 

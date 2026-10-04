@@ -60,6 +60,7 @@ connTest('Connect wizard: provider list, prompt step, sidecar connection', async
 });
 
 dataTest('Explore: inventory, metric detail, day view', async ({ page }) => {
+	dataTest.slow(); // many full-page scans in two themes and two widths
 	const day = `/explore/resting_heart_rate/day/${fallbackDay}`;
 	for (const path of ['/explore', '/explore/resting_heart_rate?range=1M&end=2026-09-16', '/explore/steps?range=1W&end=2026-09-16', day]) {
 		await page.goto(path);
@@ -139,6 +140,7 @@ devicesTest('Settings › Devices: pairing code, devices, origins, resync dialog
 });
 
 viewsTest('Specialised views: sleep, blood pressure, body composition, workouts, events, lab analyte', async ({ page }) => {
+	viewsTest.slow(); // many full-page scans in two themes and two widths
 	for (const path of ['/explore/sleep', '/explore/blood-pressure', '/explore/body-composition', '/explore/workouts', '/explore/events', '/lab/analytes/glucose']) {
 		await page.goto(path);
 		await scan(page, path);
