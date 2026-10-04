@@ -16,5 +16,6 @@ export const icons = {
 	more: 'M5 12h.01 M12 12h.01 M19 12h.01',
 	close: 'M6 6l12 12 M18 6L6 18',
 	metric: 'M3 17l5-6 4 4 8-9',
-	empty: 'M9 2v5 M15 2v5 M6 7h12v4a6 6 0 0 1-12 0z M12 17v5'
+	empty: 'M9 2v5 M15 2v5 M6 7h12v4a6 6 0 0 1-12 0z M12 17v5',
+	star: 'M12 3l2.8 5.8 6.2.9-4.5 4.4 1.1 6.2L12 17.4l-5.6 2.9 1.1-6.2L3 9.7l6.2-.9z'
 } as const;
