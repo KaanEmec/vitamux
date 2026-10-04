@@ -577,37 +577,9 @@ func (o *owner) GetResolvedSeries(ctx context.Context, req oapi.GetResolvedSerie
 	if !ok {
 		return nil, problemErr(CodeNotFound, "no rule is in effect for "+prm.Metric)
 	}
-	// The window: the rule's, a kind, or a bucket size (a size other than the rule's resolves a
-	// copy of the rule with that bucket, which skips the cache like every bucket window).
-	kind, size, draft := v.Rule.Window.Kind, string(v.Rule.Window.Size), (*resolve.Version)(nil)
-	if w := ptrVal(prm.Window); w != "" {
-		switch {
-		case bucketSizes[w]:
-			kind, size = catalog.WindowBucket, w
-		case slices.Contains([]catalog.Window{catalog.WindowBucket, catalog.WindowHour, catalog.WindowLocalDay, catalog.WindowLocalNight,
-			catalog.WindowSleepEpisode, catalog.WindowLatest, catalog.WindowReading}, catalog.Window(w)):
-			kind = catalog.Window(w)
-			if kind != v.Rule.Window.Kind {
-				size = ""
-			}
-		default:
-			return nil, problemErr(CodeValidationFailed, "invalid window", FieldError{Pointer: "/window", Detail: "must be a window kind or 1m, 5m, 15m, 30m"})
-		}
-	}
-	if !allowsWindow(prm.Metric, kind) {
-		return nil, problemErr(CodeUnsupportedWindow, fmt.Sprintf("window %s is not allowed for %s", kind, prm.Metric))
-	}
-	if kind == catalog.WindowBucket {
-		if size == "" {
-			size = "5m"
-		}
-		if string(v.Rule.Window.Size) != size || v.Rule.Window.Kind != catalog.WindowBucket {
-			r := *v.Rule
-			r.Window = resolve.RuleWindow{Kind: catalog.WindowBucket, Size: resolve.Duration(size)}
-			cp := v
-			cp.Rule = &r
-			draft = &cp
-		}
+	kind, size, draft, err := seriesWindow(prm.Metric, v, ptrVal(prm.Window))
+	if err != nil {
+		return nil, err
 	}
 
 	z, err := o.zones(ctx)
@@ -695,36 +667,79 @@ func (o *owner) GetResolvedSeries(ctx context.Context, req oapi.GetResolvedSerie
 		out.Unit = &m.Unit
 	}
 	for i, r := range results {
-		pt := oapi.ResolvedPoint{Key: r.Window.Key, Start: z.ptr(r.Window.Start), End: z.at(r.Window.End),
-			Status: oapi.ResolvedPointStatus(r.Status), Value: valueOf(r.Value, r.Components), Sources: []string{}}
-		if !r.Window.Date.IsZero() {
-			d := apiDate(r.Window.Date)
-			pt.LocalDate = &d
-		}
-		if r.Partial {
-			pt.Partial = &r.Partial
-		}
-		if r.Status != resolve.ResultNoData {
-			pt.Coverage = round3(r.Coverage)
-		}
-		for _, in := range r.Inputs {
-			if in.Selected && in.Group != "" {
-				pt.Sources = append(pt.Sources, in.Group)
-			}
-		}
-		if len(r.Warnings) > 0 {
-			ws := make([]string, len(r.Warnings))
-			for j, w := range r.Warnings {
-				ws[j] = string(w.Code)
-			}
-			pt.Warnings = &ws
-		}
-		if link := sourcesLink(prm.Metric, rule, r.Window); link != "" {
-			pt.Links = &oapi.ResolvedLinks{Sources: &link}
-		}
-		out.Points[i] = pt
+		out.Points[i] = resolvedPoint(z, prm.Metric, rule, r)
 	}
 	return out, nil
+}
+
+// seriesWindow picks a series' window: the rule's, a window kind, or a bucket size. A size other
+// than the rule's resolves a copy of the rule with that bucket (draft), which skips the cache like
+// every bucket window.
+func seriesWindow(metric string, v resolve.Version, requested string) (catalog.Window, string, *resolve.Version, error) {
+	kind, size := v.Rule.Window.Kind, string(v.Rule.Window.Size)
+	if requested != "" {
+		switch {
+		case bucketSizes[requested]:
+			kind, size = catalog.WindowBucket, requested
+		case slices.Contains([]catalog.Window{catalog.WindowBucket, catalog.WindowHour, catalog.WindowLocalDay, catalog.WindowLocalNight,
+			catalog.WindowSleepEpisode, catalog.WindowLatest, catalog.WindowReading}, catalog.Window(requested)):
+			kind = catalog.Window(requested)
+			if kind != v.Rule.Window.Kind {
+				size = ""
+			}
+		default:
+			return "", "", nil, problemErr(CodeValidationFailed, "invalid window", FieldError{Pointer: "/window", Detail: "must be a window kind or 1m, 5m, 15m, 30m"})
+		}
+	}
+	if !allowsWindow(metric, kind) {
+		return "", "", nil, problemErr(CodeUnsupportedWindow, fmt.Sprintf("window %s is not allowed for %s", kind, metric))
+	}
+	if kind != catalog.WindowBucket {
+		return kind, size, nil, nil
+	}
+	if size == "" {
+		size = "5m"
+	}
+	if string(v.Rule.Window.Size) == size && v.Rule.Window.Kind == catalog.WindowBucket {
+		return kind, size, nil, nil
+	}
+	r := *v.Rule
+	r.Window = resolve.RuleWindow{Kind: catalog.WindowBucket, Size: resolve.Duration(size)}
+	cp := v
+	cp.Rule = &r
+	return kind, size, &cp, nil
+}
+
+// resolvedPoint is the API form of one resolved window of metric under rule.
+func resolvedPoint(z *zones, metric string, rule *resolve.Rule, r resolve.Result) oapi.ResolvedPoint {
+	pt := oapi.ResolvedPoint{Key: r.Window.Key, Start: z.ptr(r.Window.Start), End: z.at(r.Window.End),
+		Status: oapi.ResolvedPointStatus(r.Status), Value: valueOf(r.Value, r.Components), Sources: []string{}}
+	if !r.Window.Date.IsZero() {
+		d := apiDate(r.Window.Date)
+		pt.LocalDate = &d
+	}
+	if r.Partial {
+		pt.Partial = &r.Partial
+	}
+	if r.Status != resolve.ResultNoData {
+		pt.Coverage = round3(r.Coverage)
+	}
+	for _, in := range r.Inputs {
+		if in.Selected && in.Group != "" {
+			pt.Sources = append(pt.Sources, in.Group)
+		}
+	}
+	if len(r.Warnings) > 0 {
+		ws := make([]string, len(r.Warnings))
+		for j, w := range r.Warnings {
+			ws[j] = string(w.Code)
+		}
+		pt.Warnings = &ws
+	}
+	if link := sourcesLink(metric, rule, r.Window); link != "" {
+		pt.Links = &oapi.ResolvedLinks{Sources: &link}
+	}
+	return pt
 }
 
 func later(a, b time.Time) time.Time {
