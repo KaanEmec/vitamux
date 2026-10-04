@@ -7,6 +7,8 @@ const DAY = 86_400_000;
 const HOUR = 3_600_000;
 const CYCLE_LIMIT = 200;
 const WORKOUT_PAGE = 25;
+const WHOOP_API = "https://api.prod.whoop.com";
+const BODY_PATH = "/developer/v2/user/measurement/body";
 
 // ---------------------------------------------------------------- errors
 
@@ -76,6 +78,8 @@ const STREAMS = [
   { name: "whoop.sleep", interval_s: h(1), lookback_s: h(72), unit_size_s: h(720), max_backfill_s: d(3650) },
   { name: "whoop.workouts", interval_s: h(1), lookback_s: h(72), unit_size_s: h(720), max_backfill_s: d(3650) },
   { name: "whoop.strain_deep_dive", interval_s: h(6), lookback_s: h(48), unit_size_s: h(720), max_backfill_s: d(365) },
+  // The profile's body measurements are a snapshot with no time: one unit, whatever the window.
+  { name: "whoop.body", interval_s: h(24), lookback_s: h(48), unit_size_s: d(365), max_backfill_s: d(365) },
 ];
 const LOOKBACK_MS = Object.fromEntries(STREAMS.map((x) => [x.name, x.lookback_s * 1000]));
 
@@ -243,7 +247,7 @@ function fingerprint(text, fallback) {
 
 const REPLAY_CREDS = { access_token: "replay", refresh_token: "replay", user_id: 4242, expires: Infinity };
 
-// Run `work(client, take)` with valid tokens: refresh before use when expired, and once after a 401.
+// Run `work(client, take, get)` with valid tokens: refresh before use when expired, and once after a 401.
 async function withClient(credentials, deps, work) {
   let creds = deps.replay ? { ...REPLAY_CREDS, access_token: credentials?.access_token || "replay", refresh_token: credentials?.refresh_token || "replay" } : unpack(credentials);
   let refreshed = null;
@@ -256,7 +260,13 @@ async function withClient(credentials, deps, work) {
     const cap = capture(deps.fetch, deps.throttleMs);
     const client = new WhoopClient({ accessToken: creds.access_token, refreshToken: creds.refresh_token, userId: creds.user_id }, cap.fetch);
     try {
-      return { page: await work(client, cap.take), credentials: refreshed };
+      // get requests a developer-API path @dofek/whoop has no method for, as its own calls do.
+      const get = async (path) => {
+        const res = await cap.fetch(`${WHOOP_API}${path}?apiVersion=7`, { headers: { Authorization: `Bearer ${creds.access_token}`, "User-Agent": "WHOOP/4.0" } });
+        if (res.status === 429) throw new SidecarError("rate_limited", "WHOOP rate limit", { retryAfterS: Number(res.headers.get("retry-after")) || null });
+        if (!res.ok) throw new Error(`WHOOP API error (${res.status})`); // classify reads the status only
+      };
+      return { page: await work(client, cap.take, get), credentials: refreshed };
     } catch (err) {
       const e = classify(err);
       if (e.code === "reauth_required" && refreshed === null && err !== e) {
@@ -464,6 +474,15 @@ const STREAM_PAGES = {
     return { items, next_cursor: finished ? null : { next_token: next }, done: finished, high_watermark: finished ? iso(end) : null };
   },
 
+  // The profile's height, weight and maximum heart rate: one raw under a fixed key, so a changed profile is a new version of it.
+  async "whoop.body"({ get, take, end }) {
+    await get(BODY_PATH);
+    const c = take();
+    const b = c && JSON.parse(c.text);
+    if (!b || typeof b !== "object" || Array.isArray(b) || ["height_meter", "weight_kilogram", "max_heart_rate"].some((k) => b[k] != null && typeof b[k] !== "number")) throw drift("body measurement");
+    return { items: [item("whoop.body", {}, c)], next_cursor: null, done: true, high_watermark: iso(end) };
+  },
+
   // One call per local day (the day is computed in the owner's timezone).
   async "whoop.strain_deep_dive"({ client, take, start, end, cursor, tz }) {
     const date = cursor?.next ?? localDate(start, tz);
@@ -503,7 +522,7 @@ export async function fetchPage(req, deps) {
     throw bad("unknown timezone");
   }
   const grid = req.stream === "whoop.heart_rate" ? deps.hrWindowH * HOUR : GRID[req.stream];
-  const { page: p, credentials } = await withClient(req.credentials, deps, (client, take) => page({ client, take, start, end, cursor, tz, grid, deps }));
+  const { page: p, credentials } = await withClient(req.credentials, deps, (client, take, get) => page({ client, take, get, start, end, cursor, tz, grid, deps }));
   const next_cursor = p.done ? (incremental ? { since: iso(end) } : undefined) : incremental ? { since: iso(start), ...p.next_cursor } : p.next_cursor;
   return { ...p, next_cursor, credentials: credentials ?? undefined };
 }

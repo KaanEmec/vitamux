@@ -1,0 +1,66 @@
+{
+  "synthetic": true,
+  "normalizer": "whoop.body",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "whoop:strap",
+        "type": "band",
+        "manufacturer": "WHOOP"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "height",
+        "kind": "sample",
+        "start": "2026-03-02T08:30:00Z",
+        "value": 1.83,
+        "unit": "m",
+        "flags": 1,
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "body",
+          "external_id": "profile",
+          "component": "height"
+        }
+      },
+      {
+        "metric": "whoop_max_heart_rate",
+        "kind": "sample",
+        "start": "2026-03-02T08:30:00Z",
+        "value": 195,
+        "unit": "bpm",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "body",
+          "external_id": "profile",
+          "component": "whoop_max_heart_rate"
+        }
+      }
+    ],
+    "groups": [
+      {
+        "kind": "body_composition",
+        "measured_at": "2026-03-02T08:30:00Z",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "body",
+          "external_id": "profile",
+          "component": "body_composition"
+        },
+        "components": [
+          {
+            "metric": "weight",
+            "kind": "sample",
+            "start": "2026-03-02T08:30:00Z",
+            "value": 82.5,
+            "unit": "kg",
+            "flags": 1,
+            "device": "whoop:strap"
+          }
+        ]
+      }
+    ]
+  }
+}

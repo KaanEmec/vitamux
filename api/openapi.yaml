@@ -4036,7 +4036,7 @@ components:
         unit: {type: string, description: Canonical unit code.}
         source_value: {type: [number, 'null'], format: double, description: Original value, only when unit conversion changed it.}
         source_unit: {type: [string, 'null']}
-        quality_flags: {type: integer, minimum: 0, description: 'Bitset: 1 manual_entry, 2 motion_context, 4 implausible, 8 relayed, 16 migrated_without_raw, 32 prorated_source.'}
+        quality_flags: {type: integer, minimum: 0, description: 'Bitset: 1 manual_entry, 2 motion_context, 4 implausible, 8 relayed, 16 migrated_without_raw, 32 prorated_source, 64 calibrating.'}
         group_id: {type: [string, 'null'], description: Measurement group (blood-pressure reading, weigh-in) this row is a component of.}
         source: {$ref: '#/components/schemas/SourceRef'}
         provenance: {$ref: '#/components/schemas/RecordProvenance'}

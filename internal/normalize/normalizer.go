@@ -73,6 +73,7 @@ const (
 	FlagRelayed
 	FlagMigratedWithoutRaw
 	FlagProratedSource
+	FlagCalibrating // WHOOP scored the recovery while still calibrating to the wearer
 )
 
 // Device is a physical device as the source describes it. Fingerprint is stable per provider.

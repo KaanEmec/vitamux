@@ -126,6 +126,8 @@ Each score is added together with its connector. They are never pooled across pr
 
 Implemented ([J25.1](../plan/E25-catalogue-mappings/J25.1-policy-ledger-seed.md)): `whoop_sleep_need`, `whoop_sleep_debt`, `whoop_sleep_consistency`, `whoop_sleep_disturbances`, `whoop_max_heart_rate`, `garmin_body_battery_charged`, `garmin_body_battery_drained`, `garmin_fitness_age`, `garmin_acute_load`, `garmin_chronic_load`, `withings_sleep_score`, `withings_breathing_quality`, `withings_nerve_health_score`, `withings_nerve_response_score`, `withings_metabolic_age`, `withings_esc`.
 
+Implemented ([J25.4](../plan/E25-catalogue-mappings/J25.4-whoop.md)): `whoop_workout_strain` (interval, latest), `whoop_hr_zone_0_time` to `whoop_hr_zone_5_time` (seconds, additive intervals over a workout), `elevation_change` (net, additive), `whoop_sleep_debt_post`, `whoop_sleep_need_habitual`, `whoop_sleep_need_from_strain`, `whoop_sleep_nap_credit`, `whoop_sleep_cycles`. The `calibrating` quality flag marks rows of a WHOOP recovery scored during calibration.
+
 Implemented with their connectors ([J18.4](../plan/E18-garmin/J18.4-normalizers.md), [J19.4](../plan/E19-whoop/J19.4-normalizers.md)): `garmin_stress`, `garmin_body_battery` (samples, intensive), `garmin_training_readiness`, `garmin_sleep_score`, `whoop_recovery`, `whoop_strain`, `whoop_sleep_performance` (daily_summary). WHOOP SpO2 and skin temperature stay raw until a matching method is confirmed.
 
 ## Events

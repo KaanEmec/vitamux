@@ -181,6 +181,43 @@ test("strain deep dive: one call per local day", async (t) => {
   assert.equal((await s.call("POST", "/v1/fetch", req({ stream: "whoop.strain_deep_dive", config: { timezone: "Mars/Olympus" } }))).json().code, "permanent");
 });
 
+const BODY = "/developer/v2/user/measurement/body";
+
+test("body: one raw under a fixed key, whatever the window", async (t) => {
+  const text = '{ "height_meter": 1.83, "weight_kilogram": 82.5, "max_heart_rate": 195 }';
+  const s = await start({ [BODY]: () => json(text) });
+  t.after(s.stop);
+  const r = await s.call("POST", "/v1/fetch", req({ stream: "whoop.body", to: "2026-01-04T00:00:00Z" }));
+  assert.ok(r.text.includes('"response":' + text)); // verbatim
+  const [raw, result] = r.lines();
+  assert.equal(raw.external_key, "whoop.body");
+  assert.deepEqual(raw.body.unit, {});
+  assert.deepEqual(raw.request, { endpoint: BODY, params: { apiVersion: "7" } });
+  assert.deepEqual(result, { type: "result", done: true, high_watermark: "2026-01-04T00:00:00.000Z" });
+  assert.equal(s.calls[0].auth, `Bearer ${ACCESS}`);
+  const inc = (await s.call("POST", "/v1/fetch", { stream: "whoop.body", mode: "incremental", credentials: creds() })).lines();
+  assert.equal(inc.length, 2);
+  assert.equal(inc.at(-1).done, true);
+});
+
+test("body: errors are classified and a retyped value is schema_drift", async (t) => {
+  let next;
+  const s = await start({ [BODY]: () => next(), InitiateAuth: () => authResult(), "/users-service/v2/bootstrap/": () => json({ user: { id: USER_ID } }) });
+  t.after(s.stop);
+  const code = async (make) => {
+    next = make;
+    return (await s.call("POST", "/v1/fetch", req({ stream: "whoop.body" }))).json().code;
+  };
+  assert.equal(await code(() => json({ height_meter: "1.83" })), "schema_drift");
+  assert.equal(await code(() => json([])), "schema_drift");
+  assert.equal(await code(() => json("gone", 404)), "schema_drift");
+  assert.equal(await code(() => json("denied", 401)), "reauth_required");
+  assert.equal(await code(() => json("slow", 429, { "retry-after": "9" })), "rate_limited");
+  assert.equal(await code(() => json("down", 503)), "transient");
+  next = () => json({ max_heart_rate: 190, weight_kilogram: null }); // a missing value is fine
+  assert.equal((await s.call("POST", "/v1/fetch", req({ stream: "whoop.body" }))).lines().length, 2);
+});
+
 test("an expired access token is refreshed before use and returned", async (t) => {
   const s = await start({
     InitiateAuth: () => authResult({ AccessToken: "fresh-access", RefreshToken: "rotated" }),

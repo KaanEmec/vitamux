@@ -28,7 +28,7 @@ test("describe", async (t) => {
   assert.equal(d.auth_kind, "interactive_mfa");
   assert.equal(d.upstream.package, "@dofek/whoop");
   assert.equal(d.upstream.version, "0.1.65");
-  assert.deepEqual(d.streams.map((x) => x.name), ["whoop.heart_rate", "whoop.cycles", "whoop.sleep", "whoop.workouts", "whoop.strain_deep_dive"]);
+  assert.deepEqual(d.streams.map((x) => x.name), ["whoop.heart_rate", "whoop.cycles", "whoop.sleep", "whoop.workouts", "whoop.strain_deep_dive", "whoop.body"]);
   assert.deepEqual(d.streams[0], { name: "whoop.heart_rate", interval_s: 3600, lookback_s: 172800, unit_size_s: 604800, max_backfill_s: 7776000 });
   assert.deepEqual(d.rate_limits, [{ requests: 1, per_s: 1 }]);
   assert.deepEqual(d.capabilities, { incremental: true, backfill: true, manual_sync: true });

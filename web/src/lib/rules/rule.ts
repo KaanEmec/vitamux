@@ -107,7 +107,8 @@ export const qualityFlags = [
 	'implausible',
 	'relayed',
 	'migrated_without_raw',
-	'prorated_source'
+	'prorated_source',
+	'calibrating'
 ];
 
 export const sumWarning = 'cross_source_sum_duplicate_risk';

@@ -1,6 +1,6 @@
 {
   "name": "vitamux-whoop-sidecar",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Vitamux connector sidecar (vitamux-connector/1) wrapping the unofficial @dofek/whoop client",
   "type": "module",

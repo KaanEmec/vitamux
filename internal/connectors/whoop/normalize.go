@@ -26,10 +26,11 @@ const (
 	StreamSleep          = "whoop.sleep"
 	StreamWorkouts       = "whoop.workouts"
 	StreamStrainDeepDive = "whoop.strain_deep_dive"
+	StreamBody           = "whoop.body"
 )
 
 // versions is each stream normalizer's Version(): bump only the stream whose output changes.
-var versions = map[string]int{StreamHeartRate: 2, StreamCycles: 3, StreamSleep: 3, StreamWorkouts: 1, StreamStrainDeepDive: 3}
+var versions = map[string]int{StreamHeartRate: 2, StreamCycles: 4, StreamSleep: 3, StreamWorkouts: 2, StreamStrainDeepDive: 3, StreamBody: 1}
 
 // strap is the device of every WHOOP record: the private API names no device of its own.
 var strap = normalize.Device{Fingerprint: "whoop:strap", Type: "band", Manufacturer: "WHOOP"}
@@ -40,7 +41,7 @@ type Normalizer struct{ Stream string }
 // Normalizers returns one normalizer per stored stream, for normalize.NewRegistry.
 func Normalizers() []normalize.Normalizer {
 	return []normalize.Normalizer{Normalizer{StreamHeartRate}, Normalizer{StreamCycles}, Normalizer{StreamSleep},
-		Normalizer{StreamWorkouts}, Normalizer{StreamStrainDeepDive}}
+		Normalizer{StreamWorkouts}, Normalizer{StreamStrainDeepDive}, Normalizer{StreamBody}}
 }
 
 func (n Normalizer) ID() string                    { return n.Stream }
@@ -87,8 +88,8 @@ type rawUnit struct {
 	Date           string     `json:"date"`
 }
 
-// Normalize is pure. Heart rate carries no WHOOP timezone_offset, so its local dates come from
-// the owner's timezone periods; everything else carries WHOOP's offset.
+// Normalize is pure. Heart rate and the body snapshot carry no WHOOP timezone_offset, so their local
+// dates come from the owner's timezone periods; everything else carries WHOOP's offset.
 func (n Normalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ normalize.Env) (normalize.Output, error) {
 	b := &builder{stream: n.Stream}
 	var body struct {
@@ -110,13 +111,15 @@ func (n Normalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ nor
 		err = b.workouts(body.Response)
 	case StreamStrainDeepDive:
 		err = b.dailySteps(body.Unit, body.Response)
+	case StreamBody:
+		err = b.body(raw.FetchedAt, body.Response)
 	default:
 		err = b.drift("stream is not normalized")
 	}
 	if err != nil {
 		return normalize.Output{}, err
 	}
-	if len(b.out.Measurements)+len(b.out.Sleep)+len(b.out.Workouts) > 0 {
+	if len(b.out.Measurements)+len(b.out.Groups)+len(b.out.Sleep)+len(b.out.Workouts) > 0 {
 		b.out.Devices = []normalize.Device{strap}
 	}
 	return b.out, nil
@@ -180,6 +183,43 @@ func (b *builder) dailySteps(u rawUnit, resp json.RawMessage) error {
 	return nil
 }
 
+// body maps the developer API's body measurements {height_meter, weight_kilogram, max_heart_rate}, the
+// profile the owner entered in WHOOP, so they carry no time of their own: they are stamped with the fetch
+// time, keyed by the metric, and a changed profile (a new raw version) supersedes them. Height and weight are
+// manual entries, which the built-in rules never select; the maximum heart rate is WHOOP's own figure.
+func (b *builder) body(at time.Time, resp json.RawMessage) error {
+	var r struct {
+		HeightMeter    *float64 `json:"height_meter"`
+		WeightKilogram *float64 `json:"weight_kilogram"`
+		MaxHeartRate   *float64 `json:"max_heart_rate"`
+	}
+	if err := b.decode(resp, &r); err != nil {
+		return err
+	}
+	if at.IsZero() {
+		return b.drift("payload without a fetch time")
+	}
+	at = at.UTC()
+	add := func(metric string, v *float64, unit string, flags normalize.Flags) {
+		if v == nil {
+			return
+		}
+		m := normalize.Measurement{Metric: metric, Kind: catalog.Sample, Start: at, Value: *v, Unit: unit, Flags: flags,
+			Device: strap.Fingerprint, Key: normalize.Key{RecordType: "body", ExternalID: "profile", Component: metric}}
+		if met, _ := catalog.Lookup(metric); met.Group != "" { // weight: a one-component reading
+			m.Key = normalize.Key{}
+			b.out.Groups = append(b.out.Groups, normalize.Group{Kind: met.Group, MeasuredAt: at, Device: m.Device,
+				Key: normalize.Key{RecordType: "body", ExternalID: "profile", Component: met.Group}, Components: []normalize.Measurement{m}})
+			return
+		}
+		b.out.Measurements = append(b.out.Measurements, m)
+	}
+	add("height", r.HeightMeter, "m", normalize.FlagManualEntry)
+	add("weight", r.WeightKilogram, "kg", normalize.FlagManualEntry)
+	add("whoop_max_heart_rate", r.MaxHeartRate, "bpm", 0)
+	return nil
+}
+
 func isNull(raw json.RawMessage) bool {
 	raw = bytes.TrimSpace(raw)
 	return len(raw) == 0 || string(raw) == "null"
@@ -217,8 +257,8 @@ func (b *builder) heartRate(resp json.RawMessage) error {
 }
 
 // cycleRecord is one item of the cycles BFF's records (docs/providers/whoop.md#content-of-records).
-// Fields not read here (cycle days and during, calibrating, the day's heart rates, stage durations,
-// workouts, v2_activities) stay raw.
+// Fields not read here (cycle days and during, the day's heart rates, stage durations, recovery
+// components and baselines, workouts, v2_activities) stay raw.
 type cycleRecord struct {
 	Cycle *struct {
 		ID             json.RawMessage `json:"id"`
@@ -227,6 +267,7 @@ type cycleRecord struct {
 		DayKilojoules  *float64        `json:"day_kilojoules"`
 	} `json:"cycle"`
 	Recovery *struct {
+		Calibrating      bool     `json:"calibrating"`
 		RecoveryScore    *float64 `json:"recovery_score"`
 		RestingHeartRate *float64 `json:"resting_heart_rate"`
 		HRVRMSSD         *float64 `json:"hrv_rmssd"` // seconds
@@ -245,8 +286,13 @@ type cycleSleep struct {
 	Significant      bool     `json:"significant"`
 	Score            *float64 `json:"score"` // sleep performance, %
 	RespiratoryRate  *float64 `json:"respiratory_rate"`
-	SleepNeed        *float64 `json:"sleep_need"`        // ms
-	DebtPre          *float64 `json:"debt_pre"`          // ms, the debt inside this night's need
+	SleepNeed        *float64 `json:"sleep_need"`          // ms
+	DebtPre          *float64 `json:"debt_pre"`            // ms, the debt inside this night's need
+	DebtPost         *float64 `json:"debt_post"`           // ms, the debt left after the sleep
+	HabitualNeed     *float64 `json:"habitual_sleep_need"` // ms
+	NeedFromStrain   *float64 `json:"need_from_strain"`    // ms
+	CreditFromNaps   *float64 `json:"credit_from_naps"`    // ms
+	CyclesCount      *float64 `json:"cycles_count"`
 	SleepConsistency *float64 `json:"sleep_consistency"` // %
 	Disturbances     *float64 `json:"disturbances"`
 }
@@ -287,7 +333,8 @@ func (b *builder) cycles(resp json.RawMessage) error {
 // significant). A cycle runs from one sleep to the next, so it is not a local day: day strain,
 // recovery, resting HR and nightly RMSSD are daily values at the main sleep's wake-up, so they
 // share its sleep_date (ADR-0009), as do the day's energy, SpO2, skin temperature and the main
-// sleep's need, debt, consistency and disturbances. Without a main sleep they stay raw.
+// sleep's need and its parts, debt before and after, consistency, disturbances and cycle count. A
+// recovery scored while calibrating flags the rows derived from it. Without a main sleep they stay raw.
 func (b *builder) cycle(c cycleRecord) error {
 	if c.Cycle == nil {
 		return b.drift("record without cycle")
@@ -343,10 +390,11 @@ func (b *builder) cycle(c cycleRecord) error {
 		}
 		return nil
 	}
+	var flags normalize.Flags
 	add := func(metric string, v *float64, unit string) {
 		if v != nil {
 			b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: metric, Kind: catalog.DailyValue,
-				Start: wake, End: &wake, Zone: wakeZone, Value: *v, Unit: unit, Device: strap.Fingerprint,
+				Start: wake, End: &wake, Zone: wakeZone, Value: *v, Unit: unit, Flags: flags, Device: strap.Fingerprint,
 				Key: normalize.Key{RecordType: "cycle", ExternalID: id, Component: metric}})
 		}
 	}
@@ -355,9 +403,17 @@ func (b *builder) cycle(c cycleRecord) error {
 	m := c.Sleeps[main]
 	add("whoop_sleep_need", m.SleepNeed, "ms")
 	add("whoop_sleep_debt", m.DebtPre, "ms")
+	add("whoop_sleep_debt_post", m.DebtPost, "ms")
+	add("whoop_sleep_need_habitual", m.HabitualNeed, "ms")
+	add("whoop_sleep_need_from_strain", m.NeedFromStrain, "ms")
+	add("whoop_sleep_nap_credit", m.CreditFromNaps, "ms")
+	add("whoop_sleep_cycles", m.CyclesCount, "count")
 	add("whoop_sleep_consistency", m.SleepConsistency, "%")
 	add("whoop_sleep_disturbances", m.Disturbances, "count")
 	if r := c.Recovery; r != nil {
+		if r.Calibrating {
+			flags = normalize.FlagCalibrating
+		}
 		add("spo2_nightly", r.SpO2, "%")
 		add("skin_temperature_nightly", r.SkinTempCelsius, "°C")
 		add("whoop_recovery", r.RecoveryScore, "%")
@@ -508,9 +564,10 @@ var sports = map[string]string{
 }
 
 // workouts maps one developer-API workout record (the sidecar slices each record of a page into
-// its own raw). Strain, HR zones and percent recorded have no place in the workout model and stay
-// raw. A weightlifting detail is a separate payload, and a workout's sets would have to come from
-// the payload that writes the workout, so the detail is only checked for shape and stays raw.
+// its own raw). Strain, the time in each heart-rate zone and the altitude gain and change are
+// intervals over the workout, keyed by its id so a rescore supersedes them; percent recorded
+// stays raw. A weightlifting detail is a separate payload, and a workout's sets would have to come
+// from the payload that writes the workout, so the detail is only checked for shape and stays raw.
 func (b *builder) workouts(resp json.RawMessage) error {
 	var detail struct {
 		ActivityID    *string            `json:"activity_id"`
@@ -541,6 +598,17 @@ func (b *builder) workout(raw json.RawMessage) error {
 			MaxHeartRate     *float64 `json:"max_heart_rate"`
 			Kilojoule        *float64 `json:"kilojoule"`
 			DistanceMeter    *float64 `json:"distance_meter"`
+			Strain           *float64 `json:"strain"`
+			AltitudeGain     *float64 `json:"altitude_gain_meter"`
+			AltitudeChange   *float64 `json:"altitude_change_meter"`
+			ZoneDurations    *struct {
+				Zero  *float64 `json:"zone_zero_milli"`
+				One   *float64 `json:"zone_one_milli"`
+				Two   *float64 `json:"zone_two_milli"`
+				Three *float64 `json:"zone_three_milli"`
+				Four  *float64 `json:"zone_four_milli"`
+				Five  *float64 `json:"zone_five_milli"`
+			} `json:"zone_durations"`
 		} `json:"score"`
 	}
 	if err := b.decode(raw, &w); err != nil {
@@ -572,6 +640,21 @@ func (b *builder) workout(raw json.RawMessage) error {
 		if sc.Kilojoule != nil {
 			kcal := *sc.Kilojoule / 4.184
 			x.EnergyKcal = &kcal
+		}
+		span := func(metric string, v *float64, unit string) {
+			if v != nil {
+				b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: metric, Kind: catalog.Interval,
+					Start: x.Start, End: &x.End, Zone: zone, Value: *v, Unit: unit, Device: strap.Fingerprint,
+					Key: normalize.Key{RecordType: "workout", ExternalID: w.ID, Component: metric}})
+			}
+		}
+		span("whoop_workout_strain", sc.Strain, "index")
+		span("elevation_gain", sc.AltitudeGain, "m")
+		span("elevation_change", sc.AltitudeChange, "m")
+		if z := sc.ZoneDurations; z != nil {
+			for i, v := range []*float64{z.Zero, z.One, z.Two, z.Three, z.Four, z.Five} {
+				span("whoop_hr_zone_"+strconv.Itoa(i)+"_time", v, "ms") // the writer stores seconds
+			}
 		}
 	}
 	b.out.Workouts = append(b.out.Workouts, x)

@@ -70,6 +70,13 @@ var NoBuiltin = func() map[string]string {
 		"sleep_snoring_episodes"} {
 		m[code] = "added with the mapping corrections (J25.1); no researched ladder: uses the default rule"
 	}
+	// The WHOOP workout, sleep-need and elevation codes of J25.4: provider-scoped with one source each, or added without a ladder.
+	for _, code := range []string{"whoop_workout_strain", "whoop_hr_zone_0_time", "whoop_hr_zone_1_time", "whoop_hr_zone_2_time",
+		"whoop_hr_zone_3_time", "whoop_hr_zone_4_time", "whoop_hr_zone_5_time", "whoop_sleep_debt_post", "whoop_sleep_need_habitual",
+		"whoop_sleep_need_from_strain", "whoop_sleep_nap_credit", "whoop_sleep_cycles"} {
+		m[code] = "a provider-scoped value with a single source, so there is nothing to order"
+	}
+	m["elevation_change"] = "added with the WHOOP mappings (J25.4); no researched ladder yet, so the owner picks a source"
 	return m
 }()
 

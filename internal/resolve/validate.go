@@ -46,7 +46,7 @@ var (
 	providerRe = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
 	bucketSize = map[Duration]bool{"1m": true, "5m": true, "15m": true, "30m": true}
 	flagNames  = map[string]bool{"manual_entry": true, "motion_context": true, "implausible": true,
-		"relayed": true, "migrated_without_raw": true, "prorated_source": true}
+		"relayed": true, "migrated_without_raw": true, "prorated_source": true, "calibrating": true}
 	windowKinds = []catalog.Window{catalog.WindowBucket, catalog.WindowHour, catalog.WindowLocalDay,
 		catalog.WindowLocalNight, catalog.WindowSleepEpisode, catalog.WindowLatest, catalog.WindowReading}
 	opStrategy = map[Op]catalog.Strategy{

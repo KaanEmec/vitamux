@@ -1,0 +1,29 @@
+{
+  "synthetic": true,
+  "normalizer": "whoop.body",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "whoop:strap",
+        "type": "band",
+        "manufacturer": "WHOOP"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "whoop_max_heart_rate",
+        "kind": "sample",
+        "start": "2026-03-02T08:30:00Z",
+        "value": 190,
+        "unit": "bpm",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "body",
+          "external_id": "profile",
+          "component": "whoop_max_heart_rate"
+        }
+      }
+    ]
+  }
+}

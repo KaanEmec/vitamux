@@ -1,13 +1,168 @@
 {
   "synthetic": true,
   "normalizer": "whoop.workouts",
-  "version": 1,
+  "version": 2,
   "output": {
     "devices": [
       {
         "fingerprint": "whoop:strap",
         "type": "band",
         "manufacturer": "WHOOP"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "whoop_workout_strain",
+        "kind": "interval",
+        "start": "2026-03-02T17:30:00Z",
+        "end": "2026-03-02T18:25:00Z",
+        "zone": {
+          "offset_min": -300
+        },
+        "value": 8.2,
+        "unit": "index",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "workout",
+          "external_id": "00000000-0000-4000-8000-0000000000b2",
+          "component": "whoop_workout_strain"
+        }
+      },
+      {
+        "metric": "elevation_gain",
+        "kind": "interval",
+        "start": "2026-03-02T17:30:00Z",
+        "end": "2026-03-02T18:25:00Z",
+        "zone": {
+          "offset_min": -300
+        },
+        "value": 41.2,
+        "unit": "m",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "workout",
+          "external_id": "00000000-0000-4000-8000-0000000000b2",
+          "component": "elevation_gain"
+        }
+      },
+      {
+        "metric": "elevation_change",
+        "kind": "interval",
+        "start": "2026-03-02T17:30:00Z",
+        "end": "2026-03-02T18:25:00Z",
+        "zone": {
+          "offset_min": -300
+        },
+        "value": -2.1,
+        "unit": "m",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "workout",
+          "external_id": "00000000-0000-4000-8000-0000000000b2",
+          "component": "elevation_change"
+        }
+      },
+      {
+        "metric": "whoop_hr_zone_0_time",
+        "kind": "interval",
+        "start": "2026-03-02T17:30:00Z",
+        "end": "2026-03-02T18:25:00Z",
+        "zone": {
+          "offset_min": -300
+        },
+        "value": 0,
+        "unit": "ms",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "workout",
+          "external_id": "00000000-0000-4000-8000-0000000000b2",
+          "component": "whoop_hr_zone_0_time"
+        }
+      },
+      {
+        "metric": "whoop_hr_zone_1_time",
+        "kind": "interval",
+        "start": "2026-03-02T17:30:00Z",
+        "end": "2026-03-02T18:25:00Z",
+        "zone": {
+          "offset_min": -300
+        },
+        "value": 120000,
+        "unit": "ms",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "workout",
+          "external_id": "00000000-0000-4000-8000-0000000000b2",
+          "component": "whoop_hr_zone_1_time"
+        }
+      },
+      {
+        "metric": "whoop_hr_zone_2_time",
+        "kind": "interval",
+        "start": "2026-03-02T17:30:00Z",
+        "end": "2026-03-02T18:25:00Z",
+        "zone": {
+          "offset_min": -300
+        },
+        "value": 600000,
+        "unit": "ms",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "workout",
+          "external_id": "00000000-0000-4000-8000-0000000000b2",
+          "component": "whoop_hr_zone_2_time"
+        }
+      },
+      {
+        "metric": "whoop_hr_zone_3_time",
+        "kind": "interval",
+        "start": "2026-03-02T17:30:00Z",
+        "end": "2026-03-02T18:25:00Z",
+        "zone": {
+          "offset_min": -300
+        },
+        "value": 1500000,
+        "unit": "ms",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "workout",
+          "external_id": "00000000-0000-4000-8000-0000000000b2",
+          "component": "whoop_hr_zone_3_time"
+        }
+      },
+      {
+        "metric": "whoop_hr_zone_4_time",
+        "kind": "interval",
+        "start": "2026-03-02T17:30:00Z",
+        "end": "2026-03-02T18:25:00Z",
+        "zone": {
+          "offset_min": -300
+        },
+        "value": 900000,
+        "unit": "ms",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "workout",
+          "external_id": "00000000-0000-4000-8000-0000000000b2",
+          "component": "whoop_hr_zone_4_time"
+        }
+      },
+      {
+        "metric": "whoop_hr_zone_5_time",
+        "kind": "interval",
+        "start": "2026-03-02T17:30:00Z",
+        "end": "2026-03-02T18:25:00Z",
+        "zone": {
+          "offset_min": -300
+        },
+        "value": 0,
+        "unit": "ms",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "workout",
+          "external_id": "00000000-0000-4000-8000-0000000000b2",
+          "component": "whoop_hr_zone_5_time"
+        }
       }
     ],
     "workouts": [
