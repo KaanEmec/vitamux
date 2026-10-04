@@ -39,7 +39,9 @@ for _ in $(seq 1 30); do
   nc -z 127.0.0.1 "$port" 2> /dev/null && break
   sleep 1
 done
-go run ./cmd/vitamux connector-test --url "http://127.0.0.1:$port" --secret-file "$work/secret"
+scenario=()
+[ ! -f "$dir/conformance.json" ] || scenario=(--scenario "$dir/conformance.json")
+go run ./cmd/vitamux connector-test --url "http://127.0.0.1:$port" --secret-file "$work/secret" ${scenario[@]+"${scenario[@]}"}
 
 echo "== Go normalizer goldens"
 if [ -d "internal/connectors/${name//-/_}" ]; then

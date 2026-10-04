@@ -71,7 +71,7 @@ A review records why shipping the upstream in its own container is acceptable (n
 
 1. the license gate;
 2. the unit tests on cassettes (`docker build --target test`);
-3. the image with `REPLAY=1` against `vitamux connector-test --url --secret-file` (schemas, auth steps, paging, cursors, replay, typed errors, no secrets in output);
+3. the image with `REPLAY=1` against `vitamux connector-test --url --secret-file [--scenario sidecars/<name>/conformance.json]` (schemas, auth steps, paging, cursors, replay, typed errors, no secrets in output). A [scenario](../schemas/connector-test-scenario.v1.json) holds synthetic sign-in values and which login provokes which error ([example](../examples/sidecar-python/conformance.json)); without one the kit checks the first auth step and fetches with placeholder credentials, which a replaying sidecar must serve;
 4. the Go normalizer goldens in `internal/connectors/<name>/`.
 
 ## Automatic upstream updates

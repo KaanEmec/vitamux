@@ -123,6 +123,37 @@ jobs:
           (cd web && npx playwright install --with-deps chromium)
           scripts/e2e-stack.sh
 
+  # The conformance kit (J17.3) against the Python example sidecar: the conformant example passes
+  # every check and each BREAK variant fails exactly its named check. ubuntu-latest ships Python 3.12.
+  sidecar-kit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+      - name: Example sidecar unit tests
+        run: python3 -m unittest
+        working-directory: examples/sidecar-python
+      - name: Kit passes the example and fails each broken variant at its named check
+        run: VITAMUX_REQUIRE_PYTHON=1 go test -count=1 -v -run 'TestExampleSidecarPasses|TestBrokenVariantsFailOneCheck|TestScenarioSchema' ./internal/connectors/remote/
+      - name: vitamux connector-test CLI (exit status and output)
+        run: |
+          go build -o "$RUNNER_TEMP/vitamux" ./cmd/vitamux
+          od -An -tx1 -N16 /dev/urandom | tr -d ' \n' > "$RUNNER_TEMP/secret"
+          args=(--url http://127.0.0.1:8080 --secret-file "$RUNNER_TEMP/secret" --scenario examples/sidecar-python/conformance.json)
+          run_example() { # BREAK value, "" for the conformant example
+            BREAK=$1 VITAMUX_SIDECAR_SECRET_FILE="$RUNNER_TEMP/secret" SIDECAR_ADDR=127.0.0.1:8080 python3 examples/sidecar-python/sidecar.py 2> /dev/null &
+            pid=$!
+            for _ in $(seq 1 30); do nc -z 127.0.0.1 8080 2> /dev/null && break; sleep 0.2; done
+            set +e; "$RUNNER_TEMP/vitamux" connector-test "${args[@]}" | tee "$RUNNER_TEMP/out"; status=${PIPESTATUS[0]}; set -e
+            kill "$pid"; wait "$pid" 2> /dev/null || true
+          }
+          run_example ""
+          [ "$status" -eq 0 ] || { echo "::error::the conformant example fails the kit"; exit 1; }
+          run_example bad_cursor
+          [ "$status" -eq 1 ] && grep -q '^FAIL  fetch_paging ' "$RUNNER_TEMP/out" || { echo "::error::BREAK=bad_cursor must fail fetch_paging"; exit 1; }
+
   image:
     runs-on: ubuntu-latest
     steps:
