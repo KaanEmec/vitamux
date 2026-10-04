@@ -6,8 +6,11 @@
 	import type { Problem } from '#lib/api/client.ts';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import StatusIcon from '#lib/components/StatusIcon.svelte';
+	import Icon from '#lib/ui/Icon.svelte';
 	import { maxUploadBytes, upload, type Document } from './api.ts';
 	import { uploadReasons } from './format.ts';
+
+	const uploadIcon = 'M12 16V4 M7 9l5-5 5 5 M4 16v4h16v-4';
 
 	let { onuploaded }: { onuploaded: (doc: Document, existing: boolean) => void } = $props();
 
@@ -67,8 +70,14 @@
 	ondragleave={() => (over = false)}
 	ondrop={drop}
 >
-	<h2 id="upload-title">Upload a lab report</h2>
-	<p class="muted">Drop a PDF here or choose one. At most 20 MiB and 50 pages; password-protected PDFs are refused.</p>
+	<span class="art"><Icon d={uploadIcon} size={24} /></span>
+	<div class="copy">
+		<h2 id="upload-title">Upload a lab report</h2>
+		<p class="muted">Drop a PDF here or choose one. At most 20 MiB and 50 pages; password-protected PDFs are refused.</p>
+		<p class="muted fine">
+			The PDF stays on this server. It is sent to an AI provider only if you pick one and consent for that document, naming the provider and model.
+		</p>
+	</div>
 	<label class="btn primary">
 		{busy ? 'Uploading…' : 'Choose a PDF'}
 		<input
@@ -86,16 +95,42 @@
 
 <style>
 	.zone {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-4);
+		align-items: center;
 		padding: var(--space-5);
 		margin-bottom: var(--space-4);
-		text-align: center;
 		background: var(--color-surface);
-		border: 2px dashed var(--color-border);
-		border-radius: var(--radius-md);
+		border: 2px dashed var(--color-border-strong);
+		border-radius: var(--radius-lg);
 	}
 	.zone.over {
 		border-color: var(--color-accent);
-		background: var(--color-surface-2);
+		background: var(--color-accent-soft);
+	}
+	.art {
+		display: grid;
+		place-items: center;
+		width: 3rem;
+		height: 3rem;
+		color: var(--color-accent);
+		background: var(--color-accent-soft);
+		border-radius: var(--radius-md);
+	}
+	.copy {
+		flex: 1 1 18rem;
+	}
+	.copy h2 {
+		margin-bottom: var(--space-1);
+	}
+	.copy p {
+		margin: 0;
+		max-width: 44rem;
+	}
+	.fine {
+		margin-top: var(--space-1);
+		font-size: var(--text-sm);
 	}
 	.zone label:focus-within {
 		outline: 2px solid var(--color-focus);

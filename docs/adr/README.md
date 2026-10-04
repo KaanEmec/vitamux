@@ -10,7 +10,7 @@ ADRs record decisions that code depends on. Keep each one short and link to the 
 | [0004](0004-blob-store.md) | Filesystem blob store: SHA-256 addressed, HMAC file names, zstd, verified reads, refcount sweep | Accepted |
 | [0008](0008-rule-schema.md) | Typed resolution rule schema v1 (`vitamux.rule/1`), first-match groups, sleep and blood-pressure rule families | Accepted |
 | [0009](0009-sleep-date-night-window.md) | `sleep_date` = local wake date; night D = sessions ending in `[D−1 18:00, D 18:00)` local | Accepted |
-| [0010](0010-sveltekit-static-spa.md) | SvelteKit static SPA embedded in the binary | Accepted |
+| [0010](0010-sveltekit-static-spa.md) | SvelteKit static SPA embedded in the binary | Accepted, amended by 0020 |
 | [0011](0011-secrets-vault.md) | Master key file, HKDF purposes, AES-256-GCM sealed values with `key_id` | Accepted |
 | [0012](0012-mit-license-dco.md) | MIT license with DCO sign-off | Accepted |
 | [0013](0013-extraction-consent.md) | Extraction providers behind one interface; external ones need configuration, owner enablement and per-request consent naming provider and model | Accepted |
@@ -20,3 +20,4 @@ ADRs record decisions that code depends on. Keep each one short and link to the 
 | [0017](0017-sidecar-protocol.md) | Sidecar protocol `vitamux-connector/1`: HTTP + JSON + NDJSON pages, frozen, additive only within v1 | Accepted |
 | [0018](0018-garmin-upstream.md) | Garmin Connect through a sidecar wrapping `python-garminconnect` | Accepted |
 | [0019](0019-whoop-upstream.md) | WHOOP through a sidecar wrapping `@dofek/whoop` (private API, 6 s HR) | Accepted |
+| [0020](0020-chart-kit.md) | Hand-written SVG chart kit (lazy chunk ≤ 40 KiB gzip); uPlot removed | Accepted |

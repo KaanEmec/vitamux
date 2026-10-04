@@ -1,92 +1,159 @@
 <!--
-	Settings section: one h1 and links to its pages. The pages set their own <title> and an h2.
-	The shared form and table styles below apply to every page in the section.
+	Settings section: one h1, the pages grouped in a side menu (a scrolling row on narrow screens),
+	the current page's h2, and the page itself: a short intro and a stack of cards
+	(lib/settings/Card.svelte). Pages set their own <title>. The form, table and notice styles
+	below apply to every card in the section.
 -->
 <script lang="ts">
 	import { page } from '$app/state';
+	import { settingsPages } from '#lib/nav.ts';
 
 	let { children } = $props();
 
-	const tabs = [
-		{ href: '/settings', label: 'Profile' },
-		{ href: '/settings/devices', label: 'Devices' },
-		{ href: '/settings/api-keys', label: 'API keys' },
-		{ href: '/settings/ai', label: 'AI providers' },
-		{ href: '/settings/retention', label: 'Retention' },
-		{ href: '/settings/backups', label: 'Backups and export' },
-		{ href: '/settings/security', label: 'Security' },
-		{ href: '/settings/system', label: 'System' }
-	];
-	const current = (href: string) => page.url.pathname.replace(/\/$/, '') === href;
+	const groups = [...new Set(settingsPages.map((p) => p.group))].map((name) => ({ name, items: settingsPages.filter((p) => p.group === name) }));
+	const path = $derived(page.url.pathname.replace(/\/$/, '') || '/');
+	const current = $derived(settingsPages.find((p) => p.href === path));
 </script>
 
 <h1>Settings</h1>
-<nav class="tabs" aria-label="Settings pages">
-	{#each tabs as t (t.href)}
-		<a href={t.href} aria-current={current(t.href) ? 'page' : undefined}>{t.label}</a>
-	{/each}
-</nav>
 
-<div class="settings">
-	{@render children()}
+<div class="layout">
+	<nav class="menu" aria-label="Settings pages">
+		{#each groups as g (g.name)}
+			<div class="group">
+				<p class="group-name" id="settings-group-{g.name}">{g.name}</p>
+				<ul aria-labelledby="settings-group-{g.name}">
+					{#each g.items as p (p.href)}
+						<li><a href={p.href} aria-current={p.href === path ? 'page' : undefined}>{p.label}</a></li>
+					{/each}
+				</ul>
+			</div>
+		{/each}
+	</nav>
+
+	<div class="settings">
+		{#if current}<h2 class="page-title">{current.label}</h2>{/if}
+		{@render children()}
+	</div>
 </div>
 
 <style>
-	.tabs {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-1);
-		margin-bottom: var(--space-5);
-		border-bottom: 1px solid var(--color-border);
-	}
-	.tabs a {
-		padding: var(--space-2) var(--space-4);
-		color: var(--color-text);
-		text-decoration: none;
-		border-bottom: 3px solid transparent;
-	}
-	.tabs a:hover {
-		background: var(--color-surface-2);
-	}
-	.tabs a[aria-current='page'] {
-		font-weight: 600;
-		color: var(--color-accent);
-		border-bottom-color: var(--color-accent);
+	.layout {
+		display: grid;
+		grid-template-columns: 13rem minmax(0, 1fr);
+		gap: var(--space-6);
+		align-items: start;
 	}
 
-	.settings :global(section) {
-		margin-bottom: var(--space-6);
+	.menu {
+		display: grid;
+		gap: var(--space-4);
+	}
+	.group-name {
+		margin: 0 0 var(--space-1);
+		padding: 0 var(--space-3);
+		font-size: var(--text-xs);
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--color-text-faint);
+	}
+	.menu ul {
+		display: grid;
+		gap: 2px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.menu a {
+		display: block;
+		padding: var(--space-2) var(--space-3);
+		font-weight: 500;
+		color: var(--color-text-muted);
+		text-decoration: none;
+		border-radius: var(--radius-sm);
+	}
+	.menu a:hover {
+		color: var(--color-text);
+		background: var(--color-surface-2);
+	}
+	.menu a[aria-current='page'] {
+		font-weight: 600;
+		color: var(--color-text);
+		background: var(--color-selected);
+	}
+
+	@media (max-width: 48rem) {
+		.layout {
+			grid-template-columns: minmax(0, 1fr);
+			gap: var(--space-4);
+		}
+		.menu {
+			display: flex;
+			gap: var(--space-4);
+			padding-bottom: var(--space-1);
+			overflow-x: auto;
+			scrollbar-width: none;
+		}
+		.group {
+			display: flex;
+			flex: none;
+			gap: var(--space-1);
+			align-items: center;
+		}
+		.group-name {
+			padding: 0 var(--space-1);
+		}
+		.menu ul {
+			display: flex;
+		}
+		.menu a {
+			white-space: nowrap;
+		}
+	}
+
+	.settings {
+		display: grid;
+		gap: var(--space-4);
+		min-width: 0;
+	}
+	.page-title {
+		margin: 0;
+		font-size: var(--text-xl);
+		letter-spacing: var(--tracking-tight);
+	}
+	.settings :global(.lede) {
+		max-width: 46rem;
+		margin: calc(-1 * var(--space-2)) 0 0;
+		color: var(--color-text-muted);
+	}
+	.settings :global(.table-wrap) {
+		overflow-x: auto;
 	}
 	.settings :global(table) {
 		width: 100%;
 		border-collapse: collapse;
-		margin-bottom: var(--space-4);
 	}
 	.settings :global(th),
 	.settings :global(td) {
-		padding: var(--space-2) var(--space-3);
+		padding: var(--space-3);
 		text-align: left;
 		vertical-align: top;
 		border-bottom: 1px solid var(--color-border);
 	}
 	.settings :global(thead th) {
-		font-size: var(--text-sm);
+		font-size: var(--text-xs);
+		font-weight: 600;
 		color: var(--color-text-muted);
+	}
+	.settings :global(tbody tr:last-child > *) {
+		border-bottom: 0;
 	}
 	.settings :global(.actions) {
 		display: flex;
 		flex-wrap: wrap;
 		gap: var(--space-2);
 		align-items: center;
-	}
-	.settings :global(.field select),
-	.settings :global(.field textarea) {
-		padding: var(--space-2) var(--space-3);
-		font: inherit;
-		color: var(--color-text);
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-sm);
 	}
 	.settings :global(.check) {
 		display: flex;
@@ -108,9 +175,19 @@
 		margin: var(--space-3) 0;
 		font-family: var(--font-mono);
 		overflow-wrap: anywhere;
-		background: var(--color-surface-2);
+		background: var(--color-inset);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-sm);
+	}
+	.settings :global(.callout) {
+		padding: var(--space-4);
+		margin-bottom: var(--space-4);
+		background: var(--color-inset);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+	}
+	.settings :global(.callout:last-child) {
+		margin-bottom: 0;
 	}
 	.settings :global(.row-form) {
 		display: flex;
@@ -123,7 +200,13 @@
 	}
 	.settings :global(fieldset) {
 		margin: 0 0 var(--space-4);
+		padding: var(--space-3) var(--space-4);
 		border: 1px solid var(--color-border);
-		border-radius: var(--radius-sm);
+		border-radius: var(--radius-md);
+	}
+	.settings :global(legend) {
+		padding: 0 var(--space-2);
+		font-size: var(--text-sm);
+		font-weight: 500;
 	}
 </style>

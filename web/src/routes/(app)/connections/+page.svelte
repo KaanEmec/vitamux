@@ -1,45 +1,96 @@
 <!--
-	Connections: every source with its derived health, the connect wizard, and the outcome of
-	an OAuth round trip (?connected=<provider> or ?auth_error=<code> from the callback).
+	Connections: a card per source (health, last sync, 14-day run strip, fix-it action), the connect
+	wizard, running backfills and the latest runs, and the outcome of an OAuth round trip
+	(?connected=<provider> or ?auth_error=<code> from the callback).
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { api, type Problem } from '#lib/api/client.ts';
-	import HealthBadge from '#lib/components/HealthBadge.svelte';
+	import { api, type Problem, type Schemas } from '#lib/api/client.ts';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
-	import StatusIcon from '#lib/components/StatusIcon.svelte';
-	import UnofficialBadge from '#lib/components/UnofficialBadge.svelte';
+	import StatusIcon, { type Status } from '#lib/components/StatusIcon.svelte';
+	import ConnectionCard from '#lib/connections/ConnectionCard.svelte';
 	import ConnectWizard from '#lib/connections/ConnectWizard.svelte';
+	import DataTable from '#lib/connections/DataTable.svelte';
+	import ProgressBar from '#lib/connections/ProgressBar.svelte';
 	import { loadProviders } from '#lib/connections/providers.svelte.ts';
-	import { ago, authErrors, providerLabel, type Connection } from '#lib/connections/connections.ts';
+	import { alerting, authErrors, elapsed, providerLabel, when, type Connection } from '#lib/connections/connections.ts';
+	import { loadRuns, type Run } from '#lib/connections/runs.ts';
+	import Button from '#lib/ui/Button.svelte';
+	import Chip from '#lib/ui/Chip.svelte';
+	import Icon from '#lib/ui/Icon.svelte';
+	import Skeleton from '#lib/ui/Skeleton.svelte';
 
-	const modes: Record<string, string> = { in_process: 'Server sync', push: 'Push uploads', remote: 'Sidecar' };
+	type Backfill = Schemas['Backfill'];
+
+	// Run outcomes recorded by internal/jobs/runner.go.
+	const outcomes: Record<string, Status> = { succeeded: 'ok', failed: 'error', rescheduled: 'info', lease_expired: 'warn' };
+	const plus = 'M12 5v14 M5 12h14';
+	const latest = 8;
 
 	let connections = $state<Connection[] | null>(null);
 	let problem = $state<Problem | null>(null);
 	let wizard = $state(false);
+	let runs = $state<Record<string, Run[] | null>>({});
+	let backfills = $state<Record<string, Backfill[]>>({});
 
 	const connected = $derived(page.url.searchParams.get('connected'));
 	const authError = $derived(page.url.searchParams.get('auth_error'));
 	const removed = $derived(page.url.searchParams.get('removed'));
+
+	const attention = $derived(connections?.filter((c) => alerting.includes(c.health)).length ?? 0);
+	const healthy = $derived(connections?.filter((c) => c.health === 'ok').length ?? 0);
+	const summary = $derived(
+		connections?.length
+			? `${connections.length} ${connections.length === 1 ? 'source' : 'sources'} · ${healthy} healthy${attention ? ` · ${attention} need${attention === 1 ? 's' : ''} attention` : ''}`
+			: 'Sources send Vitamux your health data.'
+	);
+	const running = $derived(
+		(connections ?? []).flatMap((c) => (backfills[c.id] ?? []).filter((b) => b.status === 'running').map((b) => ({ c, b })))
+	);
+	const recent = $derived(
+		(connections ?? [])
+			.flatMap((c) => (runs[c.id] ?? []).map((r) => ({ c, r })))
+			.sort((a, b) => Date.parse(b.r.started_at) - Date.parse(a.r.started_at))
+			.slice(0, latest)
+	);
+
+	async function loadRunsOf(c: Connection) {
+		runs[c.id] = await loadRuns(c.id);
+	}
 
 	onMount(async () => {
 		void loadProviders();
 		const { data, error } = await api.GET('/api/v1/connections');
 		problem = error ?? null;
 		connections = data?.connections ?? [];
+		for (const c of connections) {
+			void loadRunsOf(c);
+			if (c.mode === 'push') continue;
+			void api.GET('/api/v1/connections/{id}/backfills', { params: { path: { id: c.id } } }).then(({ data }) => {
+				if (data) backfills[c.id] = data.backfills;
+			});
+		}
 	});
 
+	function changed(c: Connection) {
+		connections = connections?.map((x) => (x.id === c.id ? c : x)) ?? null;
+		void loadRunsOf(c);
+	}
+
 	const dismiss = () => goto('/connections', { replace: true, reset: false });
+	const total = (b: Backfill) => b.unit_counts.pending + b.unit_counts.running + b.unit_counts.done + b.unit_counts.failed;
 </script>
 
 <svelte:head><title>Connections · Vitamux</title></svelte:head>
 
 <div class="head">
-	<h1>Connections</h1>
-	<button class="btn primary" type="button" onclick={() => (wizard = true)}>Connect a source</button>
+	<div>
+		<h1>Connections</h1>
+		<p class="muted summary">{summary}</p>
+	</div>
+	<Button variant="primary" onclick={() => (wizard = true)}><Icon d={plus} size={16} />Connect a source</Button>
 </div>
 
 {#if connected}
@@ -61,31 +112,63 @@
 <ProblemAlert {problem} />
 
 {#if connections === null}
-	<p class="muted" role="status">Loading connections…</p>
-{:else if connections.length}
-	<table>
-		<thead>
-			<tr><th scope="col">Source</th><th scope="col">Health</th><th scope="col">Last success</th><th scope="col">Type</th></tr>
-		</thead>
-		<tbody>
-			{#each connections as c (c.id)}
-				<tr>
-					<th scope="row">
-						<a href="/connections/{c.id}">{providerLabel(c.provider)}</a>
-						{#if c.official === false}<UnofficialBadge />{/if}
-					</th>
-					<td>
-						<HealthBadge health={c.health} />
-						{#if c.health_reason}<div class="muted reason">{c.health_reason}</div>{/if}
-					</td>
-					<td>{ago(c.last_success_at)}</td>
-					<td>{modes[c.mode] ?? c.mode}</td>
-				</tr>
+	<Skeleton variant="block" label="Loading connections" />
+{:else}
+	<div class="grid">
+		{#each connections as c (c.id)}
+			<ConnectionCard connection={c} runs={runs[c.id]} onchange={changed} />
+		{/each}
+		<button class="add" type="button" onclick={() => (wizard = true)}>
+			<span class="plus"><Icon d={plus} size={20} /></span>
+			<span class="title">{connections.length ? 'Add a source' : 'Connect your first source'}</span>
+			<span class="muted">Guided setup for Withings, Garmin, WHOOP, Apple Health or any push collector</span>
+		</button>
+	</div>
+
+	<div class="panels">
+		<section class="card backfills" aria-labelledby="backfills-title">
+			<h2 id="backfills-title">Backfill in progress</h2>
+			{#each running as { c, b } (b.id)}
+				<div class="backfill">
+					<div class="line">
+						<span class="name"><a href="/connections/{c.id}?tab=backfills">{providerLabel(c.provider)}</a> · <code>{b.stream}</code></span>
+						<span class="muted">{Math.round((b.unit_counts.done / (total(b) || 1)) * 100)}%</span>
+					</div>
+					<ProgressBar value={b.unit_counts.done} max={total(b)} label="Backfill of {b.stream} for {providerLabel(c.provider)}" />
+					<div class="muted detail">{b.unit_counts.done} of {total(b)} units done{#if b.unit_counts.failed}, {b.unit_counts.failed} failed{/if} · resumes after restarts</div>
+				</div>
+			{:else}
+				<p class="muted">No backfill is running. A backfill fetches history older than the regular sync window.</p>
 			{/each}
-		</tbody>
-	</table>
-{:else if !problem}
-	<p class="muted">No connections yet. Connect a source to start collecting data.</p>
+		</section>
+
+		<section class="runs" aria-labelledby="runs-title">
+			<h2 id="runs-title">Recent sync runs</h2>
+			{#if recent.length}
+				<DataTable label="Recent sync runs">
+					<thead>
+						<tr><th scope="col">Started</th><th scope="col">Source</th><th scope="col">Run</th><th scope="col">Took</th><th scope="col">Result</th></tr>
+					</thead>
+					<tbody>
+						{#each recent as { c, r } (r.id)}
+							<tr>
+								<td class="when">{when(r.started_at)}</td>
+								<td><Chip source={c.provider}>{providerLabel(c.provider)}</Chip></td>
+								<td><code>{r.kind}</code></td>
+								<td>{elapsed(r.started_at, r.finished_at)}</td>
+								<td>
+									<span class="nowrap"><StatusIcon status={r.outcome ? (outcomes[r.outcome] ?? 'info') : 'pending'} /> {r.outcome ?? 'running'}</span>
+									{#if r.error_class}<code class="muted">{r.error_class}</code>{/if}
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</DataTable>
+			{:else}
+				<p class="muted">No runs in the last 14 days.</p>
+			{/if}
+		</section>
+	</div>
 {/if}
 
 {#if wizard}<ConnectWizard onclose={() => (wizard = false)} />{/if}
@@ -94,41 +177,118 @@
 	.head {
 		display: flex;
 		flex-wrap: wrap;
-		gap: var(--space-3);
-		align-items: baseline;
+		gap: var(--space-4);
+		align-items: flex-end;
 		justify-content: space-between;
+		margin-bottom: var(--space-5);
+	}
+	h1 {
+		margin: 0;
+	}
+	.summary {
+		margin: var(--space-1) 0 0;
 	}
 	.banner {
 		display: flex;
 		flex-wrap: wrap;
 		gap: var(--space-2);
 		align-items: center;
-		padding: var(--space-3);
+		padding: var(--space-3) var(--space-4);
 		margin: 0 0 var(--space-4);
 		background: var(--color-surface);
 		border: 1px solid var(--color-ok);
-		border-radius: var(--radius-sm);
+		border-radius: var(--radius-md);
 	}
 	.banner.error {
 		background: var(--color-error-bg);
 		border-color: var(--color-error);
 	}
-	table {
-		width: 100%;
-		border-collapse: collapse;
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+		gap: var(--space-4);
+	}
+	.add {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+		align-items: center;
+		justify-content: center;
+		min-height: 14rem;
+		padding: var(--space-5);
+		font: inherit;
 		font-size: var(--text-sm);
+		text-align: center;
+		color: var(--color-text);
+		background: transparent;
+		border: 1.5px dashed var(--color-border-strong);
+		border-radius: var(--radius-lg);
+		cursor: pointer;
 	}
-	th,
-	td {
-		padding: var(--space-2);
-		border-bottom: 1px solid var(--color-border);
-		text-align: left;
-		vertical-align: top;
+	.add:hover {
+		background: var(--color-surface);
 	}
-	tbody th {
+	.add .muted {
+		max-width: 14rem;
+	}
+	.title {
+		font-size: var(--text-md);
 		font-weight: 600;
 	}
-	.reason {
+	.plus {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.75rem;
+		height: 2.75rem;
+		color: var(--color-link);
+		background: var(--color-surface-2);
+		border-radius: var(--radius-md);
+	}
+	.panels {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-4);
+		margin-top: var(--space-5);
+	}
+	.backfills {
+		display: flex;
+		flex: 1 1 20rem;
+		flex-direction: column;
+		gap: var(--space-3);
+		align-self: flex-start;
+	}
+	.runs {
+		flex: 2 1 32rem;
+		min-width: 0;
+	}
+	h2 {
+		margin: 0;
+		font-size: var(--text-md);
+	}
+	.runs h2 {
+		margin-bottom: var(--space-3);
+	}
+	.backfills p {
+		margin: 0;
+		font-size: var(--text-sm);
+	}
+	.backfill {
+		display: grid;
+		gap: var(--space-2);
+	}
+	.line {
+		display: flex;
+		gap: var(--space-3);
+		justify-content: space-between;
+		font-size: var(--text-sm);
+		font-weight: 600;
+	}
+	.detail {
 		font-size: var(--text-xs);
+	}
+	.when,
+	.nowrap {
+		white-space: nowrap;
 	}
 </style>

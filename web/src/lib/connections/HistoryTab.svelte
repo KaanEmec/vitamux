@@ -3,6 +3,8 @@
 	import { api, type Problem, type Schemas } from '../api/client.ts';
 	import ProblemAlert from '../components/ProblemAlert.svelte';
 	import StatusIcon, { type Status } from '../components/StatusIcon.svelte';
+	import Button from '../ui/Button.svelte';
+	import DataTable from './DataTable.svelte';
 	import { elapsed, when, type Connection } from './connections.ts';
 
 	let { connection }: { connection: Connection } = $props();
@@ -36,7 +38,7 @@
 {#if runs === null}
 	<p class="muted" role="status">Loading history…</p>
 {:else if runs.length}
-	<table>
+	<DataTable label="Runs">
 		<thead>
 			<tr><th scope="col">Started</th><th scope="col">Run</th><th scope="col">Outcome</th><th scope="col">Took</th><th scope="col">Error</th></tr>
 		</thead>
@@ -51,27 +53,15 @@
 				</tr>
 			{/each}
 		</tbody>
-	</table>
+	</DataTable>
 	{#if next}
-		<button class="btn more" type="button" disabled={busy} onclick={() => load(next)}>Load older runs</button>
+		<div class="more"><Button disabled={busy} onclick={() => load(next)}>Load older runs</Button></div>
 	{/if}
 {:else if !problem}
 	<p class="muted">No runs yet.</p>
 {/if}
 
 <style>
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: var(--text-sm);
-	}
-	th,
-	td {
-		padding: var(--space-2);
-		border-bottom: 1px solid var(--color-border);
-		text-align: left;
-		vertical-align: top;
-	}
 	.outcome {
 		white-space: nowrap;
 	}

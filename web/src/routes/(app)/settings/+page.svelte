@@ -8,6 +8,7 @@
 	import { api, fieldErrors, type Problem, type Schemas } from '#lib/api/client.ts';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import TextField from '#lib/components/TextField.svelte';
+	import Card from '#lib/settings/Card.svelte';
 	import { session } from '#lib/session.svelte.ts';
 	import { loadSettings, patchSettings } from '#lib/settings/api.ts';
 	import Notice from '#lib/settings/Notice.svelte';
@@ -118,17 +119,17 @@
 
 <svelte:head><title>Settings · Vitamux</title></svelte:head>
 
-<section aria-labelledby="account">
-	<h2 id="account">Account</h2>
-	<p>Signed in as <strong>{session.user?.username ?? '–'}</strong>.</p>
-</section>
+<p class="lede">The signed-in owner, the time zones your local dates follow, and Withings notifications.</p>
 
-<section aria-labelledby="periods">
-	<h2 id="periods">Timezone periods</h2>
-	<p class="muted">
-		Local dates (days, nights, sleep) follow the timezone in effect when a value was measured. Add a period when you move;
-		changing one recomputes the local dates it covers.
-	</p>
+<Card title="Account" id="account">
+	<p>Signed in as <strong>{session.user?.username ?? '–'}</strong>. Password and two-factor are under <a href="/settings/security">Security</a>.</p>
+</Card>
+
+<Card
+	title="Time zones"
+	id="periods"
+	description="Local dates (days, nights, sleep) follow the timezone in effect when a value was measured. Add a period when you move; changing one recomputes the local dates it covers."
+>
 	{#if notice}<Notice>{notice}</Notice>{/if}
 	<ProblemAlert {problem} fields={['tz', 'valid_from']} />
 
@@ -137,37 +138,39 @@
 	{:else if periods.length === 0}
 		<p class="muted">No timezone periods yet. Add the one you are in now.</p>
 	{:else}
-		<table>
-			<caption class="visually-hidden">Timezone periods, oldest first</caption>
-			<thead>
-				<tr><th scope="col">Timezone</th><th scope="col">From</th><th scope="col">Until</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
-			</thead>
-			<tbody>
-				{#each periods as p (p.id)}
-					<tr>
-						<th scope="row">{p.tz}</th>
-						<td>{zonedLabel(p.valid_from, p.tz)}</td>
-						<td>{p.valid_to ? zonedLabel(p.valid_to, p.tz) : 'Current'}</td>
-						<td>
-							<div class="actions">
-								{#if removing === p.id}
-									<span>Remove {p.tz}?</span>
-									<button class="btn" type="button" disabled={busy} onclick={() => remove(p)}>Confirm remove</button>
-									<button class="btn" type="button" onclick={() => (removing = null)}>Keep</button>
-								{:else}
-									<button class="btn" type="button" onclick={() => edit(p)} aria-label="Edit {p.tz} period">Edit</button>
-									<button class="btn" type="button" onclick={() => (removing = p.id)} aria-label="Remove {p.tz} period">Remove</button>
-								{/if}
-							</div>
-						</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
+		<div class="table-wrap">
+			<table>
+				<caption class="visually-hidden">Timezone periods, oldest first</caption>
+				<thead>
+					<tr><th scope="col">Timezone</th><th scope="col">From</th><th scope="col">Until</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+				</thead>
+				<tbody>
+					{#each periods as p (p.id)}
+						<tr>
+							<th scope="row">{p.tz}</th>
+							<td>{zonedLabel(p.valid_from, p.tz)}</td>
+							<td>{p.valid_to ? zonedLabel(p.valid_to, p.tz) : 'Current'}</td>
+							<td>
+								<div class="actions">
+									{#if removing === p.id}
+										<span>Remove {p.tz}?</span>
+										<button class="btn sm" type="button" disabled={busy} onclick={() => remove(p)}>Confirm remove</button>
+										<button class="btn sm" type="button" onclick={() => (removing = null)}>Keep</button>
+									{:else}
+										<button class="btn sm" type="button" onclick={() => edit(p)} aria-label="Edit {p.tz} period">Edit</button>
+										<button class="btn sm" type="button" onclick={() => (removing = p.id)} aria-label="Remove {p.tz} period">Remove</button>
+									{/if}
+								</div>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	{/if}
 
-	<form onsubmit={submit} aria-labelledby="period-form">
-		<h3 id="period-form">{editing ? 'Change period' : 'Add a period'}</h3>
+	<form class="callout" onsubmit={submit} aria-labelledby="period-form">
+		<h4 id="period-form">{editing ? 'Change period' : 'Add a period'}</h4>
 		<div class="row-form">
 			<TextField label="Timezone" name="tz" bind:value={tz} error={errors.tz} list="zone-names" autocomplete="off" required />
 			<TextField
@@ -188,10 +191,9 @@
 			{#each zones as z (z)}<option value={z}></option>{/each}
 		</datalist>
 	</form>
-</section>
+</Card>
 
-<section aria-labelledby="withings">
-	<h2 id="withings">Withings notifications</h2>
+<Card title="Withings notifications" id="withings">
 	<form onsubmit={saveWithings}>
 		<ProblemAlert problem={withingsProblem} />
 		{#if withingsSaved}<Notice>Saved.</Notice>{/if}
@@ -204,4 +206,11 @@
 		</label>
 		<button class="btn primary" type="submit">Save</button>
 	</form>
-</section>
+</Card>
+
+<style>
+	h4 {
+		margin: 0 0 var(--space-3);
+		font-size: var(--text-md);
+	}
+</style>

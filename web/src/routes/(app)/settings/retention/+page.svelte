@@ -9,6 +9,7 @@
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import TextField from '#lib/components/TextField.svelte';
 	import { loadSettings, patchSettings, type SettingsMap } from '#lib/settings/api.ts';
+	import Card from '#lib/settings/Card.svelte';
 	import Notice from '#lib/settings/Notice.svelte';
 
 	const docDays = 'documents.retention_days';
@@ -149,8 +150,7 @@
 
 <svelte:head><title>Retention · Vitamux</title></svelte:head>
 
-<h2>Retention</h2>
-<p class="muted">
+<p class="lede">
 	Pruned data cannot be recovered. Leave a field empty or at 0 to keep that data. Deletions run in the background after you save.
 </p>
 <ProblemAlert {problem} fields={[docDays, docDelete, rawDays, superseded, idempotency, ...extras.map((x) => x.key)]} />
@@ -159,9 +159,8 @@
 {#if saved === null && !problem}
 	<p class="muted" role="status">Loading settings…</p>
 {:else if saved}
-	<form onsubmit={save} oninput={changed}>
-		<section aria-labelledby="lab-pdfs">
-			<h3 id="lab-pdfs">Lab PDFs</h3>
+	<form class="stack" onsubmit={save} oninput={changed}>
+		<Card title="Lab PDFs" id="lab-pdfs">
 			<TextField
 				label="Delete originals after (days)"
 				name={docDays}
@@ -178,46 +177,45 @@
 				</span>
 			</label>
 			{#if errors[docDelete]}<div class="field"><span class="error">{errors[docDelete]}</span></div>{/if}
-		</section>
+		</Card>
 
-		<section aria-labelledby="raw">
-			<h3 id="raw">Raw provider payloads</h3>
+		<Card title="Raw provider payloads" id="raw" description="Days to keep the original responses per provider. 0 or no row keeps them.">
 			<Notice status="warn">
 				Pruned raw payloads can no longer be reprocessed: normalization fixes and new rules cannot be re-run on them. The
 				server still keeps raw that reprocessing needs.
 			</Notice>
-			<p class="muted">Days to keep the original responses per provider. 0 or no row keeps them.</p>
 			{#if rawRows.length}
-				<table>
-					<caption class="visually-hidden">Raw payload retention per provider</caption>
-					<thead><tr><th scope="col">Provider</th><th scope="col">Days (0 keeps)</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
-					<tbody>
-						{#each rawRows as r, i (r.provider)}
-							<tr>
-								<th scope="row">{r.provider}</th>
-								<td>
-									<div class="field">
-										<label class="visually-hidden" for="raw-{r.provider}">Days to keep raw payloads for {r.provider}</label>
-										<input id="raw-{r.provider}" name="{rawDays}.{r.provider}" bind:value={r.days} inputmode="numeric" aria-invalid={errors[`${rawDays}.${r.provider}`] ? 'true' : undefined} />
-										{#if errors[`${rawDays}.${r.provider}`]}<span class="error">{errors[`${rawDays}.${r.provider}`]}</span>{/if}
-									</div>
-								</td>
-								<td>
-									<button class="btn" type="button" onclick={() => { rawRows.splice(i, 1); changed(); }} aria-label="Stop pruning {r.provider}">Keep all</button>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
+				<div class="table-wrap">
+					<table>
+						<caption class="visually-hidden">Raw payload retention per provider</caption>
+						<thead><tr><th scope="col">Provider</th><th scope="col">Days (0 keeps)</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+						<tbody>
+							{#each rawRows as r, i (r.provider)}
+								<tr>
+									<th scope="row">{r.provider}</th>
+									<td>
+										<div class="field">
+											<label class="visually-hidden" for="raw-{r.provider}">Days to keep raw payloads for {r.provider}</label>
+											<input id="raw-{r.provider}" name="{rawDays}.{r.provider}" bind:value={r.days} inputmode="numeric" aria-invalid={errors[`${rawDays}.${r.provider}`] ? 'true' : undefined} />
+											{#if errors[`${rawDays}.${r.provider}`]}<span class="error">{errors[`${rawDays}.${r.provider}`]}</span>{/if}
+										</div>
+									</td>
+									<td>
+										<button class="btn sm" type="button" onclick={() => { rawRows.splice(i, 1); changed(); }} aria-label="Stop pruning {r.provider}">Keep all</button>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
 			{/if}
 			<div class="row-form">
 				<TextField label="Add a provider" name="new_provider" bind:value={newProvider} hint="Provider code, such as withings." autocomplete="off" />
 				<button class="btn" type="button" onclick={addProvider} disabled={!newProvider.trim()}>Add</button>
 			</div>
-		</section>
+		</Card>
 
-		<section aria-labelledby="other-data">
-			<h3 id="other-data">Replaced and replayed records</h3>
+		<Card title="Replaced and replayed records" id="other-data">
 			<TextField
 				label="Keep superseded rows (days)"
 				name={superseded}
@@ -234,11 +232,10 @@
 				hint="Stored responses for repeated uploads (Idempotency-Key). At least 7; the default is 30."
 				inputmode="numeric"
 			/>
-		</section>
+		</Card>
 
 		{#if extras.length}
-			<section aria-labelledby="other">
-				<h3 id="other">Other settings</h3>
+			<Card title="Other settings" id="other">
 				{#each extras as x (x.key)}
 					{#if typeof x.orig === 'boolean'}
 						<label class="check">
@@ -249,9 +246,16 @@
 						<TextField label={x.key} name={x.key} bind:value={x.text} error={errors[x.key]} />
 					{/if}
 				{/each}
-			</section>
+			</Card>
 		{/if}
 
-		<button class="btn primary" type="submit" disabled={busy}>Save retention</button>
+		<div class="actions"><button class="btn primary" type="submit" disabled={busy}>Save retention</button></div>
 	</form>
 {/if}
+
+<style>
+	.stack {
+		display: grid;
+		gap: var(--space-4);
+	}
+</style>

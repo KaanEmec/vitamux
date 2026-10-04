@@ -34,6 +34,8 @@ func (rt *router) configRoutes() {
 	rt.handle("DELETE /api/v1/timezone-periods/{id}", write, rt.ops.DeleteTimezonePeriod)
 	rt.handle("GET /api/v1/settings", read, rt.ops.GetSettings)
 	rt.handle("PATCH /api/v1/settings", write, rt.ops.UpdateSettings)
+	rt.handle("GET /api/v1/settings/dashboard", read, rt.ops.GetDashboardLayout)
+	rt.handle("PUT /api/v1/settings/dashboard", write, rt.ops.PutDashboardLayout)
 }
 
 func scheduleBody(s dbq.Schedule) oapi.Schedule {

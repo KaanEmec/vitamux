@@ -204,6 +204,57 @@ func (e ConnectionPatchStatus) Valid() bool {
 	}
 }
 
+// Defines values for DashboardCardSize.
+const (
+	L DashboardCardSize = "L"
+	M DashboardCardSize = "M"
+	S DashboardCardSize = "S"
+)
+
+// Valid indicates whether the value is a known member of the DashboardCardSize enum.
+func (e DashboardCardSize) Valid() bool {
+	switch e {
+	case L:
+		return true
+	case M:
+		return true
+	case S:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DashboardLayoutVersion.
+const (
+	DashboardLayoutVersionN1 DashboardLayoutVersion = 1
+)
+
+// Valid indicates whether the value is a known member of the DashboardLayoutVersion enum.
+func (e DashboardLayoutVersion) Valid() bool {
+	switch e {
+	case DashboardLayoutVersionN1:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DashboardLayoutInputVersion.
+const (
+	DashboardLayoutInputVersionN1 DashboardLayoutInputVersion = 1
+)
+
+// Valid indicates whether the value is a known member of the DashboardLayoutInputVersion enum.
+func (e DashboardLayoutInputVersion) Valid() bool {
+	switch e {
+	case DashboardLayoutInputVersionN1:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DocumentStatus.
 const (
 	DocumentStatusConfirmed   DocumentStatus = "confirmed"
@@ -477,6 +528,36 @@ func (e Health) Valid() bool {
 	case HealthPaused:
 		return true
 	case HealthStale:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InventoryItemKind.
+const (
+	InventoryItemKindAnalyte  InventoryItemKind = "analyte"
+	InventoryItemKindEvent    InventoryItemKind = "event"
+	InventoryItemKindGroup    InventoryItemKind = "group"
+	InventoryItemKindMetric   InventoryItemKind = "metric"
+	InventoryItemKindSleep    InventoryItemKind = "sleep"
+	InventoryItemKindWorkouts InventoryItemKind = "workouts"
+)
+
+// Valid indicates whether the value is a known member of the InventoryItemKind enum.
+func (e InventoryItemKind) Valid() bool {
+	switch e {
+	case InventoryItemKindAnalyte:
+		return true
+	case InventoryItemKindEvent:
+		return true
+	case InventoryItemKindGroup:
+		return true
+	case InventoryItemKindMetric:
+		return true
+	case InventoryItemKindSleep:
+		return true
+	case InventoryItemKindWorkouts:
 		return true
 	default:
 		return false
@@ -813,6 +894,24 @@ func (e ResolvedPointStatus) Valid() bool {
 	}
 }
 
+// Defines values for ResolvedTrendGrain.
+const (
+	ResolvedTrendGrainMonth ResolvedTrendGrain = "month"
+	ResolvedTrendGrainWeek  ResolvedTrendGrain = "week"
+)
+
+// Valid indicates whether the value is a known member of the ResolvedTrendGrain enum.
+func (e ResolvedTrendGrain) Valid() bool {
+	switch e {
+	case ResolvedTrendGrainMonth:
+		return true
+	case ResolvedTrendGrainWeek:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ResolvedValueStatus.
 const (
 	ResolvedValueStatusCalculated ResolvedValueStatus = "calculated"
@@ -954,6 +1053,69 @@ func (e SleepStageStage) Valid() bool {
 	}
 }
 
+// Defines values for SourceSeriesAggregation.
+const (
+	SourceSeriesAggregationAdditive     SourceSeriesAggregation = "additive"
+	SourceSeriesAggregationDailySummary SourceSeriesAggregation = "daily_summary"
+	SourceSeriesAggregationIntensive    SourceSeriesAggregation = "intensive"
+	SourceSeriesAggregationLatest       SourceSeriesAggregation = "latest"
+)
+
+// Valid indicates whether the value is a known member of the SourceSeriesAggregation enum.
+func (e SourceSeriesAggregation) Valid() bool {
+	switch e {
+	case SourceSeriesAggregationAdditive:
+		return true
+	case SourceSeriesAggregationDailySummary:
+		return true
+	case SourceSeriesAggregationIntensive:
+		return true
+	case SourceSeriesAggregationLatest:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SourceSeriesGrain.
+const (
+	SourceSeriesGrainDay  SourceSeriesGrain = "day"
+	SourceSeriesGrainHour SourceSeriesGrain = "hour"
+)
+
+// Valid indicates whether the value is a known member of the SourceSeriesGrain enum.
+func (e SourceSeriesGrain) Valid() bool {
+	switch e {
+	case SourceSeriesGrainDay:
+		return true
+	case SourceSeriesGrainHour:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SourceSeriesSourceRuleStatus.
+const (
+	SourceSeriesSourceRuleStatusExcluded  SourceSeriesSourceRuleStatus = "excluded"
+	SourceSeriesSourceRuleStatusNotInRule SourceSeriesSourceRuleStatus = "not_in_rule"
+	SourceSeriesSourceRuleStatusUsed      SourceSeriesSourceRuleStatus = "used"
+)
+
+// Valid indicates whether the value is a known member of the SourceSeriesSourceRuleStatus enum.
+func (e SourceSeriesSourceRuleStatus) Valid() bool {
+	switch e {
+	case SourceSeriesSourceRuleStatusExcluded:
+		return true
+	case SourceSeriesSourceRuleStatusNotInRule:
+		return true
+	case SourceSeriesSourceRuleStatusUsed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for StreamStatus.
 const (
 	StreamStatusDegraded StreamStatus = "degraded"
@@ -966,6 +1128,33 @@ func (e StreamStatus) Valid() bool {
 	case StreamStatusDegraded:
 		return true
 	case StreamStatusOk:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SummaryPointStatus.
+const (
+	SummaryPointStatusCalculated SummaryPointStatus = "calculated"
+	SummaryPointStatusDirect     SummaryPointStatus = "direct"
+	SummaryPointStatusFallback   SummaryPointStatus = "fallback"
+	SummaryPointStatusNoData     SummaryPointStatus = "no_data"
+	SummaryPointStatusOverridden SummaryPointStatus = "overridden"
+)
+
+// Valid indicates whether the value is a known member of the SummaryPointStatus enum.
+func (e SummaryPointStatus) Valid() bool {
+	switch e {
+	case SummaryPointStatusCalculated:
+		return true
+	case SummaryPointStatusDirect:
+		return true
+	case SummaryPointStatusFallback:
+		return true
+	case SummaryPointStatusNoData:
+		return true
+	case SummaryPointStatusOverridden:
 		return true
 	default:
 		return false
@@ -1071,6 +1260,33 @@ func (e DeleteDocumentParamsDerived) Valid() bool {
 	case DeleteDocumentParamsDerivedDelete:
 		return true
 	case DeleteDocumentParamsDerivedKeep:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListEventsParamsInclude.
+const (
+	ListEventsParamsIncludeDeleted    ListEventsParamsInclude = "deleted"
+	ListEventsParamsIncludeProvenance ListEventsParamsInclude = "provenance"
+	ListEventsParamsIncludeSegments   ListEventsParamsInclude = "segments"
+	ListEventsParamsIncludeStages     ListEventsParamsInclude = "stages"
+	ListEventsParamsIncludeSuperseded ListEventsParamsInclude = "superseded"
+)
+
+// Valid indicates whether the value is a known member of the ListEventsParamsInclude enum.
+func (e ListEventsParamsInclude) Valid() bool {
+	switch e {
+	case ListEventsParamsIncludeDeleted:
+		return true
+	case ListEventsParamsIncludeProvenance:
+		return true
+	case ListEventsParamsIncludeSegments:
+		return true
+	case ListEventsParamsIncludeStages:
+		return true
+	case ListEventsParamsIncludeSuperseded:
 		return true
 	default:
 		return false
@@ -1197,6 +1413,24 @@ func (e GetProvenanceParamsEntity) Valid() bool {
 	}
 }
 
+// Defines values for GetResolvedTrendParamsGrain.
+const (
+	GetResolvedTrendParamsGrainMonth GetResolvedTrendParamsGrain = "month"
+	GetResolvedTrendParamsGrainWeek  GetResolvedTrendParamsGrain = "week"
+)
+
+// Valid indicates whether the value is a known member of the GetResolvedTrendParamsGrain enum.
+func (e GetResolvedTrendParamsGrain) Valid() bool {
+	switch e {
+	case GetResolvedTrendParamsGrainMonth:
+		return true
+	case GetResolvedTrendParamsGrainWeek:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListSleepParamsInclude.
 const (
 	ListSleepParamsIncludeDeleted    ListSleepParamsInclude = "deleted"
@@ -1245,6 +1479,24 @@ func (e GetSleepParamsInclude) Valid() bool {
 	case GetSleepParamsIncludeStages:
 		return true
 	case GetSleepParamsIncludeSuperseded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetSourceSeriesParamsGrain.
+const (
+	GetSourceSeriesParamsGrainDay  GetSourceSeriesParamsGrain = "day"
+	GetSourceSeriesParamsGrainHour GetSourceSeriesParamsGrain = "hour"
+)
+
+// Valid indicates whether the value is a known member of the GetSourceSeriesParamsGrain enum.
+func (e GetSourceSeriesParamsGrain) Valid() bool {
+	switch e {
+	case GetSourceSeriesParamsGrainDay:
+		return true
+	case GetSourceSeriesParamsGrainHour:
 		return true
 	default:
 		return false
@@ -1349,6 +1601,13 @@ type AnalyteAliasInput struct {
 	// Analyte Analyte code from docs/analytes.md.
 	Analyte string `json:"analyte"`
 	Label   string `json:"label"`
+}
+
+// AnalyteRef defines model for AnalyteRef.
+type AnalyteRef struct {
+	CanonicalUnit *string `json:"canonical_unit,omitempty"`
+	Code          string  `json:"code"`
+	Name          string  `json:"name"`
 }
 
 // AnchorReset defines model for AnchorReset.
@@ -1570,6 +1829,42 @@ type CreatedAPIKey struct {
 	Token string `json:"token"`
 }
 
+// DashboardCard defines model for DashboardCard.
+type DashboardCard struct {
+	Hidden bool `json:"hidden"`
+
+	// Metric Catalogue code or rule family (sleep, blood_pressure).
+	Metric string            `json:"metric"`
+	Size   DashboardCardSize `json:"size"`
+}
+
+// DashboardCardSize defines model for DashboardCard.Size.
+type DashboardCardSize string
+
+// DashboardLayout defines model for DashboardLayout.
+type DashboardLayout struct {
+	Cards []DashboardCard `json:"cards"`
+
+	// IsDefault No layout is stored; this is the curated default.
+	IsDefault bool                   `json:"is_default"`
+	Version   DashboardLayoutVersion `json:"version"`
+}
+
+// DashboardLayoutVersion defines model for DashboardLayout.Version.
+type DashboardLayoutVersion int
+
+// DashboardLayoutInput defines model for DashboardLayoutInput.
+type DashboardLayoutInput struct {
+	// Cards In display order; a metric at most once.
+	Cards []DashboardCard `json:"cards"`
+
+	// Version Layout schema version.
+	Version DashboardLayoutInputVersion `json:"version"`
+}
+
+// DashboardLayoutInputVersion Layout schema version.
+type DashboardLayoutInputVersion int
+
 // DataOrigin An app that recorded data inside a transport provider, e.g. a HealthKit bundle id.
 type DataOrigin struct {
 	// CreatedAt When the origin was first seen.
@@ -1664,6 +1959,14 @@ type DrilldownSource struct {
 
 // DrilldownSourceRuleStatus defines model for DrilldownSource.RuleStatus.
 type DrilldownSourceRuleStatus string
+
+// EventType defines model for EventType.
+type EventType struct {
+	Code string `json:"code"`
+
+	// Levels Level words the event may carry; empty when it has none.
+	Levels []string `json:"levels"`
+}
 
 // Export defines model for Export.
 type Export struct {
@@ -1895,12 +2198,98 @@ type GroupPage struct {
 // Health Derived health (internal/connectors/health.go).
 type Health string
 
+// HealthEvent A typed event (docs/architecture/metric-catalog.md#events).
+type HealthEvent struct {
+	Code string `json:"code"`
+
+	// Context Source metadata as given.
+	Context   json.RawMessage    `json:"context"`
+	EndAt     *time.Time         `json:"end_at"`
+	ID        openapi_types.UUID `json:"id"`
+	Level     *string            `json:"level"`
+	LocalDate openapi_types.Date `json:"local_date"`
+
+	// Provenance Version and provenance columns of a canonical row; GET /provenance/{entity}/{id} has the full trace.
+	Provenance   RecordProvenance `json:"provenance"`
+	QualityFlags int              `json:"quality_flags"`
+
+	// Source Where a canonical row came from. device and origin are the values the device and origin filters take.
+	Source      SourceRef `json:"source"`
+	StartAt     time.Time `json:"start_at"`
+	TzOffsetMin *int      `json:"tz_offset_min"`
+	Value       *float64  `json:"value"`
+}
+
+// HealthEventPage defines model for HealthEventPage.
+type HealthEventPage struct {
+	Events  []HealthEvent `json:"events"`
+	HasMore bool          `json:"has_more"`
+
+	// NextCursor Present when has_more is true.
+	NextCursor *string `json:"next_cursor,omitempty"`
+}
+
 // HourPick defines model for HourPick.
 type HourPick struct {
 	Group  *string   `json:"group,omitempty"`
 	Start  time.Time `json:"start"`
 	Status string    `json:"status"`
 	Value  *float64  `json:"value,omitempty"`
+}
+
+// Inventory defines model for Inventory.
+type Inventory struct {
+	// AggregatesPending Days wait for the rebuild job, so metric counts, days and sources may lag.
+	AggregatesPending bool            `json:"aggregates_pending"`
+	Items             []InventoryItem `json:"items"`
+}
+
+// InventoryItem defines model for InventoryItem.
+type InventoryItem struct {
+	Analyte *AnalyteRef `json:"analyte,omitempty"`
+
+	// Code Metric code, group kind (bp_reading, body_composition), event code, sleep, workouts or analyte code.
+	Code string `json:"code"`
+
+	// Components The metric codes of a group kind.
+	Components *[]string `json:"components,omitempty"`
+
+	// Count Active records; for metrics the daily values plus the rows in the hourly aggregates, where an interval counts once per hour it touches.
+	Count int64 `json:"count"`
+
+	// Days Local dates with data.
+	Days    int         `json:"days"`
+	Devices []DeviceRef `json:"devices"`
+	Event   *EventType  `json:"event,omitempty"`
+
+	// FirstAt Absent for lab results without a collection time.
+	FirstAt   *time.Time         `json:"first_at,omitempty"`
+	FirstDate openapi_types.Date `json:"first_date"`
+	Kind      InventoryItemKind  `json:"kind"`
+	LastAt    *time.Time         `json:"last_at,omitempty"`
+	LastDate  openapi_types.Date `json:"last_date"`
+
+	// Latest The newest record: a metric's row, a group's components, an event's value or level, the newest sleep session's asleep seconds, a workout's sport, or a lab result's canonical value (else its printed number) with its printed text.
+	Latest *InventoryLatest `json:"latest,omitempty"`
+
+	// Metric Catalogue metric (docs/architecture/metric-catalog.md) with what a rule for it may use.
+	Metric    *Metric     `json:"metric,omitempty"`
+	Origins   []OriginRef `json:"origins"`
+	Providers []string    `json:"providers"`
+}
+
+// InventoryItemKind defines model for InventoryItem.Kind.
+type InventoryItemKind string
+
+// InventoryLatest The newest record: a metric's row, a group's components, an event's value or level, the newest sleep session's asleep seconds, a workout's sport, or a lab result's canonical value (else its printed number) with its printed text.
+type InventoryLatest struct {
+	At         *time.Time          `json:"at,omitempty"`
+	Components *map[string]float64 `json:"components,omitempty"`
+	Level      *string             `json:"level,omitempty"`
+	LocalDate  openapi_types.Date  `json:"local_date"`
+	Text       *string             `json:"text,omitempty"`
+	Unit       *string             `json:"unit,omitempty"`
+	Value      *float64            `json:"value,omitempty"`
 }
 
 // Job A background job (docs/architecture/reliability.md#job-queue).
@@ -2117,6 +2506,22 @@ type MetricStrategies string
 
 // MetricWindows defines model for Metric.Windows.
 type MetricWindows string
+
+// MetricSummary defines model for MetricSummary.
+type MetricSummary struct {
+	Metric string   `json:"metric"`
+	Rule   *RuleRef `json:"rule,omitempty"`
+
+	// Sparkline The 30 local dates ending at date, oldest first.
+	Sparkline []SummaryPoint `json:"sparkline"`
+
+	// Stats Rollups of the 7, 30 and 90 local dates ending at date, in that order.
+	Stats []Rollup `json:"stats"`
+
+	// Unit Canonical unit; absent for a family.
+	Unit  *string       `json:"unit,omitempty"`
+	Value ResolvedValue `json:"value"`
+}
 
 // OriginRef defines model for OriginRef.
 type OriginRef struct {
@@ -2573,6 +2978,32 @@ type ResolvedSource struct {
 	Provider     string     `json:"provider"`
 }
 
+// ResolvedSummary defines model for ResolvedSummary.
+type ResolvedSummary struct {
+	Date    openapi_types.Date       `json:"date"`
+	Metrics map[string]MetricSummary `json:"metrics"`
+
+	// Timezone IANA timezone in effect on date; empty while no timezone period is configured.
+	Timezone string `json:"timezone"`
+}
+
+// ResolvedTrend defines model for ResolvedTrend.
+type ResolvedTrend struct {
+	Buckets   []Rollup           `json:"buckets"`
+	EndDate   openapi_types.Date `json:"end_date"`
+	Grain     ResolvedTrendGrain `json:"grain"`
+	Metric    string             `json:"metric"`
+	Rule      *RuleRef           `json:"rule,omitempty"`
+	StartDate openapi_types.Date `json:"start_date"`
+	Timezone  string             `json:"timezone"`
+
+	// Unit Canonical unit; absent for a family.
+	Unit *string `json:"unit,omitempty"`
+}
+
+// ResolvedTrendGrain defines model for ResolvedTrend.Grain.
+type ResolvedTrendGrain string
+
 // ResolvedValue defines model for ResolvedValue.
 type ResolvedValue struct {
 	ComputedAt *time.Time `json:"computed_at,omitempty"`
@@ -2651,6 +3082,37 @@ type ResolvedWorkouts struct {
 	Workouts []ResolvedWorkout `json:"workouts"`
 }
 
+// Rollup Plain statistics of the resolved daily values of the local dates start_date through end_date, for display; not a resolution strategy. Values of windows still open are left out.
+type Rollup struct {
+	// Components For a rule family, the statistics of each catalogue code instead.
+	Components *map[string]RollupValues `json:"components,omitempty"`
+
+	// Coverage n / days.
+	Coverage float64 `json:"coverage"`
+
+	// Days Local dates in the period.
+	Days    int                `json:"days"`
+	EndDate openapi_types.Date `json:"end_date"`
+	Max     *float64           `json:"max,omitempty"`
+	Mean    *float64           `json:"mean,omitempty"`
+	Min     *float64           `json:"min,omitempty"`
+
+	// N Dates with a resolved value.
+	N         int                `json:"n"`
+	StartDate openapi_types.Date `json:"start_date"`
+
+	// Sum Additive metrics only.
+	Sum *float64 `json:"sum,omitempty"`
+}
+
+// RollupValues defines model for RollupValues.
+type RollupValues struct {
+	Max  *float64 `json:"max,omitempty"`
+	Mean *float64 `json:"mean,omitempty"`
+	Min  *float64 `json:"min,omitempty"`
+	N    int      `json:"n"`
+}
+
 // Rule A rule version, the owner's or a built-in (docs/architecture/resolution.md#rule-specification).
 type Rule = RuleVersion
 
@@ -2686,7 +3148,7 @@ type RuleVersion struct {
 	// CreatedBy Audit actor; null for built-ins.
 	CreatedBy *string `json:"created_by"`
 
-	// Metric Catalogue code or rule family (sleep
+	// Metric Catalogue code or rule family (sleep, blood_pressure).
 	Metric string  `json:"metric"`
 	Note   *string `json:"note"`
 
@@ -2893,6 +3355,23 @@ type SourceDevice struct {
 	Provider string  `json:"provider"`
 }
 
+// SourcePoint One source's values in a local hour or day: additive metrics the intervals pro-rated to it (sum), the others the mean of its 5-minute bucket means with min and max.
+type SourcePoint struct {
+	// DailyValue The value the source reported for the whole day (day grain).
+	DailyValue *float64           `json:"daily_value,omitempty"`
+	LocalDate  openapi_types.Date `json:"local_date"`
+	Max        *float64           `json:"max,omitempty"`
+	Mean       *float64           `json:"mean,omitempty"`
+	Min        *float64           `json:"min,omitempty"`
+
+	// N Samples, plus intervals once per hour they touch.
+	N int `json:"n"`
+
+	// Start The hour's start (hour grain).
+	Start *time.Time `json:"start,omitempty"`
+	Sum   *float64   `json:"sum,omitempty"`
+}
+
 // SourceRef Where a canonical row came from. device and origin are the values the device and origin filters take.
 type SourceRef struct {
 	ConnectionID ConnectionID `json:"connection_id"`
@@ -2907,6 +3386,42 @@ type SourceRef struct {
 	// Provider Provider code.
 	Provider string `json:"provider"`
 }
+
+// SourceSeries defines model for SourceSeries.
+type SourceSeries struct {
+	Aggregation SourceSeriesAggregation `json:"aggregation"`
+
+	// Behind Days of the metric in the range wait for the rebuild job.
+	Behind   bool                 `json:"behind"`
+	Grain    SourceSeriesGrain    `json:"grain"`
+	Metric   string               `json:"metric"`
+	Rule     *RuleRef             `json:"rule,omitempty"`
+	Sources  []SourceSeriesSource `json:"sources"`
+	Timezone string               `json:"timezone"`
+	Unit     string               `json:"unit"`
+}
+
+// SourceSeriesAggregation defines model for SourceSeries.Aggregation.
+type SourceSeriesAggregation string
+
+// SourceSeriesGrain defines model for SourceSeries.Grain.
+type SourceSeriesGrain string
+
+// SourceSeriesSource defines model for SourceSeriesSource.
+type SourceSeriesSource struct {
+	ConnectionID ConnectionID `json:"connection_id"`
+	Device       *DeviceRef   `json:"device,omitempty"`
+
+	// Group The rule group the source belongs to; null when excluded or outside the rule.
+	Group      *string                      `json:"group"`
+	Origin     *OriginRef                   `json:"origin,omitempty"`
+	Points     []SourcePoint                `json:"points"`
+	Provider   string                       `json:"provider"`
+	RuleStatus SourceSeriesSourceRuleStatus `json:"rule_status"`
+}
+
+// SourceSeriesSourceRuleStatus defines model for SourceSeriesSource.RuleStatus.
+type SourceSeriesSourceRuleStatus string
 
 // SourcesDrilldown defines model for SourcesDrilldown.
 type SourcesDrilldown struct {
@@ -2976,6 +3491,19 @@ type Stream struct {
 
 // StreamStatus defines model for Stream.Status.
 type StreamStatus string
+
+// SummaryPoint defines model for SummaryPoint.
+type SummaryPoint struct {
+	LocalDate openapi_types.Date `json:"local_date"`
+	Partial   *bool              `json:"partial,omitempty"`
+	Status    SummaryPointStatus `json:"status"`
+
+	// Value Same shape as ResolvedValue.value.
+	Value interface{} `json:"value,omitempty"`
+}
+
+// SummaryPointStatus defines model for SummaryPoint.Status.
+type SummaryPointStatus string
 
 // SyncQueued defines model for SyncQueued.
 type SyncQueued struct {
@@ -3337,6 +3865,48 @@ type CreateExtractionParams struct {
 	IdempotencyKey *IdempotencyKeyOptional `json:"Idempotency-Key,omitempty"`
 }
 
+// ListEventsParams defines parameters for ListEvents.
+type ListEventsParams struct {
+	// Start Inclusive start instant (RFC 3339 with offset).
+	Start *Start `form:"start,omitempty" json:"start,omitempty"`
+
+	// End Exclusive end instant (RFC 3339 with offset).
+	End *End `form:"end,omitempty" json:"end,omitempty"`
+
+	// StartDate First local date, inclusive.
+	StartDate *StartDate `form:"start_date,omitempty" json:"start_date,omitempty"`
+
+	// EndDate Last local date, inclusive.
+	EndDate *EndDate `form:"end_date,omitempty" json:"end_date,omitempty"`
+
+	// Code Event code; repeatable.
+	Code *[]string `form:"code,omitempty" json:"code,omitempty"`
+
+	// Provider Provider code; repeatable.
+	Provider *ProviderFilter `form:"provider,omitempty" json:"provider,omitempty"`
+
+	// Connection Connection id; repeatable.
+	Connection *ConnectionFilter `form:"connection,omitempty" json:"connection,omitempty"`
+
+	// Device Device id (dev_…); repeatable.
+	Device *DeviceFilter `form:"device,omitempty" json:"device,omitempty"`
+
+	// Origin Origin key (e.g. a HealthKit bundle id); repeatable.
+	Origin *OriginFilter `form:"origin,omitempty" json:"origin,omitempty"`
+
+	// Include Comma-separated expansions.
+	Include *Include `form:"include,omitempty" json:"include,omitempty"`
+
+	// Limit Page size. Endpoints may cap it lower than 10,000.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque next_cursor from the previous page of the same query.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListEventsParamsInclude defines parameters for ListEvents.
+type ListEventsParamsInclude string
+
 // CreateExportParams defines parameters for CreateExport.
 type CreateExportParams struct {
 	// IdempotencyKey Replays the stored response for the same request; a different request with the same key is 409.
@@ -3530,6 +4100,31 @@ type GetResolvedSleepParams struct {
 	EndDate EndDateRequired `form:"end_date" json:"end_date"`
 }
 
+// GetResolvedSummaryParams defines parameters for GetResolvedSummary.
+type GetResolvedSummaryParams struct {
+	// Metrics Comma-separated metric codes or rule families (repeating the parameter also works); at most 20.
+	Metrics []string `form:"metrics" json:"metrics"`
+
+	// Date Local date; today in the owner's timezone when omitted.
+	Date *openapi_types.Date `form:"date,omitempty" json:"date,omitempty"`
+}
+
+// GetResolvedTrendParams defines parameters for GetResolvedTrend.
+type GetResolvedTrendParams struct {
+	// Metric Catalogue code or rule family (sleep, blood_pressure).
+	Metric string `form:"metric" json:"metric"`
+
+	// StartDate First local date, inclusive.
+	StartDate StartDateRequired `form:"start_date" json:"start_date"`
+
+	// EndDate Last local date, inclusive.
+	EndDate EndDateRequired              `form:"end_date" json:"end_date"`
+	Grain   *GetResolvedTrendParamsGrain `form:"grain,omitempty" json:"grain,omitempty"`
+}
+
+// GetResolvedTrendParamsGrain defines parameters for GetResolvedTrend.
+type GetResolvedTrendParamsGrain string
+
 // GetResolvedWorkoutsParams defines parameters for GetResolvedWorkouts.
 type GetResolvedWorkoutsParams struct {
 	// StartDate First local date, inclusive.
@@ -3598,6 +4193,18 @@ type GetSleepParams struct {
 
 // GetSleepParamsInclude defines parameters for GetSleep.
 type GetSleepParamsInclude string
+
+// GetSourceSeriesParams defines parameters for GetSourceSeries.
+type GetSourceSeriesParams struct {
+	// Metric Catalogue code.
+	Metric string                      `form:"metric" json:"metric"`
+	Start  time.Time                   `form:"start" json:"start"`
+	End    time.Time                   `form:"end" json:"end"`
+	Grain  *GetSourceSeriesParamsGrain `form:"grain,omitempty" json:"grain,omitempty"`
+}
+
+// GetSourceSeriesParamsGrain defines parameters for GetSourceSeries.
+type GetSourceSeriesParamsGrain string
 
 // ListWorkoutsParams defines parameters for ListWorkouts.
 type ListWorkoutsParams struct {
@@ -3732,6 +4339,9 @@ type UpdateScheduleJSONRequestBody = SchedulePatch
 
 // UpdateSettingsJSONRequestBody defines body for UpdateSettings for application/json ContentType.
 type UpdateSettingsJSONRequestBody = Settings
+
+// PutDashboardLayoutJSONRequestBody defines body for PutDashboardLayout for application/json ContentType.
+type PutDashboardLayoutJSONRequestBody = DashboardLayoutInput
 
 // CreateTimezonePeriodJSONRequestBody defines body for CreateTimezonePeriod for application/json ContentType.
 type CreateTimezonePeriodJSONRequestBody = TimezonePeriodInput
@@ -4023,6 +4633,12 @@ type ServerInterface interface {
 	// GetDocumentFile Download the original PDF
 	// (GET /api/v1/documents/{id}/file)
 	GetDocumentFile(w http.ResponseWriter, r *http.Request, id ID)
+	// ListEventTypes List health event types
+	// (GET /api/v1/event-types)
+	ListEventTypes(w http.ResponseWriter, r *http.Request)
+	// ListEvents List health events
+	// (GET /api/v1/events)
+	ListEvents(w http.ResponseWriter, r *http.Request, params ListEventsParams)
 	// CreateExport Start an export job
 	// (POST /api/v1/exports)
 	CreateExport(w http.ResponseWriter, r *http.Request, params CreateExportParams)
@@ -4050,6 +4666,9 @@ type ServerInterface interface {
 	// ListGroups List measurement groups (blood-pressure readings, weigh-ins)
 	// (GET /api/v1/groups)
 	ListGroups(w http.ResponseWriter, r *http.Request, params ListGroupsParams)
+	// GetInventory Everything stored, per metric, group kind, event code, sleep, workouts and lab analyte
+	// (GET /api/v1/inventory)
+	GetInventory(w http.ResponseWriter, r *http.Request)
 	// ListJobs List background jobs
 	// (GET /api/v1/jobs)
 	ListJobs(w http.ResponseWriter, r *http.Request, params ListJobsParams)
@@ -4110,6 +4729,12 @@ type ServerInterface interface {
 	// GetResolvedSleep Resolved sleep episodes per night
 	// (GET /api/v1/resolved/sleep)
 	GetResolvedSleep(w http.ResponseWriter, r *http.Request, params GetResolvedSleepParams)
+	// GetResolvedSummary Dashboard summary per metric
+	// (GET /api/v1/resolved/summary)
+	GetResolvedSummary(w http.ResponseWriter, r *http.Request, params GetResolvedSummaryParams)
+	// GetResolvedTrend Weekly or monthly rollups of resolved daily values
+	// (GET /api/v1/resolved/trend)
+	GetResolvedTrend(w http.ResponseWriter, r *http.Request, params GetResolvedTrendParams)
 	// GetResolvedWorkouts Resolved workouts
 	// (GET /api/v1/resolved/workouts)
 	GetResolvedWorkouts(w http.ResponseWriter, r *http.Request, params GetResolvedWorkoutsParams)
@@ -4140,6 +4765,12 @@ type ServerInterface interface {
 	// UpdateSettings Change settings (merge patch)
 	// (PATCH /api/v1/settings)
 	UpdateSettings(w http.ResponseWriter, r *http.Request)
+	// GetDashboardLayout Dashboard layout
+	// (GET /api/v1/settings/dashboard)
+	GetDashboardLayout(w http.ResponseWriter, r *http.Request)
+	// PutDashboardLayout Replace the dashboard layout
+	// (PUT /api/v1/settings/dashboard)
+	PutDashboardLayout(w http.ResponseWriter, r *http.Request)
 	// ListSleep List sleep sessions
 	// (GET /api/v1/sleep)
 	ListSleep(w http.ResponseWriter, r *http.Request, params ListSleepParams)
@@ -4149,6 +4780,9 @@ type ServerInterface interface {
 	// ListSourceDevices List the devices measurements were recorded on (not the paired apps)
 	// (GET /api/v1/source-devices)
 	ListSourceDevices(w http.ResponseWriter, r *http.Request)
+	// GetSourceSeries Per-source series of one metric from the hourly aggregates
+	// (GET /api/v1/sources/series)
+	GetSourceSeries(w http.ResponseWriter, r *http.Request, params GetSourceSeriesParams)
 	// GetSystemStatus Instance diagnostics
 	// (GET /api/v1/system/status)
 	GetSystemStatus(w http.ResponseWriter, r *http.Request)
@@ -5479,6 +6113,196 @@ func (siw *ServerInterfaceWrapper) GetDocumentFile(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// ListEventTypes operation middleware
+func (siw *ServerInterfaceWrapper) ListEventTypes(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListEventTypes(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListEvents operation middleware
+func (siw *ServerInterfaceWrapper) ListEvents(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListEventsParams
+
+	// ------------- Optional query parameter "start" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "start", r.URL.Query(), &params.Start, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "start"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "start", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "end" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "end", r.URL.Query(), &params.End, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "end"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "end", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "start_date" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "start_date", r.URL.Query(), &params.StartDate, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "start_date"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "start_date", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "end_date" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "end_date", r.URL.Query(), &params.EndDate, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "end_date"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "end_date", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "code" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "code", r.URL.Query(), &params.Code, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "code"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "code", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "provider" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "provider", r.URL.Query(), &params.Provider, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "provider"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "connection" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection", r.URL.Query(), &params.Connection, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "device" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "device", r.URL.Query(), &params.Device, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "device"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "device", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "origin" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "origin", r.URL.Query(), &params.Origin, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "origin"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "origin", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "include" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "include", r.URL.Query(), &params.Include, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListEvents(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateExport operation middleware
 func (siw *ServerInterfaceWrapper) CreateExport(w http.ResponseWriter, r *http.Request) {
 
@@ -5882,6 +6706,20 @@ func (siw *ServerInterfaceWrapper) ListGroups(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListGroups(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetInventory operation middleware
+func (siw *ServerInterfaceWrapper) GetInventory(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetInventory(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6748,6 +7586,124 @@ func (siw *ServerInterfaceWrapper) GetResolvedSleep(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetResolvedSummary operation middleware
+func (siw *ServerInterfaceWrapper) GetResolvedSummary(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetResolvedSummaryParams
+
+	// ------------- Required query parameter "metrics" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, true, "metrics", r.URL.Query(), &params.Metrics, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "metrics"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "metrics", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "date" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "date", r.URL.Query(), &params.Date, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "date"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "date", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetResolvedSummary(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetResolvedTrend operation middleware
+func (siw *ServerInterfaceWrapper) GetResolvedTrend(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetResolvedTrendParams
+
+	// ------------- Required query parameter "metric" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "metric", r.URL.Query(), &params.Metric, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "metric"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "metric", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "start_date" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "start_date", r.URL.Query(), &params.StartDate, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "start_date"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "start_date", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "end_date" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "end_date", r.URL.Query(), &params.EndDate, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "end_date"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "end_date", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "grain" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "grain", r.URL.Query(), &params.Grain, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "grain"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "grain", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetResolvedTrend(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetResolvedWorkouts operation middleware
 func (siw *ServerInterfaceWrapper) GetResolvedWorkouts(w http.ResponseWriter, r *http.Request) {
 
@@ -7024,6 +7980,34 @@ func (siw *ServerInterfaceWrapper) UpdateSettings(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// GetDashboardLayout operation middleware
+func (siw *ServerInterfaceWrapper) GetDashboardLayout(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDashboardLayout(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutDashboardLayout operation middleware
+func (siw *ServerInterfaceWrapper) PutDashboardLayout(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutDashboardLayout(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListSleep operation middleware
 func (siw *ServerInterfaceWrapper) ListSleep(w http.ResponseWriter, r *http.Request) {
 
@@ -7234,6 +8218,78 @@ func (siw *ServerInterfaceWrapper) ListSourceDevices(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListSourceDevices(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSourceSeries operation middleware
+func (siw *ServerInterfaceWrapper) GetSourceSeries(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetSourceSeriesParams
+
+	// ------------- Required query parameter "metric" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "metric", r.URL.Query(), &params.Metric, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "metric"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "metric", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "start" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "start", r.URL.Query(), &params.Start, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "start"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "start", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "end" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "end", r.URL.Query(), &params.End, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "end"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "end", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "grain" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "grain", r.URL.Query(), &params.Grain, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "grain"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "grain", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSourceSeries(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -7785,6 +8841,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/metrics", wrapper.ListMetrics)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/metrics/{code}", wrapper.GetMetric)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/event-types", wrapper.ListEventTypes)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/inventory", wrapper.GetInventory)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/events", wrapper.ListEvents)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/sources/series", wrapper.GetSourceSeries)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/measurements", wrapper.ListMeasurements)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/measurements/manual", wrapper.CreateManualMeasurement)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/groups", wrapper.ListGroups)
@@ -7800,6 +8860,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/resolved/workouts", wrapper.GetResolvedWorkouts)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/resolved/{metric}/{window_key}/sources", wrapper.GetResolvedSources)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/resolution/preview", wrapper.PreviewResolution)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/resolved/summary", wrapper.GetResolvedSummary)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/resolved/trend", wrapper.GetResolvedTrend)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/rules", wrapper.ListRules)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/rules/{metric}/versions", wrapper.ListRuleVersions)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/rules/{metric}/versions", wrapper.CreateRuleVersion)
@@ -7872,6 +8934,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/api-keys/{id}", wrapper.RevokeAPIKey)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/settings", wrapper.GetSettings)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/settings", wrapper.UpdateSettings)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/settings/dashboard", wrapper.GetDashboardLayout)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/settings/dashboard", wrapper.PutDashboardLayout)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/timezone-periods", wrapper.ListTimezonePeriods)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/timezone-periods", wrapper.CreateTimezonePeriod)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/timezone-periods/{id}", wrapper.DeleteTimezonePeriod)
@@ -11178,6 +12242,125 @@ func (response GetDocumentFile503ApplicationProblemPlusJSONResponse) VisitGetDoc
 	return err
 }
 
+type ListEventTypesRequestObject struct {
+}
+
+type ListEventTypesResponseObject interface {
+	VisitListEventTypesResponse(w http.ResponseWriter) error
+}
+
+type ListEventTypes200JSONResponse struct {
+	EventTypes []EventType `json:"event_types"`
+}
+
+func (response ListEventTypes200JSONResponse) VisitListEventTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListEventTypes401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response ListEventTypes401ApplicationProblemPlusJSONResponse) VisitListEventTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListEventTypes403ApplicationProblemPlusJSONResponse Problem
+
+func (response ListEventTypes403ApplicationProblemPlusJSONResponse) VisitListEventTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListEventsRequestObject struct {
+	Params ListEventsParams
+}
+
+type ListEventsResponseObject interface {
+	VisitListEventsResponse(w http.ResponseWriter) error
+}
+
+type ListEvents200JSONResponse HealthEventPage
+
+func (response ListEvents200JSONResponse) VisitListEventsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListEvents401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response ListEvents401ApplicationProblemPlusJSONResponse) VisitListEventsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListEvents403ApplicationProblemPlusJSONResponse Problem
+
+func (response ListEvents403ApplicationProblemPlusJSONResponse) VisitListEventsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListEvents422ApplicationProblemPlusJSONResponse Problem
+
+func (response ListEvents422ApplicationProblemPlusJSONResponse) VisitListEventsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateExportRequestObject struct {
 	Params CreateExportParams
 	Body   *CreateExportJSONRequestBody
@@ -11863,6 +13046,71 @@ func (response ListGroups422ApplicationProblemPlusJSONResponse) VisitListGroupsR
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInventoryRequestObject struct {
+}
+
+type GetInventoryResponseObject interface {
+	VisitGetInventoryResponse(w http.ResponseWriter) error
+}
+
+type GetInventory200JSONResponse Inventory
+
+func (response GetInventory200JSONResponse) VisitGetInventoryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInventory401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response GetInventory401ApplicationProblemPlusJSONResponse) VisitGetInventoryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInventory403ApplicationProblemPlusJSONResponse Problem
+
+func (response GetInventory403ApplicationProblemPlusJSONResponse) VisitGetInventoryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInventory503ApplicationProblemPlusJSONResponse Problem
+
+func (response GetInventory503ApplicationProblemPlusJSONResponse) VisitGetInventoryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -13296,6 +14544,138 @@ func (response GetResolvedSleep422ApplicationProblemPlusJSONResponse) VisitGetRe
 	return err
 }
 
+type GetResolvedSummaryRequestObject struct {
+	Params GetResolvedSummaryParams
+}
+
+type GetResolvedSummaryResponseObject interface {
+	VisitGetResolvedSummaryResponse(w http.ResponseWriter) error
+}
+
+type GetResolvedSummary200JSONResponse ResolvedSummary
+
+func (response GetResolvedSummary200JSONResponse) VisitGetResolvedSummaryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetResolvedSummary401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response GetResolvedSummary401ApplicationProblemPlusJSONResponse) VisitGetResolvedSummaryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetResolvedSummary403ApplicationProblemPlusJSONResponse Problem
+
+func (response GetResolvedSummary403ApplicationProblemPlusJSONResponse) VisitGetResolvedSummaryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetResolvedSummary422ApplicationProblemPlusJSONResponse Problem
+
+func (response GetResolvedSummary422ApplicationProblemPlusJSONResponse) VisitGetResolvedSummaryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetResolvedTrendRequestObject struct {
+	Params GetResolvedTrendParams
+}
+
+type GetResolvedTrendResponseObject interface {
+	VisitGetResolvedTrendResponse(w http.ResponseWriter) error
+}
+
+type GetResolvedTrend200JSONResponse ResolvedTrend
+
+func (response GetResolvedTrend200JSONResponse) VisitGetResolvedTrendResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetResolvedTrend401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response GetResolvedTrend401ApplicationProblemPlusJSONResponse) VisitGetResolvedTrendResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetResolvedTrend403ApplicationProblemPlusJSONResponse Problem
+
+func (response GetResolvedTrend403ApplicationProblemPlusJSONResponse) VisitGetResolvedTrendResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetResolvedTrend422ApplicationProblemPlusJSONResponse Problem
+
+func (response GetResolvedTrend422ApplicationProblemPlusJSONResponse) VisitGetResolvedTrendResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetResolvedWorkoutsRequestObject struct {
 	Params GetResolvedWorkoutsParams
 }
@@ -14049,6 +15429,123 @@ func (response UpdateSettings503ApplicationProblemPlusJSONResponse) VisitUpdateS
 	return err
 }
 
+type GetDashboardLayoutRequestObject struct {
+}
+
+type GetDashboardLayoutResponseObject interface {
+	VisitGetDashboardLayoutResponse(w http.ResponseWriter) error
+}
+
+type GetDashboardLayout200JSONResponse DashboardLayout
+
+func (response GetDashboardLayout200JSONResponse) VisitGetDashboardLayoutResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDashboardLayout401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response GetDashboardLayout401ApplicationProblemPlusJSONResponse) VisitGetDashboardLayoutResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDashboardLayout403ApplicationProblemPlusJSONResponse Problem
+
+func (response GetDashboardLayout403ApplicationProblemPlusJSONResponse) VisitGetDashboardLayoutResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutDashboardLayoutRequestObject struct {
+	Body *PutDashboardLayoutJSONRequestBody
+}
+
+type PutDashboardLayoutResponseObject interface {
+	VisitPutDashboardLayoutResponse(w http.ResponseWriter) error
+}
+
+type PutDashboardLayout200JSONResponse DashboardLayout
+
+func (response PutDashboardLayout200JSONResponse) VisitPutDashboardLayoutResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutDashboardLayout401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response PutDashboardLayout401ApplicationProblemPlusJSONResponse) VisitPutDashboardLayoutResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutDashboardLayout403ApplicationProblemPlusJSONResponse Problem
+
+func (response PutDashboardLayout403ApplicationProblemPlusJSONResponse) VisitPutDashboardLayoutResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutDashboardLayout422ApplicationProblemPlusJSONResponse Problem
+
+func (response PutDashboardLayout422ApplicationProblemPlusJSONResponse) VisitPutDashboardLayoutResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListSleepRequestObject struct {
 	Params ListSleepParams
 }
@@ -14245,6 +15742,72 @@ func (response ListSourceDevices403ApplicationProblemPlusJSONResponse) VisitList
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSourceSeriesRequestObject struct {
+	Params GetSourceSeriesParams
+}
+
+type GetSourceSeriesResponseObject interface {
+	VisitGetSourceSeriesResponse(w http.ResponseWriter) error
+}
+
+type GetSourceSeries200JSONResponse SourceSeries
+
+func (response GetSourceSeries200JSONResponse) VisitGetSourceSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSourceSeries401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response GetSourceSeries401ApplicationProblemPlusJSONResponse) VisitGetSourceSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSourceSeries403ApplicationProblemPlusJSONResponse Problem
+
+func (response GetSourceSeries403ApplicationProblemPlusJSONResponse) VisitGetSourceSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSourceSeries422ApplicationProblemPlusJSONResponse Problem
+
+func (response GetSourceSeries422ApplicationProblemPlusJSONResponse) VisitGetSourceSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -15037,6 +16600,12 @@ type StrictServerInterface interface {
 	// GetDocumentFile Download the original PDF
 	// (GET /api/v1/documents/{id}/file)
 	GetDocumentFile(ctx context.Context, request GetDocumentFileRequestObject) (GetDocumentFileResponseObject, error)
+	// ListEventTypes List health event types
+	// (GET /api/v1/event-types)
+	ListEventTypes(ctx context.Context, request ListEventTypesRequestObject) (ListEventTypesResponseObject, error)
+	// ListEvents List health events
+	// (GET /api/v1/events)
+	ListEvents(ctx context.Context, request ListEventsRequestObject) (ListEventsResponseObject, error)
 	// CreateExport Start an export job
 	// (POST /api/v1/exports)
 	CreateExport(ctx context.Context, request CreateExportRequestObject) (CreateExportResponseObject, error)
@@ -15064,6 +16633,9 @@ type StrictServerInterface interface {
 	// ListGroups List measurement groups (blood-pressure readings, weigh-ins)
 	// (GET /api/v1/groups)
 	ListGroups(ctx context.Context, request ListGroupsRequestObject) (ListGroupsResponseObject, error)
+	// GetInventory Everything stored, per metric, group kind, event code, sleep, workouts and lab analyte
+	// (GET /api/v1/inventory)
+	GetInventory(ctx context.Context, request GetInventoryRequestObject) (GetInventoryResponseObject, error)
 	// ListJobs List background jobs
 	// (GET /api/v1/jobs)
 	ListJobs(ctx context.Context, request ListJobsRequestObject) (ListJobsResponseObject, error)
@@ -15124,6 +16696,12 @@ type StrictServerInterface interface {
 	// GetResolvedSleep Resolved sleep episodes per night
 	// (GET /api/v1/resolved/sleep)
 	GetResolvedSleep(ctx context.Context, request GetResolvedSleepRequestObject) (GetResolvedSleepResponseObject, error)
+	// GetResolvedSummary Dashboard summary per metric
+	// (GET /api/v1/resolved/summary)
+	GetResolvedSummary(ctx context.Context, request GetResolvedSummaryRequestObject) (GetResolvedSummaryResponseObject, error)
+	// GetResolvedTrend Weekly or monthly rollups of resolved daily values
+	// (GET /api/v1/resolved/trend)
+	GetResolvedTrend(ctx context.Context, request GetResolvedTrendRequestObject) (GetResolvedTrendResponseObject, error)
 	// GetResolvedWorkouts Resolved workouts
 	// (GET /api/v1/resolved/workouts)
 	GetResolvedWorkouts(ctx context.Context, request GetResolvedWorkoutsRequestObject) (GetResolvedWorkoutsResponseObject, error)
@@ -15154,6 +16732,12 @@ type StrictServerInterface interface {
 	// UpdateSettings Change settings (merge patch)
 	// (PATCH /api/v1/settings)
 	UpdateSettings(ctx context.Context, request UpdateSettingsRequestObject) (UpdateSettingsResponseObject, error)
+	// GetDashboardLayout Dashboard layout
+	// (GET /api/v1/settings/dashboard)
+	GetDashboardLayout(ctx context.Context, request GetDashboardLayoutRequestObject) (GetDashboardLayoutResponseObject, error)
+	// PutDashboardLayout Replace the dashboard layout
+	// (PUT /api/v1/settings/dashboard)
+	PutDashboardLayout(ctx context.Context, request PutDashboardLayoutRequestObject) (PutDashboardLayoutResponseObject, error)
 	// ListSleep List sleep sessions
 	// (GET /api/v1/sleep)
 	ListSleep(ctx context.Context, request ListSleepRequestObject) (ListSleepResponseObject, error)
@@ -15163,6 +16747,9 @@ type StrictServerInterface interface {
 	// ListSourceDevices List the devices measurements were recorded on (not the paired apps)
 	// (GET /api/v1/source-devices)
 	ListSourceDevices(ctx context.Context, request ListSourceDevicesRequestObject) (ListSourceDevicesResponseObject, error)
+	// GetSourceSeries Per-source series of one metric from the hourly aggregates
+	// (GET /api/v1/sources/series)
+	GetSourceSeries(ctx context.Context, request GetSourceSeriesRequestObject) (GetSourceSeriesResponseObject, error)
 	// GetSystemStatus Instance diagnostics
 	// (GET /api/v1/system/status)
 	GetSystemStatus(ctx context.Context, request GetSystemStatusRequestObject) (GetSystemStatusResponseObject, error)
@@ -16433,6 +18020,56 @@ func (sh *strictHandler) GetDocumentFile(w http.ResponseWriter, r *http.Request,
 	}
 }
 
+// ListEventTypes operation middleware
+func (sh *strictHandler) ListEventTypes(w http.ResponseWriter, r *http.Request) {
+	var request ListEventTypesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListEventTypes(ctx, request.(ListEventTypesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListEventTypes")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListEventTypesResponseObject); ok {
+		if err := validResponse.VisitListEventTypesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListEvents operation middleware
+func (sh *strictHandler) ListEvents(w http.ResponseWriter, r *http.Request, params ListEventsParams) {
+	var request ListEventsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListEvents(ctx, request.(ListEventsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListEvents")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListEventsResponseObject); ok {
+		if err := validResponse.VisitListEventsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // CreateExport operation middleware
 func (sh *strictHandler) CreateExport(w http.ResponseWriter, r *http.Request, params CreateExportParams) {
 	var request CreateExportRequestObject
@@ -16674,6 +18311,30 @@ func (sh *strictHandler) ListGroups(w http.ResponseWriter, r *http.Request, para
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListGroupsResponseObject); ok {
 		if err := validResponse.VisitListGroupsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetInventory operation middleware
+func (sh *strictHandler) GetInventory(w http.ResponseWriter, r *http.Request) {
+	var request GetInventoryRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetInventory(ctx, request.(GetInventoryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetInventory")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetInventoryResponseObject); ok {
+		if err := validResponse.VisitGetInventoryResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -17225,6 +18886,58 @@ func (sh *strictHandler) GetResolvedSleep(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// GetResolvedSummary operation middleware
+func (sh *strictHandler) GetResolvedSummary(w http.ResponseWriter, r *http.Request, params GetResolvedSummaryParams) {
+	var request GetResolvedSummaryRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetResolvedSummary(ctx, request.(GetResolvedSummaryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetResolvedSummary")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetResolvedSummaryResponseObject); ok {
+		if err := validResponse.VisitGetResolvedSummaryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetResolvedTrend operation middleware
+func (sh *strictHandler) GetResolvedTrend(w http.ResponseWriter, r *http.Request, params GetResolvedTrendParams) {
+	var request GetResolvedTrendRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetResolvedTrend(ctx, request.(GetResolvedTrendRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetResolvedTrend")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetResolvedTrendResponseObject); ok {
+		if err := validResponse.VisitGetResolvedTrendResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetResolvedWorkouts operation middleware
 func (sh *strictHandler) GetResolvedWorkouts(w http.ResponseWriter, r *http.Request, params GetResolvedWorkoutsParams) {
 	var request GetResolvedWorkoutsRequestObject
@@ -17509,6 +19222,61 @@ func (sh *strictHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+// GetDashboardLayout operation middleware
+func (sh *strictHandler) GetDashboardLayout(w http.ResponseWriter, r *http.Request) {
+	var request GetDashboardLayoutRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetDashboardLayout(ctx, request.(GetDashboardLayoutRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetDashboardLayout")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetDashboardLayoutResponseObject); ok {
+		if err := validResponse.VisitGetDashboardLayoutResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PutDashboardLayout operation middleware
+func (sh *strictHandler) PutDashboardLayout(w http.ResponseWriter, r *http.Request) {
+	var request PutDashboardLayoutRequestObject
+
+	var body PutDashboardLayoutJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutDashboardLayout(ctx, request.(PutDashboardLayoutRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutDashboardLayout")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutDashboardLayoutResponseObject); ok {
+		if err := validResponse.VisitPutDashboardLayoutResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListSleep operation middleware
 func (sh *strictHandler) ListSleep(w http.ResponseWriter, r *http.Request, params ListSleepParams) {
 	var request ListSleepRequestObject
@@ -17579,6 +19347,32 @@ func (sh *strictHandler) ListSourceDevices(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListSourceDevicesResponseObject); ok {
 		if err := validResponse.VisitListSourceDevicesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSourceSeries operation middleware
+func (sh *strictHandler) GetSourceSeries(w http.ResponseWriter, r *http.Request, params GetSourceSeriesParams) {
+	var request GetSourceSeriesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSourceSeries(ctx, request.(GetSourceSeriesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSourceSeries")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSourceSeriesResponseObject); ok {
+		if err := validResponse.VisitGetSourceSeriesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -8,6 +8,8 @@
 	import HealthBadge from '../components/HealthBadge.svelte';
 	import Modal from '../components/Modal.svelte';
 	import ProblemAlert from '../components/ProblemAlert.svelte';
+	import Button from '../ui/Button.svelte';
+	import DataTable from './DataTable.svelte';
 	import { ago, every, when, type Connection } from './connections.ts';
 
 	let { connection }: { connection: Connection } = $props();
@@ -48,7 +50,7 @@
 {#if streams === null}
 	<p class="muted" role="status">Loading streams…</p>
 {:else if streams.length}
-	<table>
+	<DataTable label="Streams">
 		<thead>
 			<tr>
 				<th scope="col">Stream</th><th scope="col">Health</th><th scope="col">Newest data</th><th scope="col">Cursor</th>
@@ -72,13 +74,13 @@
 					</td>
 					<td>
 						{#if s.has_cursor && connection.mode !== 'push'}
-							<button class="btn" type="button" onclick={() => (resetting = s.name)}>Reset cursor<span class="visually-hidden"> of {s.name}</span></button>
+							<Button size="sm" onclick={() => (resetting = s.name)}>Reset cursor<span class="visually-hidden"> of {s.name}</span></Button>
 						{/if}
 					</td>
 				</tr>
 			{/each}
 		</tbody>
-	</table>
+	</DataTable>
 {:else if !problem}
 	<p class="muted">No streams yet; they appear after the first sync.</p>
 {/if}
@@ -86,23 +88,11 @@
 {#if resetting}
 	<Modal title="Reset the cursor of {resetting}?" onclose={() => (resetting = null)}>
 		<p>The next sync fetches this stream again from the connector's initial window. Stored data stays, and records fetched again are deduplicated.</p>
-		<button class="btn primary" type="button" disabled={busy} onclick={reset}>Reset cursor</button>
+		<Button variant="primary" disabled={busy} onclick={reset}>Reset cursor</Button>
 	</Modal>
 {/if}
 
 <style>
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: var(--text-sm);
-	}
-	th,
-	td {
-		padding: var(--space-2);
-		border-bottom: 1px solid var(--color-border);
-		text-align: left;
-		vertical-align: top;
-	}
 	.reason {
 		font-size: var(--text-xs);
 	}

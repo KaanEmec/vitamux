@@ -7,6 +7,8 @@
 	import { api, type Problem, type Schemas } from '../api/client.ts';
 	import ProblemAlert from '../components/ProblemAlert.svelte';
 	import StatusIcon from '../components/StatusIcon.svelte';
+	import Button from '../ui/Button.svelte';
+	import DataTable from './DataTable.svelte';
 	import DeleteDialog from './DeleteDialog.svelte';
 	import { every, providerLabel, span, when, type Connection } from './connections.ts';
 
@@ -78,16 +80,16 @@
 <ProblemAlert {problem} />
 {#if message}<p class="done" role="status"><StatusIcon status="ok" /> {message}</p>{/if}
 
-<section aria-labelledby="sync-state">
+<section class="card" aria-labelledby="sync-state">
 	<h2 id="sync-state">Syncing</h2>
 	{#if connection.status === 'paused'}
 		<p>Scheduled and manual syncs are paused. Data already collected stays available.</p>
-		<button class="btn primary" type="button" disabled={busy} onclick={() => setPaused(false)}>Resume syncing</button>
+		<Button variant="primary" disabled={busy} onclick={() => setPaused(false)}>Resume syncing</Button>
 	{:else if canPause}
 		<p>Pausing stops scheduled syncs until you resume; nothing is deleted.</p>
-		<button class="btn" type="button" disabled={busy} onclick={() => setPaused(true)}>Pause syncing</button>
+		<Button disabled={busy} onclick={() => setPaused(true)}>Pause syncing</Button>
 	{:else if connection.status === 'needs_reauth'}
-		<p class="muted">Reauthorize this connection on the Overview tab to resume syncing.</p>
+		<p class="muted">Use Reauthorize at the top of this page to resume syncing.</p>
 	{:else}
 		<p class="muted">This connection is {connection.status}; connect the account again from Connections to resume.</p>
 	{/if}
@@ -98,7 +100,7 @@
 	{#if schedules === null}
 		<p class="muted" role="status">Loading schedules…</p>
 	{:else if schedules.length}
-		<table>
+		<DataTable label="Schedules">
 			<thead>
 				<tr><th scope="col">Stream</th><th scope="col">Mode</th><th scope="col">Interval</th><th scope="col">Enabled</th><th scope="col">Next run</th></tr>
 			</thead>
@@ -128,42 +130,43 @@
 					</tr>
 				{/each}
 			</tbody>
-		</table>
+		</DataTable>
 	{:else}
 		<p class="muted">No schedules.</p>
 	{/if}
 </section>
 
-<section aria-labelledby="remove">
+<section class="card" aria-labelledby="remove">
 	<h2 id="remove">Remove</h2>
 	<p>Disconnect {providerLabel(connection.provider)} and keep its data, or delete the connection with everything it collected.</p>
-	<button class="btn" type="button" onclick={() => (removing = true)}>Remove connection…</button>
+	<Button variant="danger" onclick={() => (removing = true)}>Remove connection…</Button>
 </section>
 
 {#if removing}<DeleteDialog {connection} onclose={() => (removing = false)} ondeleted={deleted} />{/if}
 
 <style>
 	section {
-		margin-bottom: var(--space-6);
+		margin-bottom: var(--space-4);
+	}
+	h2 {
+		margin: 0 0 var(--space-2);
+		font-size: var(--text-md);
+	}
+	section p {
+		margin: 0 0 var(--space-3);
 	}
 	.done {
 		display: flex;
 		gap: var(--space-2);
 		align-items: center;
 	}
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: var(--text-sm);
-	}
-	th,
-	td {
-		padding: var(--space-2);
-		border-bottom: 1px solid var(--color-border);
-		text-align: left;
-	}
 	select {
+		min-height: var(--control-h-sm);
+		padding: 0 var(--space-2);
 		font: inherit;
-		padding: var(--space-1) var(--space-2);
+		color: var(--color-text);
+		background: var(--color-inset);
+		border: 1px solid var(--color-border-strong);
+		border-radius: var(--radius-sm);
 	}
 </style>

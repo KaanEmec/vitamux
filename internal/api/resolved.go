@@ -41,6 +41,8 @@ func (rt *router) resolvedRoutes() {
 	rt.handle("GET /api/v1/resolved/workouts", read, rt.ops.GetResolvedWorkouts)
 	rt.handle("GET /api/v1/resolved/{metric}/{window_key}/sources", read, rt.ops.GetResolvedSources)
 	rt.handle("POST /api/v1/resolution/preview", read, rt.ops.PreviewResolution)
+	rt.handle("GET /api/v1/resolved/summary", read, joinRepeated("metrics", rt.ops.GetResolvedSummary))
+	rt.handle("GET /api/v1/resolved/trend", read, rt.ops.GetResolvedTrend)
 }
 
 const (
@@ -464,11 +466,9 @@ func (o *owner) GetResolvedDaily(ctx context.Context, req oapi.GetResolvedDailyR
 	if err != nil {
 		return nil, err
 	}
-	var metrics []string
-	for _, m := range ptrVal(req.Params.Metrics) {
-		if m = strings.TrimSpace(m); m != "" && !slices.Contains(metrics, m) {
-			metrics = append(metrics, m)
-		}
+	metrics, err := metricList(ptrVal(req.Params.Metrics))
+	if err != nil {
+		return nil, err
 	}
 	user := auth.PrincipalFrom(ctx).UserID
 	if len(metrics) == 0 {
@@ -478,11 +478,6 @@ func (o *owner) GetResolvedDaily(ctx context.Context, req oapi.GetResolvedDailyR
 		}
 		for _, v := range set {
 			metrics = append(metrics, v.Metric)
-		}
-	}
-	for _, m := range metrics {
-		if !resolvable(m) {
-			return nil, problemErr(CodeValidationFailed, "unknown metric", FieldError{Pointer: "/metrics", Detail: "no such metric: " + strconv.Quote(m)})
 		}
 	}
 	var out oapi.GetResolvedDaily200JSONResponse

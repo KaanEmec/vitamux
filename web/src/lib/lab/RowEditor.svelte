@@ -14,12 +14,25 @@
 
 	let { row, runId, onsaved }: { row: Row; runId: string; onsaved: (row: Row) => void } = $props();
 
-	const textFields = [
+	let valueInput = $state<HTMLInputElement>();
+	/** The keyboard flow's E: put the cursor in the printed value. */
+	export function edit() {
+		valueInput?.focus();
+		valueInput?.select();
+	}
+	/** The keyboard flow's Enter: accept the row as read, with any edits made so far. */
+	export function accept() {
+		if (!busy) void send('accept');
+	}
+
+	const printed = [
 		['analyte_label', 'Label as printed'],
 		['value_text', 'Value as printed'],
 		['unit_text', 'Unit as printed'],
 		['reference_range_text', 'Range as printed'],
-		['printed_flag', 'Flag as printed'],
+		['printed_flag', 'Flag as printed']
+	] as const;
+	const report = [
 		['collected_at', 'Collected'],
 		['reported_at', 'Reported'],
 		['specimen_type', 'Specimen'],
@@ -30,7 +43,7 @@
 		['ref_low', 'Range low'],
 		['ref_high', 'Range high']
 	] as const;
-	type Key = (typeof textFields)[number][0] | (typeof numberFields)[number][0] | 'comparator' | 'analyte';
+	type Key = (typeof printed)[number][0] | (typeof report)[number][0] | (typeof numberFields)[number][0] | 'comparator' | 'analyte';
 	const hints: Partial<Record<Key, string>> = {
 		unit_text: 'Leave empty to confirm the value as unitless.',
 		collected_at: 'YYYY-MM-DD or YYYY-MM-DDTHH:MM, local time as printed.',
@@ -122,6 +135,9 @@
 		<h3>Row {row.index + 1}{#if row.page}, page {row.page}{/if}</h3>
 		<span class="state"><StatusIcon status={rowStatus[row.review_status].status} /> {rowStatus[row.review_status].label}</span>
 	</div>
+	<p class="meta muted">
+		Confidence {row.confidence.toFixed(2)}, an extractor hint only · {notes.length ? `${notes.length} check${notes.length === 1 ? '' : 's'} to compare with the PDF` : 'no checks'}
+	</p>
 
 	{#if notes.length}
 		<ul class="notes" aria-label="Checks for this row">
@@ -134,9 +150,15 @@
 	<ProblemAlert {problem} fields={Object.keys(form)} />
 
 	<div class="grid">
-		{#each textFields as [key, label] (key)}
-			<TextField {label} name={key} bind:value={form[key]} error={errors[key]} hint={hints[key]} autocomplete="off" />
+		{#each printed as [key, label] (key)}
+			{#if key === 'value_text'}
+				<TextField {label} name={key} bind:value={form[key]} bind:input={valueInput} error={errors[key]} hint={hints[key]} autocomplete="off" />
+			{:else}
+				<TextField {label} name={key} bind:value={form[key]} error={errors[key]} hint={hints[key]} autocomplete="off" />
+			{/if}
 		{/each}
+	</div>
+	<div class="grid">
 		{#each numberFields as [key, label] (key)}
 			<TextField {label} name={key} bind:value={form[key]} error={errors[key]} inputmode="decimal" autocomplete="off" />
 		{/each}
@@ -164,12 +186,17 @@
 			{#if offered}
 				<p class="offer">
 					Label alias match: <code>{offered}</code>
-					<button class="btn" type="button" onclick={() => (form.analyte = offered ?? '')}>Use {offered}</button>
+					<button class="btn sm" type="button" onclick={() => (form.analyte = offered ?? '')}>Use {offered}</button>
 				</p>
 			{:else if row.suggested_analyte}
 				<p class="offer muted">From a label alias match; not final until you accept.</p>
 			{/if}
 		</div>
+	</div>
+	<div class="grid">
+		{#each report as [key, label] (key)}
+			<TextField {label} name={key} bind:value={form[key]} error={errors[key]} hint={hints[key]} autocomplete="off" />
+		{/each}
 	</div>
 
 	<div class="actions">
@@ -199,10 +226,10 @@
 
 <style>
 	.editor {
-		padding: var(--space-4);
+		padding: var(--space-5);
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);
-		border-radius: var(--radius-md);
+		border-radius: var(--radius-lg);
 	}
 	.head {
 		display: flex;
@@ -210,42 +237,51 @@
 		align-items: baseline;
 		justify-content: space-between;
 	}
+	.head h3 {
+		margin: 0;
+		font-size: var(--text-lg);
+	}
 	.state {
 		display: inline-flex;
 		gap: var(--space-1);
 		align-items: center;
+		font-size: var(--text-sm);
+	}
+	.meta {
+		margin: var(--space-1) 0 var(--space-3);
+		font-size: var(--text-sm);
 	}
 	.notes {
+		display: grid;
+		gap: var(--space-1);
 		margin: 0 0 var(--space-3);
-		padding: 0;
+		padding: var(--space-3);
 		list-style: none;
+		background: var(--color-warn-bg);
+		border-radius: var(--radius-sm);
 	}
 	.notes li {
 		display: flex;
 		gap: var(--space-2);
 		align-items: flex-start;
+		font-size: var(--text-sm);
 	}
 	.notes :global(.status-icon) {
-		margin-top: 0.3em;
+		margin-top: 0.2em;
 	}
 	.evidence {
-		margin: 0 0 var(--space-3);
+		margin: 0 0 var(--space-4);
+		padding: var(--space-2) var(--space-3);
 		font-family: var(--font-mono);
 		font-size: var(--text-sm);
+		background: var(--color-inset);
+		border-radius: var(--radius-sm);
 	}
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
 		gap: 0 var(--space-4);
 		align-items: start;
-	}
-	select {
-		padding: var(--space-2) var(--space-3);
-		font: inherit;
-		color: var(--color-text);
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-sm);
 	}
 	.offer {
 		display: flex;
@@ -259,9 +295,13 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: var(--space-2);
+		padding-top: var(--space-2);
 	}
 	.trail {
 		margin: var(--space-2) 0 0;
 		font-size: var(--text-sm);
+	}
+	details {
+		margin-top: var(--space-4);
 	}
 </style>

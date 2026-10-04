@@ -7,6 +7,7 @@
 	import type { Problem } from '#lib/api/client.ts';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import { loadSettings, patchSettings, type SettingsMap } from '#lib/settings/api.ts';
+	import Card from '#lib/settings/Card.svelte';
 	import Notice from '#lib/settings/Notice.svelte';
 
 	const providers = [
@@ -56,12 +57,12 @@
 
 <svelte:head><title>AI providers · Vitamux</title></svelte:head>
 
-<section aria-labelledby="ai">
-	<h2 id="ai">AI providers</h2>
-	<p class="muted">
-		Lab PDFs can be read by an external AI provider that extracts the printed rows for you to review. Nothing is sent
-		until you consent for a specific document; enabling a provider here only lets you pick it.
-	</p>
+<p class="lede">
+	Lab PDFs can be read by an external AI provider that extracts the printed rows for you to review. Nothing is sent
+	until you consent for a specific document; enabling a provider here only lets you pick it.
+</p>
+
+<Card title="Providers for lab extraction" id="ai" description="Each document asks for consent again, naming the provider and model; there is no standing consent.">
 	<ProblemAlert {problem} />
 	{#if done}<Notice>Saved.</Notice>{/if}
 
@@ -80,8 +81,7 @@
 					</span>
 				</label>
 			{/each}
-			<p class="muted">Each document asks for consent again; there is no standing consent.</p>
 			<button class="btn primary" type="submit" disabled={busy}>Save</button>
 		</form>
 	{/if}
-</section>
+</Card>

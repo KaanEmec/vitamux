@@ -8,7 +8,7 @@
 <main class="error-page">
 	<h1><StatusIcon status="error" size={22} /> {page.status === 404 ? 'Page not found' : 'Something went wrong'}</h1>
 	{#if page.error?.message && page.status !== 404}<p>{page.error.message}</p>{/if}
-	<p><a href="/">Back to Today</a></p>
+	<p><a href="/">Back to the dashboard</a></p>
 </main>
 
 <style>

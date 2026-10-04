@@ -184,7 +184,7 @@ export function fromSpec(r: Rule): Form {
 		follow: str(r.follow),
 		compose: str(r.compose?.op),
 		acknowledged: [...(r.acknowledged_warnings ?? [])],
-		contexts: r.contexts ? structuredClone(r.contexts) : undefined
+		contexts: r.contexts ? JSON.parse(JSON.stringify(r.contexts)) : undefined // works on $state proxies, unlike structuredClone
 	};
 }
 

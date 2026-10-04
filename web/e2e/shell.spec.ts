@@ -6,7 +6,7 @@ test.beforeEach(({ api }) => {
 
 test('the shell is keyboard navigable', async ({ page }) => {
 	await page.goto('/');
-	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Today');
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Dashboard');
 
 	// First Tab reaches the skip link, then the brand, then the sections in order.
 	await page.keyboard.press('Tab');
@@ -15,7 +15,7 @@ test('the shell is keyboard navigable', async ({ page }) => {
 	await expect(page.getByRole('link', { name: 'Vitamux' })).toBeFocused();
 
 	const nav = page.getByRole('navigation', { name: 'Sections' });
-	for (const name of ['Today', 'Connections', 'Data', 'Rules', 'Lab results', 'Settings']) {
+	for (const name of ['Dashboard', 'Explore', 'Connections', 'Rules', 'Lab results', 'Settings']) {
 		await page.keyboard.press('Tab');
 		await expect(nav.getByRole('link', { name })).toBeFocused();
 	}
@@ -23,7 +23,7 @@ test('the shell is keyboard navigable', async ({ page }) => {
 	await expect(page).toHaveURL('/settings');
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Settings');
 	await expect(nav.getByRole('link', { name: 'Settings' })).toHaveAttribute('aria-current', 'page');
-	await expect(nav.getByRole('link', { name: 'Today' })).not.toHaveAttribute('aria-current');
+	await expect(nav.getByRole('link', { name: 'Dashboard' })).not.toHaveAttribute('aria-current');
 
 	await page.keyboard.press('Tab');
 	await page.keyboard.press('Enter'); // skip link after navigation focus reset
@@ -32,9 +32,9 @@ test('the shell is keyboard navigable', async ({ page }) => {
 
 test('every section has a route', async ({ page }) => {
 	for (const [path, heading] of [
-		['/', 'Today'],
+		['/', 'Dashboard'],
+		['/explore', 'Explore'],
 		['/connections', 'Connections'],
-		['/data', 'Data'],
 		['/rules', 'Rules'],
 		['/lab', 'Lab results'],
 		['/settings', 'Settings']

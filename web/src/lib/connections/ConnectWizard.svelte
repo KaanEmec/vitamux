@@ -10,7 +10,9 @@
 	import Modal from '../components/Modal.svelte';
 	import ProblemAlert from '../components/ProblemAlert.svelte';
 	import UnofficialBadge from '../components/UnofficialBadge.svelte';
+	import Button from '../ui/Button.svelte';
 	import AuthPrompt from './AuthPrompt.svelte';
+	import Monogram from './Monogram.svelte';
 	import { connectable, goToProvider } from './connections.ts';
 	import { known, loadProviders } from './providers.svelte.ts';
 
@@ -60,10 +62,11 @@
 			<fieldset>
 				<legend>Provider</legend>
 				{#each providers as p (p.code)}
-					<div class="choice">
+					<div class={['choice', !p.available && 'off']}>
 						<label>
 							<input type="radio" name="provider" value={p.code} bind:group={provider} disabled={!p.available} aria-describedby={p.available && p.official ? undefined : `note-${p.code}`} />
-							{p.name}
+							<Monogram provider={p.code} />
+							<span class="name">{p.name}</span>
 							{#if !p.official}<UnofficialBadge />{/if}
 						</label>
 						{#if !p.available}
@@ -89,15 +92,15 @@
 			{/if}
 			<p class="muted">Apple Health connects from the iPhone app (Settings, Devices); file imports use the command line.</p>
 			<ProblemAlert {problem} />
-			<button class="btn primary" type="submit" disabled={busy || !chosen}>
-				{chosen ? `Continue to ${chosen.name}` : 'Continue'}
-			</button>
+			<Button variant="primary" type="submit" disabled={busy || !chosen}>{chosen ? `Continue to ${chosen.name}` : 'Continue'}</Button>
 		</form>
 	{/if}
 </Modal>
 
 <style>
 	fieldset {
+		display: grid;
+		gap: var(--space-2);
 		margin: 0 0 var(--space-4);
 		padding: 0;
 		border: 0;
@@ -108,15 +111,34 @@
 		font-size: var(--text-sm);
 	}
 	.choice {
-		padding: var(--space-2) 0;
+		padding: var(--space-3);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+	}
+	.choice:has(input:checked) {
+		background: var(--color-accent-soft);
+		border-color: var(--color-accent);
+	}
+	.choice:has(input:focus-visible) {
+		outline: 2px solid var(--color-focus);
+		outline-offset: 2px;
 	}
 	.choice label {
 		display: flex;
-		gap: var(--space-2);
+		gap: var(--space-3);
 		align-items: center;
+		cursor: pointer;
+	}
+	.off label {
+		cursor: not-allowed;
+		opacity: 0.7;
+	}
+	.name {
+		flex: 1;
+		font-weight: 600;
 	}
 	.note {
-		padding-left: var(--space-5);
+		margin-top: var(--space-2);
 		font-size: var(--text-sm);
 	}
 </style>

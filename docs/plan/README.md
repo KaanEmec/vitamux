@@ -42,7 +42,7 @@ Conventions:
 | [E18](E18-garmin/README.md) | Garmin Connect connector (unofficial sidecar) | v0.3.0 | E17, G5 |
 | [E19](E19-whoop/README.md) | WHOOP connector (unofficial sidecar) | v0.3.0 | E17, G5 |
 | [E20](E20-guided-setup/README.md) | Guided source setup in the web panel | v0.3.0 (Withings part may ship in v0.2.0) | E11, E17; E18, E19 for J20.4–J20.5 |
-| [E21](E21-visualisation/README.md) | Panel redesign, dashboard and data exploration | v0.4.0 | E11, E12, E15, E20; E18, E19 for multi-source checks |
+| [E21](E21-visualisation/README.md) | Panel redesign, dashboard and data exploration | v0.2.0 | E11, E12, E15, E17–E19 (shipped in v0.1.1) |
 
 ```mermaid
 flowchart LR
@@ -59,7 +59,8 @@ flowchart LR
   E17 --> E18 & E19
   E11 --> E20
   E18 & E19 --> E20
-  E18 & E19 & E20 -->|G6| E21
+  E15 & E18 & E19 --> E21
+  E21 -->|G7| E20
 ```
 
 ## Gates
@@ -72,8 +73,8 @@ flowchart LR
 | G3 | Ingest batch schema v1 frozen | J05.1 | E15 contract work |
 | G4 | v0.1.0 released | J14.5 | E15 completion |
 | G5 | v0.2.0 released (E15 and E17) | J15.9 | E18 and E19 releases |
-| G6 | v0.3.0 released (E18, E19 and E20) | J19.7 | E21 release |
-| G7 | v0.4.0 released (E21) | J21.13 | — |
+| G6 | v0.3.0 released (E18, E19 and E20) | J19.7 | — |
+| G7 | v0.2.0 released (E21) | J21.13 | E20 UI jobs (build on the E21 kit) |
 
 ## Parallel streams
 

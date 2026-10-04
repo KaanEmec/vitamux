@@ -4,11 +4,12 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { test as connTest, expect, ids, sidecarSecret } from './connections-fake';
-import { test as dataTest, fallbackDay } from './data-fake';
+import { test as dataTest, fallbackDay } from './explore-fake';
 import { test as devicesTest } from './devices-fake';
 import { test as labTest, syntheticPdf } from './lab-fake';
 import { test as rulesTest } from './rules-fake';
 import { test as settingsTest } from './settings-fake';
+import { test as viewsTest } from './views-fake';
 import { test as anonTest } from './fake-api';
 
 /** Waits for the page to settle, then fails on serious or critical axe violations (light and dark). */
@@ -32,7 +33,7 @@ anonTest('login', async ({ page }) => {
 	await scan(page, '/login');
 });
 
-connTest('Today and connections', async ({ page }) => {
+connTest('Dashboard and connections', async ({ page }) => {
 	for (const path of ['/', '/connections', `/connections/${ids.ultrahuman}`, `/connections/${ids.ultrahuman}?tab=backfills`, `/connections/${ids.withings}?tab=settings`]) {
 		await page.goto(path);
 		await scan(page, path);
@@ -58,14 +59,9 @@ connTest('Connect wizard: provider list, prompt step, sidecar connection', async
 	await scan(page, '/connections/[id] (sidecar)');
 });
 
-dataTest('Data: daily view, drilldown, sleep, workouts', async ({ page }) => {
-	const day = `/data/day/resting_heart_rate/${fallbackDay}`;
-	for (const path of [
-		'/data?metric=resting_heart_rate&start=2026-09-12&end=2026-09-16',
-		day,
-		`/data/sleep?date=${fallbackDay}`,
-		'/data/workouts?start=2026-09-12&end=2026-09-16'
-	]) {
+dataTest('Explore: inventory, metric detail, day view', async ({ page }) => {
+	const day = `/explore/resting_heart_rate/day/${fallbackDay}`;
+	for (const path of ['/explore', '/explore/resting_heart_rate?range=1M&end=2026-09-16', '/explore/steps?range=1W&end=2026-09-16', day]) {
 		await page.goto(path);
 		await scan(page, path);
 	}
@@ -130,4 +126,11 @@ devicesTest('Settings › Devices: pairing code, devices, origins, resync dialog
 	await page.getByRole('button', { name: 'Resync Synthetic iPhone' }).click();
 	await expect(page.getByRole('dialog')).toBeVisible();
 	await scan(page, '/settings/devices (resync dialog)');
+});
+
+viewsTest('Specialised views: sleep, blood pressure, body composition, workouts, events, lab analyte', async ({ page }) => {
+	for (const path of ['/explore/sleep', '/explore/blood-pressure', '/explore/body-composition', '/explore/workouts', '/explore/events', '/lab/analytes/glucose']) {
+		await page.goto(path);
+		await scan(page, path);
+	}
 });

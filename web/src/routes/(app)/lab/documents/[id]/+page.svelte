@@ -1,7 +1,9 @@
 <!--
-	Review of one document: the PDF page with the selected row outlined beside the extracted
-	rows. Every row is accepted, edited or rejected before confirm creates the results; a
+	Review of one document: the PDF page with the selected row outlined beside the row list and
+	editor. Every row is accepted, edited or rejected before confirm creates the results; a
 	confirmed run can be edited and confirmed again (new revisions) or unconfirmed.
+	Keyboard, when focus is not in a field or on a control: J and K move between rows, E edits the
+	value, Enter accepts the row; Escape leaves a field.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
@@ -14,9 +16,10 @@
 	import type { Document, Extraction, Row } from '#lib/lab/api.ts';
 	import DeleteDialog from '#lib/lab/DeleteDialog.svelte';
 	import ExtractDialog from '#lib/lab/ExtractDialog.svelte';
-	import { documentStatus, errorClasses, printedValue, providerName, rowOfPointer, rowStatus, runStatus, warningText, when } from '#lib/lab/format.ts';
+	import { documentStatus, errorClasses, providerName, rowOfPointer, runStatus, warningText, when } from '#lib/lab/format.ts';
 	import PdfViewer from '#lib/lab/PdfViewer.svelte';
 	import RowEditor from '#lib/lab/RowEditor.svelte';
+	import RowList from '#lib/lab/RowList.svelte';
 
 	const id = $derived(page.params.id ?? '');
 
@@ -34,10 +37,12 @@
 	let busy = $state(false);
 	let extracting = $state(false);
 	let deleting = $state(false);
+	let editor = $state<ReturnType<typeof RowEditor>>();
 
 	const rows = $derived(run?.rows ?? []);
 	const row = $derived(selected === null ? null : (rows.find((r) => r.index === selected) ?? null));
 	const pending = $derived(rows.filter((r) => r.review_status === 'pending').length);
+	const withChecks = $derived(rows.filter((r) => r.review_status === 'pending' && r.validation.length + r.warnings.length > 0).length);
 	const active = $derived(runs.some((r) => r.status === 'queued' || r.status === 'running'));
 	const reviewable = $derived(run?.status === 'succeeded' || run?.status === 'confirmed');
 	const bbox = $derived(row?.bbox && row.page === viewPage ? (row.bbox as { x0: number; y0: number; x1: number; y1: number }) : null);
@@ -87,6 +92,30 @@
 		if (r.page) viewPage = r.page;
 	}
 
+	/** J and K: the next or previous row. */
+	function step(by: 1 | -1) {
+		const at = rows.findIndex((r) => r.index === selected);
+		const next = rows[at < 0 ? (by > 0 ? 0 : rows.length - 1) : Math.min(rows.length - 1, Math.max(0, at + by))];
+		if (next) select(next);
+	}
+
+	function keydown(e: KeyboardEvent) {
+		if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || !reviewable || extracting || deleting) return;
+		const target = e.target instanceof Element ? e.target : null;
+		if (e.key === 'Escape' && target?.matches('.editor input, .editor select')) {
+			(target as HTMLElement).blur();
+			return;
+		}
+		// Typing, buttons, links and dialogs keep their own keys.
+		if (target?.closest('input, textarea, select, button, a, summary, dialog, [contenteditable]')) return;
+		const key = e.key.toLowerCase();
+		if (key === 'j' || key === 'k') step(key === 'j' ? 1 : -1);
+		else if (key === 'e' && row) editor?.edit();
+		else if (key === 'enter' && row) editor?.accept();
+		else return;
+		e.preventDefault();
+	}
+
 	async function saved(r: Row) {
 		const reviewed = r.review_status !== 'pending';
 		await loadRuns();
@@ -129,25 +158,37 @@
 </script>
 
 <svelte:head><title>Review · Lab results · Vitamux</title></svelte:head>
+<svelte:window onkeydown={keydown} />
 
+<nav class="crumbs" aria-label="Breadcrumb">
+	<a href="/lab">Lab results</a><span aria-hidden="true">/</span><span>{doc?.filename ?? 'Document'}</span>
+</nav>
 <ProblemAlert {problem} />
 {#if doc}
 	{@const st = documentStatus[doc.status]}
-	<div class="top">
+	<header class="top">
 		<div>
-			<h2>{doc.filename ?? 'Lab document'}</h2>
+			<h1>Review extracted rows</h1>
 			<p class="muted">
 				<span class="status"><StatusIcon status={st.status} /> {st.label}</span> · uploaded {when(doc.uploaded_at)} · {doc.page_count}
 				page{doc.page_count === 1 ? '' : 's'}
 			</p>
 		</div>
+		{#if run && reviewable}
+			<div class="progress">
+				<div class="counts"><span>{rows.length - pending} of {rows.length} reviewed</span>{#if withChecks}<span>{withChecks} with checks</span>{/if}</div>
+				<div class="bar" role="progressbar" aria-label="Rows reviewed" aria-valuemin="0" aria-valuemax={rows.length} aria-valuenow={rows.length - pending}>
+					<div class="fill" style:width="{rows.length ? ((rows.length - pending) / rows.length) * 100 : 0}%"></div>
+				</div>
+			</div>
+		{/if}
 		{#if doc.status !== 'deleted'}
 			<div class="actions">
 				<button class="btn" type="button" disabled={active} onclick={() => (extracting = true)}>{runs.length ? 'Extract again' : 'Extract'}</button>
 				<button class="btn" type="button" onclick={() => (deleting = true)}>Delete document</button>
 			</div>
 		{/if}
-	</div>
+	</header>
 
 	{#if runs.length > 1}
 		<div class="field run-picker">
@@ -190,44 +231,25 @@
 				<p class="muted">
 					Read by {providerName(run.provider)}{run.model ? ` (${run.model})` : ''} on {when(run.finished_at ?? run.created_at)}. {pending
 						? `${pending} of ${rows.length} rows not reviewed yet.`
-						: `All ${rows.length} rows reviewed.`}
+						: `All ${rows.length} rows reviewed.`} Nothing is saved as a result until you confirm.
 				</p>
-				<table>
-					<caption class="visually-hidden">Extracted rows</caption>
-					<thead>
-						<tr>
-							<th scope="col">Row</th><th scope="col">Label</th><th scope="col">Value</th><th scope="col">Unit</th>
-							<th scope="col">Range as printed</th><th scope="col">Flag as printed</th><th scope="col">Analyte</th>
-							<th scope="col">Checks</th><th scope="col">Review</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each rows as r (r.index)}
-							{@const rs = rowStatus[r.review_status]}
-							{@const checks = r.validation.length + r.warnings.length}
-							<tr class={[r.index === selected && 'current', r.review_status === 'rejected' && 'rejected']} aria-current={r.index === selected ? 'true' : undefined}>
-								<td><button class="btn link" type="button" onclick={() => select(r)} aria-label="Review row {r.index + 1}: {r.analyte_label}">{r.index + 1}</button></td>
-								<th scope="row">{r.analyte_label}</th>
-								<td>{printedValue(r)}</td>
-								<td>{r.unit_text ?? '–'}</td>
-								<td>{r.reference_range_text ?? '–'}</td>
-								<td>{r.printed_flag ?? '–'}</td>
-								<td>{#if r.analyte}<code>{r.analyte}</code>{:else}<span class="muted">unknown</span>{/if}</td>
-								<td>{#if checks}<span class="status"><StatusIcon status="warn" /> {checks}</span>{:else}–{/if}</td>
-								<td><span class="status"><StatusIcon status={rs.status} /> {rs.label}</span></td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
+				<RowList {rows} {selected} onselect={select} />
 
 				{#if row}
-					{#key row}<RowEditor {row} runId={run.id} onsaved={saved} />{/key}
+					{#key row}<RowEditor bind:this={editor} {row} runId={run.id} onsaved={saved} />{/key}
+					<p class="keys">
+						<span class="visually-hidden">Keyboard shortcuts:</span>
+						<span><kbd>Enter</kbd> accept row</span>
+						<span><kbd>J</kbd> / <kbd>K</kbd> next / previous row</span>
+						<span><kbd>E</kbd> edit value</span>
+						<span><kbd>Esc</kbd> leave a field</span>
+					</p>
 				{:else}
-					<p class="muted">Select a row to compare it with the PDF and review it.</p>
+					<p class="muted">Select a row, or press <kbd>J</kbd>, to compare it with the PDF and review it.</p>
 				{/if}
 
-				<section class="confirm" aria-labelledby="confirm-title">
-					<h3 id="confirm-title">Confirm</h3>
+				<section class="card confirm" aria-labelledby="confirm-title">
+					<h2 id="confirm-title">Confirm</h2>
 					{#if notice}<p role="status"><StatusIcon status="ok" /> {notice} <a href="/lab/results">See results</a></p>{/if}
 					{#if confirmProblem?.status === 422}
 						<div class="not-ready" role="alert">
@@ -285,12 +307,52 @@
 {/if}
 
 <style>
+	.crumbs {
+		display: flex;
+		gap: var(--space-2);
+		margin-bottom: var(--space-2);
+		font-size: var(--text-sm);
+		color: var(--color-text-muted);
+	}
+	.crumbs a {
+		text-decoration: none;
+	}
 	.top {
 		display: flex;
 		flex-wrap: wrap;
-		gap: var(--space-3);
-		align-items: flex-start;
+		gap: var(--space-4) var(--space-5);
+		align-items: flex-end;
 		justify-content: space-between;
+		margin-bottom: var(--space-4);
+	}
+	.top h1 {
+		margin-bottom: var(--space-1);
+	}
+	.top p {
+		margin: 0;
+	}
+	.progress {
+		display: grid;
+		flex: 0 1 16rem;
+		gap: var(--space-1);
+		margin-left: auto;
+		font-size: var(--text-sm);
+		color: var(--color-text-muted);
+	}
+	.counts {
+		display: flex;
+		justify-content: space-between;
+		gap: var(--space-3);
+	}
+	.bar {
+		height: 0.5rem;
+		overflow: hidden;
+		background: var(--color-surface-2);
+		border-radius: var(--radius-xs);
+	}
+	.fill {
+		height: 100%;
+		background: var(--color-accent);
 	}
 	.actions {
 		display: flex;
@@ -305,12 +367,6 @@
 	}
 	.run-picker select {
 		max-width: 36rem;
-		padding: var(--space-2) var(--space-3);
-		font: inherit;
-		color: var(--color-text);
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-sm);
 	}
 	.doc-notes {
 		padding: 0;
@@ -324,7 +380,11 @@
 	}
 	.pdf {
 		position: sticky;
-		top: var(--space-4);
+		top: calc(var(--space-8) + var(--space-5));
+		padding: var(--space-3);
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-lg);
 	}
 	@media (max-width: 70rem) {
 		.review {
@@ -339,26 +399,25 @@
 		gap: var(--space-4);
 		min-width: 0;
 	}
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: var(--text-sm);
+	.rows > p {
+		margin: 0;
 	}
-	th,
-	td {
-		padding: var(--space-1) var(--space-2);
-		text-align: left;
-		border-bottom: 1px solid var(--color-border);
-	}
-	tr.current {
-		background: var(--color-surface-2);
-		outline: 2px solid var(--color-focus);
-		outline-offset: -2px;
-	}
-	tr.rejected th,
-	tr.rejected td:nth-child(n + 3):not(:last-child) {
-		text-decoration: line-through;
+	.keys {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-2) var(--space-5);
+		font-size: var(--text-xs);
 		color: var(--color-text-muted);
+	}
+	kbd {
+		padding: 1px var(--space-2);
+		font-size: var(--text-2xs);
+		color: var(--color-text);
+		border: 1px solid var(--color-border-strong);
+		border-radius: var(--radius-xs);
+	}
+	.confirm h2 {
+		font-size: var(--text-md);
 	}
 	.not-ready {
 		padding: var(--space-3);

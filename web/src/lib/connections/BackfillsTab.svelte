@@ -7,7 +7,10 @@
 	import { api, type Problem, type Schemas } from '../api/client.ts';
 	import ProblemAlert from '../components/ProblemAlert.svelte';
 	import StatusIcon, { type Status } from '../components/StatusIcon.svelte';
+	import Button from '../ui/Button.svelte';
 	import BackfillDialog from './BackfillDialog.svelte';
+	import DataTable from './DataTable.svelte';
+	import ProgressBar from './ProgressBar.svelte';
 	import { day, when, type Connection } from './connections.ts';
 
 	type Backfill = Schemas['Backfill'];
@@ -83,9 +86,7 @@
 </script>
 
 <div class="bar">
-	<button class="btn primary" type="button" disabled={connection.mode === 'push' || !streams.length} onclick={() => (dialog = true)}>
-		New backfill
-	</button>
+	<Button variant="primary" disabled={connection.mode === 'push' || !streams.length} onclick={() => (dialog = true)}>New backfill</Button>
 	{#if connection.mode === 'push'}<span class="muted">Push sources upload their own history.</span>{/if}
 </div>
 
@@ -95,7 +96,7 @@
 {#if backfills === null}
 	<p class="muted" role="status">Loading backfills…</p>
 {:else if backfills.length}
-	<table>
+	<DataTable label="Backfills">
 		<thead>
 			<tr>
 				<th scope="col">Stream</th><th scope="col">Range</th><th scope="col">Status</th><th scope="col">Units</th>
@@ -109,26 +110,28 @@
 					<td>{day(b.start)} – {day(b.end)}</td>
 					<td class="nowrap"><StatusIcon status={icons[b.status] ?? 'info'} /> {b.status}</td>
 					<td>
-						<progress max={total(b) || 1} value={b.unit_counts.done} aria-label="Units done for {label(b)}"></progress>
-						{b.unit_counts.done}/{total(b)} done{#if b.unit_counts.failed}, <strong>{b.unit_counts.failed} failed</strong>{/if}
+						<div class="progress">
+							<ProgressBar value={b.unit_counts.done} max={total(b)} label="Units done for {label(b)}" />
+							<span>{b.unit_counts.done}/{total(b)} done{#if b.unit_counts.failed}, <strong>{b.unit_counts.failed} failed</strong>{/if}</span>
+						</div>
 					</td>
 					<td>{when(b.created_at)}</td>
-					<td class="actions">
+					<td><div class="actions">
 						{#if b.unit_counts.failed && b.status !== 'cancelled'}
-							<button class="btn" type="button" disabled={busy} onclick={() => act(b, 'retry')}>Retry failed<span class="visually-hidden"> units of {label(b)}</span></button>
+							<Button size="sm" disabled={busy} onclick={() => act(b, 'retry')}>Retry failed<span class="visually-hidden"> units of {label(b)}</span></Button>
 						{/if}
 						{#if b.status === 'running' || b.status === 'failed'}
-							<button class="btn" type="button" disabled={busy} onclick={() => act(b, 'cancel')}>Cancel<span class="visually-hidden"> backfill of {label(b)}</span></button>
+							<Button size="sm" disabled={busy} onclick={() => act(b, 'cancel')}>Cancel<span class="visually-hidden"> backfill of {label(b)}</span></Button>
 						{/if}
 						<button class="btn link" type="button" aria-expanded={open?.id === b.id} onclick={() => (open?.id === b.id ? (open = null) : showUnits(b.id))}>
 							Units<span class="visually-hidden"> of {label(b)}</span>
 						</button>
-					</td>
+					</div></td>
 				</tr>
 				{#if open?.id === b.id && open.units}
 					<tr class="units">
 						<td colspan="6">
-							<table>
+							<table class="inner">
 								<caption class="visually-hidden">Units of {label(b)}</caption>
 								<thead><tr><th scope="col">Unit</th><th scope="col">Status</th><th scope="col">Attempts</th><th scope="col">Error</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
 								<tbody>
@@ -140,7 +143,7 @@
 											<td>{#if u.error_class}<code>{u.error_class}</code>{/if}</td>
 											<td>
 												{#if u.status === 'failed' && b.status !== 'cancelled'}
-													<button class="btn" type="button" disabled={busy} onclick={() => act(b, 'retry', u.start)}>Retry<span class="visually-hidden"> unit from {day(u.start)}</span></button>
+													<Button size="sm" disabled={busy} onclick={() => act(b, 'retry', u.start)}>Retry<span class="visually-hidden"> unit from {day(u.start)}</span></Button>
 												{/if}
 											</td>
 										</tr>
@@ -152,7 +155,7 @@
 				{/if}
 			{/each}
 		</tbody>
-	</table>
+	</DataTable>
 {:else if !problem}
 	<p class="muted">No backfills yet. A backfill fetches history older than the regular sync window.</p>
 {/if}
@@ -173,28 +176,19 @@
 	.bar {
 		margin-bottom: var(--space-4);
 	}
-	table {
+	.units > td {
+		background: var(--color-inset);
+	}
+	.inner {
 		width: 100%;
 		border-collapse: collapse;
-		font-size: var(--text-sm);
-	}
-	th,
-	td {
-		padding: var(--space-2);
-		border-bottom: 1px solid var(--color-border);
-		text-align: left;
-		vertical-align: top;
-	}
-	.units > td {
-		padding-left: var(--space-6);
-		background: var(--color-surface-2);
 	}
 	.nowrap {
 		white-space: nowrap;
 	}
-	progress {
-		width: 5rem;
-		vertical-align: middle;
-		accent-color: var(--color-accent);
+	.progress {
+		display: grid;
+		gap: var(--space-1);
+		min-width: 8rem;
 	}
 </style>

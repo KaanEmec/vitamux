@@ -26,6 +26,7 @@ Metric catalogue (docs/architecture/metric-catalog.md).
 | --- | --- | --- | --- |
 | `GET` | `/api/v1/metrics` | `read:health` | List catalogue metrics |
 | `GET` | `/api/v1/metrics/{code}` | `read:health` | Get one catalogue metric |
+| `GET` | `/api/v1/event-types` | `read:health` | List health event types |
 
 ## source-data
 
@@ -33,6 +34,9 @@ Normalized source records with provenance (docs/architecture/data-model.md).
 
 | Method | Path | Access | Summary |
 | --- | --- | --- | --- |
+| `GET` | `/api/v1/inventory` | `read:health` | Everything stored, per metric, group kind, event code, sleep, workouts and lab analyte |
+| `GET` | `/api/v1/events` | `read:health` | List health events |
+| `GET` | `/api/v1/sources/series` | `read:health` | Per-source series of one metric from the hourly aggregates |
 | `GET` | `/api/v1/measurements` | `read:health` | List normalized measurements |
 | `POST` | `/api/v1/measurements/manual` | `write:config`, CSRF | Record a manual measurement (provider manual, audited) |
 | `GET` | `/api/v1/groups` | `read:health` | List measurement groups (blood-pressure readings, weigh-ins) |
@@ -55,6 +59,8 @@ Values selected by resolution rules (docs/architecture/resolution.md).
 | `GET` | `/api/v1/resolved/workouts` | `read:health` | Resolved workouts |
 | `GET` | `/api/v1/resolved/{metric}/{window_key}/sources` | `read:health` | All-sources drilldown for one metric and window |
 | `POST` | `/api/v1/resolution/preview` | `read:health`, CSRF | Resolve a draft rule over a range without writing anything |
+| `GET` | `/api/v1/resolved/summary` | `read:health` | Dashboard summary per metric |
+| `GET` | `/api/v1/resolved/trend` | `read:health` | Weekly or monthly rollups of resolved daily values |
 
 ## rules
 
@@ -186,6 +192,8 @@ Owner settings and timezone periods.
 | --- | --- | --- | --- |
 | `GET` | `/api/v1/settings` | `read:config` | Owner settings |
 | `PATCH` | `/api/v1/settings` | `write:config`, CSRF | Change settings (merge patch) |
+| `GET` | `/api/v1/settings/dashboard` | `read:config` | Dashboard layout |
+| `PUT` | `/api/v1/settings/dashboard` | `write:config`, CSRF | Replace the dashboard layout |
 | `GET` | `/api/v1/timezone-periods` | `read:config` | List timezone periods |
 | `POST` | `/api/v1/timezone-periods` | `write:config`, CSRF | Add a timezone period (local dates are recomputed) |
 | `PATCH` | `/api/v1/timezone-periods/{id}` | `write:config`, CSRF | Change a timezone period's zone or start (local dates are recomputed) |

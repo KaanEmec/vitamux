@@ -1,156 +1,147 @@
 <!--
-	Connection overview: state and last outcome, manual sync (one job per stream, coalesced
-	with a pending one) and reauthorization: the provider's OAuth page or the connector's prompts.
+	Connection overview: a sync timeline (the 14-day run strip and the latest runs) and the
+	connection's facts. Syncing and reauthorizing are in the page header (ConnectionActions).
 -->
 <script lang="ts">
-	import { api, type Problem, type Schemas } from '../api/client.ts';
 	import HealthBadge from '../components/HealthBadge.svelte';
-	import Modal from '../components/Modal.svelte';
-	import ProblemAlert from '../components/ProblemAlert.svelte';
-	import StatusIcon from '../components/StatusIcon.svelte';
-	import AuthPrompt from './AuthPrompt.svelte';
-	import { ago, goToProvider, providerLabel, safeHref, when, type Connection } from './connections.ts';
+	import StatusIcon, { type Status } from '../components/StatusIcon.svelte';
+	import RunStrip from './RunStrip.svelte';
+	import { ago, elapsed, providerLabel, safeHref, when, type Connection } from './connections.ts';
+	import { loadRuns, type Run } from './runs.ts';
 
-	let { connection, onchange }: { connection: Connection; onchange: (c: Connection) => void } = $props();
+	let { connection }: { connection: Connection } = $props();
 
-	let problem = $state<Problem | null>(null);
-	let queued = $state<Schemas['Job'][] | null>(null);
-	let prompt = $state<Schemas['AuthPromptStep'] | null>(null);
-	let busy = $state(false);
+	const outcomes: Record<string, Status> = { succeeded: 'ok', failed: 'error', rescheduled: 'info', lease_expired: 'warn' };
+	const latest = 5;
 
-	const syncs = $derived(connection.mode !== 'push');
-	const name = $derived(providerLabel(connection.provider));
+	let runs = $state<Run[] | null | undefined>(undefined);
 
-	async function sync() {
-		busy = true;
-		problem = null;
-		queued = null;
-		const { data, error } = await api.POST('/api/v1/connections/{id}/sync', { params: { path: { id: connection.id } } });
-		busy = false;
-		if (error) problem = error;
-		else queued = data.jobs;
-		const res = await api.GET('/api/v1/connections/{id}', { params: { path: { id: connection.id } } });
-		if (res.data) onchange(res.data);
-	}
-
-	async function reauthorize() {
-		busy = true;
-		problem = null;
-		const { data, error } = await api.POST('/api/v1/connections/{id}/auth/begin', { params: { path: { id: connection.id } } });
-		if (error) {
-			busy = false;
-			problem = error;
-			return;
-		}
-		if ('redirect_url' in data) {
-			goToProvider(data.redirect_url);
-		} else {
-			busy = false;
-			prompt = data;
-		}
-	}
-
-	async function reauthorized() {
-		prompt = null;
-		const { data } = await api.GET('/api/v1/connections/{id}', { params: { path: { id: connection.id } } });
-		if (data) onchange(data);
-	}
-
-	const streamOf = (j: Schemas['Job']) => (j.payload as { stream?: string })?.stream ?? j.kind;
+	// Reload when the connection changes (a manual sync updates last_success_at).
+	$effect(() => {
+		void connection.last_success_at;
+		void loadRuns(connection.id).then((r) => (runs = r));
+	});
 </script>
 
 {#if connection.health === 'needs_reauth'}
 	<div class="callout" role="alert">
 		<StatusIcon status="error" />
-		<span>{name} no longer accepts the stored authorization. Sign in again to resume syncing; no data is lost.</span>
+		<span>{providerLabel(connection.provider)} no longer accepts the stored authorization. Sign in again to resume syncing; no data is lost.</span>
 	</div>
 {/if}
 
-<dl>
-	<dt>Health</dt>
-	<dd><HealthBadge health={connection.health} />{#if connection.health_reason}<span class="muted"> · {connection.health_reason}</span>{/if}</dd>
-	<dt>Status</dt>
-	<dd><code>{connection.status}</code></dd>
-	<dt>API</dt>
-	<dd>{connection.official === false ? 'Unofficial (may change without notice)' : connection.official ? 'Official' : 'Push uploads'}</dd>
-	{#if connection.upstream}
-		<dt>Upstream</dt>
-		<dd>
-			<a href={safeHref(connection.upstream.source_url)} rel="noreferrer noopener">{connection.upstream.package}</a>
-			<code>{connection.upstream.version}</code>
-		</dd>
-	{/if}
-	<dt>Last success</dt>
-	<dd>{ago(connection.last_success_at)}<span class="muted">{connection.last_success_at ? ` · ${when(connection.last_success_at)}` : ''}</span></dd>
-	<dt>Last error</dt>
-	<dd>
-		{#if connection.last_error_class}<code>{connection.last_error_class}</code>
-			<span class="muted">· {connection.consecutive_failures} consecutive failures</span>{:else}None{/if}
-	</dd>
-	<dt>Connected</dt>
-	<dd>{when(connection.created_at)}</dd>
-	<dt>ID</dt>
-	<dd><code>{connection.id}</code></dd>
-</dl>
+<div class="cols">
+	<section class="card timeline" aria-labelledby="timeline-title">
+		<h2 id="timeline-title">Sync timeline</h2>
+		<RunStrip {runs} large />
+		{#if runs?.length}
+			<ul class="runs" aria-label="Latest runs">
+				{#each runs.slice(0, latest) as r (r.id)}
+					<li>
+						<StatusIcon status={r.outcome ? (outcomes[r.outcome] ?? 'info') : 'pending'} />
+						<span class="kind"><code>{r.kind}</code> · {r.outcome ?? 'running'}</span>
+						<span class="muted">{when(r.started_at)} · {elapsed(r.started_at, r.finished_at)}</span>
+					</li>
+				{/each}
+			</ul>
+			<a href="?tab=history">All runs</a>
+		{:else if runs}
+			<p class="muted">No runs in the last 14 days.</p>
+		{/if}
+	</section>
 
-<ProblemAlert {problem} />
-{#if queued}
-	<p class="done" role="status">
-		<StatusIcon status="ok" />
-		Sync queued: {queued.map((j) => `${streamOf(j)} (${j.status})`).join(', ') || 'nothing to sync'}.
-		<a href="?tab=history">See history</a>
-	</p>
-{/if}
-
-{#if syncs}
-	<div class="actions">
-		<button class="btn primary" type="button" disabled={busy || connection.status === 'paused'} onclick={sync}>Sync now</button>
-		<button class={['btn', connection.health === 'needs_reauth' && 'primary']} type="button" disabled={busy} onclick={reauthorize}>
-			Reauthorize
-		</button>
-		{#if connection.status === 'paused'}<span class="muted">Paused: resume it in Settings to sync.</span>{/if}
-	</div>
-{:else}
-	<p class="muted">This source uploads its data to Vitamux; there is nothing to sync from here.</p>
-{/if}
-
-{#if prompt}
-	<Modal title="Reauthorize {name}" onclose={() => (prompt = null)}>
-		<AuthPrompt provider={connection.provider} step={prompt} onrestart={() => (prompt = null)} ondone={reauthorized} />
-	</Modal>
-{/if}
+	<section class="card" aria-labelledby="facts-title">
+		<h2 id="facts-title">Details</h2>
+		<dl>
+			<dt>Health</dt>
+			<dd><HealthBadge health={connection.health} />{#if connection.health_reason}<span class="muted"> · {connection.health_reason}</span>{/if}</dd>
+			<dt>Status</dt>
+			<dd><code>{connection.status}</code></dd>
+			<dt>API</dt>
+			<dd>{connection.official === false ? 'Unofficial (may change without notice)' : connection.official ? 'Official' : 'Push uploads'}</dd>
+			{#if connection.upstream}
+				<dt>Upstream</dt>
+				<dd>
+					<a href={safeHref(connection.upstream.source_url)} rel="noreferrer noopener">{connection.upstream.package}</a>
+					<code>{connection.upstream.version}</code>
+				</dd>
+			{/if}
+			<dt>Last success</dt>
+			<dd>{ago(connection.last_success_at)}<span class="muted">{connection.last_success_at ? ` · ${when(connection.last_success_at)}` : ''}</span></dd>
+			<dt>Last error</dt>
+			<dd>
+				{#if connection.last_error_class}<code>{connection.last_error_class}</code>
+					<span class="muted">· {connection.consecutive_failures} consecutive failures</span>{:else}None{/if}
+			</dd>
+			<dt>Connected</dt>
+			<dd>{when(connection.created_at)}</dd>
+			<dt>ID</dt>
+			<dd><code class="id">{connection.id}</code></dd>
+		</dl>
+	</section>
+</div>
 
 <style>
+	.callout {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-2);
+		align-items: center;
+		padding: var(--space-3) var(--space-4);
+		margin: 0 0 var(--space-4);
+		background: var(--color-error-bg);
+		border: 1px solid var(--color-error);
+		border-radius: var(--radius-md);
+	}
+	.cols {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-4);
+		align-items: flex-start;
+	}
+	.cols > section {
+		flex: 1 1 20rem;
+		min-width: 0;
+	}
+	.timeline {
+		flex-grow: 2;
+	}
+	h2 {
+		margin: 0 0 var(--space-4);
+		font-size: var(--text-md);
+	}
+	.runs {
+		display: grid;
+		gap: var(--space-2);
+		margin: var(--space-4) 0;
+		padding: 0;
+		font-size: var(--text-sm);
+		list-style: none;
+	}
+	.runs li {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-2);
+		align-items: center;
+	}
+	.kind {
+		font-weight: 500;
+	}
 	dl {
 		display: grid;
-		grid-template-columns: max-content 1fr;
+		grid-template-columns: max-content minmax(0, 1fr);
 		gap: var(--space-2) var(--space-5);
-		margin: 0 0 var(--space-5);
+		margin: 0;
+		font-size: var(--text-sm);
 	}
 	dt {
 		font-weight: 600;
 	}
 	dd {
 		margin: 0;
+		overflow-wrap: anywhere;
 	}
-	.callout,
-	.done {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-2);
-		align-items: center;
-		margin: 0 0 var(--space-4);
-	}
-	.callout {
-		padding: var(--space-3);
-		background: var(--color-error-bg);
-		border: 1px solid var(--color-error);
-		border-radius: var(--radius-sm);
-	}
-	.actions {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-3);
-		align-items: center;
+	.id {
+		font-size: var(--text-xs);
 	}
 </style>

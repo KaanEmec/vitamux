@@ -2,6 +2,34 @@
 
 Newest first. Before a final release, `scripts/release-notes.sh --changelog vX.Y.Z` adds its section from the Conventional Commits since the previous final tag; edit it and add upgrade notes under "Breaking changes" before tagging. The release workflow refuses a final tag without its section and uses it as the release notes. Release candidates are described on their GitHub releases only.
 
+## v0.2.0 (2026-10-04)
+
+The web panel is redesigned (epic E21): a dashboard, Explore for everything Vitamux has stored, and rules you can change while looking at the data.
+
+### Web UI
+
+- Design system v2: light and dark themes (system, or chosen in the top bar), Geist fonts served by Vitamux, data-status shapes and stable source colours. A new shell with a collapsible sidebar, a ⌘K / Ctrl+K command palette and a sync-status pill.
+- Dashboard replaces Today: metric cards with value, neutral delta against the 30-day mean, sparkline, sources and status. Pin, reorder, resize (S/M/L) and hide cards; the layout is stored on the server. Past days via the date selector.
+- Explore replaces Data: every metric, group, event type and lab analyte with data, filterable by provider, device and origin. Metric pages pick their chart from the catalogue, with range and zoom, a 30-day band, each source's own values, coverage, statistics and a values table; every point opens its explanation, provenance and override actions. Old `/data` links redirect.
+- Rule lens: reorder sources and change strategy, window or coverage beside the chart, see the draft overlaid with the changed days before saving, then save, activate or revert. Every change is a rule version.
+- Views for sleep (stages, bed and wake times, nights across sources), blood pressure, body composition, workouts (calendar and clusters), health events and lab analyte trends (printed ranges only).
+- Redesigned Connections (cards with a 14-day run strip and the next action), Rules (rules as sentences, version timeline, the builder as a stepper with a live preview), Lab (split-view review with Enter, J/K and E shortcuts) and Settings (grouped navigation).
+- Charts are a small SVG kit that works under the strict CSP and replaces uPlot (ADR 0020); each has a keyboard and table fallback.
+
+### API
+
+- `GET /api/v1/inventory`, `GET /api/v1/event-types` and `GET /api/v1/events`.
+- `GET /api/v1/resolved/summary`, `GET /api/v1/resolved/trend` (beyond 366 days, by week or month) and `GET /api/v1/sources/series` (each source's values), as display rollups over the resolution engine.
+- `GET` and `PUT /api/v1/settings/dashboard`, a versioned layout stored in settings.
+
+### Fixes
+
+- The rule builder no longer fails when the rule in effect has `contexts`.
+
+### Breaking changes
+
+None. Bookmarks to `/data` pages redirect to Explore.
+
 ## v0.1.1 (2026-10-04)
 
 First final release. v0.1.0 was not published as a tag of its own: v0.1.1 contains all of it (its notes are in CHANGELOG.md) plus the changes below.

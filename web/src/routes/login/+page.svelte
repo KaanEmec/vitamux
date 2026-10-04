@@ -11,6 +11,8 @@
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import StatusIcon from '#lib/components/StatusIcon.svelte';
 	import TextField from '#lib/components/TextField.svelte';
+	import Button from '#lib/ui/Button.svelte';
+	import Logo from '#lib/ui/Logo.svelte';
 	import { safeNext, setSession } from '#lib/session.svelte.ts';
 
 	let step = $state<'password' | 'code'>('password');
@@ -69,13 +71,18 @@
 <svelte:head><title>Sign in · Vitamux</title></svelte:head>
 
 <main class="login">
-	<h1>Sign in to Vitamux</h1>
-
-	{#if expired}
-		<p class="notice" role="status"><StatusIcon status="info" /> Your session has expired. Sign in again to continue.</p>
-	{/if}
+	<p class="brand"><Logo size={34} /> Vitamux</p>
 
 	<form class="card" onsubmit={submit}>
+		<div>
+			<h1>Sign in</h1>
+			<p class="muted">{step === 'password' ? 'Your self-hosted health data.' : useRecovery ? 'Enter one of your recovery codes.' : 'Enter the code from your authenticator app.'}</p>
+		</div>
+
+		{#if expired}
+			<p class="notice" role="status"><StatusIcon status="info" /> Your session has expired. Sign in again to continue.</p>
+		{/if}
+
 		<ProblemAlert {problem} fields={['username', 'password', 'totp_code', 'recovery_code']} />
 
 		{#if step === 'password'}
@@ -114,6 +121,7 @@
 			/>
 		{:else}
 			<TextField
+				class="code"
 				label="Authenticator code"
 				name="totp_code"
 				bind:value={code}
@@ -127,23 +135,60 @@
 			/>
 		{/if}
 
-		<div class="actions">
-			<button class="btn primary" type="submit" disabled={busy}>{step === 'password' ? 'Sign in' : 'Verify'}</button>
-			{#if step === 'code'}
+		<Button variant="primary" type="submit" loading={busy}>{step === 'password' ? 'Sign in' : 'Verify'}</Button>
+		{#if step === 'code'}
+			<div class="links">
 				<button class="btn link" type="button" onclick={() => showCodeStep(!useRecovery)}>
 					{useRecovery ? 'Use an authenticator code instead' : 'Use a recovery code instead'}
 				</button>
 				<button class="btn link" type="button" onclick={back}>Back</button>
-			{/if}
-		</div>
+			</div>
+		{/if}
 	</form>
 </main>
 
 <style>
 	.login {
-		max-width: 24rem;
-		margin: var(--space-8) auto;
-		padding: 0 var(--space-4);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: var(--space-5);
+		min-height: 100vh;
+		padding: var(--space-8) var(--space-4);
+	}
+	.brand {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		margin: 0;
+		font-size: var(--text-xl);
+		font-weight: 650;
+		letter-spacing: var(--tracking-tight);
+	}
+	form {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-4);
+		width: 100%;
+		max-width: 25rem;
+		padding: var(--space-6);
+	}
+	form :global(.field) {
+		margin-bottom: 0;
+	}
+	h1 {
+		margin: 0;
+		font-size: var(--text-xl);
+	}
+	form p {
+		margin: var(--space-1) 0 0;
+		font-size: var(--text-sm);
+	}
+	form :global(input.code) {
+		font-family: var(--font-mono);
+		font-size: var(--text-lg);
+		letter-spacing: 0.3em;
 	}
 	.notice {
 		display: flex;
@@ -151,12 +196,13 @@
 		align-items: center;
 		padding: var(--space-3);
 		background: var(--color-info-bg);
-		border-radius: var(--radius-sm);
+		border-radius: var(--radius-md);
 	}
-	.actions {
+	.links {
 		display: flex;
 		flex-wrap: wrap;
+		justify-content: center;
 		gap: var(--space-4);
-		align-items: center;
+		font-size: var(--text-sm);
 	}
 </style>

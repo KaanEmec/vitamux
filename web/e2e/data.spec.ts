@@ -1,16 +1,17 @@
-import { expect, fallbackDay, test } from './data-fake';
+// The daily values and the all-sources day view, now under Explore (J21.8); /data redirects there.
+import { expect, fallbackDay, test } from './explore-fake';
 
-const range = '/data?metric=resting_heart_rate&start=2026-09-12&end=2026-09-16';
-const drilldown = `/data/day/resting_heart_rate/${fallbackDay}`;
+const range = '/explore/resting_heart_rate?range=1W&end=2026-09-16';
+const drilldown = `/explore/resting_heart_rate/day/${fallbackDay}`;
 
 test('a fallback day: see the reason, exclude an input, see the recalculation, revoke', async ({ page, data }) => {
 	await page.goto(range);
-	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Data');
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Resting heart rate');
 
-	const row = page.getByRole('row', { name: new RegExp(fallbackDay) });
+	const row = page.getByRole('row', { name: /Sep 14, 2026/ });
 	await expect(row.getByText('Fallback')).toBeVisible();
 	await expect(row.getByText('52 bpm', { exact: true })).toBeVisible();
-	await expect(page.getByRole('row', { name: /2026-09-13/ }).getByText('Direct')).toBeVisible();
+	await expect(page.getByRole('row', { name: /Sep 13, 2026/ }).getByText('Direct')).toBeVisible();
 
 	// The reason is in the explanation popover, opened and closed from the keyboard.
 	await row.getByRole('button', { name: 'Explain' }).click();
@@ -101,16 +102,15 @@ test('the provenance chain opens from a source and from a record', async ({ page
 test('the resolved endpoints being unavailable is shown, not fatal', async ({ page, data }) => {
 	data.resolvedStatus = 503;
 	await page.goto(range);
-	await expect(page.getByRole('alert')).toContainText('resolved values are not ready yet');
+	await expect(page.getByRole('alert').first()).toContainText('resolved values are not ready yet');
 	await expect(page.getByRole('link', { name: 'All sources' }).first()).toBeVisible();
 });
 
 test('a 14,400-point day renders in under 500 ms', async ({ page }) => {
-	await page.goto('/data/day/heart_rate/' + fallbackDay);
-	await expect(page.locator('.chart canvas')).toBeVisible();
+	await page.goto('/explore/heart_rate/day/' + fallbackDay);
 	await expect(page.getByRole('group', { name: /Heart rate on/ })).toBeVisible();
 	const ms = await page.evaluate(async () => {
-		// The chart marks its own data-join-to-paint time (SeriesChart.svelte).
+		// The chart marks its own data-join-to-paint time (ChartFrame.svelte).
 		for (let i = 0; i < 50 && !performance.getEntriesByName('vx-chart-render').length; i++) {
 			await new Promise((r) => setTimeout(r, 20));
 		}
@@ -118,28 +118,20 @@ test('a 14,400-point day renders in under 500 ms', async ({ page }) => {
 	});
 	console.log(`14,400-point chart render: ${ms.toFixed(1)} ms`);
 	expect(ms).toBeLessThan(500);
-	// Both sources are in the legend, each with its own dash/colour.
-	await expect(page.locator('.u-legend .u-series')).toHaveCount(3); // x + 2 sources
+	// Both sources are in the chart's table fallback (and its legend, each with its own dash and colour).
+	await page.getByText('Show as a table').click();
+	await expect(page.getByRole('table', { name: /Heart rate on/ }).getByRole('columnheader')).toHaveCount(3); // time + 2 sources
 });
 
-test('sleep: stages of every source on one axis', async ({ page }) => {
-	await page.goto('/data/sleep?date=' + fallbackDay);
-	await expect(page).toHaveTitle('Sleep · Vitamux');
-	await expect(page.getByRole('heading', { name: 'garmin' })).toBeVisible();
-	await expect(page.getByRole('heading', { name: 'apple_health · com.apple.health' })).toBeVisible();
-	await expect(page.getByRole('img', { name: /Sleep stages of garmin/ })).toBeVisible();
-	await expect(page.getByRole('img', { name: /Sleep stages of apple_health/ })).toBeVisible();
-	await page.getByRole('button', { name: /Provenance of garmin/ }).click();
-	await expect(page.getByRole('dialog', { name: /Provenance of sleep/ })).toBeVisible();
-});
-
-test('workouts: overlapping sources form one cluster', async ({ page }) => {
-	await page.goto('/data/workouts?start=2026-09-12&end=2026-09-16');
-	await expect(page).toHaveTitle('Workouts · Vitamux');
-	const clusters = page.getByRole('listitem').filter({ has: page.getByRole('heading', { level: 3 }) });
-	await expect(clusters).toHaveCount(2);
-	const run = clusters.filter({ hasText: 'Running' });
-	await expect(run.getByText('2 sources')).toBeVisible();
-	await expect(run.getByRole('row')).toHaveCount(3); // header + garmin + apple_health
-	await expect(clusters.filter({ hasText: 'Cycling' }).getByText(/\d sources/)).toHaveCount(0);
+test('old /data links redirect to Explore', async ({ page }) => {
+	for (const [from, to] of [
+		['/data?metric=resting_heart_rate&start=2026-09-12&end=2026-09-16', '/explore/resting_heart_rate?end=2026-09-16'],
+		[`/data/day/resting_heart_rate/${fallbackDay}`, drilldown],
+		[`/data/sleep?date=${fallbackDay}`, `/explore/sleep?date=${fallbackDay}`],
+		['/data/workouts?start=2026-09-12&end=2026-09-16', '/explore/workouts?start=2026-09-12&end=2026-09-16'],
+		['/data', '/explore']
+	]) {
+		await page.goto(from);
+		await expect(page).toHaveURL(to);
+	}
 });

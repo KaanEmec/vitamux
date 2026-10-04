@@ -1,16 +1,20 @@
 <!--
-	One metric's rule: the version in effect, 90-day coverage, version history with a field
-	diff between any two versions, and activation of an older or newer version.
+	One metric's rule: the version in effect in plain words, 90-day coverage, the version timeline
+	with activation, and a side-by-side diff of any two versions. The rule lens beside it edits the
+	rule against the last 30 days (a bottom sheet on narrow screens).
 -->
 <script lang="ts">
 	import { page } from '$app/state';
 	import { api, type Problem, type Schemas } from '#lib/api/client.ts';
-	import CoverageHeatmap from '#lib/components/CoverageHeatmap.svelte';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import StatusIcon from '#lib/components/StatusIcon.svelte';
 	import RuleDiff from '#lib/rules/RuleDiff.svelte';
-	import { lastDays, opLabel, selectorText, windowLabel, type Rule } from '#lib/rules/rule.ts';
+	import RuleLens from '#lib/rules/RuleLens.svelte';
+	import { lastDays, selectorText, type Rule } from '#lib/rules/rule.ts';
+	import { ruleSentence } from '#lib/rules/sentence.ts';
 	import { getCoverage, type Coverage } from '#lib/rules/stubs.ts';
+	import Badge from '#lib/ui/Badge.svelte';
+	import Chip from '#lib/ui/Chip.svelte';
 
 	type Version = Schemas['RuleVersion'];
 
@@ -26,7 +30,10 @@
 	let busy = $state(false);
 	let left = $state(0);
 	let right = $state(0);
+	// Bumped when this page activates a version, so the lens starts again from the new rule.
+	let lensKey = $state(0);
 	const range = lastDays(90);
+	const lensRange = lastDays(30);
 
 	async function load(m: string) {
 		const { data, error } = await api.GET('/api/v1/rules/{metric}/versions', { params: { path: { metric: m } } });
@@ -69,12 +76,18 @@
 			return;
 		}
 		activated = data.version;
+		lensKey++;
 		await load(metric);
 	}
 
 	const spec = (v: Version) => v.spec as unknown as Rule;
 	const current = $derived(versions?.find((v) => v.active) ?? null);
 	const byVersion = (n: number) => versions?.find((v) => v.version === n);
+	const name = (v: Version | undefined) => (!v ? '' : v.builtin ? 'Built-in' : `Version ${v.version}`);
+	const provider = (g: Rule['groups'][number]) => {
+		const p = g.match.find((s) => typeof s.provider === 'string' && s.provider)?.provider;
+		return typeof p === 'string' ? p : g.id;
+	};
 	const rows = $derived(
 		(coverage?.rows ?? []).filter((r) => r.metric === metric).map((r) => ({ label: r.source, days: r.days }))
 	);
@@ -83,155 +96,287 @@
 
 <svelte:head><title>{metric} rule · Vitamux</title></svelte:head>
 
-<p class="crumb"><a href="/rules">Rules</a> /</p>
+<nav class="crumb" aria-label="Breadcrumb"><a href="/rules">Rules</a> <span aria-hidden="true">/</span></nav>
 <h1>{metric}</h1>
 
-{#if saved}
-	<p class="ok" role="status"><StatusIcon status="ok" /> Saved version {saved}.</p>
-{/if}
-{#if activated}
-	<p class="ok" role="status"><StatusIcon status="ok" /> Version {activated} is now active.</p>
-{/if}
-<ProblemAlert {problem} />
-
-{#if versions === null}
-	<p class="muted" role="status">Loading versions…</p>
-{:else}
-	{#if current}
-		{@const r = spec(current)}
-		<section class="card" aria-labelledby="in-effect">
-			<h2 id="in-effect">In effect: {current.builtin ? 'built-in default' : `version ${current.version}`}</h2>
-			<p>{windowLabel(r.window)} · {opLabel(r.strategy.op)}</p>
-			{#if current.builtin}
-				<p>
-					{#if current.reason}{current.reason}{/if}
-					<span class="muted">Suggested order; you can reorder or replace it.</span>
-				</p>
-			{/if}
-			<ol class="groups">
-				{#each r.groups as g, i (i)}
-					<li><code>{g.id}</code> <span class="muted">{g.match.map(selectorText).join(' or ')}</span></li>
-				{/each}
-			</ol>
-			{#if r.exclude?.length}
-				<p><span class="muted">Excluded:</span> {r.exclude.map(selectorText).join('; ')}</p>
-			{/if}
-			<div class="actions">
-				<a class="btn primary" href="/rules/new?metric={metric}">Edit in builder</a>
-				<a class="btn" href="/rules/new?metric={metric}&amp;blank=1">Replace with a new rule</a>
-			</div>
-		</section>
-	{/if}
-
-	<section aria-labelledby="coverage">
-		<h2 id="coverage">Coverage, last 90 days</h2>
-		{#if origins.length}
-			<div class="field">
-				<label for="coverage-origin">Origin app</label>
-				<select id="coverage-origin" bind:value={origin}>
-					<option value="">All apps</option>
-					{#each origins as o (o.id)}<option value={o.origin_key}>{o.name || o.origin_key}</option>{/each}
-				</select>
-			</div>
+<div class="layout">
+	<div class="main">
+		{#if saved}
+			<p class="ok" role="status"><StatusIcon status="ok" /> Saved version {saved}.</p>
 		{/if}
-		{#if !coverage}
-			<p class="muted">Coverage is not available yet.</p>
-		{:else if rows.length}
-			<CoverageHeatmap {rows} start={coverage.start_date} caption="{metric} coverage per source" />
+		{#if activated}
+			<p class="ok" role="status"><StatusIcon status="ok" /> Version {activated} is now active.</p>
+		{/if}
+		<ProblemAlert {problem} />
+
+		{#if versions === null}
+			<p class="muted" role="status">Loading versions…</p>
 		{:else}
-			<p class="muted">No data in the last 90 days.</p>
-		{/if}
-	</section>
-
-	{#if versions.length}
-		<section aria-labelledby="history">
-			<h2 id="history">Version history</h2>
-			<table class="versions">
-				<thead>
-					<tr><th scope="col">Version</th><th scope="col">Status</th><th scope="col">Saved</th><th scope="col">Note</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
-				</thead>
-				<tbody>
-					{#each versions as v (v.ref)}
-						<tr>
-							<th scope="row"><code>{v.ref}</code></th>
-							<td>
-								{#if v.active}<StatusIcon status="ok" /> Active{:else}<StatusIcon status="off" /> Inactive{/if}
-							</td>
-							<td>{v.builtin ? 'Built-in' : when(v.created_at)}{#if v.created_by}<span class="muted">{` · ${v.created_by}`}</span>{/if}</td>
-							<td>{v.note ?? ''}{#if v.based_on}<span class="muted">{` (from ${v.based_on})`}</span>{/if}</td>
-							<td class="row-actions">
-								{#if !v.active && !v.builtin}
-									<button class="btn" type="button" disabled={busy} onclick={() => activate(v)}>Activate version {v.version}</button>
-								{/if}
-								<a href="/rules/new?metric={metric}&amp;from={v.version}">Edit a copy</a>
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-
-			{#if versions.length > 1}
-				<h3>Compare versions</h3>
-				<div class="compare">
-					<label>From <select bind:value={left}>{#each versions as v (v.ref)}<option value={v.version}>{v.ref}</option>{/each}</select></label>
-					<label>To <select bind:value={right}>{#each versions as v (v.ref)}<option value={v.version}>{v.ref}</option>{/each}</select></label>
-				</div>
-				<RuleDiff before={byVersion(left)?.spec} after={byVersion(right)?.spec} caption="Changes from version {left} to version {right}" />
+			{#if current}
+				{@const r = spec(current)}
+				<section class="card" aria-labelledby="in-effect">
+					<h2 id="in-effect">In effect: {current.builtin ? 'built-in default' : `version ${current.version}`}</h2>
+					<p class="sentence">{ruleSentence(r)}</p>
+					<ol class="groups" aria-label="Source order">
+						{#each r.groups as g, i (i)}
+							<li><Chip source={provider(g)}>{g.id}</Chip> <span class="muted">{g.match.map(selectorText).join(' or ')}</span></li>
+						{/each}
+					</ol>
+					{#if r.exclude?.length}
+						<p><span class="muted">Never used:</span> {r.exclude.map(selectorText).join('; ')}</p>
+					{/if}
+					{#if current.builtin}
+						<p class="muted">
+							{#if current.reason}{current.reason}{/if}
+							Suggested order; you can reorder or replace it.
+						</p>
+					{/if}
+					<div class="actions">
+						<a class="btn" href="/rules/new?metric={metric}">Edit in builder</a>
+						<a class="btn ghost" href="/rules/new?metric={metric}&amp;blank=1">Replace with a new rule</a>
+					</div>
+				</section>
 			{/if}
-		</section>
+
+			<section class="card" aria-labelledby="coverage">
+				<div class="section-head">
+					<h2 id="coverage">Coverage, last 90 days</h2>
+					{#if origins.length}
+						<div class="field inline">
+							<label for="coverage-origin">Origin app</label>
+							<select id="coverage-origin" bind:value={origin}>
+								<option value="">All apps</option>
+								{#each origins as o (o.id)}<option value={o.origin_key}>{o.name || o.origin_key}</option>{/each}
+							</select>
+						</div>
+					{/if}
+				</div>
+				{#if !coverage}
+					<p class="muted">Coverage is not available yet.</p>
+				{:else if rows.length}
+					{#await import('#lib/charts/CoverageStrip.svelte') then { default: CoverageStrip }}<CoverageStrip {rows} start={coverage.start_date} caption="{metric} coverage per source" />{/await}
+				{:else}
+					<p class="muted">No data in the last 90 days.</p>
+				{/if}
+			</section>
+
+			{#if versions.length}
+				<section class="card" id="history" aria-labelledby="history-title">
+					<h2 id="history-title">Version history</h2>
+					<ol class="timeline">
+						{#each versions as v (v.ref)}
+							<li class={{ active: v.active }}>
+								<span class="mark" aria-hidden="true"></span>
+								<div class="entry">
+									<div class="line">
+										<code>{v.ref}</code>
+										{#if v.active}<Badge tone="accent">Active</Badge>{:else}<span class="muted small">Inactive</span>{/if}
+									</div>
+									<div class="muted small">
+										{v.builtin ? 'Built-in' : when(v.created_at)}{#if v.created_by}{` · ${v.created_by}`}{/if}
+									</div>
+									{#if v.note || v.based_on}
+										<div class="small">{v.note ?? ''}{#if v.based_on}<span class="muted">{` (from ${v.based_on})`}</span>{/if}</div>
+									{/if}
+								</div>
+								<div class="row-actions">
+									{#if !v.active && !v.builtin}
+										<button class="btn sm" type="button" disabled={busy} onclick={() => activate(v)}>Activate version {v.version}</button>
+									{/if}
+									<a class="btn ghost sm" href="/rules/new?metric={metric}&amp;from={v.version}">Edit a copy</a>
+								</div>
+							</li>
+						{/each}
+					</ol>
+
+					{#if versions.length > 1}
+						<h3>Compare versions</h3>
+						<div class="compare">
+							<div class="field inline">
+								<label for="cmp-from">From</label>
+								<select id="cmp-from" bind:value={left}>{#each versions as v (v.ref)}<option value={v.version}>{v.ref}</option>{/each}</select>
+							</div>
+							<div class="field inline">
+								<label for="cmp-to">To</label>
+								<select id="cmp-to" bind:value={right}>{#each versions as v (v.ref)}<option value={v.version}>{v.ref}</option>{/each}</select>
+							</div>
+						</div>
+						<div class="sides">
+							{#each [byVersion(left), byVersion(right)] as v, i (i)}
+								<div class="side">
+									<span class="muted small">{i === 0 ? 'From' : 'To'} · {name(v)}</span>
+									<p>{v ? ruleSentence(spec(v)) : ''}</p>
+								</div>
+							{/each}
+						</div>
+						<RuleDiff
+							before={byVersion(left)?.spec}
+							after={byVersion(right)?.spec}
+							caption="Changes from version {left} to version {right}"
+							labels={[name(byVersion(left)), name(byVersion(right))]}
+						/>
+					{/if}
+				</section>
+			{/if}
+		{/if}
+	</div>
+
+	{#if metric}
+		<div class="side-panel">
+			{#key lensKey}
+				<RuleLens {metric} start={lensRange.start} end={lensRange.end} ondraft={() => {}} history={false} onsaved={() => load(metric)} />
+			{/key}
+		</div>
 	{/if}
-{/if}
+</div>
 
 <style>
 	.crumb {
-		margin: 0;
+		margin: 0 0 var(--space-1);
 		font-size: var(--text-sm);
 	}
 	h1 {
 		font-family: var(--font-mono);
 	}
-	section {
-		margin-bottom: var(--space-6);
+	.layout {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem);
+		align-items: start;
+		gap: var(--space-5);
+	}
+	.main {
+		display: grid;
+		gap: var(--space-5);
+		min-width: 0;
+	}
+	.side-panel {
+		position: sticky;
+		top: var(--space-4);
+		max-height: calc(100dvh - var(--space-6));
+		overflow: auto;
+	}
+	@media (max-width: 64rem) {
+		.layout {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.side-panel {
+			position: static;
+			max-height: none;
+			order: -1;
+		}
+	}
+	.card > :global(*:last-child) {
+		margin-bottom: 0;
 	}
 	.card p {
-		margin: 0 0 var(--space-2);
+		margin: 0 0 var(--space-3);
+	}
+	.sentence {
+		line-height: 1.55;
 	}
 	.ok {
 		display: flex;
 		gap: var(--space-2);
 		align-items: center;
+		margin: 0;
 	}
 	.groups {
+		display: grid;
+		gap: var(--space-2);
 		margin: 0 0 var(--space-3);
-		padding-left: var(--space-5);
+		padding: 0;
+		list-style: none;
 		font-size: var(--text-sm);
+		overflow-wrap: anywhere;
+	}
+	.section-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-3);
+		margin-bottom: var(--space-3);
+	}
+	.section-head h2 {
+		margin: 0;
+	}
+	.field.inline {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		margin: 0;
+	}
+	.field.inline select {
+		min-height: var(--control-h-sm);
+		padding: 0 var(--space-2);
 	}
 	.actions,
 	.compare,
 	.row-actions {
 		display: flex;
 		flex-wrap: wrap;
-		gap: var(--space-3);
+		gap: var(--space-2);
 		align-items: center;
 	}
 	.compare {
 		margin-bottom: var(--space-3);
 	}
-	.versions {
-		width: 100%;
-		border-collapse: collapse;
+	.small {
+		font-size: var(--text-xs);
+	}
+	.timeline {
+		margin: 0 0 var(--space-5);
+		padding: 0;
+		list-style: none;
+	}
+	.timeline li {
+		position: relative;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		gap: var(--space-3);
+		padding: var(--space-3) 0 var(--space-3) var(--space-5);
+		border-left: 2px solid var(--color-border);
+	}
+	.mark {
+		position: absolute;
+		top: var(--space-4);
+		left: -0.4375rem;
+		width: 0.75rem;
+		height: 0.75rem;
+		background: var(--color-surface);
+		border: 2px solid var(--color-text-faint);
+		border-radius: 50%;
+	}
+	.timeline .active .mark {
+		background: var(--color-accent);
+		border-color: var(--color-accent);
+	}
+	.entry {
+		flex: 1 1 14rem;
+		min-width: 0;
+		overflow-wrap: anywhere;
+	}
+	.line {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-2);
+	}
+	.sides {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+		gap: var(--space-3);
 		margin-bottom: var(--space-4);
+	}
+	.side {
+		padding: var(--space-3);
 		font-size: var(--text-sm);
+		background: var(--color-inset);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
 	}
-	.versions th,
-	.versions td {
-		padding: var(--space-2);
-		border-bottom: 1px solid var(--color-border);
-		text-align: left;
-	}
-	select {
-		font: inherit;
-		padding: var(--space-1) var(--space-2);
-		margin-left: var(--space-1);
+	.side p {
+		margin: var(--space-1) 0 0;
 	}
 </style>

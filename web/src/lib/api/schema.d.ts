@@ -166,6 +166,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/event-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List health event types
+         * @description The event codes health_events may hold (docs/architecture/metric-catalog.md#events), with their level words.
+         */
+        get: operations["listEventTypes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Everything stored, per metric, group kind, event code, sleep, workouts and lab analyte
+         * @description One item per kind and code that has active data, with its catalogue metadata. For metrics, first and last seen and the latest value come from the rows; count, days, providers, devices and origins come from the hourly aggregates plus the daily values, so they lag while aggregates_pending is true.
+         */
+        get: operations["getInventory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List health events
+         * @description Rows of health_events (alerts and other typed events), ordered by (start_at, id). code filters the event code; the other filters and include work as on /measurements.
+         */
+        get: operations["listEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sources/series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Per-source series of one metric from the hourly aggregates
+         * @description Every source's own values per local hour or local day over [start, end), for the all-sources overlay of long ranges. Built on the hourly aggregates (active sample and interval rows) plus, per day, the source's reported daily values; nothing is resolved. behind is true while days of the metric in the range wait for the rebuild job. Each source carries its place in the rule in effect. At most 93 days per hour series and 3,660 per day series. Sleep and derived codes have no aggregates (422).
+         */
+        get: operations["getSourceSeries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/measurements": {
         parameters: {
             query?: never;
@@ -454,6 +534,46 @@ export interface paths {
          * @description Validates the draft like POST /rules/{metric}/versions (422, or 409 rule_warning_unacknowledged) and resolves it live beside the rule in effect, one window per local date (at most 366): the draft's local_day or local_night window, else local_day. Nothing is stored: no rule version, no cache rows, no jobs.
          */
         post: operations["previewResolution"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/resolved/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dashboard summary per metric
+         * @description Per metric: the resolved value of date (the window /resolved/daily uses), the 30 resolved daily values ending at date, and 7-, 30- and 90-day display rollups of the resolved daily values ending at date (mean, min, max, n, coverage). Rollups are plain statistics of resolved values, not a resolution strategy; values of windows still open are left out. Everything comes from the resolver and its cache.
+         */
+        get: operations["getResolvedSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/resolved/trend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Weekly or monthly rollups of resolved daily values
+         * @description Display rollups (mean, min, max, n, coverage, and sum for additive metrics) of one metric's resolved daily values per ISO week (Monday first) or calendar month, clipped to the range. The range may span up to 3,660 dates, past the 366-date cap of the daily endpoints. Values of windows still open are left out. Everything comes from the resolver and its cache.
+         */
+        get: operations["getResolvedTrend"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1558,6 +1678,30 @@ export interface paths {
         patch: operations["updateSettings"];
         trace?: never;
     };
+    "/api/v1/settings/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dashboard layout
+         * @description The stored layout, or the curated default (is_default) while none is stored. Cards whose metric is no longer a catalogue code or rule family are dropped.
+         */
+        get: operations["getDashboardLayout"];
+        /**
+         * Replace the dashboard layout
+         * @description Card order is array order. Audited.
+         */
+        put: operations["putDashboardLayout"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/timezone-periods": {
         parameters: {
             query?: never;
@@ -2032,6 +2176,248 @@ export interface components {
             local_date: string;
             draft: components["schemas"]["ResolvedValue"];
             active: components["schemas"]["ResolvedValue"];
+        };
+        /** @description Plain statistics of the resolved daily values of the local dates start_date through end_date, for display; not a resolution strategy. Values of windows still open are left out. */
+        Rollup: {
+            /** Format: date */
+            start_date: string;
+            /** Format: date */
+            end_date: string;
+            /** @description Local dates in the period. */
+            days: number;
+            /** @description Dates with a resolved value. */
+            n: number;
+            /**
+             * Format: double
+             * @description n / days.
+             */
+            coverage: number;
+            /** Format: double */
+            mean?: number;
+            /** Format: double */
+            min?: number;
+            /** Format: double */
+            max?: number;
+            /**
+             * Format: double
+             * @description Additive metrics only.
+             */
+            sum?: number;
+            /** @description For a rule family, the statistics of each catalogue code instead. */
+            components?: {
+                [key: string]: components["schemas"]["RollupValues"];
+            };
+        };
+        RollupValues: {
+            n: number;
+            /** Format: double */
+            mean?: number;
+            /** Format: double */
+            min?: number;
+            /** Format: double */
+            max?: number;
+        };
+        ResolvedSummary: {
+            /** Format: date */
+            date: string;
+            /** @description IANA timezone in effect on date; empty while no timezone period is configured. */
+            timezone: string;
+            metrics: {
+                [key: string]: components["schemas"]["MetricSummary"];
+            };
+        };
+        MetricSummary: {
+            metric: string;
+            /** @description Canonical unit; absent for a family. */
+            unit?: string;
+            rule?: components["schemas"]["RuleRef"];
+            value: components["schemas"]["ResolvedValue"];
+            /** @description The 30 local dates ending at date, oldest first. */
+            sparkline: components["schemas"]["SummaryPoint"][];
+            /** @description Rollups of the 7, 30 and 90 local dates ending at date, in that order. */
+            stats: components["schemas"]["Rollup"][];
+        };
+        SummaryPoint: {
+            /** Format: date */
+            local_date: string;
+            /** @enum {string} */
+            status: "direct" | "fallback" | "calculated" | "overridden" | "no_data";
+            /** @description Same shape as ResolvedValue.value. */
+            value?: unknown;
+            partial?: boolean;
+        };
+        ResolvedTrend: {
+            metric: string;
+            /** @description Canonical unit; absent for a family. */
+            unit?: string;
+            rule?: components["schemas"]["RuleRef"];
+            /** @enum {string} */
+            grain: "week" | "month";
+            timezone: string;
+            /** Format: date */
+            start_date: string;
+            /** Format: date */
+            end_date: string;
+            buckets: components["schemas"]["Rollup"][];
+        };
+        Inventory: {
+            items: components["schemas"]["InventoryItem"][];
+            /** @description Days wait for the rebuild job, so metric counts, days and sources may lag. */
+            aggregates_pending: boolean;
+        };
+        InventoryItem: {
+            /** @enum {string} */
+            kind: "metric" | "group" | "event" | "sleep" | "workouts" | "analyte";
+            /** @description Metric code, group kind (bp_reading, body_composition), event code, sleep, workouts or analyte code. */
+            code: string;
+            /**
+             * Format: int64
+             * @description Active records; for metrics the daily values plus the rows in the hourly aggregates, where an interval counts once per hour it touches.
+             */
+            count: number;
+            /** @description Local dates with data. */
+            days: number;
+            /** Format: date */
+            first_date: string;
+            /** Format: date */
+            last_date: string;
+            /**
+             * Format: date-time
+             * @description Absent for lab results without a collection time.
+             */
+            first_at?: string;
+            /** Format: date-time */
+            last_at?: string;
+            latest?: components["schemas"]["InventoryLatest"];
+            providers: string[];
+            devices: components["schemas"]["DeviceRef"][];
+            origins: components["schemas"]["OriginRef"][];
+            metric?: components["schemas"]["Metric"];
+            /** @description The metric codes of a group kind. */
+            components?: string[];
+            event?: components["schemas"]["EventType"];
+            analyte?: components["schemas"]["AnalyteRef"];
+        };
+        /** @description The newest record: a metric's row, a group's components, an event's value or level, the newest sleep session's asleep seconds, a workout's sport, or a lab result's canonical value (else its printed number) with its printed text. */
+        InventoryLatest: {
+            /** Format: date-time */
+            at?: string;
+            /** Format: date */
+            local_date: string;
+            /** Format: double */
+            value?: number;
+            unit?: string;
+            components?: {
+                [key: string]: number;
+            };
+            level?: string;
+            text?: string;
+        };
+        EventType: {
+            code: string;
+            /** @description Level words the event may carry; empty when it has none. */
+            levels: string[];
+        };
+        AnalyteRef: {
+            code: string;
+            name: string;
+            canonical_unit?: string;
+        };
+        /** @description A typed event (docs/architecture/metric-catalog.md#events). */
+        HealthEvent: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            /** Format: date-time */
+            start_at: string;
+            /** Format: date-time */
+            end_at: string | null;
+            tz_offset_min: number | null;
+            /** Format: date */
+            local_date: string;
+            /** Format: double */
+            value: number | null;
+            level: string | null;
+            /** @description Source metadata as given. */
+            context: Record<string, never>;
+            quality_flags: number;
+            source: components["schemas"]["SourceRef"];
+            provenance: components["schemas"]["RecordProvenance"];
+        };
+        HealthEventPage: components["schemas"]["PageInfo"] & {
+            events: components["schemas"]["HealthEvent"][];
+        };
+        SourceSeries: {
+            metric: string;
+            unit: string;
+            /** @enum {string} */
+            aggregation: "intensive" | "additive" | "latest" | "daily_summary";
+            /** @enum {string} */
+            grain: "hour" | "day";
+            timezone: string;
+            rule?: components["schemas"]["RuleRef"];
+            /** @description Days of the metric in the range wait for the rebuild job. */
+            behind: boolean;
+            sources: components["schemas"]["SourceSeriesSource"][];
+        };
+        SourceSeriesSource: {
+            provider: string;
+            connection_id: components["schemas"]["ConnectionID"];
+            device?: components["schemas"]["DeviceRef"];
+            origin?: components["schemas"]["OriginRef"];
+            /** @description The rule group the source belongs to; null when excluded or outside the rule. */
+            group: string | null;
+            /** @enum {string} */
+            rule_status: "used" | "excluded" | "not_in_rule";
+            points: components["schemas"]["SourcePoint"][];
+        };
+        /** @description One source's values in a local hour or day: additive metrics the intervals pro-rated to it (sum), the others the mean of its 5-minute bucket means with min and max. */
+        SourcePoint: {
+            /**
+             * Format: date-time
+             * @description The hour's start (hour grain).
+             */
+            start?: string;
+            /** Format: date */
+            local_date: string;
+            /** @description Samples, plus intervals once per hour they touch. */
+            n: number;
+            /** Format: double */
+            mean?: number;
+            /** Format: double */
+            min?: number;
+            /** Format: double */
+            max?: number;
+            /** Format: double */
+            sum?: number;
+            /**
+             * Format: double
+             * @description The value the source reported for the whole day (day grain).
+             */
+            daily_value?: number;
+        };
+        DashboardCard: {
+            /** @description Catalogue code or rule family (sleep, blood_pressure). */
+            metric: string;
+            /** @enum {string} */
+            size: "S" | "M" | "L";
+            hidden: boolean;
+        };
+        DashboardLayoutInput: {
+            /**
+             * @description Layout schema version.
+             * @enum {integer}
+             */
+            version: 1;
+            /** @description In display order; a metric at most once. */
+            cards: components["schemas"]["DashboardCard"][];
+        };
+        DashboardLayout: {
+            /** @enum {integer} */
+            version: 1;
+            cards: components["schemas"]["DashboardCard"][];
+            /** @description No layout is stored; this is the curated default. */
+            is_default: boolean;
         };
         SystemVersion: {
             version: string;
@@ -2566,7 +2952,7 @@ export interface components {
         RuleVersion: {
             /** @description rule:<metric>:<n> for the owner's versions, builtin:<metric>:<n> for built-ins. */
             ref: string;
-            /** @description Catalogue code or rule family (sleep */
+            /** @description Catalogue code or rule family (sleep, blood_pressure). */
             metric: string;
             version: number;
             builtin: boolean;
@@ -3688,6 +4074,130 @@ export interface operations {
             404: components["responses"]["Problem"];
         };
     };
+    listEventTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All event types. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        event_types: components["schemas"]["EventType"][];
+                    };
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+        };
+    };
+    getInventory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The inventory. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Inventory"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    listEvents: {
+        parameters: {
+            query?: {
+                /** @description Inclusive start instant (RFC 3339 with offset). */
+                start?: components["parameters"]["Start"];
+                /** @description Exclusive end instant (RFC 3339 with offset). */
+                end?: components["parameters"]["End"];
+                /** @description First local date, inclusive. */
+                start_date?: components["parameters"]["StartDate"];
+                /** @description Last local date, inclusive. */
+                end_date?: components["parameters"]["EndDate"];
+                /** @description Event code; repeatable. */
+                code?: string[];
+                /** @description Provider code; repeatable. */
+                provider?: components["parameters"]["ProviderFilter"];
+                /** @description Connection id; repeatable. */
+                connection?: components["parameters"]["ConnectionFilter"];
+                /** @description Device id (dev_…); repeatable. */
+                device?: components["parameters"]["DeviceFilter"];
+                /** @description Origin key (e.g. a HealthKit bundle id); repeatable. */
+                origin?: components["parameters"]["OriginFilter"];
+                /** @description Comma-separated expansions. */
+                include?: components["parameters"]["Include"];
+                /** @description Page size. Endpoints may cap it lower than 10,000. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Opaque next_cursor from the previous page of the same query. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of events. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthEventPage"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getSourceSeries: {
+        parameters: {
+            query: {
+                /** @description Catalogue code. */
+                metric: string;
+                start: string;
+                end: string;
+                grain?: "hour" | "day";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One series per source. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceSeries"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
     listMeasurements: {
         parameters: {
             query?: {
@@ -4215,6 +4725,65 @@ export interface operations {
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getResolvedSummary: {
+        parameters: {
+            query: {
+                /** @description Comma-separated metric codes or rule families (repeating the parameter also works); at most 20. */
+                metrics: string[];
+                /** @description Local date; today in the owner's timezone when omitted. */
+                date?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One summary per metric. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResolvedSummary"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getResolvedTrend: {
+        parameters: {
+            query: {
+                /** @description Catalogue code or rule family (sleep, blood_pressure). */
+                metric: string;
+                /** @description First local date, inclusive. */
+                start_date: components["parameters"]["StartDateRequired"];
+                /** @description Last local date, inclusive. */
+                end_date: components["parameters"]["EndDateRequired"];
+                grain?: "week" | "month";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One rollup per week or month. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResolvedTrend"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
         };
     };
@@ -6194,6 +6763,55 @@ export interface operations {
             403: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
+        };
+    };
+    getDashboardLayout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The layout. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardLayout"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+        };
+    };
+    putDashboardLayout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DashboardLayoutInput"];
+            };
+        };
+        responses: {
+            /** @description The stored layout. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardLayout"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
         };
     };
     listTimezonePeriods: {

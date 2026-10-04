@@ -1,14 +1,14 @@
-# E21 Panel redesign, dashboard and data exploration (v0.4.0)
+# E21 Panel redesign, dashboard and data exploration (v0.2.0)
 
-Release: v0.4.0 · Depends on: E11, E12, E15, E20 (its screens are restyled and its first-run card is reused); E18 and E19 for real multi-source checks · [Plan index](../README.md)
+Release: v0.2.0 · Status: done (2026-10-04) · Depends on: E11, E12, E15, E17–E19 · E20 builds on its kit · [Plan index](../README.md)
 Read first: [frontend](../../architecture/frontend.md), [resolution#result-shape](../../architecture/resolution.md#result-shape), [api#owner-endpoints-apiv1](../../architecture/api.md#owner-endpoints-apiv1)
 
 **Objective:** Make the panel a sleek, modern place to look at your data and to change how it is resolved. Every existing screen is redesigned on one design system. A dashboard shows the mainstream metrics with neutral baselines. Explore lists everything Vitamux has stored, and every metric chart can change its own rule in place, with a preview.
 
 Owner decisions (2026-10-04):
-- E21 ships as v0.4.0, after E18–E20.
+- E21 ships as v0.2.0, ahead of E20 (owner decision, 2026-10-04); E20's screens are built on the new kit.
 - The dashboard is curated by default; the owner can pin, reorder, resize (S/M/L) and hide cards. The layout is stored on the server.
-- A richer, efficient chart library may replace or join uPlot. This amends [ADR-0010](../../adr/0010-sveltekit-static-spa.md) ([J21.2](J21.2-chart-library-adr.md)). The backend stays Go.
+- A richer, efficient chart library may replace or join uPlot. This amends [ADR-0010](../../adr/0010-sveltekit-static-spa.md); [J21.2](J21.2-chart-library-adr.md) measured the options and chose a small in-house SVG kit (ADR-0020). The backend stays Go.
 - Baselines are neutral: 7-, 30- and 90-day mean, delta, min–max band. No good/bad colouring or advice. Status colours describe data state only.
 - The redesign covers every existing screen: shell, Today, Connections, Data, Rules, Lab, Settings and login.
 
@@ -19,7 +19,7 @@ Owner decisions (2026-10-04):
 - Dashboard, Explore and metric-detail pages, plus the specialised views;
 - the rule lens;
 - redesigned Connections, Rules, Lab and Settings;
-- the v0.4.0 release.
+- the v0.2.0 release.
 
 ## Acceptance
 - **Redesign:** every page uses design system v2 and the new shell. No page uses raw colours or sizes. Light, dark and a manual theme override work. Every E11, E12, E15 and E20 flow still works: the existing e2e suite passes, with updated selectors where needed. Features and API contracts of existing screens are unchanged.
@@ -50,7 +50,14 @@ Owner decisions (2026-10-04):
 | [J21.10](J21.10-rule-lens.md) | Rule lens | J21.8 | None |
 | [J21.11](J21.11-redesign-connections-rules.md) | Redesign Connections and Rules | J21.3, J21.4 | None |
 | [J21.12](J21.12-redesign-lab-settings.md) | Redesign Lab and Settings | J21.3, J21.4 | None |
-| [J21.13](J21.13-quality-release.md) | Quality gates, docs and v0.4.0 | J21.7–J21.12 | G7 |
+| [J21.13](J21.13-quality-release.md) | Quality gates, docs and v0.2.0 | J21.7–J21.12 | G7 |
+
+## Follow-ups
+- The global date context and pinned sidebar shortcuts (J21.3); user-guide screenshots (J21.13).
+- `DELETE /settings/dashboard`, so Reset stops mirroring the default layout in `lib/dashboard/layout.ts`.
+- Manual blood-pressure entry as one reading (`POST /measurements/manual` takes one metric per call).
+- Rule-lens preview beyond 366 days and for non-day windows (the preview API is unchanged).
+- Measure `/inventory` and `/resolved/summary` p95 on the synthetic 3-year dataset.
 
 ## Out of scope
 - Goals or targets, scores computed by Vitamux, insights or coaching text, correlations.

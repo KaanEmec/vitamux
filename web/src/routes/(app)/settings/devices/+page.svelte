@@ -13,6 +13,7 @@
 	import ResetDialog from '#lib/devices/ResetDialog.svelte';
 	import { typeLabel } from '#lib/devices/format.ts';
 	import { ago, when } from '#lib/settings/format.ts';
+	import Card from '#lib/settings/Card.svelte';
 	import Notice from '#lib/settings/Notice.svelte';
 
 	type Device = Schemas['PairedDevice'];
@@ -62,15 +63,16 @@
 
 <svelte:head><title>Devices · Vitamux</title></svelte:head>
 
-<section aria-labelledby="pair">
-	<h2 id="pair">Pair a device</h2>
-	<p class="muted">Pair the Vitamux Apple Health app on an iPhone. The code works once and expires after 10 minutes.</p>
-	<PairingPanel onexpired={loadDevices} />
-</section>
+<p class="lede">Phones that upload Apple Health data, and how each origin app is treated in rules.</p>
 
-<section aria-labelledby="paired">
-	<h2 id="paired">Paired devices</h2>
-	<p class="actions"><button class="btn" type="button" onclick={loadDevices}>Refresh</button></p>
+<Card title="Pair a device" id="pair" description="Pair the Vitamux Apple Health app on an iPhone. The code works once and expires after 10 minutes.">
+	<PairingPanel onexpired={loadDevices} />
+</Card>
+
+<Card title="Paired devices" id="paired">
+	{#snippet aside()}
+		<button class="btn sm" type="button" onclick={loadDevices}>Refresh</button>
+	{/snippet}
 	{#if notice}<Notice>{notice}</Notice>{/if}
 	<ProblemAlert {problem} />
 	{#if devices === null}
@@ -78,77 +80,78 @@
 	{:else if devices.length === 0}
 		<p class="muted">No devices paired yet.</p>
 	{:else}
-		<table>
-			<caption class="visually-hidden">Paired devices</caption>
-			<thead>
-				<tr>
-					<th scope="col">Device</th><th scope="col">Last seen</th><th scope="col">Last sync</th>
-					<th scope="col">Requested types</th><th scope="col"><span class="visually-hidden">Actions</span></th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each devices as d (d.id)}
+		<div class="table-wrap">
+			<table>
+				<caption class="visually-hidden">Paired devices</caption>
+				<thead>
 					<tr>
-						<th scope="row">
-							{d.name}
-							{#if d.revoked_at}<br /><StatusIcon status="off" /> Revoked {when(d.revoked_at)}{/if}
-						</th>
-						<td>{d.last_seen_at ? `${when(d.last_seen_at)} (${ago(d.last_seen_at)})` : 'Never'}</td>
-						<td>{d.last_sync_at ? `${when(d.last_sync_at)} (${ago(d.last_sync_at)})` : 'Never'}</td>
-						<td>
-							{#if d.types.length === 0}
-								<span class="muted">Not reported yet</span>
-							{:else}
-								<ul class="types">
-									{#each d.types as t (t)}
-										<li title={t}>
-											{typeLabel(t)}
-											{#if d.possibly_denied.includes(t)}<span class="flag"><StatusIcon status="warn" /> possibly denied</span>{/if}
-										</li>
-									{/each}
-								</ul>
-							{/if}
-							{#if lastReset(d)}<p class="muted">Resync requested {when(lastReset(d))}.</p>{/if}
-						</td>
-						<td>
-							{#if !d.revoked_at}
-								{#if revoking === d.id}
-									<div class="actions">
-										<button class="btn" type="button" disabled={busy} onclick={() => revoke(d)}>Confirm revoke</button>
-										<button class="btn" type="button" onclick={() => (revoking = null)}>Keep</button>
-									</div>
-								{:else}
-									<div class="actions">
-										<button class="btn" type="button" onclick={() => (resetting = d)} aria-label="Resync {d.name}">Resync…</button>
-										<button class="btn" type="button" onclick={() => (revoking = d.id)} aria-label="Revoke {d.name}">Revoke</button>
-									</div>
-								{/if}
-							{/if}
-						</td>
+						<th scope="col">Device</th><th scope="col">Last seen</th><th scope="col">Last sync</th>
+						<th scope="col">Requested types</th><th scope="col"><span class="visually-hidden">Actions</span></th>
 					</tr>
-				{/each}
-			</tbody>
-		</table>
-		<p class="muted">
+				</thead>
+				<tbody>
+					{#each devices as d (d.id)}
+						<tr>
+							<th scope="row">
+								{d.name}
+								{#if d.revoked_at}<br /><StatusIcon status="off" /> Revoked {when(d.revoked_at)}{/if}
+							</th>
+							<td>{d.last_seen_at ? `${when(d.last_seen_at)} (${ago(d.last_seen_at)})` : 'Never'}</td>
+							<td>{d.last_sync_at ? `${when(d.last_sync_at)} (${ago(d.last_sync_at)})` : 'Never'}</td>
+							<td>
+								{#if d.types.length === 0}
+									<span class="muted">Not reported yet</span>
+								{:else}
+									<ul class="types">
+										{#each d.types as t (t)}
+											<li title={t}>
+												{typeLabel(t)}
+												{#if d.possibly_denied.includes(t)}<span class="flag"><StatusIcon status="warn" /> possibly denied</span>{/if}
+											</li>
+										{/each}
+									</ul>
+								{/if}
+								{#if lastReset(d)}<p class="muted">Resync requested {when(lastReset(d))}.</p>{/if}
+							</td>
+							<td>
+								{#if !d.revoked_at}
+									{#if revoking === d.id}
+										<div class="actions">
+											<button class="btn sm" type="button" disabled={busy} onclick={() => revoke(d)}>Confirm revoke</button>
+											<button class="btn sm" type="button" onclick={() => (revoking = null)}>Keep</button>
+										</div>
+									{:else}
+										<div class="actions">
+											<button class="btn sm" type="button" onclick={() => (resetting = d)} aria-label="Resync {d.name}">Resync…</button>
+											<button class="btn sm" type="button" onclick={() => (revoking = d.id)} aria-label="Revoke {d.name}">Revoke</button>
+										</div>
+									{/if}
+								{/if}
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+		<p class="muted note">
 			iOS does not tell Vitamux when you deny a type. A requested type that stored nothing for 7 days is flagged as possibly denied;
 			check Settings › Health › Data Access on the phone. It may also just have nothing new.
 		</p>
 	{/if}
-</section>
+</Card>
 
-<section aria-labelledby="origins">
-	<h2 id="origins">Origins</h2>
-	<p class="muted">
-		The apps that recorded your data inside Apple Health. Mark an app that relays another vendor's data (such as Garmin Connect), so rules can prefer
-		direct data or leave the relayed copy out.
-	</p>
+<Card
+	title="Origin apps in Apple Health"
+	id="origins"
+	description="The apps that recorded your data inside Apple Health. Mark an app that relays another vendor's data (such as Garmin Connect), so rules can prefer direct data or leave the relayed copy out."
+>
 	<ProblemAlert problem={originsProblem} />
 	{#if origins === null}
 		<p class="muted" role="status">Loading origins…</p>
 	{:else}
 		<OriginTable {origins} {targets} onchanged={loadOrigins} />
 	{/if}
-</section>
+</Card>
 
 {#if resetting}
 	<ResetDialog
@@ -172,6 +175,10 @@
 	}
 	.flag {
 		color: var(--color-text-muted);
+		font-size: var(--text-sm);
+	}
+	.note {
+		margin: var(--space-3) 0 0;
 		font-size: var(--text-sm);
 	}
 </style>

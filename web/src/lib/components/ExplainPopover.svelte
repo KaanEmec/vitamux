@@ -46,11 +46,12 @@
 		right: 0;
 		width: 22rem;
 		max-width: 80vw;
-		padding: var(--space-3);
+		padding: var(--space-3) var(--space-4);
+		margin-top: var(--space-1);
 		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-sm);
-		box-shadow: var(--shadow-1);
+		border: 1px solid var(--color-border-strong);
+		border-radius: var(--radius-md);
+		box-shadow: var(--shadow-2);
 		font-size: var(--text-sm);
 		white-space: normal;
 	}
