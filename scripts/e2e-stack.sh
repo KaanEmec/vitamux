@@ -13,8 +13,9 @@ stack_setup webui
 export VITAMUX_E2E_USER=e2e-owner VITAMUX_E2E_PASSWORD
 VITAMUX_E2E_PASSWORD=$(head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9')
 stack_owner "$VITAMUX_E2E_USER" "$VITAMUX_E2E_PASSWORD"
-# Synthetic origins and a watch for the owner; the device specs pair a device and classify them.
+# A time zone (local dates need one), synthetic origins and a watch for the owner; the device specs pair a device and classify them.
 psql "$url" -v ON_ERROR_STOP=1 -q <<'SQL'
+INSERT INTO timezone_periods (id, user_id, tz, valid_from) SELECT gen_random_uuid(), id, 'Europe/Berlin', '2000-01-01Z' FROM users;
 INSERT INTO data_origins (id, user_id, provider_id, origin_key, name, is_native)
 SELECT gen_random_uuid(), u.id, p.id, v.key, v.name, v.native
 FROM users u, providers p,
