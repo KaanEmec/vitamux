@@ -12,7 +12,9 @@ for (const scheme of schemes) {
 		await page.goto(detail);
 		const chart = page.getByRole('group', { name: /Resting heart rate, resolved per day/ });
 		await expect(chart.locator('path.line')).toHaveCount(1);
-		await page.getByLabel('Show sources').check();
+		const toggles = page.getByRole('group', { name: 'Series' });
+		await toggles.getByRole('button', { name: 'Garmin' }).click();
+		await toggles.getByRole('button', { name: 'Apple Health' }).click();
 		await expect(chart.locator('path.line')).toHaveCount(3); // resolved + one dashed overlay per source
 		await expect(chart.locator('path.line.secondary').first()).toHaveAttribute('stroke-dasharray', /\d/);
 		await expect(chart.locator('.marker.fallback')).toHaveCount(1); // status marker of the fallback day
@@ -27,6 +29,7 @@ for (const scheme of schemes) {
 		await expect(tip).toContainText('52bpm');
 		await expect(tip).toContainText('Fallback');
 		await expect(tip).toContainText('Garmin · watch');
+		await expect(tip).toContainText('Garmin'); // the provider behind the resolved value
 
 		// A click pins the card and offers the point's actions; Raw records opens the day.
 		const box = await chart.boundingBox();
@@ -54,7 +57,7 @@ for (const scheme of schemes) {
 		await expect(hist.locator('.mean')).toHaveCount(1);
 		await walk(page, hist);
 
-		await expect(page.getByRole('img', { name: /^garmin: data on/ })).toBeVisible();
+		await expect(page.getByRole('img', { name: /^Source per day: Whoop 29, Garmin 1/ })).toBeVisible();
 	});
 
 	test(`Bars (${scheme})`, async ({ page }) => {

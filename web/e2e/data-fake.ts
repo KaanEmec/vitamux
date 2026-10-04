@@ -31,10 +31,11 @@ const dayStart = Date.parse('2026-09-13T22:00:00Z'); // 2026-09-14T00:00:00+02:0
 
 // Candidate inputs in rule order. `record` is the measurement id the input's value comes from.
 const ladder = [
-	{ group: 'whoop', value: null as number | null, record: null as string | null, reason: 'stream degraded: schema_drift since 2026-09-13T06:00Z' },
-	{ group: 'garmin', value: 52, record: '9182736', reason: '' },
-	{ group: 'apple_watch', value: 54, record: '9182740', reason: '' }
+	{ group: 'whoop', provider: 'whoop', value: null as number | null, record: null as string | null, reason: 'stream degraded: schema_drift since 2026-09-13T06:00Z' },
+	{ group: 'garmin', provider: 'garmin', value: 52, record: '9182736', reason: '' },
+	{ group: 'apple_watch', provider: 'apple_health', value: 54, record: '9182740', reason: '' }
 ];
+const via = (provider: string) => [{ provider, connection_id: `conn_${provider}` }];
 
 const sourcesList = [
 	{ group: 'garmin', provider: 'garmin', conn: 'conn_garmin', device: 'watch' },
@@ -109,7 +110,7 @@ export class DataApi {
 		if (date !== fallbackDay) {
 			return {
 				...base, status: 'direct', value: 50,
-				inputs: [{ group: 'whoop', status: 'used', selected: true, value: 50, basis: 'daily_value', coverage: 1, record_refs: ['9100000'] }],
+				inputs: [{ group: 'whoop', status: 'used', selected: true, value: 50, basis: 'daily_value', coverage: 1, record_refs: ['9100000'], sources: via('whoop') }],
 				explanation: 'First available source: WHOOP 50 bpm.'
 			};
 		}
@@ -120,7 +121,7 @@ export class DataApi {
 		const inputs = ladder.map((l) => {
 			if (l.value == null) return { group: l.group, status: 'no_data', reason: l.reason };
 			if (excluded.includes(l.record)) return { group: l.group, status: 'excluded', reason: `record ${l.record} excluded by override` };
-			return { group: l.group, status: 'used', selected: false, value: l.value, basis: 'daily_value', coverage: 1, record_refs: [l.record] };
+			return { group: l.group, status: 'used', selected: false, value: l.value, basis: 'daily_value', coverage: 1, record_refs: [l.record], sources: via(l.provider) };
 		});
 		const valid = inputs.filter((i) => i.status === 'used');
 		const pick = (forced && valid.find((i) => i.group === forced)) || valid[0];

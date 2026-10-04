@@ -26,6 +26,7 @@ test('reorder, preview, save and activate, then revert', async ({ page, rules })
 	// The preview covers the page's 30 days and summarises the changed days.
 	await expect(lens.getByText('3 of 14 days change')).toBeVisible();
 	await expect(lens.getByText(/mean \+0\.3 bpm · no new gaps/)).toBeVisible();
+	await lens.locator('summary', { hasText: 'Days that change' }).click();
 	const changes = lens.getByRole('table', { name: 'Days that change' });
 	await expect(changes.getByRole('row')).toHaveCount(4);
 	await expect(changes.getByRole('row').nth(1)).toContainText('61.5 bpm · garmin');
@@ -56,14 +57,14 @@ test('the lens offers only what the metric allows', async ({ page }) => {
 	const lens = lensOf(page);
 	await expect(lens.getByLabel('Window')).toHaveText(/Fixed buckets.*Local hour.*Local day/s);
 	await expect(lens.getByLabel('Window').locator('option')).toHaveCount(3);
-	await expect(lens.getByRole('radio', { name: 'Sum' })).toHaveCount(0);
+	await expect(lens.getByLabel('Strategy').locator('option', { hasText: 'Sum' })).toHaveCount(0);
 	await expect(lens.getByText("Sum isn't offered")).toBeVisible();
 });
 
 test('an unacknowledged sum cannot be saved', async ({ page, rules }) => {
 	await page.goto('/rules/steps');
 	const lens = lensOf(page);
-	await lens.getByRole('radio', { name: 'Sum' }).check();
+	await lens.getByLabel('Strategy').selectOption({ label: 'Sum' });
 	await expect(lens.getByText('Adding sources can count the same activity twice.')).toBeVisible();
 	await lens.getByRole('button', { name: 'Save and activate' }).click();
 
@@ -108,8 +109,8 @@ test('every strategy reads as a plain sentence', async ({ page }) => {
 		['Earliest', 'For each day, use the oldest value of the sources; ties go by order.'],
 		['First available', 'For each day, use the first source in order with data; if none has, the day has no value.']
 	];
-	for (const [pill, sentence] of sentences) {
-		await lens.getByRole('radio', { name: pill }).check();
+	for (const [option, sentence] of sentences) {
+		await lens.getByLabel('Strategy').selectOption({ label: option });
 		await expect(lens.getByText(sentence)).toBeVisible();
 	}
 	await expect(lens.getByText('Each hour is picked first, then the hours are added up.')).toBeVisible();
