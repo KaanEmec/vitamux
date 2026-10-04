@@ -232,6 +232,33 @@ func (s *Store) decode(ctx context.Context, q *dbq.Queries, r dbq.Document) (Doc
 	return d, nil
 }
 
+// shred destroys the document key first (crypto-shred), then tombstones the row, drops the
+// extraction runs and releases the original and the raw responses to the blob sweep.
+func shred(ctx context.Context, q *dbq.Queries, id uuid.UUID, original []byte) error {
+	if _, err := q.DeleteDocumentKey(ctx, id); err != nil {
+		return err
+	}
+	if err := q.TombstoneDocument(ctx, id); err != nil {
+		return err
+	}
+	if err := blob.Release(ctx, q, original); err != nil {
+		return err
+	}
+	responses, err := q.DeleteExtractionRuns(ctx, id)
+	if err != nil {
+		return err
+	}
+	for _, sum := range responses {
+		if sum == nil {
+			continue
+		}
+		if err := blob.Release(ctx, q, sum); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // DeleteResult counts what a deletion removed.
 type DeleteResult struct {
 	Shredded bool  // false when the original was already deleted
@@ -260,25 +287,8 @@ func (s *Store) delete(ctx context.Context, user, id uuid.UUID, derived Derived,
 			return err
 		}
 		if row.Status != StatusDeleted {
-			if _, err := q.DeleteDocumentKey(ctx, id); err != nil {
+			if err := shred(ctx, q, id, row.BlobSha256); err != nil {
 				return err
-			}
-			if err := q.TombstoneDocument(ctx, id); err != nil {
-				return err
-			}
-			if err := blob.Release(ctx, q, row.BlobSha256); err != nil {
-				return err
-			}
-			responses, err := q.DeleteExtractionRuns(ctx, id)
-			if err != nil {
-				return err
-			}
-			for _, sum := range responses {
-				if sum != nil {
-					if err := blob.Release(ctx, q, sum); err != nil {
-						return err
-					}
-				}
 			}
 			res.Shredded = true
 		}
