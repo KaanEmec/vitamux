@@ -88,7 +88,9 @@
 {#if resetting}
 	<Modal title="Reset the cursor of {resetting}?" onclose={() => (resetting = null)}>
 		<p>The next sync fetches this stream again from the connector's initial window. Stored data stays, and records fetched again are deduplicated.</p>
-		<Button variant="primary" disabled={busy} onclick={reset}>Reset cursor</Button>
+		{#snippet footer()}
+			<Button variant="primary" disabled={busy} onclick={reset}>Reset cursor</Button>
+		{/snippet}
 	</Modal>
 {/if}
 

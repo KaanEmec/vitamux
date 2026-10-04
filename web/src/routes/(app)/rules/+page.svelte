@@ -7,11 +7,12 @@
 	import { onMount } from 'svelte';
 	import { api, type Problem, type Schemas } from '#lib/api/client.ts';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
-	import StatusIcon from '#lib/components/StatusIcon.svelte';
+	import Notice from '#lib/settings/Notice.svelte';
 	import { lastDays, type Rule } from '#lib/rules/rule.ts';
 	import { ruleSentence } from '#lib/rules/sentence.ts';
 	import { getCoverage, type Coverage } from '#lib/rules/stubs.ts';
 	import Badge from '#lib/ui/Badge.svelte';
+	import Button from '#lib/ui/Button.svelte';
 	import Chip from '#lib/ui/Chip.svelte';
 	import EmptyState from '#lib/ui/EmptyState.svelte';
 	import Segmented from '#lib/ui/Segmented.svelte';
@@ -82,7 +83,7 @@
 			every change is a new version you can roll back.
 		</p>
 	</div>
-	<a class="btn" href="/rules/new">New rule</a>
+	<Button href="/rules/new">New rule</Button>
 </div>
 
 <ProblemAlert {problem} />
@@ -101,7 +102,7 @@
 	</div>
 
 	{#if !coverage}
-		<p class="note"><StatusIcon status="info" /> Coverage heatmaps are not available yet.</p>
+		<Notice status="info">Coverage heatmaps are not available yet.</Notice>
 	{/if}
 
 	{#if visible.length === 0}
@@ -142,10 +143,10 @@
 				{/if}
 				<div class="actions">
 					{#if e.rule}
-						<a class="btn sm" href="/rules/{e.metric}">Edit with data</a>
-						<a class="btn ghost sm" href="/rules/{e.metric}#history">History</a>
+						<Button size="sm" href="/rules/{e.metric}">Edit with data</Button>
+						<Button variant="ghost" size="sm" href="/rules/{e.metric}#history">History</Button>
 					{:else}
-						<a class="btn sm" href="/rules/new?metric={e.metric}&amp;blank=1">Create a rule</a>
+						<Button size="sm" href="/rules/new?metric={e.metric}&amp;blank=1">Create a rule</Button>
 					{/if}
 				</div>
 			</li>
@@ -177,14 +178,6 @@
 		flex: 1 1 16rem;
 		max-width: 22rem;
 		margin: 0;
-	}
-	.note {
-		display: flex;
-		gap: var(--space-2);
-		align-items: center;
-		padding: var(--space-2) var(--space-3);
-		background: var(--color-info-bg);
-		border-radius: var(--radius-sm);
 	}
 	.grid {
 		display: grid;

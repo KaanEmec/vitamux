@@ -6,8 +6,10 @@
 	import { api, fieldErrors, type Problem, type Schemas } from '../api/client.ts';
 	import Modal from '../components/Modal.svelte';
 	import ProblemAlert from '../components/ProblemAlert.svelte';
+	import StatusIcon from '../components/StatusIcon.svelte';
 	import TextField from '../components/TextField.svelte';
 	import { addDays, today } from '../data/format.ts';
+	import Button from '../ui/Button.svelte';
 	import { providerLabel, unitDays, type Connection } from './connections.ts';
 
 	let {
@@ -25,6 +27,7 @@
 	let end = $state(now);
 	let problem = $state<Problem | null>(null);
 	let busy = $state(false);
+	const formId = $props.id();
 	$effect.pre(() => {
 		if (!stream && streams.length) stream = streams[0];
 	});
@@ -61,7 +64,7 @@
 </script>
 
 <Modal title="Backfill {providerLabel(connection.provider)}" {onclose}>
-	<form onsubmit={submit} novalidate>
+	<form id={formId} onsubmit={submit} novalidate>
 		<div class="field">
 			<label for="backfill-stream">Stream</label>
 			<select id="backfill-stream" name="stream" bind:value={stream} required aria-invalid={errors.stream ? 'true' : undefined}>
@@ -74,27 +77,20 @@
 			<TextField label="To (inclusive)" name="end" type="date" max={now} bind:value={end} error={errors.end} hint="Today means until now." />
 		</div>
 		<p class="muted">{plan} Each unit runs as its own job and can be retried; data fetched before a cancel stays.</p>
-		{#if localError}<p class="local-error" role="alert">{localError}</p>{/if}
+		{#if localError}
+			<div class="inline-alert error" role="alert"><StatusIcon status="error" /><span>{localError}</span></div>
+		{/if}
 		<ProblemAlert {problem} fields={['stream', 'start', 'end']} />
-		<button class="btn primary" type="submit" disabled={busy || !stream || !!localError}>Start backfill</button>
 	</form>
+	{#snippet footer()}
+		<Button variant="primary" type="submit" form={formId} disabled={busy || !stream || !!localError}>Start backfill</Button>
+	{/snippet}
 </Modal>
 
 <style>
-	select {
-		padding: var(--space-2) var(--space-3);
-		font: inherit;
-		color: var(--color-text);
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-sm);
-	}
 	.range {
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
 		gap: 0 var(--space-4);
-	}
-	.local-error {
-		color: var(--color-error);
 	}
 </style>

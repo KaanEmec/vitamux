@@ -11,6 +11,7 @@
 	import ProblemAlert from '../components/ProblemAlert.svelte';
 	import StatusIcon, { type Status } from '../components/StatusIcon.svelte';
 	import TextField from '../components/TextField.svelte';
+	import Notice from '../settings/Notice.svelte';
 	import Button from '../ui/Button.svelte';
 	import CopyValue from '../ui/CopyValue.svelte';
 	import { appDashboards, updateProvider, type Provider } from './setup.ts';
@@ -73,7 +74,7 @@
 
 	{#if step === 1}
 		{#each provider.problems as p (p.code)}
-			<p class="note"><StatusIcon status="warn" /> <span>{p.message}</span></p>
+			<Notice status="warn">{p.message}</Notice>
 		{/each}
 		<p>
 			{#if dashboard}Open the <a href={dashboard} target="_blank" rel="noreferrer">{provider.name} developer dashboard</a>, sign in and create an application.
@@ -83,7 +84,7 @@
 		{#if provider.callback_url}
 			<CopyValue label="Callback URL" value={provider.callback_url} />
 		{:else}
-			<p class="note"><StatusIcon status="warn" /> <span>No public address is set, so there is no callback URL yet. Set VITAMUX_PUBLIC_URL to the https address of Vitamux.</span></p>
+			<Notice status="warn">No public address is set, so there is no callback URL yet. Set VITAMUX_PUBLIC_URL to the https address of Vitamux.</Notice>
 		{/if}
 		<CopyValue label="Application name" value="Vitamux" />
 		<CopyValue label="Description" value="Self-hosted personal health data" />
@@ -118,7 +119,7 @@
 					hint="Stored encrypted. Vitamux never shows it again."
 					required
 				/>
-				{#if checked}<p class="note" role="alert"><StatusIcon status={checked.status} /> <span>{checked.text}</span></p>{/if}
+				{#if checked}<div class={['inline-alert', checked.status]} role="alert"><StatusIcon status={checked.status} /><span>{checked.text}</span></div>{/if}
 				<ProblemAlert {problem} fields={['client_id', 'client_secret']} lead={problem?.status === 409 ? 'The environment sets them, so they cannot be changed here.' : ''} />
 				<div class="buttons">
 					<Button onclick={() => (step = 1)}>Back</Button>
@@ -127,7 +128,7 @@
 			</form>
 		{/if}
 	{:else}
-		{#if checked}<p class="note" role="status"><StatusIcon status={checked.status} /> <span>{checked.text}</span></p>{/if}
+		{#if checked}<Notice status={checked.status}>{checked.text}</Notice>{/if}
 		<p>You will sign in at {provider.name} and allow access, then come back here. Vitamux stores the access it is given encrypted and never shows it.</p>
 		<p class="muted">If {provider.name} reports a redirect URI error, the callback URL registered there differs from the one in step 1.</p>
 		<div class="buttons">
@@ -168,15 +169,6 @@
 	}
 	p {
 		margin: 0 0 var(--space-3);
-	}
-	.note {
-		display: flex;
-		gap: var(--space-2);
-		align-items: flex-start;
-	}
-	.note :global(.status-icon) {
-		flex: none;
-		margin-top: 0.3em;
 	}
 	.buttons {
 		display: flex;
