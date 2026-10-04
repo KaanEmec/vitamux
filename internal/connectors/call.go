@@ -73,6 +73,9 @@ func (rt *Runtime) Describe(provider string) (Descriptor, bool) {
 // Providers returns every registered connector's descriptor, by provider code.
 func (rt *Runtime) Providers() []Descriptor { return rt.reg.Descriptors() }
 
+// Connector returns provider's registered connector (setup checks: AppConnector, sidecar probes).
+func (rt *Runtime) Connector(provider string) (Connector, bool) { return rt.reg.Get(provider) }
+
 // ErrNotSyncable means the server cannot sync the connection now: it is paused, disabled or in
 // error, or no connector runs its provider (push connections). The text is safe to show.
 var ErrNotSyncable = errors.New("connection cannot be synced")

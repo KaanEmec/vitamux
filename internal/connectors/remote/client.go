@@ -11,7 +11,10 @@ import (
 	"net/http"
 	"net/netip"
 	"net/url"
+	"os"
 	"strconv"
+	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -46,11 +49,34 @@ var errNotPrivate = errors.New("sidecar address is not loopback, private or link
 // client speaks the protocol to one sidecar: bearer secret, timeouts, size caps, and a dialer
 // that connects to private addresses only, checked on the resolved address of every connection.
 type client struct {
-	base   *url.URL
-	secret string
-	call   *httpx.Client // describe and auth
-	fetch  *httpx.Client
-	line   int64
+	base  *url.URL
+	call  *httpx.Client // describe and auth
+	fetch *httpx.Client
+	line  int64
+
+	mu         sync.Mutex
+	secret     string
+	secretFile string // read on use while secret is empty (a bundled sidecar's file may appear later)
+}
+
+// errSecretMissing: the shared secret file does not exist (yet); `vitamux admin init-secrets` creates it.
+var errSecretMissing = fmt.Errorf("%w: sidecar secret file is missing", connectors.ErrTransient)
+
+// bearer returns the shared secret, reading its file until it exists.
+func (c *client) bearer() (string, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.secret == "" && c.secretFile != "" {
+		b, err := os.ReadFile(c.secretFile)
+		if err != nil || strings.TrimSpace(string(b)) == "" {
+			return "", errSecretMissing
+		}
+		c.secret = strings.TrimSpace(string(b))
+	}
+	if c.secret == "" {
+		return "", errSecretMissing
+	}
+	return c.secret, nil
 }
 
 func newClient(base *url.URL, secret string, l limits) *client {
@@ -98,7 +124,11 @@ func (c *client) do(ctx context.Context, hc *httpx.Client, path string, in any) 
 	if err != nil {
 		return nil, fmt.Errorf("%w: sidecar request: %w", connectors.ErrPermanent, err)
 	}
-	req.Header.Set("Authorization", "Bearer "+c.secret)
+	secret, err := c.bearer()
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+secret)
 	if in != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}

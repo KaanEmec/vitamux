@@ -1,7 +1,7 @@
-# E20 Guided source setup in the web panel (v0.3.0)
+# E20 Guided source setup in the web panel (v0.2.1)
 
-Release: v0.3 (the Withings jobs may ship earlier) · Depends on: E11, E17; J20.4 and J20.5 need E18 and E19 · [Plan index](../README.md)
-Read first: [connectors#source-setup-in-the-web-panel](../../architecture/connectors.md#source-setup-in-the-web-panel), [frontend#navigation](../../architecture/frontend.md#navigation), [security#keys-and-secrets](../../architecture/security.md#keys-and-secrets)
+Release: v0.2.1 (owner decision, 2026-10-04) · Depends on: E11, E17; J20.4 and J20.5 need E18 and E19 · [Plan index](../README.md)
+Read first: [ADR-0021](../../adr/0021-source-setup.md), [connectors#source-setup-in-the-web-panel](../../architecture/connectors.md#source-setup-in-the-web-panel), [frontend#navigation](../../architecture/frontend.md#navigation), [security#keys-and-secrets](../../architecture/security.md#keys-and-secrets)
 
 **Objective:** Every source is set up from the Vitamux web panel in a few guided steps. This covers keys, secrets, OAuth app credentials, sign-in and MFA. No `.env` edit, secret file or restart is needed, except the one-time line that turns on an optional sidecar container.
 

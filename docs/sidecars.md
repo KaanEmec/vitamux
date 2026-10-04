@@ -58,6 +58,7 @@ sidecars/<name>/
   Dockerfile           # stages: build, test, final; base images pinned by digest
   UPSTREAM.md          # repo, package, version, tag, license, official or unofficial, license review
   compose.yaml         # profile sidecar-<name>: 256 MiB, read-only, healthcheck, frontend network only
+                       # (bundled garmin and whoop live in deploy/compose and deploy/coolify instead)
   pyproject.toml, uv.lock   # or package.json, package-lock.json
   src/  tests/  testdata/   # testdata: synthetic cassettes
 ```

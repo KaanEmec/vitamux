@@ -138,19 +138,20 @@ The stack writes a daily backup to the `vitamux-backups` volume and keeps three 
 
 ## Sidecars
 
-Optional third-party sources (a collector wrapped as a sidecar, [guide](sidecars.md)) run as Compose profiles next to `vitamux`. They get no database access, 256 MiB, a read-only root and only the `frontend` network. Their image follows `:stable`, so a pull brings the newest upstream release that passed its checks. Unofficial sources start paused: enable the connection in the UI after reading its warning.
+Optional third-party sources (a collector wrapped as a sidecar, [guide](sidecars.md)) run as containers next to `vitamux`. They get no database access, 256 MiB, a read-only root and only the `frontend` network. Their image follows `:stable`, so a pull brings the newest upstream release that passed its checks. Unofficial sources start paused: enable the connection in the UI after reading its warning.
 
-**Compose.** Each sidecar ships an overlay, `sidecars/<name>/compose.yaml` (in the release bundle next to `deploy/`). In `deploy/compose/.env`:
+**Bundled: Garmin and WHOOP.** Both Compose files ship them, off. Vitamux always lists them; until one runs it shows `needs_sidecar` with the line below for your install, and finds the sidecar on its own once it runs (**Check again**, or within a minute). Their shared secrets are generated for you (a one-shot on every start, into a volume per sidecar that only `vitamux` and that sidecar mount); nothing goes in `.env` but the switch:
 
-```sh
-COMPOSE_FILE=compose.yaml:../../sidecars/<name>/compose.yaml
-COMPOSE_PROFILES=sidecar-<name>
-VITAMUX_SIDECARS=<name>=http://sidecar-<name>:8080   # comma-separated for several sidecars
-```
+| Install | Turn on | Then |
+| --- | --- | --- |
+| Compose | `COMPOSE_PROFILES=garmin,whoop` in `deploy/compose/.env` (or just one) | `docker compose up -d --wait` |
+| Coolify | Environment variables `GARMIN_SIDECAR=1` and/or `WHOOP_SIDECAR=1` | Redeploy |
 
-Then `docker compose up -d --wait`. A one-shot service creates the shared secret once in a volume that only `vitamux` and that sidecar mount; nothing goes in `.env`. In the UI, Connections lists the source with its upstream version; the first connect runs the sidecar's own sign-in (password, MFA code or redirect). To pin, set `VITAMUX_SIDECAR_<NAME>_IMAGE=...@sha256:<digest>` in `.env`; to update on a schedule, run `docker compose pull && docker compose up -d` from cron or a systemd timer.
+Coolify gets a replica count instead of a profile because it does not reliably honour Compose profiles ([coollabsio/coolify#6395](https://github.com/coollabsio/coolify/issues/6395)); the toggle was checked with Docker Compose, not yet on a live Coolify instance. To pin an image, set `VITAMUX_SIDECAR_GARMIN_IMAGE` or `VITAMUX_SIDECAR_WHOOP_IMAGE` to `...@sha256:<digest>`; to update on a schedule, run `docker compose pull && docker compose up -d` from cron or a systemd timer (Coolify: redeploy).
 
-**Coolify.** The Coolify resource is one file, so merge the overlay by hand into `deploy/coolify/compose.yaml`: add the overlay's two services and its volume, delete their `profiles:` lines, and add the overlay's `vitamux:` keys (`environment`, `volumes`, `depends_on`) to the existing `vitamux` service. Keep the Coolify `VITAMUX_SIDECARS` default or set it as an environment variable, then redeploy. Updates: redeploy (Coolify pulls `:stable`) or pin the digest through `VITAMUX_SIDECAR_<NAME>_IMAGE`. Not yet verified on a live Coolify instance.
+**Your own sidecar.** Add it in the panel with a name and a private-network URL; Vitamux generates the shared secret and shows it once, to give the sidecar as its `VITAMUX_SIDECAR_SECRET_FILE` ([`POST /api/v1/sidecars`](api-reference.md)). Run its container next to `vitamux` from [`sidecars/_template/compose.yaml`](../sidecars/_template/compose.yaml). Automated installs can register it with `VITAMUX_SIDECARS` and a secret file instead ([configuration](configuration.md#providers)); such sidecars show read-only in the panel.
+
+The first connect runs the sidecar's own sign-in (password, MFA code or redirect).
 
 Failures show per connection (degraded or needs re-auth), never for the whole stack; see [troubleshooting](operations/troubleshooting.md). Resource budget: [resource-budget.md](resource-budget.md).
 
@@ -168,7 +169,7 @@ Coolify deploys [`deploy/coolify/compose.yaml`](../deploy/coolify/compose.yaml),
 | --- | --- |
 | Publishes `127.0.0.1:8080` for your proxy | No published ports; Coolify's proxy routes the service's domain to port 8080 and handles TLS |
 | `VITAMUX_PUBLIC_URL` from `.env` | From Coolify's `SERVICE_URL_VITAMUX`, i.e. the domain you give the `vitamux` service |
-| Secret files in `./secrets` from `init-secrets.sh`, master key from a manual `init-secrets` run | One-shot services generate the database passwords (`secrets`) and the master key (`master-key`, `init-secrets --if-missing`) into named volumes on every deploy, never overwriting; each volume is mounted only where the release file mounts that secret |
+| Secret files in `./secrets` from `init-secrets.sh`, master key from a manual `init-secrets` run | One-shot services generate the database passwords and the bundled sidecars' secrets (`secrets`) and the master key (`master-key`, `init-secrets --if-missing`) into named volumes on every deploy, never overwriting; each volume is mounted only where the release file mounts that secret |
 | Withings secret in `secrets/withings_client_secret` | Coolify environment variable `WITHINGS_CLIENT_SECRET`, seen only by the offline `secrets` service, which writes it to a file for `vitamux` |
 | Init SQL mounted from `deploy/sql/` | Inlined with Coolify's `content:` (a test keeps it in step) |
 

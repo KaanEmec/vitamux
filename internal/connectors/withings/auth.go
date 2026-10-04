@@ -17,8 +17,12 @@ import (
 const tokenPath = "/v2/oauth2" //nolint:gosec // an endpoint path, not a credential
 
 // Begin returns the consent URL (docs/providers/withings.md#oauth-20).
-func (w *Connector) Begin(_ context.Context, in connectors.AuthInput) (connectors.AuthStep, error) {
-	if w.cfg.ClientID == "" || w.cfg.ClientSecret == "" {
+func (w *Connector) Begin(ctx context.Context, in connectors.AuthInput) (connectors.AuthStep, error) {
+	app, err := w.cfg.App(ctx)
+	if err != nil {
+		return connectors.AuthStep{}, err
+	}
+	if !app.IsSet() {
 		return connectors.AuthStep{}, connectors.ErrAuthUnavailable
 	}
 	u, err := url.Parse(w.cfg.AuthURL)
@@ -26,7 +30,7 @@ func (w *Connector) Begin(_ context.Context, in connectors.AuthInput) (connector
 		return connectors.AuthStep{}, err
 	}
 	u.RawQuery = url.Values{
-		"response_type": {"code"}, "client_id": {w.cfg.ClientID}, "scope": {scope},
+		"response_type": {"code"}, "client_id": {app.ClientID}, "scope": {scope},
 		"redirect_uri": {in.RedirectURL}, "state": {in.State},
 	}.Encode()
 	return connectors.AuthStep{RedirectURL: u.String()}, nil
@@ -76,12 +80,16 @@ func (t tokenBody) credentials() connectors.Credentials {
 // token calls requesttoken. A refused grant (HTTP 400/401, status 401, 342, 343 or 503
 // "invalid params", or an invalid_grant error) is ErrReauthRequired.
 func (w *Connector) token(ctx context.Context, h *connectors.HTTPClient, form url.Values) (tokenBody, error) {
-	if w.cfg.ClientID == "" || w.cfg.ClientSecret == "" {
+	app, err := w.cfg.App(ctx)
+	if err != nil {
+		return tokenBody{}, err
+	}
+	if !app.IsSet() {
 		return tokenBody{}, fmt.Errorf("withings: client id and secret are not configured: %w", connectors.ErrPermanent)
 	}
 	form.Set("action", "requesttoken")
-	form.Set("client_id", w.cfg.ClientID)
-	form.Set("client_secret", w.cfg.ClientSecret)
+	form.Set("client_id", app.ClientID)
+	form.Set("client_secret", app.ClientSecret)
 	env, err := w.post(ctx, h, tokenPath, "", form)
 	switch {
 	case err != nil:

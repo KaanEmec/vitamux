@@ -11,6 +11,9 @@
 # - The database init SQL is inlined with `content:` (its statements are kept in sync with
 #   deploy/sql/roles.sql and deploy/compose/initdb/20-role-logins.sql by compose_test.go).
 # - No YAML anchors, so every service spells out its hardening.
+# - Bundled sidecars (Garmin, WHOOP) are off until GARMIN_SIDECAR=1 or WHOOP_SIDECAR=1 is set in
+#   Coolify's environment variables and the resource redeployed: a replica count, because Coolify
+#   does not reliably honour Compose profiles (coollabsio/coolify#6395).
 # Policy (compose_test.go): no published ports, read-only rootfs, cap_drop ALL, no-new-privileges,
 # healthchecks, memory limits, secrets only as *_FILE (except the input of `secrets`).
 name: vitamux
@@ -35,12 +38,18 @@ services:
           echo "database secrets created"
         fi
         printf '%s' "$$WITHINGS_CLIENT_SECRET" >/out/app/withings_client_secret
+        for s in garmin whoop; do # bundled sidecars' shared secrets, whether or not they are on
+          [ -s /out/$$s/secret ] || { umask 077; od -An -tx1 -N32 /dev/urandom | tr -d ' \n' >/out/$$s/secret; echo "$$s sidecar secret created"; }
+          chmod 0444 /out/$$s/secret # only vitamux and that sidecar mount the volume
+        done
     environment:
       WITHINGS_CLIENT_SECRET: ${WITHINGS_CLIENT_SECRET:-}
     volumes:
       - pg-secrets:/out/pg
       - migrate-secret:/out/migrate
       - app-secret:/out/app
+      - sidecar-garmin-secret:/out/garmin
+      - sidecar-whoop-secret:/out/whoop
     network_mode: none
     restart: "no"
     exclude_from_hc: true
@@ -167,14 +176,21 @@ services:
       - VITAMUX_MASTER_KEY_FILE=/secrets/master.key
       - VITAMUX_BACKUP_DIR=/backups
       - VITAMUX_BACKUP_KEEP=${VITAMUX_BACKUP_KEEP:-3}
+      - VITAMUX_INSTALL=coolify # the panel shows the Coolify toggle for turning on a sidecar
+      # Optional: the Withings app is normally entered in the panel; these override it.
       - VITAMUX_WITHINGS_CLIENT_ID=${VITAMUX_WITHINGS_CLIENT_ID:-}
       - VITAMUX_WITHINGS_CLIENT_SECRET_FILE=/run/secrets/withings_client_secret
+      - VITAMUX_SIDECARS=${VITAMUX_SIDECARS:-garmin=http://sidecar-garmin:8080,whoop=http://sidecar-whoop:8080}
+      - VITAMUX_SIDECAR_GARMIN_SECRET_FILE=/sidecar-secrets/garmin/secret
+      - VITAMUX_SIDECAR_WHOOP_SECRET_FILE=/sidecar-secrets/whoop/secret
       - GOMEMLIMIT=400MiB
     volumes:
       - app-secret:/run/secrets:ro
       - vitamux-data:/data
       - vitamux-secrets:/secrets:ro
       - vitamux-backups:/backups
+      - sidecar-garmin-secret:/sidecar-secrets/garmin:ro
+      - sidecar-whoop-secret:/sidecar-secrets/whoop:ro
     tmpfs:
       - /tmp:size=64m,mode=1777
     networks: [backend, frontend]
@@ -195,6 +211,64 @@ services:
       postgres: {condition: service_healthy}
       migrate: {condition: service_completed_successfully}
       master-key: {condition: service_completed_successfully}
+
+  # Bundled sidecars (docs/install.md#sidecars), off until GARMIN_SIDECAR=1 / WHOOP_SIDECAR=1.
+  # They join only the default network vitamux reaches them on; the images follow :stable.
+  sidecar-garmin:
+    image: ${VITAMUX_SIDECAR_GARMIN_IMAGE:-ghcr.io/kaanemec/vitamux-sidecar-garmin:stable}
+    deploy:
+      replicas: ${GARMIN_SIDECAR:-0}
+    restart: unless-stopped
+    exclude_from_hc: true # off is a normal state; the panel reports it
+    environment:
+      VITAMUX_SIDECAR_SECRET_FILE: /sidecar-secret/secret
+    volumes:
+      - sidecar-garmin-secret:/sidecar-secret:ro
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    networks: [frontend]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    mem_limit: 256m
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "3"}}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8080), 2)"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 20s
+    depends_on:
+      secrets: {condition: service_completed_successfully}
+
+  sidecar-whoop:
+    image: ${VITAMUX_SIDECAR_WHOOP_IMAGE:-ghcr.io/kaanemec/vitamux-sidecar-whoop:stable}
+    deploy:
+      replicas: ${WHOOP_SIDECAR:-0}
+    restart: unless-stopped
+    exclude_from_hc: true
+    environment:
+      VITAMUX_SIDECAR_SECRET_FILE: /sidecar-secret/secret
+    volumes:
+      - sidecar-whoop-secret:/sidecar-secret:ro
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    networks: [frontend]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    mem_limit: 256m
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "3"}}
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('net').connect(8080, '127.0.0.1').on('connect', () => process.exit(0)).on('error', () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 20s
+    depends_on:
+      secrets: {condition: service_completed_successfully}
 
   # Disaster recovery from the server's shell (docs/operations/backup.md#restore).
   # No `command: []`: `entrypoint` already drops the image's CMD, and Coolify rewrites an empty
@@ -240,3 +314,5 @@ volumes:
   pg-secrets:      # postgres only
   migrate-secret:  # migrate and restore only (DDL owner URL)
   app-secret:      # vitamux only (DML app URL, Withings client secret)
+  sidecar-garmin-secret: # secrets, vitamux and sidecar-garmin
+  sidecar-whoop-secret:  # secrets, vitamux and sidecar-whoop

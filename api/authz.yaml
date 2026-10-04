@@ -61,6 +61,13 @@ routes:
   POST /api/v1/connections/{id}/auth/begin: {allow: session, csrf: true}
   POST /api/v1/providers/{provider}/auth/begin: {allow: session, csrf: true}
   GET /api/v1/providers: {allow: read:config}
+  PUT /api/v1/providers/{provider}/app-credentials: {allow: session, csrf: true}
+  DELETE /api/v1/providers/{provider}/app-credentials: {allow: session, csrf: true}
+  POST /api/v1/providers/{provider}/app-credentials/verify: {allow: session, csrf: true}
+  POST /api/v1/providers/{provider}/probe: {allow: write:config, csrf: true}
+  GET /api/v1/sidecars: {allow: read:config}
+  POST /api/v1/sidecars: {allow: session, csrf: true}
+  DELETE /api/v1/sidecars/{name}: {allow: session, csrf: true}
   POST /api/v1/providers/{provider}/auth/continue: {allow: session, csrf: true}
   POST /api/v1/connections/{id}/sync: {allow: write:config, csrf: true}
   GET /api/v1/connections/{id}/backfills: {allow: read:config}

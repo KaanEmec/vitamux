@@ -36,6 +36,14 @@ func TestSidecars(t *testing.T) {
 	}
 }
 
+// A missing secret file is not an error: the connector reads it once init-secrets created it.
+func TestSidecarSecretMissing(t *testing.T) {
+	c, err := load(envOf(map[string]string{"VITAMUX_SIDECARS": "garmin=http://sidecar-garmin:8080", "VITAMUX_DATA_DIR": "/data"}), filesOf(nil))
+	if err != nil || len(c.Sidecars) != 1 || c.Sidecars[0].Secret.IsSet() || c.Sidecars[0].SecretFile != "/data/secrets/sidecar-garmin.secret" {
+		t.Fatalf("got %+v, %v", c.Sidecars, err)
+	}
+}
+
 func TestSidecarErrors(t *testing.T) {
 	for name, tc := range map[string]struct{ sidecars, want string }{
 		"bad name":    {"Bad=http://x:1", "must match"},
@@ -43,7 +51,6 @@ func TestSidecarErrors(t *testing.T) {
 		"no url":      {"a", "absolute http(s) URL"},
 		"credentials": {"a=http://u:p@x:1", "absolute http(s) URL"},
 		"ftp":         {"a=ftp://x", "absolute http(s) URL"},
-		"no secret":   {"a=http://x:1", "admin init-secrets"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := load(envOf(map[string]string{"VITAMUX_SIDECARS": tc.sidecars}), filesOf(nil))

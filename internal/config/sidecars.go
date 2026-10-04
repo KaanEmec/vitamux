@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/url"
 	"path/filepath"
 	"regexp"
@@ -70,29 +71,33 @@ func parseSidecars(env Lookup, get func(name, def string) string) ([]Sidecar, []
 
 func sidecarSecretVar(name string) string { return "SIDECAR_" + strings.ToUpper(name) + "_SECRET" }
 
-// loadSidecars parses the sidecars and reads their secrets; a missing secret is an error that
-// names `vitamux admin init-secrets`.
+// loadSidecars parses the sidecars and reads their secrets. A secret file that does not exist
+// yet, or is empty, is not an error: the sidecar is reported as needing setup and its connector
+// reads the file once `vitamux admin init-secrets` has created it (ADR-0021).
 func (c *Config) loadSidecars(env Lookup, readFile ReadFile, get func(name, def string) string) []error {
 	sidecars, errs := parseSidecars(env, get)
 	for _, s := range sidecars {
 		name := sidecarSecretVar(s.Name)
-		sec, err := secret(env, readFile, name, c.Env)
-		if err == nil && !sec.IsSet() {
+		var sec Secret
+		var err error
+		if s.SecretFile == "" { // set directly (development)
+			sec, err = secret(env, readFile, name, c.Env)
+		} else {
 			var b []byte
-			if b, err = readFile(s.SecretFile); err != nil {
-				err = fmt.Errorf("%s%s_FILE: cannot read %q (create it with `vitamux admin init-secrets`): %w", prefix, name, s.SecretFile, cmp.Or(errors.Unwrap(err), err))
+			switch b, err = readFile(s.SecretFile); {
+			case errors.Is(err, fs.ErrNotExist):
+				err = nil
+			case err != nil:
+				err = fmt.Errorf("%s%s_FILE: cannot read %q: %w", prefix, name, s.SecretFile, cmp.Or(errors.Unwrap(err), err))
 			}
 			sec = Secret{value: strings.TrimSpace(string(b))}
 		}
-		switch {
-		case err != nil:
+		if err != nil {
 			errs = append(errs, err)
-		case !sec.IsSet():
-			errs = append(errs, fmt.Errorf("%s%s: the secret is empty", prefix, name))
-		default:
-			s.Secret = sec
-			c.Sidecars = append(c.Sidecars, s)
+			continue
 		}
+		s.Secret = sec
+		c.Sidecars = append(c.Sidecars, s)
 	}
 	return errs
 }

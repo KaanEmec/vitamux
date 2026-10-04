@@ -166,9 +166,10 @@ jobs:
           cp deploy/sql/roles.sql "stage/$b/deploy/sql/"
           [ ! -d deploy/coolify ] || cp -R deploy/coolify "stage/$b/deploy/" # Coolify variant (docs/install.md#coolify)
           cp docs/install.md docs/sidecars.md "stage/$b/docs/"
-          for d in sidecars/*/; do # overlays enabled through COMPOSE_FILE (docs/install.md#sidecars)
+          for d in sidecars/*/; do # notices; overlays of non-bundled sidecars (docs/install.md#sidecars)
             case $d in */_template/) continue ;; esac
-            mkdir -p "stage/$b/$d" && cp "$d/compose.yaml" "$d/UPSTREAM.md" "stage/$b/$d"
+            mkdir -p "stage/$b/$d" && cp "$d/UPSTREAM.md" "stage/$b/$d"
+            [ ! -f "$d/compose.yaml" ] || cp "$d/compose.yaml" "stage/$b/$d"
           done
           cp LICENSE NOTICE "stage/$b/"
           # The bundle pins its own release instead of :latest.

@@ -258,6 +258,9 @@ func TestCoolifySecretVolumes(t *testing.T) {
 		"migrate-secret":  {"secrets", "migrate", "restore"},
 		"app-secret":      {"secrets", "vitamux"},
 		"vitamux-secrets": {"master-key", "vitamux", "restore"},
+		// Each bundled sidecar's shared secret: never next to the master key in the sidecar.
+		"sidecar-garmin-secret": {"secrets", "vitamux", "sidecar-garmin"},
+		"sidecar-whoop-secret":  {"secrets", "vitamux", "sidecar-whoop"},
 	}
 	for name, s := range f.Services {
 		for _, v := range s.Volumes {

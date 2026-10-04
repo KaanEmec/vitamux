@@ -19,7 +19,8 @@ Sources: the [OpenAPI spec](https://developer.withings.com/openapi.yaml) (author
 
 ## App registration and callback
 
-- Each self-hoster creates their own application in the [developer dashboard](https://developer.withings.com/dashboard/) (Public API, no contract, EU cloud `https://wbsapi.withings.net`). It yields the client id and secret: `VITAMUX_WITHINGS_CLIENT_ID` and `VITAMUX_WITHINGS_CLIENT_SECRET_FILE` (the plain `VITAMUX_WITHINGS_CLIENT_SECRET` only in development).
+- Each self-hoster creates their own application in the [developer dashboard](https://developer.withings.com/dashboard/) (Public API, no contract, EU cloud `https://wbsapi.withings.net`). It yields the client id and secret, entered in the panel (`PUT /api/v1/providers/withings/app-credentials`, sealed, used from the next authorization on) or, overriding it, as `VITAMUX_WITHINGS_CLIENT_ID` and `VITAMUX_WITHINGS_CLIENT_SECRET_FILE` (the plain `VITAMUX_WITHINGS_CLIENT_SECRET` only in development) ([ADR-0021](../adr/0021-source-setup.md)).
+- Verify checks them without a user grant: `POST https://wbsapi.withings.net/v2/signature` with `action=getnonce`, `client_id`, `timestamp` and `signature` = hex HMAC-SHA256 under the client secret of `getnonce,<client_id>,<timestamp>` (the values sorted by key, comma-joined). Status 0 means accepted; Vitamux does not use the nonce. A synthetic client id was answered with a refusal (checked 2026-10-04).
 - Register `${VITAMUX_PUBLIC_URL}/oauth/withings/callback` as the application's callback URL. `redirect_uri` must match a registered URL; several may be registered, comma-separated.
 - Production callbacks (OAuth and notification) need HTTPS, a domain name (no IP or localhost), port 80 or 443, at most 255 characters. Without that the application runs in restricted mode, limited to 10 linked users: fine for development.
 

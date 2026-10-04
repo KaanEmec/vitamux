@@ -1247,11 +1247,212 @@ paths:
         '403': {$ref: '#/components/responses/Problem'}
         '503': {$ref: '#/components/responses/Problem'}
 
+  /api/v1/providers/{provider}/app-credentials:
+    put:
+      tags: [connections]
+      operationId: putProviderAppCredentials
+      summary: Set the owner's own app credentials of a provider (write-only)
+      description: >
+        Stores the client id and secret of the owner's application at the provider (e.g. the
+        Withings developer app), sealed; the next authorization, exchange and refresh use them,
+        without a restart (docs/adr/0021-source-setup.md). The secret is never returned. 409
+        while the environment sets them (managed_by_environment). Audited as provider_app.set.
+        Owner session only.
+      security: [{session: [], csrf: []}]
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: {type: string, pattern: '^[a-z][a-z0-9_]*$'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AppCredentialsInput'}
+      responses:
+        '200':
+          description: The provider with its new setup state.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Provider'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
+    delete:
+      tags: [connections]
+      operationId: deleteProviderAppCredentials
+      summary: Remove the stored app credentials of a provider
+      description: >
+        409 while connections hold tokens that refresh with these credentials, unless
+        confirm=true (those connections then need new credentials before their next refresh),
+        and while the environment sets them. Audited as provider_app.delete. Owner session only.
+      security: [{session: [], csrf: []}]
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: {type: string, pattern: '^[a-z][a-z0-9_]*$'}
+        - name: confirm
+          in: query
+          required: false
+          description: true removes them even while connections use them.
+          schema: {type: boolean, default: false}
+      responses:
+        '204':
+          description: Removed.
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/providers/{provider}/app-credentials/verify:
+    post:
+      tags: [connections]
+      operationId: verifyProviderAppCredentials
+      summary: Check the current app credentials with the provider, without a user grant
+      description: >
+        valid or invalid where the provider can check them (Withings: a signed nonce request);
+        unverifiable where it needs a user grant, and the first connect checks them. 404 when
+        none are set; 429 or 503 when the provider is rate limiting or unreachable. Audited as
+        provider_app.verify. Owner session only.
+      security: [{session: [], csrf: []}]
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: {type: string, pattern: '^[a-z][a-z0-9_]*$'}
+      responses:
+        '200':
+          description: The outcome.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AppCredentialsVerification'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '429': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/providers/{provider}/probe:
+    post:
+      tags: [connections]
+      operationId: probeProvider
+      summary: Check a sidecar provider again now ("Check again")
+      description: >
+        Describes the provider's sidecar at once instead of waiting for the once-a-minute
+        re-check, and answers the provider with its new setup state. Other providers are
+        answered as they are.
+      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: {type: string, pattern: '^[a-z][a-z0-9_]*$'}
+      responses:
+        '200':
+          description: The provider.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Provider'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/sidecars:
+    get:
+      tags: [connections]
+      operationId: listSidecars
+      summary: List the sidecar connectors, from the environment and added in the panel
+      security: [{session: []}, {apiKey: ['read:config']}]
+      responses:
+        '200':
+          description: Every registered sidecar, by name. Environment ones are read-only.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sidecars]
+                properties:
+                  sidecars: {type: array, items: {$ref: '#/components/schemas/Sidecar'}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
+    post:
+      tags: [connections]
+      operationId: createSidecar
+      summary: Add a sidecar connector; its shared secret is returned once
+      description: >
+        Registers a sidecar at a private-network URL under a provider code. Vitamux generates the
+        shared bearer secret, stores it sealed and returns it once, to configure the sidecar with;
+        the provider is needs_sidecar until the sidecar answers describe (probeProvider checks
+        again). Audited as sidecar.add. Owner session only.
+      security: [{session: [], csrf: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name, url]
+              properties:
+                name: {type: string, pattern: '^[a-z][a-z0-9_]*$', maxLength: 63, description: Provider code the sidecar describes.}
+                url: {type: string, maxLength: 2048, description: 'Base URL, e.g. http://my-sidecar:8080; it must resolve to a loopback, private or link-local address.'}
+      responses:
+        '201':
+          description: Added.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CreatedSidecar'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/sidecars/{name}:
+    delete:
+      tags: [connections]
+      operationId: deleteSidecar
+      summary: Remove a sidecar added in the panel
+      description: >
+        409 for a sidecar of the environment, and while connections of its provider exist unless
+        confirm=true (they stop syncing). Audited as sidecar.remove. Owner session only.
+      security: [{session: [], csrf: []}]
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema: {type: string, pattern: '^[a-z][a-z0-9_]*$'}
+        - name: confirm
+          in: query
+          required: false
+          description: true removes it even while connections of its provider exist.
+          schema: {type: boolean, default: false}
+      responses:
+        '204':
+          description: Removed.
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
+
   /api/v1/providers:
     get:
       tags: [connections]
       operationId: listProviders
-      summary: List the providers a connector serves (in-process and sidecars)
+      summary: List the providers a connector serves (in-process and sidecars), with their setup state
+      description: >
+        Each provider carries what the panel needs to set it up (docs/adr/0021-source-setup.md):
+        setup_state, readiness problems, the OAuth callback URL to register, its app credentials
+        (never the secret) and, for a sidecar, how to turn it on. A sidecar is re-checked on this
+        call at most once a minute; probeProvider checks at once.
       security: [{session: []}, {apiKey: ['read:config']}]
       responses:
         '200':
@@ -4117,7 +4318,7 @@ components:
       type: object
       description: A provider served by a registered connector.
       additionalProperties: false
-      required: [code, name, official, auth_kind, remote, available]
+      required: [code, name, official, auth_kind, remote, available, setup_state, callback_url, problems, app_credentials, sidecar, connections]
       properties:
         code: {type: string}
         name: {type: string}
@@ -4126,6 +4327,101 @@ components:
         remote: {type: boolean, description: Served by a sidecar.}
         available: {type: boolean, description: False while a sidecar is unreachable or has not described itself.}
         upstream: {$ref: '#/components/schemas/Upstream'}
+        setup_state:
+          type: string
+          enum: [needs_sidecar, connected, needs_public_url, needs_app_credentials, ready]
+          description: >
+            The first that applies: needs_sidecar (the sidecar does not answer; see sidecar.enable
+            and problems), connected (a connection that is not disconnected exists),
+            needs_public_url (production only: the provider would refuse the callback; see
+            problems), needs_app_credentials (set them with putProviderAppCredentials), ready.
+        callback_url: {type: [string, 'null'], description: 'The OAuth callback to register at the provider, ${VITAMUX_PUBLIC_URL}/oauth/<provider>/callback; null for providers without a redirect.'}
+        problems:
+          type: array
+          description: What stands in the way of setup; in development the public URL problems are warnings.
+          items: {$ref: '#/components/schemas/SetupProblem'}
+        app_credentials:
+          description: Null for a provider that does not run on the owner's own application.
+          oneOf:
+            - {$ref: '#/components/schemas/AppCredentialsStatus'}
+            - {type: 'null'}
+        sidecar:
+          description: Null for an in-process connector.
+          oneOf:
+            - {$ref: '#/components/schemas/ProviderSidecar'}
+            - {type: 'null'}
+        connections: {type: integer, minimum: 0, description: The caller's connections of this provider that are not disconnected.}
+    SetupProblem:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum: [public_url_not_https, public_url_ip_host, public_url_port, public_url_too_long, sidecar_unreachable, sidecar_secret_missing, sidecar_failed]
+        message: {type: string, description: What to do, in plain language.}
+    AppCredentialsStatus:
+      type: object
+      description: The owner's application at the provider; the secret is write-only and never shown.
+      additionalProperties: false
+      required: [set, managed_by_environment, client_id, updated_at]
+      properties:
+        set: {type: boolean}
+        managed_by_environment: {type: boolean, description: Set by VITAMUX_<PROVIDER>_CLIENT_ID and _SECRET(_FILE), which win over the panel; read-only here.}
+        client_id: {type: [string, 'null']}
+        updated_at: {type: [string, 'null'], format: date-time, description: Last change in the panel; null when unset or set by the environment.}
+    AppCredentialsInput:
+      type: object
+      additionalProperties: false
+      required: [client_id, client_secret]
+      properties:
+        client_id: {type: string, minLength: 1, maxLength: 512}
+        client_secret: {type: string, minLength: 1, maxLength: 1024, description: Write-only; never returned.}
+    AppCredentialsVerification:
+      type: object
+      additionalProperties: false
+      required: [result, message]
+      properties:
+        result: {type: string, enum: [valid, invalid, unverifiable]}
+        message: {type: string}
+    ProviderSidecar:
+      type: object
+      description: How a sidecar provider is registered and, for a bundled one, how to turn it on.
+      additionalProperties: false
+      required: [source, bundled, enable]
+      properties:
+        source: {type: string, enum: [environment, panel], description: environment (VITAMUX_SIDECARS) is read-only; panel ones can be removed.}
+        bundled: {type: boolean, description: Shipped with the release Compose files (garmin, whoop), off until enabled.}
+        enable:
+          type: array
+          description: For a bundled sidecar, the line to add and what to run, for this install (VITAMUX_INSTALL) or for each when unknown; empty otherwise.
+          items: {$ref: '#/components/schemas/SidecarEnable'}
+    SidecarEnable:
+      type: object
+      additionalProperties: false
+      required: [install, line, apply]
+      properties:
+        install: {type: string, enum: [compose, coolify]}
+        line: {type: string, description: 'Compose: the .env line, e.g. COMPOSE_PROFILES=garmin (comma-separate several profiles). Coolify: the environment variable, e.g. GARMIN_SIDECAR=1.'}
+        apply: {type: string, description: What to run afterwards.}
+    Sidecar:
+      type: object
+      additionalProperties: false
+      required: [name, url, source, bundled, available, created_at]
+      properties:
+        name: {type: string}
+        url: {type: string}
+        source: {type: string, enum: [environment, panel]}
+        bundled: {type: boolean}
+        available: {type: boolean, description: The sidecar answered its last describe.}
+        created_at: {type: [string, 'null'], format: date-time, description: Panel sidecars only.}
+    CreatedSidecar:
+      type: object
+      additionalProperties: false
+      required: [sidecar, secret]
+      properties:
+        sidecar: {$ref: '#/components/schemas/Sidecar'}
+        secret: {type: string, description: 'The shared bearer secret (64 hex characters), shown only here: give it to the sidecar as its VITAMUX_SIDECAR_SECRET_FILE.'}
     Upstream:
       type: object
       description: The third-party package a sidecar connector wraps.

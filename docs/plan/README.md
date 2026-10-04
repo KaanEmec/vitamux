@@ -41,7 +41,7 @@ Conventions:
 | [E17](E17-sidecar-connectors/README.md) | Remote sidecar connectors and third-party collectors | v0.2.0 | E06, E07, E11, G4 |
 | [E18](E18-garmin/README.md) | Garmin Connect connector (unofficial sidecar) | v0.3.0 | E17, G5 |
 | [E19](E19-whoop/README.md) | WHOOP connector (unofficial sidecar) | v0.3.0 | E17, G5 |
-| [E20](E20-guided-setup/README.md) | Guided source setup in the web panel | v0.3.0 (Withings part may ship in v0.2.0) | E11, E17; E18, E19 for J20.4–J20.5 |
+| [E20](E20-guided-setup/README.md) | Guided source setup in the web panel | v0.2.1 | E11, E17; E18, E19 for J20.4–J20.5 |
 | [E21](E21-visualisation/README.md) | Panel redesign, dashboard and data exploration | v0.2.0 | E11, E12, E15, E17–E19 (shipped in v0.1.1) |
 
 ```mermaid

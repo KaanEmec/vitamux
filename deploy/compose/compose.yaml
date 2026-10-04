@@ -1,5 +1,9 @@
 # Vitamux release stack: vitamux + postgres (+ a one-shot migrate). Setup: docs/deploy/compose.md.
 #
+# - The bundled Garmin and WHOOP sidecars are off until their profile is on: add
+#   COMPOSE_PROFILES=garmin,whoop (or one of them) to .env, then `docker compose up -d`. Vitamux
+#   always lists them and finds them once they run; their shared secrets are generated here.
+#
 # - PostgreSQL lives on an internal network with no route out and no published port.
 # - vitamux publishes only 127.0.0.1:${VITAMUX_PORT:-8080}; put your TLS reverse proxy in front.
 # - Secrets are files under ./secrets (see init-secrets.sh) mounted through Compose secrets and
@@ -22,6 +26,20 @@ x-vitamux: &vitamux
   image: ${VITAMUX_IMAGE:-ghcr.io/kaanemec/vitamux:latest}
   tmpfs:
     - /tmp:size=64m,mode=1777
+
+# The bundled sidecars (ADR-0021): one shared-secret volume per sidecar, mounted into vitamux and
+# that sidecar only (never the master key's volume).
+x-sidecar: &sidecar
+  <<: *hardened
+  pids_limit: 128
+  restart: unless-stopped
+  environment:
+    VITAMUX_SIDECAR_SECRET_FILE: /sidecar-secret/secret
+  tmpfs: ["/tmp:size=16m,mode=1777"]
+  networks: [frontend] # no database network; vitamux reaches it here
+  mem_limit: 256m
+  depends_on:
+    sidecar-secrets: {condition: service_completed_successfully}
 
 services:
   postgres:
@@ -80,9 +98,13 @@ services:
       VITAMUX_MASTER_KEY_FILE: /secrets/master.key
       VITAMUX_BACKUP_DIR: /backups # daily backup; copy it off-host (docs/operations/backup.md)
       VITAMUX_BACKUP_KEEP: ${VITAMUX_BACKUP_KEEP:-3}
+      VITAMUX_INSTALL: compose # the panel shows the Compose line for turning on a sidecar
+      # Optional: the Withings app is normally entered in the panel; these override it.
       VITAMUX_WITHINGS_CLIENT_ID: ${VITAMUX_WITHINGS_CLIENT_ID:-}
       VITAMUX_WITHINGS_CLIENT_SECRET_FILE: /run/secrets/withings_client_secret
-      VITAMUX_SIDECARS: ${VITAMUX_SIDECARS:-} # e.g. example_sidecar=http://example-sidecar:8080
+      VITAMUX_SIDECARS: ${VITAMUX_SIDECARS:-garmin=http://sidecar-garmin:8080,whoop=http://sidecar-whoop:8080}
+      VITAMUX_SIDECAR_GARMIN_SECRET_FILE: /sidecar-secrets/garmin/secret
+      VITAMUX_SIDECAR_WHOOP_SECRET_FILE: /sidecar-secrets/whoop/secret
       VITAMUX_SIDECAR_EXAMPLE_SIDECAR_SECRET_FILE: /secrets/sidecar-example_sidecar.secret
       GOMEMLIMIT: 400MiB # keep the Go heap under mem_limit
     secrets: [database_url, withings_client_secret]
@@ -90,6 +112,8 @@ services:
       - vitamux-data:/data
       - vitamux-secrets:/secrets:ro
       - vitamux-backups:/backups
+      - sidecar-garmin-secret:/sidecar-secrets/garmin:ro
+      - sidecar-whoop-secret:/sidecar-secrets/whoop:ro
     ports:
       - "127.0.0.1:${VITAMUX_PORT:-8080}:8080"
     networks: [backend, frontend] # frontend: outbound access to provider APIs
@@ -104,6 +128,29 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
       migrate: {condition: service_completed_successfully}
+      sidecar-secrets: {condition: service_completed_successfully}
+
+  # Every start: create the bundled sidecars' missing shared secrets (32 random bytes, hex; never
+  # overwrites), whether or not their profile is on, so turning one on needs nothing else.
+  sidecar-secrets:
+    <<: *hardened
+    image: busybox:stable@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662 # for its shell and a random source
+    user: "0:0" # a fresh named volume is root-owned
+    entrypoint: ["/bin/sh", "-euc"]
+    command:
+      - |
+        for s in garmin whoop; do
+          [ -s /s/$$s/secret ] || { umask 077; od -An -tx1 -N32 /dev/urandom | tr -d ' \n' >/s/$$s/secret; echo "$$s sidecar secret created"; }
+          chmod 0444 /s/$$s/secret # container users cannot own volume files; only vitamux and that sidecar mount the volume
+        done
+    restart: "no"
+    volumes:
+      - sidecar-garmin-secret:/s/garmin
+      - sidecar-whoop-secret:/s/whoop
+    network_mode: none
+    pids_limit: 64
+    mem_limit: 16m
+    healthcheck: {disable: true}
 
   # Disaster recovery into a fresh stack, before the first `up` (docs/operations/backup.md):
   #   docker compose --profile restore run --rm restore --from /backups/vitamux-<time>
@@ -136,13 +183,39 @@ services:
     restart: "no"
     environment:
       VITAMUX_MASTER_KEY_FILE: /secrets/master.key
-      VITAMUX_SIDECARS: ${VITAMUX_SIDECARS:-}
+      VITAMUX_SIDECARS: ${VITAMUX_SIDECARS:-} # the bundled sidecars' secrets come from sidecar-secrets
       VITAMUX_SIDECAR_EXAMPLE_SIDECAR_SECRET_FILE: /secrets/sidecar-example_sidecar.secret
     volumes:
       - vitamux-secrets:/secrets
     network_mode: none
     mem_limit: 64m
     healthcheck: {disable: true}
+
+  # Bundled sidecars (docs/install.md#sidecars): unofficial Garmin Connect and WHOOP clients. Off
+  # until their profile is on; the images follow :stable (pin a digest with VITAMUX_SIDECAR_<NAME>_IMAGE).
+  sidecar-garmin:
+    <<: *sidecar
+    profiles: [garmin]
+    image: ${VITAMUX_SIDECAR_GARMIN_IMAGE:-ghcr.io/kaanemec/vitamux-sidecar-garmin:stable}
+    volumes: ["sidecar-garmin-secret:/sidecar-secret:ro"]
+    healthcheck: # TCP connect: /v1/* needs the bearer secret, so the probe does not call it
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8080), 2)"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 20s
+
+  sidecar-whoop:
+    <<: *sidecar
+    profiles: [whoop]
+    image: ${VITAMUX_SIDECAR_WHOOP_IMAGE:-ghcr.io/kaanemec/vitamux-sidecar-whoop:stable}
+    volumes: ["sidecar-whoop-secret:/sidecar-secret:ro"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('net').connect(8080, '127.0.0.1').on('connect', () => process.exit(0)).on('error', () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 20s
 
   # Synthetic example sidecar (examples/sidecar-python/README.md): docker compose --profile sidecar-example up -d.
   # It joins only the internal network, so it has no route out, and it never publishes a port.
@@ -178,6 +251,8 @@ volumes:
   vitamux-data:
   vitamux-secrets:
   vitamux-backups:
+  sidecar-garmin-secret:
+  sidecar-whoop-secret:
 
 secrets:
   pg_superuser_password: {file: ./secrets/pg_superuser_password}

@@ -15,6 +15,7 @@ import (
 	"github.com/KaanEmec/vitamux/internal/auth"
 	"github.com/KaanEmec/vitamux/internal/blob"
 	"github.com/KaanEmec/vitamux/internal/connectors"
+	"github.com/KaanEmec/vitamux/internal/connectors/remote"
 	"github.com/KaanEmec/vitamux/internal/connectors/withings"
 	"github.com/KaanEmec/vitamux/internal/crypto"
 	"github.com/KaanEmec/vitamux/internal/db"
@@ -54,6 +55,11 @@ type Options struct {
 	Connectors *connectors.Runtime
 	// Withings handles Withings notification callbacks; nil answers 404.
 	Withings *withings.Notifications
+	// Apps holds provider app credentials and Sidecars the sidecar registrations (source setup,
+	// ADR-0021); nil answers 503 on their endpoints. Install is VITAMUX_INSTALL.
+	Apps     *connectors.Apps
+	Sidecars *remote.Manager
+	Install  string
 	// Extract starts and lists document extractions; nil answers 503.
 	Extract *extract.Service
 	// PublicURL is VITAMUX_PUBLIC_URL, which pairing codes point devices at; nil answers 503.
@@ -115,6 +121,7 @@ func newRouter(log *slog.Logger, ui fs.FS, opts Options) (*router, error) {
 	rt.analyteRoutes()
 	rt.ruleRoutes()
 	rt.connectionRoutes()
+	rt.setupRoutes()
 	rt.configRoutes()
 	rt.manualRoutes()
 	rt.statusRoutes()

@@ -23,6 +23,7 @@ import (
 	"github.com/KaanEmec/vitamux/internal/blob"
 	"github.com/KaanEmec/vitamux/internal/config"
 	"github.com/KaanEmec/vitamux/internal/connectors"
+	"github.com/KaanEmec/vitamux/internal/connectors/remote"
 	"github.com/KaanEmec/vitamux/internal/connectors/withings"
 	"github.com/KaanEmec/vitamux/internal/crypto"
 	"github.com/KaanEmec/vitamux/internal/db"
@@ -170,11 +171,18 @@ func serve(stderr io.Writer) int {
 		log.Error("extractors", "err", err)
 		return 1
 	}
-	withingsConn := withings.New(withings.Config{ClientID: cfg.WithingsClientID, ClientSecret: cfg.WithingsClientSecret.Value()})
-	// Provider connectors are added as arguments; sidecars never block startup.
-	syncRegistry, err := connectors.NewRegistry(append([]connectors.Connector{withingsConn}, sidecarConnectors(ctx, cfg.Sidecars, db.New(pool), log)...)...)
+	// App credentials are read on every use: the environment first, then the panel (ADR-0021).
+	apps := connectors.NewApps(db.New(pool), keys, envApps(cfg))
+	withingsConn := withings.New(withings.Config{App: apps.Source(withings.Provider)})
+	// In-process connectors are added as arguments; sidecars never block startup.
+	syncRegistry, err := connectors.NewRegistry(withingsConn)
 	if err != nil {
 		log.Error("connector registry", "err", err)
+		return 1
+	}
+	sidecars := remote.NewManager(db.New(pool), keys, syncRegistry, log)
+	if err := sidecars.Start(ctx, envSidecars(cfg.Sidecars)); err != nil {
+		log.Error("sidecars", "err", err)
 		return 1
 	}
 	var syncRuntime *connectors.Runtime
@@ -200,6 +208,9 @@ func serve(stderr io.Writer) int {
 		Keys:           keys,
 		Connectors:     syncRuntime,
 		Withings:       withingsNotify,
+		Apps:           apps,
+		Sidecars:       sidecars,
+		Install:        cfg.Install,
 		Extract:        extractSvc,
 		BackupDir:      cfg.BackupDir,
 		PublicURL:      cfg.PublicURL,

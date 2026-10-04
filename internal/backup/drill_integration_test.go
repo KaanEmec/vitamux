@@ -25,6 +25,7 @@ import (
 	"github.com/KaanEmec/vitamux/internal/backup"
 	"github.com/KaanEmec/vitamux/internal/blob"
 	"github.com/KaanEmec/vitamux/internal/catalog"
+	"github.com/KaanEmec/vitamux/internal/connectors"
 	"github.com/KaanEmec/vitamux/internal/crypto"
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/db/dbq"
@@ -118,6 +119,12 @@ func TestRestoreDrill(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// A provider app secret entered in the panel (ADR-0021) must open after the restore.
+	app := connectors.AppCredentials{ClientID: "synthetic-client", ClientSecret: "synthetic-app-secret"}
+	if _, err := connectors.NewApps(src, kr, nil).Put(ctx, "withings", app, stats.UserID, "test"); err != nil {
+		t.Fatal(err)
+	}
+
 	// Backup, as the app role.
 	dir, m, err := backup.Create(ctx, backup.Options{DatabaseURL: srcURL, DB: src, DataDir: srcData, Keys: kr, Out: t.TempDir()})
 	if err != nil {
@@ -183,6 +190,9 @@ func TestRestoreDrill(t *testing.T) {
 
 	// Resolution reproduces on the restored instance (read as the app role).
 	dst := db.New(dbtest.Pool(t, dstURL, db.AppRole))
+	if got, err := connectors.NewApps(dst, kr, nil).Get(ctx, "withings"); err != nil || got != app {
+		t.Errorf("provider app credentials after restore: %v", err)
+	}
 	now := time.Date(2025, 3, 1, 0, 0, 0, 0, time.UTC)
 	for _, metric := range []string{"heart_rate", "steps", "weight", "blood_pressure", "sleep"} {
 		req := resolve.Request{UserID: stats.UserID, Metric: metric, From: day("2025-02-15"), To: day("2025-02-19"), Now: now}

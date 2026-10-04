@@ -72,6 +72,19 @@ func TestRotateKeys(t *testing.T) {
 		mustExec("INSERT INTO credentials (connection_id, ciphertext, key_id) VALUES ($1, $2, $3)", id, sealed, krA.KeyID())
 	}
 
+	// Source setup secrets (ADR-0021): a provider app and a panel sidecar.
+	appSecret, sidecarSecret := []byte("synthetic-app-secret"), []byte("synthetic-sidecar-secret")
+	sealedApp, err := krA.Seal(crypto.Credentials, appSecret, crypto.ProviderAppAAD("withings"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustExec("INSERT INTO provider_app_credentials (provider, client_id, ciphertext, key_id) VALUES ('withings', 'synthetic-client', $1, $2)", sealedApp, krA.KeyID())
+	sealedSidecar, err := krA.Seal(crypto.Credentials, sidecarSecret, crypto.SidecarAAD("my_collector"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustExec("INSERT INTO sidecars (name, url, ciphertext, key_id) VALUES ('my_collector', 'http://my-collector:8080', $1, $2)", sealedSidecar, krA.KeyID())
+
 	// Interrupted after one batch of two: one credential and the TOTP secret remain.
 	n, err := rotateKeys(ctx, d, krB, 2, 1)
 	if err != nil || n != (rotated{Credentials: 2}) {
@@ -82,7 +95,7 @@ func TestRotateKeys(t *testing.T) {
 	}
 
 	n, err = rotateKeys(ctx, d, krB, 2, 0)
-	if err != nil || n != (rotated{Credentials: 1, TOTP: 1}) {
+	if err != nil || n != (rotated{Credentials: 1, TOTP: 1, ProviderApps: 1, Sidecars: 1}) {
 		t.Fatalf("resumed run: %+v, %v", n, err)
 	}
 	n, err = rotateKeys(ctx, d, krB, 2, 0)
@@ -113,6 +126,22 @@ func TestRotateKeys(t *testing.T) {
 	}
 	if got, err := krBOnly.Open(crypto.Credentials, ct, crypto.TOTPAAD(userID)); err != nil || string(got) != string(totp) {
 		t.Fatalf("totp: %q, %v", got, err)
+	}
+
+	for _, c := range []struct {
+		sql  string
+		aad  []byte
+		want []byte
+	}{
+		{"SELECT ciphertext FROM provider_app_credentials WHERE provider = 'withings'", crypto.ProviderAppAAD("withings"), appSecret},
+		{"SELECT ciphertext FROM sidecars WHERE name = 'my_collector'", crypto.SidecarAAD("my_collector"), sidecarSecret},
+	} {
+		if err := pool.QueryRow(ctx, c.sql).Scan(&ct); err != nil {
+			t.Fatal(err)
+		}
+		if got, err := krBOnly.Open(crypto.Credentials, ct, c.aad); err != nil || string(got) != string(c.want) {
+			t.Fatalf("%s: %v", c.sql, err)
+		}
 	}
 
 	// One audit event per run that changed something; counts only.

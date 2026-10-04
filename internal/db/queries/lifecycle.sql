@@ -247,6 +247,13 @@ DELETE FROM api_keys WHERE user_id = @user_id;
 -- name: PurgeSettings :execrows
 DELETE FROM settings WHERE user_id = @user_id;
 
+-- name: PurgeProviderApps :execrows
+-- Provider app credentials and panel sidecars the user entered (instance-wide rows, ADR-0021).
+DELETE FROM provider_app_credentials WHERE updated_by = @user_id::uuid;
+
+-- name: PurgeSidecars :execrows
+DELETE FROM sidecars WHERE created_by = @user_id::uuid;
+
 -- name: PurgeUser :execrows
 -- Rules, active rules, overrides, timezone periods, recovery codes, OAuth states and custom
 -- analyte aliases go with the user (cascade); audit events stay, with user_id set to null.
