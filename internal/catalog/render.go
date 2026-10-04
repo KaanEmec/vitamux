@@ -16,12 +16,14 @@ const (
 	SeedV1        = 10 // the J07.1 v1 seed
 	SeedDerived   = 20 // the derived codes of J09.10
 	SeedHealthKit = 25 // the E15 codes of J15.2
+	SeedSidecars  = 28 // the Garmin and WHOOP codes of J18.4 and J19.4
 )
 
 var seedFiles = map[int]struct{ path, job string }{
 	SeedV1:        {"internal/db/migrations/00010_catalogue_seed.sql", "J07.1"},
 	SeedDerived:   {"internal/db/migrations/00020_catalogue_derived.sql", "J09.10"},
 	SeedHealthKit: {"internal/db/migrations/00025_catalogue_healthkit.sql", "J15.2"},
+	SeedSidecars:  {"internal/db/migrations/00028_catalogue_garmin_whoop.sql", "J18.4, J19.4"},
 }
 
 func since(marker int) int {

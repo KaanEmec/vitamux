@@ -1,0 +1,34 @@
+{
+  "synthetic": true,
+  "normalizer": "whoop.workouts",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "whoop:strap",
+        "type": "band",
+        "manufacturer": "WHOOP"
+      }
+    ],
+    "workouts": [
+      {
+        "start": "2026-03-01T10:00:00Z",
+        "end": "2026-03-01T10:52:00Z",
+        "zone": {
+          "offset_min": -300
+        },
+        "sport": "running",
+        "provider_sport": "running",
+        "distance_m": 9120.5,
+        "energy_kcal": 600,
+        "avg_hr_bpm": 152,
+        "max_hr_bpm": 178,
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "workout",
+          "external_id": "00000000-0000-4000-8000-0000000000b1"
+        }
+      }
+    ]
+  }
+}

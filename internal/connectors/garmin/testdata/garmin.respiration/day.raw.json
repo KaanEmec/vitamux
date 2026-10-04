@@ -1,0 +1,41 @@
+{
+ "synthetic": true,
+ "unit": {
+  "date": "2026-06-15"
+ },
+ "response": {
+  "calendarDate": "2026-06-15",
+  "startTimestampGMT": "2026-06-14T22:00:00.0",
+  "endTimestampGMT": "2026-06-15T22:00:00.0",
+  "startTimestampLocal": "2026-06-15T00:00:00.0",
+  "endTimestampLocal": "2026-06-16T00:00:00.0",
+  "userProfilePK": 1,
+  "lowestRespirationValue": 14.0,
+  "highestRespirationValue": 15.5,
+  "avgWakingRespirationValue": 15.0,
+  "respirationValueDescriptorsDTOList": [
+   {
+    "key": "timestamp",
+    "index": 0
+   },
+   {
+    "key": "respiration",
+    "index": 1
+   }
+  ],
+  "respirationValuesArray": [
+   [
+    1781474400000,
+    14.0
+   ],
+   [
+    1781474520000,
+    -1.0
+   ],
+   [
+    1781474640000,
+    15.5
+   ]
+  ]
+ }
+}

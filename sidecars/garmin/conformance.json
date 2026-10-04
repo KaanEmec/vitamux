@@ -1,0 +1,59 @@
+{
+  "rotated": {
+    "credentials": {
+      "access_token": "synthetic-rotate",
+      "refresh_token": "synthetic-refresh",
+      "extra": {
+        "di_client_id": "synthetic-client",
+        "display_name": "synthetic-profile",
+        "profile_id": 1
+      }
+    }
+  },
+  "errors": {
+    "reauth_required": {
+      "credentials": {
+        "access_token": "synthetic-expired",
+        "refresh_token": "synthetic-refresh",
+        "extra": {
+          "di_client_id": "synthetic-client",
+          "display_name": "synthetic-profile",
+          "profile_id": 1
+        }
+      }
+    },
+    "rate_limited": {
+      "credentials": {
+        "access_token": "synthetic-limited",
+        "refresh_token": "synthetic-refresh",
+        "extra": {
+          "di_client_id": "synthetic-client",
+          "display_name": "synthetic-profile",
+          "profile_id": 1
+        }
+      }
+    },
+    "transient": {
+      "credentials": {
+        "access_token": "synthetic-flaky",
+        "refresh_token": "synthetic-refresh",
+        "extra": {
+          "di_client_id": "synthetic-client",
+          "display_name": "synthetic-profile",
+          "profile_id": 1
+        }
+      }
+    },
+    "schema_drift": {
+      "credentials": {
+        "access_token": "synthetic-drift",
+        "refresh_token": "synthetic-refresh",
+        "extra": {
+          "di_client_id": "synthetic-client",
+          "display_name": "synthetic-profile",
+          "profile_id": 1
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "rotated": {
+    "credentials": {
+      "access_token": "synthetic-rotate",
+      "refresh_token": "synthetic-rotate-refresh",
+      "extra": {
+        "user_id": 4242
+      }
+    }
+  },
+  "errors": {
+    "reauth_required": {
+      "credentials": {
+        "access_token": "synthetic-expired",
+        "refresh_token": "synthetic-refresh",
+        "extra": {
+          "user_id": 4242
+        }
+      }
+    },
+    "rate_limited": {
+      "credentials": {
+        "access_token": "synthetic-limited",
+        "refresh_token": "synthetic-refresh",
+        "extra": {
+          "user_id": 4242
+        }
+      }
+    },
+    "transient": {
+      "credentials": {
+        "access_token": "synthetic-flaky",
+        "refresh_token": "synthetic-refresh",
+        "extra": {
+          "user_id": 4242
+        }
+      }
+    },
+    "schema_drift": {
+      "credentials": {
+        "access_token": "synthetic-drift",
+        "refresh_token": "synthetic-refresh",
+        "extra": {
+          "user_id": 4242
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "synthetic": true,
+  "normalizer": "garmin.heart_rate",
+  "version": 1,
+  "output": {
+    "measurements": [
+      {
+        "metric": "heart_rate",
+        "kind": "sample",
+        "start": "2026-06-14T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 61,
+        "unit": "bpm"
+      },
+      {
+        "metric": "heart_rate",
+        "kind": "sample",
+        "start": "2026-06-14T22:02:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 62,
+        "unit": "bpm"
+      },
+      {
+        "metric": "resting_heart_rate",
+        "kind": "daily_value",
+        "start": "2026-06-14T22:00:00Z",
+        "end": "2026-06-15T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 52,
+        "unit": "bpm",
+        "key": {
+          "record_type": "daily_heart_rate",
+          "external_id": "2026-06-15",
+          "component": "resting_heart_rate"
+        }
+      }
+    ]
+  }
+}

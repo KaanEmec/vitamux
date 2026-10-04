@@ -18,3 +18,5 @@ ADRs record decisions that code depends on. Keep each one short and link to the 
 | [0015](0015-rest-openapi-conventions.md) | REST + OpenAPI 3.1 contract-first, problem+json, cursor pagination | Accepted |
 | [0016](0016-canonical-writer.md) | Account-scoped dedupe keys; corrections supersede; one canonical writer | Accepted |
 | [0017](0017-sidecar-protocol.md) | Sidecar protocol `vitamux-connector/1`: HTTP + JSON + NDJSON pages, frozen, additive only within v1 | Accepted |
+| [0018](0018-garmin-upstream.md) | Garmin Connect through a sidecar wrapping `python-garminconnect` | Accepted |
+| [0019](0019-whoop-upstream.md) | WHOOP through a sidecar wrapping `@dofek/whoop` (private API, 6 s HR) | Accepted |

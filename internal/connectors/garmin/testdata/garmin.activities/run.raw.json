@@ -1,0 +1,36 @@
+{
+ "synthetic": true,
+ "unit": {
+  "activity_id": 90000000001
+ },
+ "response": {
+  "activityId": 90000000001,
+  "activityName": "Synthetic Run",
+  "startTimeLocal": "2026-06-15 07:30:00",
+  "startTimeGMT": "2026-06-15 05:30:00",
+  "activityType": {
+   "typeId": 6,
+   "typeKey": "trail_running",
+   "parentTypeId": 1,
+   "isHidden": false
+  },
+  "eventType": {
+   "typeId": 9,
+   "typeKey": "uncategorized"
+  },
+  "distance": 6012.5,
+  "duration": 2401.5,
+  "elapsedDuration": 2460.25,
+  "movingDuration": 2390.0,
+  "elevationGain": 85.0,
+  "calories": 498.0,
+  "averageHR": 148.0,
+  "maxHR": 171.0,
+  "steps": 6200,
+  "deviceId": 1000000001,
+  "manufacturer": "GARMIN",
+  "lapCount": 6,
+  "manualActivity": false,
+  "hrTimeInZone_3": 1200.0
+ }
+}

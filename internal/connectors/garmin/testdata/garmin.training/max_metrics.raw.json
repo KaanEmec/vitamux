@@ -1,0 +1,20 @@
+{
+ "synthetic": true,
+ "unit": {
+  "date": "2026-06-15"
+ },
+ "response": [
+  {
+   "userId": 1,
+   "generic": {
+    "calendarDate": "2026-06-15",
+    "vo2MaxPreciseValue": 47.3,
+    "vo2MaxValue": 47.0,
+    "fitnessAge": null,
+    "maxMetCategory": 0
+   },
+   "cycling": null,
+   "heatAltitudeAcclimation": null
+  }
+ ]
+}

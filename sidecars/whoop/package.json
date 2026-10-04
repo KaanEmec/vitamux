@@ -1,0 +1,18 @@
+{
+  "name": "vitamux-whoop-sidecar",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Vitamux connector sidecar (vitamux-connector/1) wrapping the unofficial @dofek/whoop client",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@dofek/whoop": "0.1.65"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "synthetic": true,
+  "normalizer": "whoop.steps",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "whoop:strap",
+        "type": "band",
+        "manufacturer": "WHOOP"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "steps",
+        "kind": "interval",
+        "start": "2026-03-01T08:00:00Z",
+        "end": "2026-03-01T08:05:00Z",
+        "value": 412,
+        "unit": "count",
+        "device": "whoop:strap"
+      },
+      {
+        "metric": "steps",
+        "kind": "interval",
+        "start": "2026-03-01T08:05:00Z",
+        "end": "2026-03-01T08:10:00Z",
+        "value": 0,
+        "unit": "count",
+        "device": "whoop:strap"
+      },
+      {
+        "metric": "steps",
+        "kind": "interval",
+        "start": "2026-03-01T08:10:00Z",
+        "end": "2026-03-01T08:15:00Z",
+        "value": 96,
+        "unit": "count",
+        "device": "whoop:strap"
+      }
+    ]
+  }
+}

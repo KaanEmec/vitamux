@@ -1,0 +1,79 @@
+{
+ "synthetic": true,
+ "unit": {
+  "date": "2026-06-15"
+ },
+ "response": {
+  "dailySleepDTO": {
+   "id": 1781471400000,
+   "userProfilePK": 1,
+   "calendarDate": "2026-06-15",
+   "sleepTimeSeconds": 21000,
+   "napTimeSeconds": 1800,
+   "sleepWindowConfirmed": true,
+   "sleepStartTimestampGMT": 1781471400000,
+   "sleepEndTimestampGMT": 1781498400000,
+   "sleepStartTimestampLocal": 1781478600000,
+   "sleepEndTimestampLocal": 1781505600000,
+   "deepSleepSeconds": 5400,
+   "lightSleepSeconds": 14400,
+   "remSleepSeconds": 5400,
+   "awakeSleepSeconds": 6000,
+   "deviceRemCapable": true,
+   "sleepScores": {
+    "overall": {
+     "value": 82,
+     "qualifierKey": "GOOD"
+    },
+    "remPercentage": {
+     "value": 21,
+     "qualifierKey": "GOOD"
+    }
+   },
+   "sleepVersion": 2
+  },
+  "remSleepData": true,
+  "sleepLevels": [
+   {
+    "startGMT": "2026-06-14T21:10:00.0",
+    "endGMT": "2026-06-14T22:40:00.0",
+    "activityLevel": 0.0
+   },
+   {
+    "startGMT": "2026-06-14T22:40:00.0",
+    "endGMT": "2026-06-15T00:30:00.0",
+    "activityLevel": 1.0
+   },
+   {
+    "startGMT": "2026-06-15T00:30:00.0",
+    "endGMT": "2026-06-15T01:40:00.0",
+    "activityLevel": 3.0
+   },
+   {
+    "startGMT": "2026-06-15T01:40:00.0",
+    "endGMT": "2026-06-15T01:50:00.0",
+    "activityLevel": -1.0
+   },
+   {
+    "startGMT": "2026-06-15T01:50:00.0",
+    "endGMT": "2026-06-15T03:10:00.0",
+    "activityLevel": 2.0
+   },
+   {
+    "startGMT": "2026-06-15T03:10:00.0",
+    "endGMT": "2026-06-15T04:40:00.0",
+    "activityLevel": 1.0
+   }
+  ],
+  "dailyNapDTOS": [
+   {
+    "userProfilePK": 1,
+    "calendarDate": "2026-06-15",
+    "napTimeSec": 1800,
+    "napStartTimestampGMT": "2026-06-15T12:00:00.0",
+    "napEndTimestampGMT": "2026-06-15T12:30:00.0",
+    "napFeedback": "SYNTHETIC"
+   }
+  ]
+ }
+}

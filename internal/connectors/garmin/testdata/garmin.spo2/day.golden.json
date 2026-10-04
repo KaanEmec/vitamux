@@ -1,0 +1,29 @@
+{
+  "synthetic": true,
+  "normalizer": "garmin.spo2",
+  "version": 1,
+  "output": {
+    "measurements": [
+      {
+        "metric": "spo2",
+        "kind": "sample",
+        "start": "2026-06-14T22:30:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 96,
+        "unit": "%"
+      },
+      {
+        "metric": "spo2",
+        "kind": "sample",
+        "start": "2026-06-14T22:45:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 94,
+        "unit": "%"
+      }
+    ]
+  }
+}

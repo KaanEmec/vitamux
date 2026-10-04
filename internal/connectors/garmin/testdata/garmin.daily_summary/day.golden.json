@@ -1,0 +1,73 @@
+{
+  "synthetic": true,
+  "normalizer": "garmin.daily_summary",
+  "version": 1,
+  "output": {
+    "measurements": [
+      {
+        "metric": "steps",
+        "kind": "daily_value",
+        "start": "2026-06-14T22:00:00Z",
+        "end": "2026-06-15T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 412,
+        "unit": "count",
+        "key": {
+          "record_type": "daily_summary",
+          "external_id": "2026-06-15",
+          "component": "steps"
+        }
+      },
+      {
+        "metric": "active_energy",
+        "kind": "daily_value",
+        "start": "2026-06-14T22:00:00Z",
+        "end": "2026-06-15T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 35,
+        "unit": "kcal",
+        "key": {
+          "record_type": "daily_summary",
+          "external_id": "2026-06-15",
+          "component": "active_energy"
+        }
+      },
+      {
+        "metric": "basal_energy",
+        "kind": "daily_value",
+        "start": "2026-06-14T22:00:00Z",
+        "end": "2026-06-15T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 1650,
+        "unit": "kcal",
+        "key": {
+          "record_type": "daily_summary",
+          "external_id": "2026-06-15",
+          "component": "basal_energy"
+        }
+      },
+      {
+        "metric": "floors_climbed",
+        "kind": "daily_value",
+        "start": "2026-06-14T22:00:00Z",
+        "end": "2026-06-15T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 2.5,
+        "unit": "count",
+        "key": {
+          "record_type": "daily_summary",
+          "external_id": "2026-06-15",
+          "component": "floors_climbed"
+        }
+      }
+    ]
+  }
+}

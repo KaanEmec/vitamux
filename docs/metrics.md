@@ -19,6 +19,7 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `exercise_time` | s | interval, daily_value | additive | 0 to 86400 | bucket, hour, local_day |  | AppleExerciseTime |  |
 | `stand_time` | s | interval | additive | 0 to 86400 | bucket, hour, local_day |  | AppleStandTime |  |
 | `stand_hours` | count | interval, daily_value | additive | 0 to 24 | bucket, hour, local_day |  | AppleStandHour (category) |  |
+| `whoop_strain` | index | daily_value | daily_summary | 0 to 21 | local_day, latest |  |  |  |
 
 ## Heart and circulation
 
@@ -33,6 +34,10 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `pulse_wave_velocity` | m/s | sample | latest | 2 to 30 | local_day, latest |  |  | 91 |
 | `vascular_age` | years | sample | latest | 10 to 120 | local_day, latest |  |  | 155 |
 | `walking_heart_rate` | bpm | daily_value | daily_summary | 20 to 250 | local_day, latest |  | WalkingHeartRateAverage |  |
+| `garmin_stress` | index | sample | intensive | 0 to 100 | bucket, hour, local_day, local_night, sleep_episode, latest |  |  |  |
+| `garmin_body_battery` | index | sample | intensive | 0 to 100 | bucket, hour, local_day, local_night, sleep_episode, latest |  |  |  |
+| `garmin_training_readiness` | index | sample | daily_summary | 0 to 100 | local_day, latest |  |  |  |
+| `whoop_recovery` | % | daily_value | daily_summary | 0 to 100 | local_day, latest |  |  |  |
 
 ## Blood pressure
 
@@ -125,6 +130,8 @@ Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-m
 | `sleep_latency` | s | - | sleep_derived | 0 to 86400 | local_night, sleep_episode |  |  |  |
 | `sleep_waso` | s | - | sleep_derived | 0 to 86400 | local_night, sleep_episode |  |  |  |
 | `sleep_efficiency` | % | - | sleep_derived | 0 to 100 | local_night, sleep_episode |  |  |  |
+| `garmin_sleep_score` | index | daily_value | daily_summary | 0 to 100 | local_day, latest |  |  |  |
+| `whoop_sleep_performance` | % | sample | daily_summary | 0 to 100 | local_day, latest |  |  |  |
 
 ## Derived
 

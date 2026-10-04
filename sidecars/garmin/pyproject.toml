@@ -1,0 +1,9 @@
+[project]
+name = "vitamux-sidecar-garmin"
+version = "0.1.0"
+description = "Vitamux connector sidecar for Garmin Connect (protocol vitamux-connector/1)"
+requires-python = ">=3.12"
+dependencies = ["garminconnect==0.3.17"]
+
+[tool.uv]
+package = false

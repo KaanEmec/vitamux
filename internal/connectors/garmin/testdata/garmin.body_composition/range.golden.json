@@ -1,0 +1,112 @@
+{
+  "synthetic": true,
+  "normalizer": "garmin.body_composition",
+  "version": 1,
+  "output": {
+    "groups": [
+      {
+        "kind": "body_composition",
+        "measured_at": "2026-06-15T05:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "context": {
+          "source_type": "INDEX_SCALE"
+        },
+        "key": {
+          "record_type": "weight",
+          "external_id": "1781500000001"
+        },
+        "components": [
+          {
+            "metric": "weight",
+            "kind": "sample",
+            "start": "2026-06-15T05:00:00Z",
+            "zone": {
+              "offset_min": 120
+            },
+            "value": 72500,
+            "unit": "g"
+          },
+          {
+            "metric": "bmi",
+            "kind": "sample",
+            "start": "2026-06-15T05:00:00Z",
+            "zone": {
+              "offset_min": 120
+            },
+            "value": 22.4,
+            "unit": "kg/m²"
+          },
+          {
+            "metric": "body_fat_ratio",
+            "kind": "sample",
+            "start": "2026-06-15T05:00:00Z",
+            "zone": {
+              "offset_min": 120
+            },
+            "value": 18.5,
+            "unit": "%"
+          },
+          {
+            "metric": "bone_mass",
+            "kind": "sample",
+            "start": "2026-06-15T05:00:00Z",
+            "zone": {
+              "offset_min": 120
+            },
+            "value": 3200,
+            "unit": "g"
+          },
+          {
+            "metric": "muscle_mass",
+            "kind": "sample",
+            "start": "2026-06-15T05:00:00Z",
+            "zone": {
+              "offset_min": 120
+            },
+            "value": 32000,
+            "unit": "g"
+          },
+          {
+            "metric": "visceral_fat_index",
+            "kind": "sample",
+            "start": "2026-06-15T05:00:00Z",
+            "zone": {
+              "offset_min": 120
+            },
+            "value": 6,
+            "unit": "index"
+          }
+        ]
+      },
+      {
+        "kind": "body_composition",
+        "measured_at": "2026-06-12T21:30:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "context": {
+          "source_type": "MANUAL"
+        },
+        "key": {
+          "record_type": "weight",
+          "external_id": "1781300000002"
+        },
+        "components": [
+          {
+            "metric": "weight",
+            "kind": "sample",
+            "start": "2026-06-12T21:30:00Z",
+            "zone": {
+              "offset_min": 120
+            },
+            "value": 72100,
+            "unit": "g",
+            "flags": 1
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,51 @@
+{
+ "synthetic": true,
+ "unit": {
+  "date": "2026-06-15"
+ },
+ "response": {
+  "calendarDate": "2026-06-15",
+  "startTimestampGMT": "2026-06-14T22:00:00.0",
+  "endTimestampGMT": "2026-06-15T22:00:00.0",
+  "startTimestampLocal": "2026-06-15T00:00:00.0",
+  "endTimestampLocal": "2026-06-16T00:00:00.0",
+  "userProfilePK": 1,
+  "maxHeartRate": 63,
+  "minHeartRate": 61,
+  "restingHeartRate": 52,
+  "lastSevenDaysAvgRestingHeartRate": 53,
+  "heartRateValueDescriptors": [
+   {
+    "key": "timestamp",
+    "index": 0
+   },
+   {
+    "key": "heartrate",
+    "index": 1
+   },
+   {
+    "key": "confidence",
+    "index": 2
+   }
+  ],
+  "heartRateValues": [
+   [
+    1781474400000,
+    61,
+    3
+   ],
+   [
+    1781474520000,
+    62,
+    1
+   ]
+  ],
+  "syntheticNewSection": {
+   "enabled": true,
+   "values": [
+    1,
+    2
+   ]
+  }
+ }
+}

@@ -1,0 +1,47 @@
+{
+  "synthetic": true,
+  "normalizer": "garmin.blood_pressure",
+  "version": 1,
+  "output": {
+    "groups": [
+      {
+        "kind": "bp_reading",
+        "measured_at": "2026-06-14T07:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "context": {
+          "source_type": "MANUAL"
+        },
+        "key": {
+          "record_type": "bp",
+          "external_id": "1781420400000"
+        },
+        "components": [
+          {
+            "metric": "bp_systolic",
+            "kind": "sample",
+            "start": "2026-06-14T07:00:00Z",
+            "zone": {
+              "offset_min": 120
+            },
+            "value": 128,
+            "unit": "mmHg",
+            "flags": 1
+          },
+          {
+            "metric": "bp_diastolic",
+            "kind": "sample",
+            "start": "2026-06-14T07:00:00Z",
+            "zone": {
+              "offset_min": 120
+            },
+            "value": 84,
+            "unit": "mmHg",
+            "flags": 1
+          }
+        ]
+      }
+    ]
+  }
+}

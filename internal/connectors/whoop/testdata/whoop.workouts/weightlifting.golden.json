@@ -1,0 +1,33 @@
+{
+  "synthetic": true,
+  "normalizer": "whoop.workouts",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "whoop:strap",
+        "type": "band",
+        "manufacturer": "WHOOP"
+      }
+    ],
+    "workouts": [
+      {
+        "start": "2026-03-02T17:30:00Z",
+        "end": "2026-03-02T18:25:00Z",
+        "zone": {
+          "offset_min": -300
+        },
+        "sport": "traditional_strength_training",
+        "provider_sport": "weightlifting",
+        "energy_kcal": 329.82791586998087,
+        "avg_hr_bpm": 118,
+        "max_hr_bpm": 151,
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "workout",
+          "external_id": "00000000-0000-4000-8000-0000000000b2"
+        }
+      }
+    ]
+  }
+}

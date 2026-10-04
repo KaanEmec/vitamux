@@ -1,0 +1,6 @@
+{
+  "synthetic": true,
+  "normalizer": "whoop.sleep",
+  "version": 1,
+  "error": "whoop.sleep: sleep without stages or bounds (shape drift)"
+}

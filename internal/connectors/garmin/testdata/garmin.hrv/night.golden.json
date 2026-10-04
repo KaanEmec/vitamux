@@ -1,0 +1,45 @@
+{
+  "synthetic": true,
+  "normalizer": "garmin.hrv",
+  "version": 1,
+  "output": {
+    "measurements": [
+      {
+        "metric": "hrv_rmssd",
+        "kind": "sample",
+        "start": "2026-06-14T21:15:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 45,
+        "unit": "ms"
+      },
+      {
+        "metric": "hrv_rmssd",
+        "kind": "sample",
+        "start": "2026-06-14T21:20:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 51,
+        "unit": "ms"
+      },
+      {
+        "metric": "hrv_rmssd_nightly",
+        "kind": "daily_value",
+        "start": "2026-06-14T22:00:00Z",
+        "end": "2026-06-15T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 48,
+        "unit": "ms",
+        "key": {
+          "record_type": "hrv",
+          "external_id": "2026-06-15",
+          "component": "hrv_rmssd_nightly"
+        }
+      }
+    ]
+  }
+}

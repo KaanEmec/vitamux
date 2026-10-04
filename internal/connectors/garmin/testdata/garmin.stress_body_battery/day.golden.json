@@ -1,0 +1,49 @@
+{
+  "synthetic": true,
+  "normalizer": "garmin.stress_body_battery",
+  "version": 1,
+  "output": {
+    "measurements": [
+      {
+        "metric": "garmin_stress",
+        "kind": "sample",
+        "start": "2026-06-14T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 25,
+        "unit": "index"
+      },
+      {
+        "metric": "garmin_stress",
+        "kind": "sample",
+        "start": "2026-06-14T22:09:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 40,
+        "unit": "index"
+      },
+      {
+        "metric": "garmin_body_battery",
+        "kind": "sample",
+        "start": "2026-06-14T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 60,
+        "unit": "index"
+      },
+      {
+        "metric": "garmin_body_battery",
+        "kind": "sample",
+        "start": "2026-06-14T22:06:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 59,
+        "unit": "index"
+      }
+    ]
+  }
+}

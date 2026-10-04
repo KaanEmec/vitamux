@@ -1,0 +1,6 @@
+{
+  "synthetic": true,
+  "normalizer": "garmin.hrv",
+  "version": 1,
+  "output": {}
+}

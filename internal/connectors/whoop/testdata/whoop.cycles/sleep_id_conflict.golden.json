@@ -1,0 +1,117 @@
+{
+  "synthetic": true,
+  "normalizer": "whoop.cycles",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "whoop:strap",
+        "type": "band",
+        "manufacturer": "WHOOP"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "respiratory_rate",
+        "kind": "sample",
+        "start": "2026-03-06T02:55:00Z",
+        "value": 14.6,
+        "unit": "breaths/min",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "sleep",
+          "external_id": "10241",
+          "component": "respiratory_rate"
+        }
+      },
+      {
+        "metric": "respiratory_rate",
+        "kind": "sample",
+        "start": "2026-03-06T14:15:00Z",
+        "value": 15.2,
+        "unit": "breaths/min",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "sleep",
+          "external_id": "00000000-0000-4000-8000-0000000000c1",
+          "component": "respiratory_rate"
+        }
+      },
+      {
+        "metric": "whoop_strain",
+        "kind": "daily_value",
+        "start": "2026-03-06T06:40:00Z",
+        "end": "2026-03-06T06:40:00Z",
+        "value": 10.1,
+        "unit": "index",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "cycle",
+          "external_id": "101",
+          "component": "whoop_strain"
+        }
+      },
+      {
+        "metric": "whoop_recovery",
+        "kind": "daily_value",
+        "start": "2026-03-06T06:40:00Z",
+        "end": "2026-03-06T06:40:00Z",
+        "value": 70,
+        "unit": "%",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "cycle",
+          "external_id": "101",
+          "component": "whoop_recovery"
+        }
+      },
+      {
+        "metric": "resting_heart_rate",
+        "kind": "daily_value",
+        "start": "2026-03-06T06:40:00Z",
+        "end": "2026-03-06T06:40:00Z",
+        "value": 54,
+        "unit": "bpm",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "cycle",
+          "external_id": "101",
+          "component": "resting_heart_rate"
+        }
+      },
+      {
+        "metric": "hrv_rmssd_nightly",
+        "kind": "daily_value",
+        "start": "2026-03-06T06:40:00Z",
+        "end": "2026-03-06T06:40:00Z",
+        "value": 60,
+        "unit": "ms",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "cycle",
+          "external_id": "101",
+          "component": "hrv_rmssd_nightly"
+        }
+      }
+    ],
+    "sleep": [
+      {
+        "start": "2026-03-06T14:00:00Z",
+        "end": "2026-03-06T14:30:00Z",
+        "nap": true,
+        "totals": {
+          "asleep_s": 1500,
+          "deep_s": 0,
+          "light_s": 1200,
+          "rem_s": 300,
+          "awake_s": 300
+        },
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "sleep",
+          "external_id": "00000000-0000-4000-8000-0000000000c1"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+{
+ "synthetic": true,
+ "unit": {
+  "date": "2026-06-15"
+ },
+ "response": {
+  "userProfileId": 1,
+  "calendarDate": "2026-06-15",
+  "totalSteps": 412,
+  "totalDistanceMeters": 310,
+  "activeKilocalories": 35.0,
+  "bmrKilocalories": 1650.0,
+  "totalKilocalories": 1685.0,
+  "floorsAscended": 2.5,
+  "restingHeartRate": 52,
+  "averageStressLevel": 21,
+  "bodyBatteryHighestValue": 80,
+  "includesWellnessData": true,
+  "privacyProtected": false,
+  "wellnessStartTimeGmt": "2026-06-14T22:00:00.0",
+  "wellnessStartTimeLocal": "2026-06-15T00:00:00.0",
+  "wellnessEndTimeGmt": "2026-06-15T22:00:00.0",
+  "wellnessEndTimeLocal": "2026-06-16T00:00:00.0",
+  "durationInMilliseconds": 86400000
+ }
+}

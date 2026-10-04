@@ -1,0 +1,6 @@
+{
+  "synthetic": true,
+  "normalizer": "whoop.heart_rate",
+  "version": 1,
+  "error": "whoop.heart_rate: response without values (shape drift)"
+}

@@ -1,0 +1,33 @@
+{
+  "synthetic": true,
+  "normalizer": "garmin.steps",
+  "version": 1,
+  "output": {
+    "measurements": [
+      {
+        "metric": "steps",
+        "kind": "interval",
+        "start": "2026-06-14T22:00:00Z",
+        "end": "2026-06-14T22:15:00Z",
+        "value": 0,
+        "unit": "count"
+      },
+      {
+        "metric": "steps",
+        "kind": "interval",
+        "start": "2026-06-14T22:15:00Z",
+        "end": "2026-06-14T22:30:00Z",
+        "value": 12,
+        "unit": "count"
+      },
+      {
+        "metric": "steps",
+        "kind": "interval",
+        "start": "2026-06-15T05:00:00Z",
+        "end": "2026-06-15T05:15:00Z",
+        "value": 400,
+        "unit": "count"
+      }
+    ]
+  }
+}

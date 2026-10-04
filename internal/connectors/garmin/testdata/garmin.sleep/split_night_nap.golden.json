@@ -1,0 +1,87 @@
+{
+  "synthetic": true,
+  "normalizer": "garmin.sleep",
+  "version": 1,
+  "output": {
+    "measurements": [
+      {
+        "metric": "garmin_sleep_score",
+        "kind": "daily_value",
+        "start": "2026-06-14T22:00:00Z",
+        "end": "2026-06-15T22:00:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 82,
+        "unit": "index",
+        "key": {
+          "record_type": "sleep",
+          "external_id": "2026-06-15",
+          "component": "garmin_sleep_score"
+        }
+      }
+    ],
+    "sleep": [
+      {
+        "start": "2026-06-14T21:10:00Z",
+        "end": "2026-06-15T04:40:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "stages": [
+          {
+            "stage": "deep",
+            "start": "2026-06-14T21:10:00Z",
+            "end": "2026-06-14T22:40:00Z"
+          },
+          {
+            "stage": "light",
+            "start": "2026-06-14T22:40:00Z",
+            "end": "2026-06-15T00:30:00Z"
+          },
+          {
+            "stage": "awake",
+            "start": "2026-06-15T00:30:00Z",
+            "end": "2026-06-15T01:40:00Z"
+          },
+          {
+            "stage": "rem",
+            "start": "2026-06-15T01:50:00Z",
+            "end": "2026-06-15T03:10:00Z"
+          },
+          {
+            "stage": "light",
+            "start": "2026-06-15T03:10:00Z",
+            "end": "2026-06-15T04:40:00Z"
+          }
+        ],
+        "totals": {
+          "asleep_s": 21000,
+          "deep_s": 5400,
+          "light_s": 14400,
+          "rem_s": 5400,
+          "awake_s": 6000
+        },
+        "key": {
+          "record_type": "sleep",
+          "external_id": "1781471400000"
+        }
+      },
+      {
+        "start": "2026-06-15T12:00:00Z",
+        "end": "2026-06-15T12:30:00Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "nap": true,
+        "totals": {
+          "asleep_s": 1800
+        },
+        "key": {
+          "record_type": "nap",
+          "external_id": "1781524800000"
+        }
+      }
+    ]
+  }
+}

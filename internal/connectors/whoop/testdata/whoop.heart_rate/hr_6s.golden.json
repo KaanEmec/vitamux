@@ -1,0 +1,40 @@
+{
+  "synthetic": true,
+  "normalizer": "whoop.heart_rate",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "whoop:strap",
+        "type": "band",
+        "manufacturer": "WHOOP"
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "heart_rate",
+        "kind": "sample",
+        "start": "2026-03-01T07:00:00Z",
+        "value": 58,
+        "unit": "bpm",
+        "device": "whoop:strap"
+      },
+      {
+        "metric": "heart_rate",
+        "kind": "sample",
+        "start": "2026-03-01T07:00:06Z",
+        "value": 59,
+        "unit": "bpm",
+        "device": "whoop:strap"
+      },
+      {
+        "metric": "heart_rate",
+        "kind": "sample",
+        "start": "2026-03-01T07:00:12Z",
+        "value": 61,
+        "unit": "bpm",
+        "device": "whoop:strap"
+      }
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+ "synthetic": true,
+ "unit": {
+  "date": "2026-06-15"
+ },
+ "response": [
+  {
+   "userProfilePK": 1,
+   "calendarDate": "2026-06-15",
+   "timestamp": "2026-06-15T04:45:00.0",
+   "timestampLocal": "2026-06-15T06:45:00.0",
+   "deviceId": 1000000001,
+   "level": "HIGH",
+   "score": 71,
+   "sleepScore": 82,
+   "recoveryTime": 0,
+   "inputContext": "AFTER_WAKEUP_RESET"
+  },
+  {
+   "userProfilePK": 1,
+   "calendarDate": "2026-06-15",
+   "timestamp": "2026-06-15T12:00:00.0",
+   "timestampLocal": "2026-06-15T14:00:00.0",
+   "deviceId": 1000000001,
+   "level": "MODERATE",
+   "score": 65,
+   "sleepScore": 82,
+   "recoveryTime": 600,
+   "inputContext": "UPDATE_REALTIME_VARIABLES"
+  }
+ ]
+}

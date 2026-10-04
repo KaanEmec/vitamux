@@ -46,6 +46,11 @@ var NoBuiltin = func() map[string]string {
 		"walking_steadiness", "walking_asymmetry", "walking_double_support", "walking_step_length"} {
 		m[code] = "added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source"
 	}
+	// Garmin and WHOOP scores (J18.4, J19.4) are provider-scoped: one source each, nothing to order.
+	for _, code := range []string{"garmin_stress", "garmin_body_battery", "garmin_training_readiness", "garmin_sleep_score",
+		"whoop_recovery", "whoop_strain", "whoop_sleep_performance"} {
+		m[code] = "a provider-scoped score with a single source, so there is nothing to order"
+	}
 	return m
 }()
 

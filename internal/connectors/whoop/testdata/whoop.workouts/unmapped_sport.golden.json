@@ -1,0 +1,36 @@
+{
+  "synthetic": true,
+  "normalizer": "whoop.workouts",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "whoop:strap",
+        "type": "band",
+        "manufacturer": "WHOOP"
+      }
+    ],
+    "workouts": [
+      {
+        "start": "2026-03-02T18:30:00Z",
+        "end": "2026-03-02T18:45:00Z",
+        "zone": {
+          "offset_min": 60
+        },
+        "sport": "other",
+        "provider_sport": "synthetic-unlisted-sport",
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "workout",
+          "external_id": "00000000-0000-4000-8000-0000000000b3"
+        }
+      }
+    ],
+    "warnings": [
+      {
+        "code": "unmapped_sport",
+        "detail": "synthetic-unlisted-sport"
+      }
+    ]
+  }
+}

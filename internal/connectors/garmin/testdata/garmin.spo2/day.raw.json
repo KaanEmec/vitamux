@@ -1,0 +1,36 @@
+{
+ "synthetic": true,
+ "unit": {
+  "date": "2026-06-15"
+ },
+ "response": {
+  "calendarDate": "2026-06-15",
+  "startTimestampGMT": "2026-06-14T22:00:00.0",
+  "endTimestampGMT": "2026-06-15T22:00:00.0",
+  "startTimestampLocal": "2026-06-15T00:00:00.0",
+  "endTimestampLocal": "2026-06-16T00:00:00.0",
+  "userProfilePK": 1,
+  "averageSpO2": 95.0,
+  "lowestSpO2": 93,
+  "latestSpO2": 96,
+  "spO2HourlyAverages": [
+   [
+    1781474400000,
+    95
+   ]
+  ],
+  "spO2SingleValues": [
+   [
+    1781476200000,
+    96,
+    true
+   ],
+   [
+    1781477100000,
+    94,
+    true
+   ]
+  ],
+  "continuousReadingDTOList": null
+ }
+}

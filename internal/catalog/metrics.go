@@ -122,4 +122,17 @@ var metrics = []Metric{
 	{Code: "walking_asymmetry", Section: secMobility, Unit: "%", Kinds: sample, Agg: Intensive, Min: 0, Max: 100, HK: "WalkingAsymmetryPercentage", Since: SeedHealthKit},
 	{Code: "walking_double_support", Section: secMobility, Unit: "%", Kinds: sample, Agg: Intensive, Min: 0, Max: 100, HK: "WalkingDoubleSupportPercentage", Since: SeedHealthKit},
 	{Code: "walking_step_length", Section: secMobility, Unit: "m", Kinds: sample, Agg: Intensive, Min: 0.1, Max: 3, HK: "WalkingStepLength", Since: SeedHealthKit},
+
+	// Garmin Connect (E18, J18.4): provider-scoped scores (metric-catalog.md#provider-namespaced-scores), 0-100.
+	{Code: "garmin_stress", Section: secHeart, Unit: "index", Kinds: sample, Agg: Intensive, Min: 0, Max: 100, ProviderScoped: true, Since: SeedSidecars},
+	{Code: "garmin_body_battery", Section: secHeart, Unit: "index", Kinds: sample, Agg: Intensive, Min: 0, Max: 100, ProviderScoped: true, Since: SeedSidecars},
+	// Snapshots: Garmin updates the score during the day, so the day's value is the latest.
+	{Code: "garmin_training_readiness", Section: secHeart, Unit: "index", Kinds: sample, Agg: DailySummary, Min: 0, Max: 100, ProviderScoped: true, Since: SeedSidecars},
+	{Code: "garmin_sleep_score", Section: secSleep, Unit: "index", Kinds: daily, Agg: DailySummary, Min: 0, Max: 100, ProviderScoped: true, Since: SeedSidecars},
+
+	// WHOOP (E19, J19.4): provider-scoped scores. Recovery and day strain are daily values at the
+	// cycle's wake-up; sleep performance is a sample at the sleep's wake-up.
+	{Code: "whoop_recovery", Section: secHeart, Unit: "%", Kinds: daily, Agg: DailySummary, Min: 0, Max: 100, ProviderScoped: true, Since: SeedSidecars},
+	{Code: "whoop_strain", Section: secActivity, Unit: "index", Kinds: daily, Agg: DailySummary, Min: 0, Max: 21, ProviderScoped: true, Since: SeedSidecars},
+	{Code: "whoop_sleep_performance", Section: secSleep, Unit: "%", Kinds: sample, Agg: DailySummary, Min: 0, Max: 100, ProviderScoped: true, Since: SeedSidecars},
 }

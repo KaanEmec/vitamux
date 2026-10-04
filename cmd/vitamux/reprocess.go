@@ -18,6 +18,8 @@ import (
 	"github.com/KaanEmec/vitamux/internal/config"
 	"github.com/KaanEmec/vitamux/internal/connectors/applehealth"
 	"github.com/KaanEmec/vitamux/internal/connectors/example"
+	"github.com/KaanEmec/vitamux/internal/connectors/garmin"
+	"github.com/KaanEmec/vitamux/internal/connectors/whoop"
 	"github.com/KaanEmec/vitamux/internal/connectors/withings"
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/ingest"
@@ -33,10 +35,12 @@ changed records are superseded. TIME is RFC 3339 or YYYY-MM-DD (UTC) and filters
 It queues a job for the running server; --wait prints the result when the job finishes.
 `
 
-// normalizers is every normalizer this build ships. Connectors (E08, E15) add theirs here.
+// normalizers is every normalizer this build ships. Connectors (E08, E15, E18, E19) add theirs here.
 func normalizers() (*normalize.Registry, error) {
-	return normalize.NewRegistry(withings.Normalizer{}, applehealth.Normalizer{}, applehealth.ExportNormalizer{}, normalize.Manual{},
-		example.Normalizer{Stream: example.SidecarStream})
+	ns := []normalize.Normalizer{withings.Normalizer{}, applehealth.Normalizer{}, applehealth.ExportNormalizer{}, normalize.Manual{},
+		example.Normalizer{Stream: example.SidecarStream}}
+	ns = append(ns, garmin.Normalizers()...)
+	return normalize.NewRegistry(append(ns, whoop.Normalizers()...)...)
 }
 
 func reprocess(args []string, stdout, stderr io.Writer) int {

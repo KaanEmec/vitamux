@@ -1,0 +1,31 @@
+{
+ "synthetic": true,
+ "unit": {
+  "start": "2026-06-03",
+  "end": "2026-07-02"
+ },
+ "response": {
+  "from": "2026-06-03",
+  "until": "2026-07-02",
+  "measurementSummaries": [
+   {
+    "startDate": "2026-06-14",
+    "endDate": "2026-06-14",
+    "measurements": [
+     {
+      "version": 1781420400000,
+      "systolic": 128,
+      "diastolic": 84,
+      "pulse": null,
+      "sourceType": "MANUAL",
+      "multiMeasurement": false,
+      "measurementTimestampGMT": "2026-06-14T07:00:00.0",
+      "measurementTimestampLocal": "2026-06-14T09:00:00.0",
+      "category": "NORMAL",
+      "notes": "synthetic note"
+     }
+    ]
+   }
+  ]
+ }
+}

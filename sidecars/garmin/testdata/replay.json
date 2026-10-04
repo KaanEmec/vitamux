@@ -1,0 +1,52 @@
+{
+  "synthetic": true,
+  "now": "2026-09-14T12:00:00Z",
+  "responses": [
+    {
+      "token": "synthetic-expired",
+      "path": "/",
+      "error": "reauth_required"
+    },
+    {
+      "token": "synthetic-limited",
+      "path": "/",
+      "error": "rate_limited"
+    },
+    {
+      "token": "synthetic-flaky",
+      "path": "/",
+      "error": "transient"
+    },
+    {
+      "token": "synthetic-drift",
+      "path": "/",
+      "body": "synthetic text, not an object"
+    },
+    {
+      "path": "/usersummary-service/usersummary/daily/synthetic-profile",
+      "body": {
+        "synthetic": true,
+        "totalSteps": 4321,
+        "restingHeartRate": 58,
+        "calendarDate": "2026-09-14"
+      }
+    },
+    {
+      "path": "/wellness-service/wellness/dailyHeartRate/synthetic-profile",
+      "body": {
+        "synthetic": true,
+        "restingHeartRate": 58,
+        "heartRateValues": [
+          [
+            1789300800000,
+            61
+          ],
+          [
+            1789300860000,
+            64
+          ]
+        ]
+      }
+    }
+  ]
+}

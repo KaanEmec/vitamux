@@ -102,6 +102,10 @@ A group id means the same selectors in every built-in. Fields of one selector ar
 - No built-in for `distance_wheelchair`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `exercise_time`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `floors_climbed`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `garmin_body_battery`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `garmin_sleep_score`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `garmin_stress`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `garmin_training_readiness`: a provider-scoped score with a single source, so there is nothing to order.
 - No built-in for `skin_temperature`: the value depends on where the device is worn, so there is no neutral order; the owner picks one source.
 - No built-in for `stand_hours`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `stand_time`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
@@ -111,5 +115,8 @@ A group id means the same selectors in every built-in. Fields of one selector ar
 - No built-in for `walking_heart_rate`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `walking_steadiness`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - No built-in for `walking_step_length`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
+- No built-in for `whoop_recovery`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `whoop_sleep_performance`: a provider-scoped score with a single source, so there is nothing to order.
+- No built-in for `whoop_strain`: a provider-scoped score with a single source, so there is nothing to order.
 - No built-in for `wrist_temperature_sleeping`: added with the Apple Health bridge (J15.2); no researched ladder yet, so the owner picks a source.
 - Codes not in [metrics.md](metrics.md) get their built-in together with the code.

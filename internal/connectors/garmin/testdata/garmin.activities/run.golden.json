@@ -1,0 +1,33 @@
+{
+  "synthetic": true,
+  "normalizer": "garmin.activities",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "1000000001",
+        "manufacturer": "Garmin"
+      }
+    ],
+    "workouts": [
+      {
+        "start": "2026-06-15T05:30:00Z",
+        "end": "2026-06-15T06:11:00.25Z",
+        "zone": {
+          "offset_min": 120
+        },
+        "sport": "running",
+        "provider_sport": "trail_running",
+        "distance_m": 6012.5,
+        "energy_kcal": 498,
+        "avg_hr_bpm": 148,
+        "max_hr_bpm": 171,
+        "device": "1000000001",
+        "key": {
+          "record_type": "activity",
+          "external_id": "90000000001"
+        }
+      }
+    ]
+  }
+}

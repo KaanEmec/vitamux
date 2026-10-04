@@ -1,0 +1,24 @@
+{
+ "synthetic": true,
+ "unit": {
+  "date": "2026-06-15"
+ },
+ "response": {
+  "dailySleepDTO": {
+   "id": 1781452800000,
+   "calendarDate": "2026-06-15",
+   "sleepTimeSeconds": 25200,
+   "sleepStartTimestampGMT": 1781452800000,
+   "sleepEndTimestampGMT": 1781478000000,
+   "sleepStartTimestampLocal": 1781510400000,
+   "sleepEndTimestampLocal": 1781535600000,
+   "sleepScores": {
+    "overall": {
+     "value": 78
+    }
+   }
+  },
+  "remSleepData": true,
+  "sleepLevels": []
+ }
+}

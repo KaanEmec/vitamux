@@ -1,0 +1,37 @@
+{
+ "synthetic": true,
+ "unit": {
+  "date": "2026-06-15"
+ },
+ "response": {
+  "dailySleepDTO": {
+   "id": 1781471400000,
+   "userProfilePK": 1,
+   "calendarDate": "2026-06-15",
+   "sleepTimeSeconds": 25200,
+   "napTimeSeconds": 0,
+   "sleepWindowConfirmed": true,
+   "sleepStartTimestampGMT": 1781471400000,
+   "sleepStartTimestampLocal": 1781478600000,
+   "sleepEndTimestampLocal": 1781505600000,
+   "deepSleepSeconds": 5400,
+   "lightSleepSeconds": 14400,
+   "remSleepSeconds": 5400,
+   "awakeSleepSeconds": 1800,
+   "deviceRemCapable": true,
+   "sleepScores": {
+    "overall": {
+     "value": 82,
+     "qualifierKey": "GOOD"
+    },
+    "remPercentage": {
+     "value": 21,
+     "qualifierKey": "GOOD"
+    }
+   },
+   "sleepVersion": 2
+  },
+  "remSleepData": true,
+  "sleepLevels": []
+ }
+}

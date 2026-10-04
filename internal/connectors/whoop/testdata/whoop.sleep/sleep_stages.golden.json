@@ -1,0 +1,52 @@
+{
+  "synthetic": true,
+  "normalizer": "whoop.sleep",
+  "version": 1,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "whoop:strap",
+        "type": "band",
+        "manufacturer": "WHOOP"
+      }
+    ],
+    "sleep": [
+      {
+        "start": "2026-02-28T23:00:00Z",
+        "end": "2026-03-01T06:30:00Z",
+        "stages": [
+          {
+            "stage": "awake",
+            "start": "2026-02-28T23:00:00Z",
+            "end": "2026-02-28T23:12:00Z"
+          },
+          {
+            "stage": "light",
+            "start": "2026-02-28T23:12:00Z",
+            "end": "2026-03-01T00:30:00Z"
+          },
+          {
+            "stage": "deep",
+            "start": "2026-03-01T00:30:00Z",
+            "end": "2026-03-01T01:40:00Z"
+          },
+          {
+            "stage": "rem",
+            "start": "2026-03-01T01:40:00Z",
+            "end": "2026-03-01T02:30:00Z"
+          },
+          {
+            "stage": "light",
+            "start": "2026-03-01T02:40:00Z",
+            "end": "2026-03-01T06:30:00Z"
+          }
+        ],
+        "device": "whoop:strap",
+        "key": {
+          "record_type": "sleep",
+          "external_id": "10235"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "synthetic": true,
+  "normalizer": "garmin.sleep",
+  "version": 1,
+  "output": {
+    "sleep": [
+      {
+        "start": "2026-06-14T16:00:00Z",
+        "end": "2026-06-14T23:00:00Z",
+        "totals": {
+          "asleep_s": 25200
+        },
+        "key": {
+          "record_type": "sleep",
+          "external_id": "1781452800000"
+        }
+      }
+    ],
+    "warnings": [
+      {
+        "code": "implausible_local_offset",
+        "detail": "garmin_sleep_score 2026-06-15"
+      }
+    ]
+  }
+}

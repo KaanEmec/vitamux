@@ -180,7 +180,7 @@ Each score is added together with its connector. They are never pooled across pr
 | Fitness estimates | `fitbit_cardio_fitness`, `withings_nerve_health_score` (W 167), `withings_nerve_response_score` (W 196), `withings_esc` (W 229), `withings_metabolic_age` (W 227) | latest |
 | Breathing quality | `withings_breathing_quality` | daily_summary |
 
-Garmin and WHOOP codes (e.g., `garmin_body_battery`, `garmin_stress`, `whoop_recovery`, `whoop_strain`) belong to [E16](migration-reference.md) and are added there.
+Implemented with their connectors ([J18.4](../plan/E18-garmin/J18.4-normalizers.md), [J19.4](../plan/E19-whoop/J19.4-normalizers.md)): `garmin_stress`, `garmin_body_battery` (samples, intensive), `garmin_training_readiness`, `garmin_sleep_score`, `whoop_recovery`, `whoop_strain`, `whoop_sleep_performance` (daily_summary). WHOOP SpO2 and skin temperature stay raw until a matching method is confirmed.
 
 ## Events
 

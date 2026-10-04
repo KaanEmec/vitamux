@@ -1,0 +1,6 @@
+{
+  "synthetic": true,
+  "normalizer": "whoop.workouts",
+  "version": 1,
+  "error": "whoop.workouts: workout without id (shape drift)"
+}
