@@ -1,0 +1,21 @@
+{
+  "stream": "example_sidecar.heart_rate",
+  "mode": "incremental",
+  "cursor": {
+    "since": "2026-09-14T07:00:00Z",
+    "page": "2"
+  },
+  "from": "2026-09-14T07:00:00Z",
+  "to": "2026-09-14T08:00:00Z",
+  "credentials": {
+    "access_token": "synthetic-access-token-1",
+    "refresh_token": "synthetic-refresh-token-1",
+    "expires_at": "2026-09-14T10:00:00Z",
+    "extra": {
+      "region": "synthetic-eu"
+    }
+  },
+  "config": {
+    "region": "eu"
+  }
+}

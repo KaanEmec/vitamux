@@ -1,0 +1,11 @@
+{
+  "redirect_url": "https://vitamux.example.com/oauth/example_sidecar/callback",
+  "values": {
+    "username": "synthetic-user",
+    "password": "synthetic-pass"
+  },
+  "session": "eyJzeW50aGV0aWMiOnRydWUsInN0ZXAiOiJsb2dpbiJ9",
+  "config": {
+    "region": "eu"
+  }
+}

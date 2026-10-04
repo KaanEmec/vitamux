@@ -14,7 +14,7 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "lint": "eslint .",
     "openapi": "openapi-typescript ../api/openapi.yaml -o src/lib/api/schema.d.ts",
-    "lint:api": "npx --yes @stoplight/spectral-cli@6.17.0 lint --fail-severity=warn --ruleset ../.spectral.yaml ../api/openapi.yaml",
+    "lint:api": "npx --yes @stoplight/spectral-cli@6.17.0 lint --fail-severity=warn --ruleset ../.spectral.yaml ../api/openapi.yaml ../api/connector-sidecar.v1.yaml",
     "budget": "node scripts/bundle-budget.mjs",
     "test:e2e": "vite build && playwright test"
   },

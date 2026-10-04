@@ -1,0 +1,9 @@
+{
+  "step": {
+    "prompt": {
+      "message": "Approve the pairing on the device, then continue.",
+      "fields": []
+    },
+    "session": "eyJzeW50aGV0aWMiOnRydWUsInN0ZXAiOiJtZmEifQ=="
+  }
+}

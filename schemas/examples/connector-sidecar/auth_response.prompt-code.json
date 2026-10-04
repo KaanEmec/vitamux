@@ -1,0 +1,15 @@
+{
+  "step": {
+    "prompt": {
+      "message": "Enter the code sent to your phone.",
+      "fields": [
+        {
+          "name": "code",
+          "label": "Code",
+          "kind": "code"
+        }
+      ]
+    },
+    "session": "eyJzeW50aGV0aWMiOnRydWUsInN0ZXAiOiJtZmEifQ=="
+  }
+}

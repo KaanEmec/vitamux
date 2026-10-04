@@ -1,0 +1,10 @@
+{
+  "redirect_url": "https://vitamux.example.com/oauth/example_sidecar/callback",
+  "values": {
+    "code": "123456"
+  },
+  "session": "eyJzeW50aGV0aWMiOnRydWUsInN0ZXAiOiJtZmEifQ==",
+  "config": {
+    "region": "eu"
+  }
+}

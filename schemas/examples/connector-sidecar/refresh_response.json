@@ -1,0 +1,10 @@
+{
+  "credentials": {
+    "access_token": "synthetic-access-token-2",
+    "refresh_token": "synthetic-refresh-token-1",
+    "expires_at": "2026-09-14T11:00:00Z",
+    "extra": {
+      "region": "synthetic-eu"
+    }
+  }
+}
