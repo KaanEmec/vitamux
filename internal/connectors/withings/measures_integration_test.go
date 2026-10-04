@@ -3,7 +3,6 @@
 package withings
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/json"
 	"net/http"
@@ -99,7 +98,7 @@ func unix(s string) int64 {
 // A synthetic year backfilled in 30-day units, then incremental syncs: every group exactly
 // once, a modified group superseded, and the lastupdate cursor carried from call to call.
 func TestBackfillThenIncremental(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	f := &fakeMeasure{pageSize: 20, now: unix("2026-01-01T00:00:00Z")}
 	srv := httptest.NewServer(f)
 	t.Cleanup(srv.Close)
@@ -215,7 +214,7 @@ func TestBackfillThenIncremental(t *testing.T) {
 // A getmeas body without the fields the connector relies on is drift: the page is kept
 // quarantined, the cursor stays, the connection is degraded, nothing is substituted.
 func TestSchemaDrift(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	fake := fp.New(t)
 	e := setup(t, fake.URL)
 	conn := uuid.New()

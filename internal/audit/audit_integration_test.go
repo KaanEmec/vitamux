@@ -3,7 +3,6 @@
 package audit_test
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -18,7 +17,7 @@ const sentinel = "SENTINEL-not-a-real-secret"
 func TestRecordMasksSecrets(t *testing.T) {
 	_, pool := dbtest.Migrated(t)
 	d := db.New(pool)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	err := d.Tx(ctx, func(q *dbq.Queries) error {
 		return audit.Record(ctx, q, audit.Event{

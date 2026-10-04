@@ -3,7 +3,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -40,7 +39,7 @@ type resolvedEnv struct {
 
 func newResolvedEnv(t *testing.T, start string, days int) *resolvedEnv {
 	t.Helper()
-	ctx := context.Background()
+	ctx := t.Context()
 	dir := t.TempDir()
 	_, file, _, _ := runtime.Caller(0)
 	cmd := exec.CommandContext(ctx, "go", "run", "./tools/fixturegen", "-out", dir, "-start", start, "-days", strconv.Itoa(days), "-hr-step", "60")

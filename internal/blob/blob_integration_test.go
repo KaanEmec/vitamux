@@ -35,7 +35,7 @@ func setup(t *testing.T) (*Store, *db.DB, rawSQL) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := context.Background()
+	ctx := t.Context()
 	return s, db.New(pool), rawSQL{
 		Exec: func(sql string, args ...any) error { _, err := pool.Exec(ctx, sql, args...); return err },
 		QueryRow: func(sql string, args []any, dest ...any) error {
@@ -47,13 +47,13 @@ func setup(t *testing.T) (*Store, *db.DB, rawSQL) {
 func put(t *testing.T, s *Store, d *db.DB, content []byte, mode Mode, retain bool) Info {
 	t.Helper()
 	var info Info
-	err := d.Tx(context.Background(), func(q *dbq.Queries) error {
+	err := d.Tx(t.Context(), func(q *dbq.Queries) error {
 		var err error
-		if info, err = s.Put(context.Background(), q, bytes.NewReader(content), mode); err != nil {
+		if info, err = s.Put(t.Context(), q, bytes.NewReader(content), mode); err != nil {
 			return err
 		}
 		if retain {
-			return Retain(context.Background(), q, info.SHA256)
+			return Retain(t.Context(), q, info.SHA256)
 		}
 		return nil
 	})
@@ -67,7 +67,7 @@ func exists(path string) bool { _, err := os.Stat(path); return err == nil }
 
 func sweep(t *testing.T, s *Store, d *db.DB, grace time.Duration) SweepStats {
 	t.Helper()
-	st, err := Sweep(context.Background(), d, s, grace)
+	st, err := Sweep(t.Context(), d, s, grace)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func sweep(t *testing.T, s *Store, d *db.DB, grace time.Duration) SweepStats {
 
 func TestCrashOrphanSweptOnlyAfterGrace(t *testing.T) {
 	s, d, _ := setup(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	var sum []byte
 	err := d.Tx(ctx, func(q *dbq.Queries) error {
 		info, err := s.Put(ctx, q, bytes.NewReader(synthetic(50)), Plain)
@@ -108,7 +108,7 @@ func TestCrashOrphanSweptOnlyAfterGrace(t *testing.T) {
 
 func TestUnreferencedRowsSweptAfterGrace(t *testing.T) {
 	s, d, sql := setup(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	kept := put(t, s, d, synthetic(1), Plain, true)
 	loose := put(t, s, d, synthetic(2), Plain, false)
 
@@ -139,7 +139,7 @@ func TestUnreferencedRowsSweptAfterGrace(t *testing.T) {
 
 func TestPutDeduplicatesAndHeals(t *testing.T) {
 	s, d, sql := setup(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	a := put(t, s, d, synthetic(7), Plain, true)
 	b := put(t, s, d, synthetic(7), Plain, true)
 	if !bytes.Equal(a.SHA256, b.SHA256) {
@@ -179,7 +179,7 @@ func TestPutDeduplicatesAndHeals(t *testing.T) {
 // gone once the enqueued job has succeeded, a referenced one stays.
 func TestSweepJob(t *testing.T) {
 	s, d, sql := setup(t)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	kept := put(t, s, d, synthetic(1), Plain, true)
 	loose := put(t, s, d, synthetic(2), Plain, false)

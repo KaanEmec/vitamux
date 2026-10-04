@@ -36,7 +36,7 @@ type ovEnv struct {
 
 func newOvEnv(t *testing.T) *ovEnv {
 	t.Helper()
-	ctx := context.Background()
+	ctx := t.Context()
 	u, pool := dbtest.Migrated(t)
 	owner := dbtest.Pool(t, u, db.OwnerRole)
 	e := &ovEnv{ctx: ctx, ov: resolve.NewOverrides(db.New(pool)),

@@ -65,7 +65,7 @@ type env struct {
 // an owner with a live session and a timezone period.
 func setup(t *testing.T, apiURL string) *env {
 	t.Helper()
-	ctx := context.Background()
+	ctx := t.Context()
 	_, pool := dbtest.Migrated(t)
 	keyPath := filepath.Join(t.TempDir(), "master.key")
 	if _, err := crypto.WriteKeyFile(keyPath); err != nil {
@@ -152,7 +152,7 @@ func (e *env) run(t *testing.T) {
 	r.Register(connectors.KindBackfillUnit, e.rt.HandleBackfillUnit)
 	p := &normalize.Processor{DB: e.d, Blobs: e.blobs, Registry: reg, Log: slog.New(slog.NewJSONHandler(e.logs, nil))}
 	r.Register(ingest.KindNormalizeBatch, p.BatchJob())
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan struct{})
 	go func() { r.Run(ctx); close(done) }()
 	defer func() { cancel(); <-done }()

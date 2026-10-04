@@ -4,7 +4,6 @@ package ingest
 
 import (
 	"bytes"
-	"context"
 	"crypto/sha256"
 	"errors"
 	"path/filepath"
@@ -30,7 +29,7 @@ type env struct {
 
 func setup(t *testing.T) env {
 	t.Helper()
-	ctx := context.Background()
+	ctx := t.Context()
 	_, pool := dbtest.Migrated(t)
 	keyPath := filepath.Join(t.TempDir(), "master.key")
 	if _, err := crypto.WriteKeyFile(keyPath); err != nil {
@@ -73,9 +72,9 @@ func setup(t *testing.T) env {
 func (e env) store(t *testing.T, items ...RawItem) []Result {
 	t.Helper()
 	var res []Result
-	err := e.d.Tx(context.Background(), func(q *dbq.Queries) error {
+	err := e.d.Tx(t.Context(), func(q *dbq.Queries) error {
 		var err error
-		res, err = StoreRaw(context.Background(), q, e.blobs, e.batch, items)
+		res, err = StoreRaw(t.Context(), q, e.blobs, e.batch, items)
 		return err
 	})
 	if err != nil {
@@ -166,7 +165,7 @@ func TestStoreRawStripsRequestCredentials(t *testing.T) {
 
 func TestStoreRawBlobItemAndQuarantine(t *testing.T) {
 	e := setup(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	file := []byte("synthetic FIT bytes")
 	var info blob.Info
 	err := e.d.Tx(ctx, func(q *dbq.Queries) error {
@@ -200,7 +199,7 @@ func TestStoreRawBlobItemAndQuarantine(t *testing.T) {
 
 func TestSetStatus(t *testing.T) {
 	e := setup(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	id := e.store(t, item("grp:1", `{"synthetic": true}`))[0].RawPayloadID
 	set := func(id int64, to Status) error {
 		return e.d.Tx(ctx, func(q *dbq.Queries) error { return SetStatus(ctx, q, id, to) })

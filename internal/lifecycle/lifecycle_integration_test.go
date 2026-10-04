@@ -4,7 +4,6 @@ package lifecycle_test
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -45,11 +44,11 @@ func newEnv(t *testing.T) *env {
 	owner := dbtest.Pool(t, url, db.OwnerRole)
 	e := &env{t: t, d: db.New(app), blobDir: filepath.Join(t.TempDir(), "blobs"),
 		run: func(sql string, args ...any) error {
-			_, err := owner.Exec(context.Background(), sql, args...)
+			_, err := owner.Exec(t.Context(), sql, args...)
 			return err
 		},
 		scan: func(sql string, dest []any, args ...any) error {
-			return owner.QueryRow(context.Background(), sql, args...).Scan(dest...)
+			return owner.QueryRow(t.Context(), sql, args...).Scan(dest...)
 		},
 	}
 	keyAt := filepath.Join(t.TempDir(), "master.key")
@@ -137,7 +136,7 @@ func (e *env) files() []string {
 func (e *env) sweep() {
 	e.t.Helper()
 	// A negative grace tolerates the database clock running ahead (nothing writes meanwhile).
-	if _, err := blob.Sweep(context.Background(), e.d, e.blobs, -time.Minute); err != nil {
+	if _, err := blob.Sweep(e.t.Context(), e.d, e.blobs, -time.Minute); err != nil {
 		e.t.Fatal(err)
 	}
 }
@@ -160,8 +159,8 @@ func (e *env) newUser(name string) seeded {
 func (e *env) raw(s seeded, conn uuid.UUID, items map[string]string) map[string]int64 {
 	e.t.Helper()
 	out := map[string]int64{}
-	err := e.d.Tx(context.Background(), func(q *dbq.Queries) error {
-		b, err := ingest.CreateBatch(context.Background(), q, ingest.BatchInfo{UserID: s.user, ConnectionID: conn, SourceKind: ingest.SourceSync})
+	err := e.d.Tx(e.t.Context(), func(q *dbq.Queries) error {
+		b, err := ingest.CreateBatch(e.t.Context(), q, ingest.BatchInfo{UserID: s.user, ConnectionID: conn, SourceKind: ingest.SourceSync})
 		if err != nil {
 			return err
 		}
@@ -170,7 +169,7 @@ func (e *env) raw(s seeded, conn uuid.UUID, items map[string]string) map[string]
 			list = append(list, ingest.RawItem{Stream: "withings.measures", ExternalKey: k, ContentType: "application/json",
 				FetchedAt: time.Now(), Body: []byte(items[k])})
 		}
-		res, err := ingest.StoreRaw(context.Background(), q, e.blobs, b, list)
+		res, err := ingest.StoreRaw(e.t.Context(), q, e.blobs, b, list)
 		for _, r := range res {
 			out[r.ExternalKey] = r.RawPayloadID
 		}
@@ -210,7 +209,7 @@ func (e *env) correct(s seeded, conn uuid.UUID, old int64, daysAgo int, raw any,
 // seedAll gives s a bit of everything an owner can have.
 func (e *env) seedAll(s seeded, name string) {
 	e.t.Helper()
-	ctx := context.Background()
+	ctx := e.t.Context()
 	e.exec(`INSERT INTO credentials (connection_id, ciphertext, key_id) VALUES ($1, '\x00', 'synthetic')`, s.conn)
 	e.exec(`INSERT INTO schedules (id, connection_id, stream, run_interval, next_run_at) VALUES ($1, $2, 'withings.measures', '1 hour', now())`, newID(), s.conn)
 	e.exec(`INSERT INTO sync_cursors (connection_id, stream, cursor) VALUES ($1, 'withings.measures', '{"offset": 1}')`, s.conn)
@@ -301,7 +300,7 @@ func (e *env) strings(sql string) []string {
 // before that owner existed, except for unlinked audit events.
 func TestPurge(t *testing.T) {
 	e := newEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	other := e.newUser("other")
 	e.seedAll(other, "other")
 	before, files := e.snapshot("audit_events"), e.files()
@@ -363,7 +362,7 @@ func TestPurge(t *testing.T) {
 // changes nothing else but re-resolution marks.
 func TestDeleteConnection(t *testing.T) {
 	e := newEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	s := e.newUser("owner")
 	e.seedAll(s, "owner")
 	before, files := e.snapshot(), e.files()
@@ -402,7 +401,7 @@ func TestDeleteConnection(t *testing.T) {
 // TestDeleteDocument: a document deletion leaves a tombstone and nothing else of the document.
 func TestDeleteDocument(t *testing.T) {
 	e := newEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	s := e.newUser("owner")
 	e.seedAll(s, "owner")
 	before, files := e.snapshot(), e.files()
@@ -427,7 +426,7 @@ func TestDeleteDocument(t *testing.T) {
 // TestPruneRaw covers each prune_raw safety rule.
 func TestPruneRaw(t *testing.T) {
 	e := newEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	s := e.newUser("owner")
 	k := func(n string) string { return `{"synthetic":"` + n + `"}` }
 	r := e.raw(s, s.conn, map[string]string{"chain": k("chain-1"), "active": k("active"), "replaced": k("replaced"), "stale-rows": k("stale-rows"),
@@ -524,8 +523,8 @@ func btoi(b bool) int {
 
 func setRetention(t *testing.T, e *env, user uuid.UUID, r lifecycle.Retention) {
 	t.Helper()
-	err := e.d.Tx(context.Background(), func(q *dbq.Queries) error {
-		return lifecycle.SetRetention(context.Background(), q, user, audit.Owner, r)
+	err := e.d.Tx(t.Context(), func(q *dbq.Queries) error {
+		return lifecycle.SetRetention(t.Context(), q, user, audit.Owner, r)
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -534,7 +533,7 @@ func setRetention(t *testing.T, e *env, user uuid.UUID, r lifecycle.Retention) {
 
 func TestPruneSuperseded(t *testing.T) {
 	e := newEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	s := e.newUser("owner")
 	raw := e.raw(s, s.conn, map[string]string{"a": `{"synthetic":"a"}`})["a"]
 	// m1 -> m2 -> m3 (active): superseded 100 and 50 days ago.
@@ -593,7 +592,7 @@ func TestPruneSuperseded(t *testing.T) {
 
 func TestPruneIdempotencyKeysAndSettings(t *testing.T) {
 	e := newEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	s := e.newUser("owner")
 	client := newID()
 	e.exec(`INSERT INTO clients (id, user_id, connection_id, kind, name, token_hash) VALUES ($1, $2, $3, 'collector', 'synthetic', sha256('t'))`, client, s.user, s.conn)

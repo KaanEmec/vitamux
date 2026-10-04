@@ -3,7 +3,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -31,7 +30,7 @@ func TestListExtractors(t *testing.T) {
 	if g := got[1]; g.ID != "gemini" || !g.External || g.Enabled || g.Model == nil || *g.Model != "gemini-test" {
 		t.Fatalf("gemini: %+v", g)
 	}
-	if err := extract.SetEnabled(context.Background(), d, e.user, audit.Owner, extract.Gemini, true); err != nil {
+	if err := extract.SetEnabled(t.Context(), d, e.user, audit.Owner, extract.Gemini, true); err != nil {
 		t.Fatal(err)
 	}
 	if g := list()[1]; !g.Enabled {

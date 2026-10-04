@@ -3,7 +3,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -48,7 +47,7 @@ func newStatusEnv(t *testing.T, backups string) (*statusEnv, uuid.UUID) {
 	}
 	e := &statusEnv{t: t, h: rt.mux, d: d, exec: func(sql string, args ...any) {
 		t.Helper()
-		if _, err := ownerPool.Exec(context.Background(), sql, args...); err != nil {
+		if _, err := ownerPool.Exec(t.Context(), sql, args...); err != nil {
 			t.Fatalf("%s: %v", sql, err)
 		}
 	}}
@@ -169,7 +168,7 @@ func TestSystemStatus(t *testing.T) {
 func generateYear(t *testing.T, dir, start string, days int) {
 	t.Helper()
 	_, file, _, _ := runtime.Caller(0)
-	cmd := exec.CommandContext(context.Background(), "go", "run", "./tools/fixturegen", "-out", dir, "-start", start,
+	cmd := exec.CommandContext(t.Context(), "go", "run", "./tools/fixturegen", "-out", dir, "-start", start,
 		"-days", strconv.Itoa(days), "-hr-step", "60")
 	cmd.Dir = filepath.Join(filepath.Dir(file), "..", "..")
 	if out, err := cmd.CombinedOutput(); err != nil {
@@ -189,7 +188,7 @@ func TestCoverage(t *testing.T) {
 	dir := t.TempDir()
 	generateYear(t, dir, start, days)
 	u, app := dbtest.Migrated(t)
-	stats, err := fixtureload.Load(context.Background(), app, dir)
+	stats, err := fixtureload.Load(t.Context(), app, dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -197,18 +196,18 @@ func TestCoverage(t *testing.T) {
 	for _, p := range []struct{ from, tz string }{
 		{"2024-01-01T00:00:00Z", "Europe/Berlin"}, {"2025-05-11T22:00:00Z", "America/New_York"}, {"2025-05-22T04:00:00Z", "Europe/Berlin"},
 	} {
-		if _, err := app.Exec(context.Background(), `INSERT INTO timezone_periods (id, user_id, tz, valid_from) VALUES ($1, $2, $3, $4)`,
+		if _, err := app.Exec(t.Context(), `INSERT INTO timezone_periods (id, user_id, tz, valid_from) VALUES ($1, $2, $3, $4)`,
 			uuid.New(), stats.UserID, p.tz, p.from); err != nil {
 			t.Fatal(err)
 		}
 	}
 	// The loader writes rows without marking their days; mark them all, then run the rebuild job's step.
-	if _, err := dbtest.Pool(t, u, db.OwnerRole).Exec(context.Background(), `INSERT INTO resolution_dirty (user_id, metric_id, local_date)
+	if _, err := dbtest.Pool(t, u, db.OwnerRole).Exec(t.Context(), `INSERT INTO resolution_dirty (user_id, metric_id, local_date)
 		SELECT DISTINCT user_id, metric_id, local_date FROM measurements ON CONFLICT DO NOTHING`); err != nil {
 		t.Fatal(err)
 	}
 	for {
-		n, err := resolve.RebuildAggregates(context.Background(), d, time.Now().Add(time.Minute))
+		n, err := resolve.RebuildAggregates(t.Context(), d, time.Now().Add(time.Minute))
 		if err != nil {
 			t.Fatal(err)
 		}

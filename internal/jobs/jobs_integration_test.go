@@ -50,7 +50,7 @@ var ownerID = uuid.MustParse("00000000-0000-4000-8000-000000000001")
 
 func exec(t *testing.T, pool rawDB, sql string, args ...any) {
 	t.Helper()
-	if err := pool.Exec(context.Background(), sql, args...); err != nil {
+	if err := pool.Exec(t.Context(), sql, args...); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -83,7 +83,7 @@ func start(r *Runner) (stop func()) {
 
 func enqueue(t *testing.T, d *db.DB, j NewJob) uuid.UUID {
 	t.Helper()
-	id, _, err := Enqueue(context.Background(), d.Q(), j)
+	id, _, err := Enqueue(t.Context(), d.Q(), j)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +92,7 @@ func enqueue(t *testing.T, d *db.DB, j NewJob) uuid.UUID {
 
 func job(t *testing.T, d *db.DB, id uuid.UUID) dbq.Job {
 	t.Helper()
-	j, err := d.Q().GetJob(context.Background(), id)
+	j, err := d.Q().GetJob(t.Context(), id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func job(t *testing.T, d *db.DB, id uuid.UUID) dbq.Job {
 
 func runs(t *testing.T, d *db.DB, id uuid.UUID) []dbq.JobRun {
 	t.Helper()
-	rs, err := d.Q().ListJobRuns(context.Background(), id)
+	rs, err := d.Q().ListJobRuns(t.Context(), id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +129,7 @@ func outcomes(rs []dbq.JobRun) string {
 
 func TestEnqueueDedupe(t *testing.T) {
 	d, pool := setup(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	var wg sync.WaitGroup
 	ids := make([]uuid.UUID, 20)
 	created := atomic.Int32{}
@@ -237,7 +237,7 @@ func TestStress(t *testing.T) {
 
 	waitFor(t, 2*time.Minute, "all jobs terminal", func() bool {
 		var open int
-		_ = pool.QueryRow(context.Background(), "SELECT count(*) FROM jobs WHERE status NOT IN ('succeeded', 'dead')").Scan(&open)
+		_ = pool.QueryRow(t.Context(), "SELECT count(*) FROM jobs WHERE status NOT IN ('succeeded', 'dead')").Scan(&open)
 		return open == 0
 	})
 	if overlaps.Load() > 0 || badAttempts.Load() > 0 {
@@ -370,7 +370,7 @@ func TestSIGTERMDrain(t *testing.T) {
 		time.Sleep(300 * time.Millisecond)
 		return nil
 	})
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(t.Context(), syscall.SIGTERM)
 	defer stop()
 	done := make(chan struct{})
 	go func() { r.Run(ctx); close(done) }()
@@ -415,7 +415,7 @@ func TestShutdownReleasesAfterGrace(t *testing.T) {
 		<-ctx.Done()
 		return ctx.Err()
 	})
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan struct{})
 	go func() { r.Run(ctx); close(done) }()
 	coop := enqueue(t, d, NewJob{Kind: "export", Payload: "cooperative"})
@@ -444,7 +444,7 @@ func TestShutdownReleasesAfterGrace(t *testing.T) {
 
 func TestScheduleService(t *testing.T) {
 	d, pool := setup(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	cid := newConnection(t, pool, "active")
 	spec := ScheduleSpec{ConnectionID: cid, Stream: "measures", Interval: time.Hour}
 	a, err := EnsureSchedule(ctx, d.Q(), spec)
@@ -481,7 +481,7 @@ func TestScheduleService(t *testing.T) {
 // over on that same tick, a third joins later, and every slot gets exactly one job.
 func TestSchedulersOverSimulatedDay(t *testing.T) {
 	d, pool := setup(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	active, paused := newConnection(t, pool, "active"), newConnection(t, pool, "paused")
 	specs := []ScheduleSpec{
 		{ConnectionID: active, Stream: "measures", Interval: time.Hour},
@@ -573,7 +573,7 @@ func TestSchedulersOverSimulatedDay(t *testing.T) {
 // materializers create one job per slot.
 func TestConcurrentMaterializeNoDuplicates(t *testing.T) {
 	d, pool := setup(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	cid := newConnection(t, pool, "active")
 	sc, err := EnsureSchedule(ctx, d.Q(), ScheduleSpec{ConnectionID: cid, Stream: "measures", Interval: time.Minute})
 	if err != nil {
@@ -605,7 +605,7 @@ func TestConcurrentMaterializeNoDuplicates(t *testing.T) {
 // often it ticks, even after the job finished, and again when the day changes.
 func TestSchedulerDailyJob(t *testing.T) {
 	d, pool := setup(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	now := time.Date(2026, 10, 3, 9, 0, 0, 0, time.UTC)
 	s := NewScheduler(d, nil)
 	s.now = func() time.Time { return now }

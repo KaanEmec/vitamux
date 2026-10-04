@@ -3,7 +3,6 @@
 package resolve_test
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"strings"
@@ -29,7 +28,7 @@ type env struct {
 
 func newStore(t *testing.T) (*resolve.Store, env, resolve.By) {
 	t.Helper()
-	ctx := context.Background()
+	ctx := t.Context()
 	_, pool := dbtest.Migrated(t)
 	if _, err := pool.Exec(ctx, "INSERT INTO users (id, username, password_hash) VALUES ($1, 'owner', 'synthetic')", ownerID); err != nil {
 		t.Fatal(err)
@@ -73,7 +72,7 @@ func spec(t *testing.T, metric string, edit func(*resolve.Rule)) []byte {
 }
 
 func TestFirstEditCopiesBuiltin(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	s, e, by := newStore(t)
 
 	v, err := s.Active(ctx, by.UserID, "steps")
@@ -128,7 +127,7 @@ func TestFirstEditCopiesBuiltin(t *testing.T) {
 }
 
 func TestEditCreatesNextVersionAndReactivation(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	s, e, by := newStore(t)
 	strict := spec(t, "heart_rate", func(r *resolve.Rule) { r.Quality.PlausibleRange = []float64{30, 220} })
 	if _, err := s.Create(ctx, by, strict, "", true); err != nil {
@@ -172,7 +171,7 @@ func TestEditCreatesNextVersionAndReactivation(t *testing.T) {
 }
 
 func TestMetricWithoutBuiltin(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	s, _, by := newStore(t)
 	if _, err := s.Active(ctx, by.UserID, "skin_temperature"); !errors.Is(err, db.ErrNotFound) {
 		t.Fatalf("no rule yet: %v", err)
@@ -195,7 +194,7 @@ func TestMetricWithoutBuiltin(t *testing.T) {
 }
 
 func TestRejectedChangesStoreNothing(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	s, e, by := newStore(t)
 	var ve *resolve.ValidationError
 
@@ -230,7 +229,7 @@ func TestRejectedChangesStoreNothing(t *testing.T) {
 }
 
 func TestVersionsAreImmutable(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	s, e, by := newStore(t)
 	if _, err := s.Create(ctx, by, spec(t, "vo2max", func(*resolve.Rule) {}), "", true); err != nil {
 		t.Fatal(err)

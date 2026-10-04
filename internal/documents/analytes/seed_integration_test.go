@@ -3,7 +3,6 @@
 package analytes_test
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -18,7 +17,7 @@ import (
 // The seed must contain exactly the catalogue with stable ids, and every seeded alias.
 func TestSeedMatchesCatalogue(t *testing.T) {
 	_, app := dbtest.Migrated(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	rows, err := app.Query(ctx, `SELECT id, code, name, coalesce(canonical_unit, ''), coalesce(loinc, '') FROM analytes ORDER BY id`)
 	if err != nil {
 		t.Fatal(err)
@@ -54,7 +53,7 @@ func TestSeedMatchesCatalogue(t *testing.T) {
 
 func TestAliases(t *testing.T) {
 	u, app := dbtest.Migrated(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	d := db.New(app)
 	user, other := uuid.New(), uuid.New()
 	owner := dbtest.Pool(t, u, db.OwnerRole)

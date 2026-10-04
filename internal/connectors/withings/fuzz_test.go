@@ -2,7 +2,6 @@ package withings
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/url"
 	"os"
@@ -32,8 +31,8 @@ func FuzzNormalizeMeasures(f *testing.F) {
 	f.Add([]byte(`{"measuregrp":{"grpid":1,"date":1,"category":1,"measures":[{"value":1,"type":1,"unit":9999}]}}`))
 	f.Fuzz(func(t *testing.T, data []byte) {
 		raw := normalize.RawPayload{Stream: StreamMeasures, ContentType: "application/json", ExternalKey: "fuzz", Body: data}
-		out, err := Normalizer{}.Normalize(context.Background(), raw, normalize.Env{Provider: Provider})
-		again, err2 := Normalizer{}.Normalize(context.Background(), raw, normalize.Env{Provider: Provider})
+		out, err := Normalizer{}.Normalize(t.Context(), raw, normalize.Env{Provider: Provider})
+		again, err2 := Normalizer{}.Normalize(t.Context(), raw, normalize.Env{Provider: Provider})
 		if (err == nil) != (err2 == nil) {
 			t.Fatal("error is not deterministic")
 		}

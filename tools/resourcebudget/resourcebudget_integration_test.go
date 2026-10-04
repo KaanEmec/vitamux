@@ -305,7 +305,7 @@ func rusage(t *testing.T, label string, ps *os.ProcessState) {
 // rebuild marks (metric, day) pairs as dirty, old enough to settle, queues the job and waits for it.
 func (b *bench) rebuild(t *testing.T, m meter, label, where string) {
 	t.Helper()
-	ctx := context.Background()
+	ctx := t.Context()
 	var marks int64
 	if err := b.owner.QueryRow(ctx, `WITH ins AS (INSERT INTO resolution_dirty (user_id, metric_id, local_date, marked_at)
 		SELECT DISTINCT user_id, metric_id, local_date, now() - interval '10 minutes' FROM measurements `+where+` RETURNING 1)
@@ -445,7 +445,7 @@ func TestResourceBudget(t *testing.T) {
 	if bin == "" || dataset == "" {
 		t.Fatal("set VITAMUX_BUDGET_BIN and VITAMUX_VOLUME_DATASET")
 	}
-	ctx := context.Background()
+	ctx := t.Context()
 	tmp := t.TempDir()
 	b := &bench{bin: bin, tmp: tmp, pg: pgName, keyFile: filepath.Join(tmp, "master.key")}
 	if out, err := b.vx(nil, "admin", "init-secrets", "--out", b.keyFile).CombinedOutput(); err != nil {
@@ -639,7 +639,7 @@ func TestDashboardChild(t *testing.T) {
 	if mode == "" {
 		t.Skip("helper process of TestResourceBudget")
 	}
-	ctx := context.Background()
+	ctx := t.Context()
 	url := os.Getenv("VITAMUX_BUDGET_DB")
 	app, err := db.Open(ctx, url, db.AppRole)
 	if err != nil {

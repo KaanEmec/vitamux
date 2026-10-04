@@ -2,7 +2,6 @@ package extract
 
 import (
 	"bytes"
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -94,7 +93,7 @@ func geminiOK(text string) any {
 func TestGeminiRequestShape(t *testing.T) {
 	c, srv := provider(t, jsonReply(200, geminiOK(truth(t))))
 	g := NewGemini(GeminiConfig{APIKey: sentinelKey, Model: "gemini-test", BaseURL: srv.URL, Client: httpx.New(httpx.Options{})})
-	res, err := g.Extract(context.Background(), request())
+	res, err := g.Extract(t.Context(), request())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +146,7 @@ func openAIOK(text string) any {
 func TestOpenAIRequestShape(t *testing.T) {
 	c, srv := provider(t, jsonReply(200, openAIOK(truth(t)), "x-request-id", "req_abc"))
 	o := NewOpenAI(OpenAIConfig{APIKey: sentinelKey, Model: "gpt-test", BaseURL: srv.URL + "/v1", Client: httpx.New(httpx.Options{})})
-	res, err := o.Extract(context.Background(), request())
+	res, err := o.Extract(t.Context(), request())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +182,7 @@ func TestOpenAIRequestShape(t *testing.T) {
 func TestOpenAICompatibleWithoutKey(t *testing.T) {
 	c, srv := provider(t, jsonReply(200, openAIOK(truth(t))))
 	o := NewOpenAI(OpenAIConfig{Compatible: true, Model: "local-model", BaseURL: srv.URL + "/v1/", Client: httpx.New(httpx.Options{})})
-	res, err := o.Extract(context.Background(), request())
+	res, err := o.Extract(t.Context(), request())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,7 +224,7 @@ func TestProviderFailures(t *testing.T) {
 			if tc.openai {
 				ex = NewOpenAI(OpenAIConfig{APIKey: sentinelKey, Model: "m", BaseURL: srv.URL, Client: client})
 			}
-			res, err := ex.Extract(context.Background(), request())
+			res, err := ex.Extract(t.Context(), request())
 			var e *Error
 			if !errors.As(err, &e) || e.Class != tc.class || e.RetryAfter != tc.after {
 				t.Fatalf("err %v, want class %s", err, tc.class)
@@ -250,7 +249,7 @@ func TestGeminiRefusesOversizedPDF(t *testing.T) {
 	req := request()
 	req.PDF = make([]byte, geminiInlineMax+1)
 	var e *Error
-	if _, err := g.Extract(context.Background(), req); !errors.As(err, &e) || e.Class != ClassTooLarge {
+	if _, err := g.Extract(t.Context(), req); !errors.As(err, &e) || e.Class != ClassTooLarge {
 		t.Fatalf("err %v", err)
 	}
 }
@@ -265,7 +264,7 @@ func TestFakeAnswersByChecksum(t *testing.T) {
 		t.Fatal(err)
 	}
 	var e *Error
-	if _, err := f.Extract(context.Background(), request()); !errors.As(err, &e) || e.Class != ClassUnknownDocument {
+	if _, err := f.Extract(t.Context(), request()); !errors.As(err, &e) || e.Class != ClassUnknownDocument {
 		t.Fatalf("unknown PDF: %v", err)
 	}
 	real, err := NewFake()

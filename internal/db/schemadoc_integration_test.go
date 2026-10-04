@@ -24,7 +24,7 @@ const updateSchemaDocEnv = "VITAMUX_UPDATE_SCHEMA_DOC"
 // regenerate with VITAMUX_UPDATE_SCHEMA_DOC=1.
 func TestSchemaDoc(t *testing.T) {
 	_, app := dbtest.Migrated(t)
-	got, err := schemaDoc(context.Background(), app)
+	got, err := schemaDoc(t.Context(), app)
 	if err != nil {
 		t.Fatal(err)
 	}

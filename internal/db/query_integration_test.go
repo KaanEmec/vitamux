@@ -3,7 +3,6 @@
 package db_test
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,7 +26,7 @@ func newDB(t *testing.T) (*db.DB, *pgxpool.Pool) {
 
 func count(t *testing.T, pool *pgxpool.Pool, table string) (n int) {
 	t.Helper()
-	if err := pool.QueryRow(context.Background(), "SELECT count(*) FROM "+table).Scan(&n); err != nil {
+	if err := pool.QueryRow(t.Context(), "SELECT count(*) FROM "+table).Scan(&n); err != nil {
 		t.Fatal(err)
 	}
 	return n
@@ -40,7 +39,7 @@ func TestCopyFrom100kRows(t *testing.T) {
 	for i := range rows {
 		rows[i] = []any{"system", "synthetic.copy", json.RawMessage(fmt.Sprintf(`{"i":%d}`, i))}
 	}
-	n, err := d.CopyFrom(context.Background(), "audit_events", []string{"actor", "action", "detail"}, rows)
+	n, err := d.CopyFrom(t.Context(), "audit_events", []string{"actor", "action", "detail"}, rows)
 	if err != nil || n != total {
 		t.Fatalf("copied %d rows, err %v", n, err)
 	}
@@ -51,7 +50,7 @@ func TestCopyFrom100kRows(t *testing.T) {
 
 func TestNotFoundAndConflict(t *testing.T) {
 	d, _ := newDB(t)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	_, err := d.Q().GetUserByUsername(ctx, "nobody")
 	if err = db.MapErr(err); !errors.Is(err, db.ErrNotFound) || !errors.Is(err, pgx.ErrNoRows) {
@@ -86,7 +85,7 @@ func TestNotFoundAndConflict(t *testing.T) {
 
 func TestTxCommitAndRollback(t *testing.T) {
 	d, pool := newDB(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	insert := func(q *dbq.Queries) error {
 		_, err := q.InsertAuditEvent(ctx, dbq.InsertAuditEventParams{Actor: "system", Action: "test", Detail: json.RawMessage(`{}`)})
 		return err
@@ -111,7 +110,7 @@ func TestTxCommitAndRollback(t *testing.T) {
 
 func TestTxRetriesTransientFailures(t *testing.T) {
 	d, pool := newDB(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	for _, code := range []string{"40001", "40P01"} {
 		attempts := 0
 		err := d.Tx(ctx, func(q *dbq.Queries) error {

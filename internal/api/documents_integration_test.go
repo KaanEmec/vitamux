@@ -4,7 +4,6 @@ package api
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -46,7 +45,7 @@ func newDocEnv(t *testing.T) *docEnv {
 	t.Helper()
 	u, app := dbtest.Migrated(t)
 	e := &docEnv{t: t, user: uuid.New()}
-	if _, err := dbtest.Pool(t, u, db.OwnerRole).Exec(context.Background(),
+	if _, err := dbtest.Pool(t, u, db.OwnerRole).Exec(t.Context(),
 		`INSERT INTO users (id, username, password_hash) VALUES ($1, 'owner', 'synthetic')`, e.user); err != nil {
 		t.Fatal(err)
 	}

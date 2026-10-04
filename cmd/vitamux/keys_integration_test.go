@@ -3,7 +3,6 @@
 package main
 
 import (
-	"context"
 	"path/filepath"
 	"testing"
 
@@ -26,7 +25,7 @@ func loadKeyring(t *testing.T, path string, previous ...string) *crypto.Keyring 
 func TestRotateKeys(t *testing.T) {
 	_, pool := dbtest.Migrated(t)
 	d := db.New(pool)
-	ctx := context.Background()
+	ctx := t.Context()
 	mustExec := func(sql string, args ...any) {
 		t.Helper()
 		if _, err := pool.Exec(ctx, sql, args...); err != nil {

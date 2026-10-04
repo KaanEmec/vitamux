@@ -89,7 +89,7 @@ type env struct {
 
 func setup(t *testing.T, f *fake) *env {
 	t.Helper()
-	ctx := context.Background()
+	ctx := t.Context()
 	_, pool := dbtest.Migrated(t)
 	keyPath := filepath.Join(t.TempDir(), "master.key")
 	if _, err := crypto.WriteKeyFile(keyPath); err != nil {
@@ -143,7 +143,7 @@ func (e *env) enqueue(t *testing.T, p jobs.SyncPayload) uuid.UUID {
 	if p.Slot.IsZero() {
 		p.Slot = time.Now()
 	}
-	id, _, err := jobs.Enqueue(context.Background(), e.d.Q(), jobs.NewJob{
+	id, _, err := jobs.Enqueue(t.Context(), e.d.Q(), jobs.NewJob{
 		Kind: jobs.KindSync, ConnectionID: &e.conn, Exclusive: true, Payload: p,
 	})
 	if err != nil {
@@ -160,7 +160,7 @@ func (e *env) drive(t *testing.T, rt *Runtime, id uuid.UUID, wantRuns int) dbq.J
 		Heartbeat: time.Second, Grace: 2 * time.Second, RetryBase: time.Hour, RetryMax: time.Hour,
 	})
 	r.Register(jobs.KindSync, rt.Handle)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan struct{})
 	go func() { r.Run(ctx); close(done) }()
 	defer func() { cancel(); <-done }()
@@ -171,7 +171,7 @@ func (e *env) drive(t *testing.T, rt *Runtime, id uuid.UUID, wantRuns int) dbq.J
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	j, err := e.d.Q().GetJob(context.Background(), id)
+	j, err := e.d.Q().GetJob(t.Context(), id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +180,7 @@ func (e *env) drive(t *testing.T, rt *Runtime, id uuid.UUID, wantRuns int) dbq.J
 
 func (e *env) finishedRuns(t *testing.T, id uuid.UUID) []dbq.JobRun {
 	t.Helper()
-	rs, err := e.d.Q().ListJobRuns(context.Background(), id)
+	rs, err := e.d.Q().ListJobRuns(t.Context(), id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -431,14 +431,14 @@ func oauthFake(provider *fp.Server) *fake {
 
 func (e *env) saveCreds(t *testing.T, c Credentials) {
 	t.Helper()
-	if err := e.rt.SaveCredentials(context.Background(), e.d.Q(), e.conn, c); err != nil {
+	if err := e.rt.SaveCredentials(t.Context(), e.d.Q(), e.conn, c); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func (e *env) storedCreds(t *testing.T) (Credentials, int32) {
 	t.Helper()
-	row, err := e.d.Q().GetCredentials(context.Background(), e.conn)
+	row, err := e.d.Q().GetCredentials(t.Context(), e.conn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -463,7 +463,7 @@ func TestConcurrentRefreshSingleFlight(t *testing.T) {
 	errs := make(chan error, 100)
 	for range 100 {
 		wg.Go(func() {
-			cred, _, err := e.rt.creds.current(context.Background(), c, f)
+			cred, _, err := e.rt.creds.current(t.Context(), c, f)
 			if err == nil && cred.AccessToken != "synthetic-access-2" {
 				err = errors.New("caller got a stale access token")
 			}
@@ -587,11 +587,11 @@ func TestEnsureSchedules(t *testing.T) {
 	f := &fake{}
 	e := setup(t, f)
 	for range 2 { // idempotent
-		if err := EnsureSchedules(context.Background(), e.d.Q(), e.conn, f.Describe()); err != nil {
+		if err := EnsureSchedules(t.Context(), e.d.Q(), e.conn, f.Describe()); err != nil {
 			t.Fatal(err)
 		}
 	}
-	got, err := jobs.ListSchedules(context.Background(), e.d.Q(), &e.conn)
+	got, err := jobs.ListSchedules(t.Context(), e.d.Q(), &e.conn)
 	if err != nil {
 		t.Fatal(err)
 	}

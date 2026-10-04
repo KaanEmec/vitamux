@@ -3,7 +3,6 @@
 package provenance_test
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"testing"
@@ -37,13 +36,13 @@ func newEnv(t *testing.T) *env {
 	e := &env{t: t, d: db.New(app), user: uuid.New(), conn: uuid.New(), client: uuid.New()}
 	e.exec = func(sql string, args ...any) {
 		t.Helper()
-		if _, err := owner.Exec(context.Background(), sql, args...); err != nil {
+		if _, err := owner.Exec(t.Context(), sql, args...); err != nil {
 			t.Fatalf("%s: %v", sql, err)
 		}
 	}
 	e.scan = func(dest any, sql string, args ...any) {
 		t.Helper()
-		if err := owner.QueryRow(context.Background(), sql, args...).Scan(dest); err != nil {
+		if err := owner.QueryRow(t.Context(), sql, args...).Scan(dest); err != nil {
 			t.Fatalf("%s: %v", sql, err)
 		}
 	}
@@ -60,7 +59,7 @@ func newEnv(t *testing.T) *env {
 // the given normalizer version; it returns the raw id.
 func (e *env) write(version int, out normalize.Output) int64 {
 	e.t.Helper()
-	ctx := context.Background()
+	ctx := e.t.Context()
 	body := uuid.New()
 	e.exec(`INSERT INTO blobs (sha256, size_bytes, stored_bytes, compression) VALUES (sha256($1::bytea), 42, 42, 'none')`, body[:])
 	batch := uuid.New()
@@ -127,7 +126,7 @@ func (e *env) active(table, external string) string {
 
 func (e *env) trace(entity provenance.Entity, id string) *provenance.Lineage {
 	e.t.Helper()
-	l, err := provenance.Trace(context.Background(), e.d, entity, id)
+	l, err := provenance.Trace(e.t.Context(), e.d, entity, id)
 	if err != nil {
 		e.t.Fatalf("trace %s %s: %v", entity, id, err)
 	}
@@ -281,7 +280,7 @@ func TestTraceLongChainAndDeletion(t *testing.T) {
 
 func TestTraceNotFoundAndBadInput(t *testing.T) {
 	e := newEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	for _, tc := range []struct {
 		entity provenance.Entity
 		id     string

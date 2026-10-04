@@ -4,7 +4,6 @@ package documents
 
 import (
 	"bytes"
-	"context"
 	"encoding/hex"
 	"errors"
 	"log/slog"
@@ -45,13 +44,13 @@ func newEnv(t *testing.T) *env {
 	e := &env{t: t, d: db.New(app), user: uuid.New(), keyAt: filepath.Join(t.TempDir(), "master.key")}
 	e.exec = func(sql string, args ...any) {
 		t.Helper()
-		if _, err := owner.Exec(context.Background(), sql, args...); err != nil {
+		if _, err := owner.Exec(t.Context(), sql, args...); err != nil {
 			t.Fatalf("%s: %v", sql, err)
 		}
 	}
 	e.scan = func(dest any, sql string, args ...any) {
 		t.Helper()
-		if err := owner.QueryRow(context.Background(), sql, args...).Scan(dest); err != nil {
+		if err := owner.QueryRow(t.Context(), sql, args...).Scan(dest); err != nil {
 			t.Fatalf("%s: %v", sql, err)
 		}
 	}
@@ -73,7 +72,7 @@ func newEnv(t *testing.T) *env {
 
 func (e *env) upload(pdf []byte, name string) (Document, bool) {
 	e.t.Helper()
-	d, existing, err := e.s.Upload(context.Background(), e.user, audit.Owner, name, bytes.NewReader(pdf))
+	d, existing, err := e.s.Upload(e.t.Context(), e.user, audit.Owner, name, bytes.NewReader(pdf))
 	if err != nil {
 		e.t.Fatal(err)
 	}
@@ -82,7 +81,7 @@ func (e *env) upload(pdf []byte, name string) (Document, bool) {
 
 func TestUploadDedupeAndRead(t *testing.T) {
 	e := newEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	pdf := testPDF(3, true, false, marker)
 	d, existing := e.upload(pdf, "report-2026.pdf")
 	if existing || d.Pages != 3 || d.Status != StatusUploaded || d.Filename != "report-2026.pdf" || d.SizeBytes != int64(len(pdf)) {
@@ -136,7 +135,7 @@ func TestUploadRejects(t *testing.T) {
 		"too many pages": {testPDF(4, false, false, marker), ReasonTooManyPages},
 		"oversized":      {append(testPDF(1, false, false, marker), make([]byte, 4096)...), ReasonTooLarge},
 	} {
-		_, _, err := e.s.Upload(context.Background(), e.user, audit.Owner, "x.pdf", bytes.NewReader(tc.pdf))
+		_, _, err := e.s.Upload(t.Context(), e.user, audit.Owner, "x.pdf", bytes.NewReader(tc.pdf))
 		var re *RejectError
 		if !errors.As(err, &re) || re.Reason != tc.want || strings.Contains(err.Error(), marker) {
 			t.Errorf("%s: %v, want %s", name, err, tc.want)
@@ -163,7 +162,7 @@ func (e *env) addReport(id uuid.UUID) {
 
 func TestDeleteCryptoShreds(t *testing.T) {
 	e := newEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	d, _ := e.upload(testPDF(2, false, false, marker), "secret-name.pdf")
 	e.addReport(d.ID)
 	run := uuid.New()
@@ -267,7 +266,7 @@ func TestDeleteCryptoShreds(t *testing.T) {
 
 func TestRetention(t *testing.T) {
 	e := newEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	old, _ := e.upload(testPDF(1, false, false, "old"), "")
 	fresh, _ := e.upload(testPDF(1, false, false, "fresh"), "")
 	confirmed, _ := e.upload(testPDF(1, false, false, "confirmed"), "")
@@ -326,7 +325,7 @@ func TestRetention(t *testing.T) {
 
 func TestRotateDocumentKeys(t *testing.T) {
 	e := newEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	pdf := testPDF(1, false, false, marker)
 	d, _ := e.upload(pdf, "a.pdf")
 

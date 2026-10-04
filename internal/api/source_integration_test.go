@@ -3,7 +3,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -49,12 +48,12 @@ func newSourceEnv(t *testing.T) *sourceEnv {
 	e := &sourceEnv{t: t, d: db.New(app), user: uuid.New(), conn: uuid.New(), other: uuid.New(), oconn: uuid.New()}
 	e.exec = func(sql string, args ...any) {
 		t.Helper()
-		if _, err := ownerPool.Exec(context.Background(), sql, args...); err != nil {
+		if _, err := ownerPool.Exec(t.Context(), sql, args...); err != nil {
 			t.Fatalf("%s: %v", sql, err)
 		}
 	}
 	e.scanE = func(dest any, sql string, args ...any) error {
-		return ownerPool.QueryRow(context.Background(), sql, args...).Scan(dest)
+		return ownerPool.QueryRow(t.Context(), sql, args...).Scan(dest)
 	}
 	e.scan = func(dest any, sql string, args ...any) {
 		t.Helper()
@@ -86,7 +85,7 @@ func (e *sourceEnv) write(conn uuid.UUID, out normalize.Output) {
 
 // tryWrite is write for goroutines other than the test's.
 func (e *sourceEnv) tryWrite(conn uuid.UUID, out normalize.Output) error {
-	ctx := context.Background()
+	ctx := e.t.Context()
 	body, batch := uuid.New(), uuid.New()
 	var raw int64
 	err := e.scanE(&raw, `WITH b AS (

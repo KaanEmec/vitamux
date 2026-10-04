@@ -91,9 +91,9 @@ func (e *jobEnv) processor(version int) *Processor {
 func (e *jobEnv) raws(stream string, bodies ...[2]string) uuid.UUID {
 	e.t.Helper()
 	var ref ingest.BatchRef
-	err := e.d.Tx(context.Background(), func(q *dbq.Queries) error {
+	err := e.d.Tx(e.t.Context(), func(q *dbq.Queries) error {
 		var err error
-		ref, err = ingest.CreateBatch(context.Background(), q, ingest.BatchInfo{UserID: e.user, ConnectionID: e.conn, SourceKind: ingest.SourcePush})
+		ref, err = ingest.CreateBatch(e.t.Context(), q, ingest.BatchInfo{UserID: e.user, ConnectionID: e.conn, SourceKind: ingest.SourcePush})
 		if err != nil {
 			return err
 		}
@@ -102,7 +102,7 @@ func (e *jobEnv) raws(stream string, bodies ...[2]string) uuid.UUID {
 			items = append(items, ingest.RawItem{Stream: stream, ExternalKey: b[0], ContentType: "application/json",
 				FetchedAt: time.Now(), Body: []byte(b[1])})
 		}
-		_, err = ingest.StoreRaw(context.Background(), q, e.blobs, ref, items)
+		_, err = ingest.StoreRaw(e.t.Context(), q, e.blobs, ref, items)
 		return err
 	})
 	if err != nil {
@@ -114,7 +114,7 @@ func (e *jobEnv) raws(stream string, bodies ...[2]string) uuid.UUID {
 // run executes one job of kind through a real Runner and returns its checkpoint.
 func (e *jobEnv) run(p *Processor, kind string, h jobs.Handler, payload any) json.RawMessage {
 	e.t.Helper()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(e.t.Context())
 	r := jobs.NewRunner(e.d, jobs.Config{Workers: 1, Poll: 20 * time.Millisecond})
 	r.Register(kind, h)
 	done := make(chan struct{})
@@ -231,12 +231,12 @@ func TestReprocessAfterVersionBump(t *testing.T) {
 	e.batch(p1, e.raws("other.stream", [2]string{"x", `{}`}))
 
 	// Every payload was already attempted by v1 (failures included), so v1 selects nothing.
-	if n, _, err := p1.CountReprocess(context.Background(), ReprocessPayload{}); err != nil || n != 0 {
+	if n, _, err := p1.CountReprocess(t.Context(), ReprocessPayload{}); err != nil || n != 0 {
 		t.Fatalf("v1 selects %d (%v), want 0", n, err)
 	}
 
 	p2 := e.processor(2)
-	if n, scanned, err := p2.CountReprocess(context.Background(), ReprocessPayload{Normalizer: "test.readings", Stream: testStream}); err != nil || n != 4 || scanned != 4 {
+	if n, scanned, err := p2.CountReprocess(t.Context(), ReprocessPayload{Normalizer: "test.readings", Stream: testStream}); err != nil || n != 4 || scanned != 4 {
 		t.Fatalf("v2 selects %d of %d (%v), want 4 of 4", n, scanned, err)
 	}
 	sum := e.reprocess(p2, ReprocessPayload{Normalizer: "test.readings"})
@@ -261,7 +261,7 @@ func TestReprocessAfterVersionBump(t *testing.T) {
 
 	// Second run is a no-op.
 	h := e.activeHash()
-	if n, _, err := p2.CountReprocess(context.Background(), ReprocessPayload{}); err != nil || n != 0 {
+	if n, _, err := p2.CountReprocess(t.Context(), ReprocessPayload{}); err != nil || n != 0 {
 		t.Fatalf("second count %d (%v), want 0", n, err)
 	}
 	if sum := e.reprocess(p2, ReprocessPayload{}); sum != (Summary{}) {
@@ -270,7 +270,7 @@ func TestReprocessAfterVersionBump(t *testing.T) {
 	if e.activeHash() != h || e.int(`SELECT count(*) FROM measurements`) != 5 {
 		t.Error("second run changed canonical rows")
 	}
-	if _, _, err := p2.CountReprocess(context.Background(), ReprocessPayload{Normalizer: "nope"}); err == nil || !strings.Contains(err.Error(), "unknown normalizer") {
+	if _, _, err := p2.CountReprocess(t.Context(), ReprocessPayload{Normalizer: "nope"}); err == nil || !strings.Contains(err.Error(), "unknown normalizer") {
 		t.Errorf("unknown normalizer: %v", err)
 	}
 }

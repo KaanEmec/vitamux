@@ -5,7 +5,6 @@ package export_test
 import (
 	"archive/zip"
 	"bytes"
-	"context"
 	"crypto/rand"
 	"errors"
 	"fmt"
@@ -48,11 +47,11 @@ func newInstance(t *testing.T) *instance {
 	owner := dbtest.Pool(t, url, db.OwnerRole)
 	return &instance{t: t, d: db.New(app),
 		run: func(sql string, args ...any) error {
-			_, err := owner.Exec(context.Background(), sql, args...)
+			_, err := owner.Exec(t.Context(), sql, args...)
 			return err
 		},
 		scan: func(sql string, dest []any, args ...any) error {
-			return owner.QueryRow(context.Background(), sql, args...).Scan(dest...)
+			return owner.QueryRow(t.Context(), sql, args...).Scan(dest...)
 		},
 		load: func(dir string) (fixtureload.Stats, error) { return fixtureload.Load(t.Context(), app, dir) },
 	}

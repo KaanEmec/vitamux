@@ -25,7 +25,7 @@ const binding = "synthetic-binding"
 // begin starts an authorization and returns the state from the consent URL.
 func (e *env) begin(t *testing.T, conn *uuid.UUID) string {
 	t.Helper()
-	target, err := e.rt.BeginAuth(context.Background(), connectors.AuthRequest{
+	target, err := e.rt.BeginAuth(t.Context(), connectors.AuthRequest{
 		UserID: e.user, SessionID: e.session, Provider: Provider, ConnectionID: conn, Binding: binding,
 	})
 	if err != nil {
@@ -75,7 +75,7 @@ func (e *env) complete(state, code string) (uuid.UUID, error) {
 }
 
 func TestOAuthLifecycle(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	fake := fp.New(t)
 	e := setup(t, fake.URL)
 	accountKey := sha256.Sum256([]byte("1234567"))
@@ -207,7 +207,7 @@ func TestOAuthLifecycle(t *testing.T) {
 // A refused access token is refreshed once through the runtime's single-flight refresh; the
 // rotated pair is stored before use. A refused refresh token puts the connection in needs_reauth.
 func TestRefreshRotation(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	fake := fp.New(t)
 	e := setup(t, fake.URL)
 	state := e.begin(t, nil)

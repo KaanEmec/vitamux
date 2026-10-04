@@ -1,7 +1,6 @@
 package withings
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"testing"
@@ -17,7 +16,7 @@ func TestDescriptorIsValid(t *testing.T) {
 }
 
 func TestBeginNeedsClient(t *testing.T) {
-	_, err := New(Config{}).Begin(context.Background(), connectors.AuthInput{RedirectURL: "https://x.example.test/cb", State: "s"})
+	_, err := New(Config{}).Begin(t.Context(), connectors.AuthInput{RedirectURL: "https://x.example.test/cb", State: "s"})
 	if !errors.Is(err, connectors.ErrAuthUnavailable) {
 		t.Fatalf("got %v", err)
 	}
@@ -27,20 +26,20 @@ func TestPlan(t *testing.T) {
 	w := New(Config{})
 	from, to := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC), time.Date(2025, 1, 31, 0, 0, 0, 0, time.UTC)
 	// An interrupted call's offset is dropped: the call restarts from the stored lastupdate.
-	us, err := w.Plan(context.Background(), connectors.Conn{}, connectors.PlanRequest{Mode: connectors.ModeIncremental,
+	us, err := w.Plan(t.Context(), connectors.Conn{}, connectors.PlanRequest{Mode: connectors.ModeIncremental,
 		Cursor: json.RawMessage(`{"lastupdate":100,"offset":40,"updatetime":200}`)})
 	if err != nil || len(us) != 1 || string(us[0].Cursor) != `{"lastupdate":100}` || !us[0].From.IsZero() {
 		t.Fatalf("incremental: %v %+v", err, us)
 	}
-	us, err = w.Plan(context.Background(), connectors.Conn{}, connectors.PlanRequest{Mode: connectors.ModeManual})
+	us, err = w.Plan(t.Context(), connectors.Conn{}, connectors.PlanRequest{Mode: connectors.ModeManual})
 	if err != nil || string(us[0].Cursor) != `{"lastupdate":0}` {
 		t.Fatalf("first sync: %v %+v", err, us)
 	}
-	us, err = w.Plan(context.Background(), connectors.Conn{}, connectors.PlanRequest{Mode: connectors.ModeBackfill, From: from, To: to})
+	us, err = w.Plan(t.Context(), connectors.Conn{}, connectors.PlanRequest{Mode: connectors.ModeBackfill, From: from, To: to})
 	if err != nil || len(us) != 1 || !us[0].From.Equal(from) || !us[0].To.Equal(to) || us[0].Cursor != nil {
 		t.Fatalf("backfill: %v %+v", err, us)
 	}
-	if _, err := w.Plan(context.Background(), connectors.Conn{}, connectors.PlanRequest{Mode: connectors.ModeCorrection}); !errors.Is(err, connectors.ErrPermanent) {
+	if _, err := w.Plan(t.Context(), connectors.Conn{}, connectors.PlanRequest{Mode: connectors.ModeCorrection}); !errors.Is(err, connectors.ErrPermanent) {
 		t.Fatalf("correction without window: %v", err)
 	}
 }

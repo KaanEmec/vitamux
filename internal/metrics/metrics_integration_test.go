@@ -3,7 +3,6 @@
 package metrics
 
 import (
-	"context"
 	"io"
 	"net/http/httptest"
 	"strings"
@@ -17,7 +16,7 @@ import (
 
 func TestStateGauges(t *testing.T) {
 	_, p := dbtest.Migrated(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	owner, active, reauth := uuid.New(), uuid.New(), uuid.New()
 	for _, sql := range []struct {
 		q    string

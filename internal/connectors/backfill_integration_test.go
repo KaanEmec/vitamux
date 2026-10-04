@@ -66,7 +66,7 @@ func (e *env) runBackfill(t *testing.T, rt *Runtime, d time.Duration, stop func(
 		Heartbeat: 500 * time.Millisecond, Grace: time.Millisecond, RetryBase: time.Millisecond, RetryMax: 5 * time.Millisecond,
 	})
 	r.Register(KindBackfillUnit, rt.HandleBackfillUnit)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan struct{})
 	go func() { r.Run(ctx); close(done) }()
 	for end := time.Now().Add(d); time.Now().Before(end) && !stop(); {
@@ -78,7 +78,7 @@ func (e *env) runBackfill(t *testing.T, rt *Runtime, d time.Duration, stop func(
 
 func (e *env) backfill(t *testing.T, rt *Runtime, id uuid.UUID) Backfill {
 	t.Helper()
-	bs, err := rt.ListBackfills(context.Background(), e.conn)
+	bs, err := rt.ListBackfills(t.Context(), e.conn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func (e *env) backfill(t *testing.T, rt *Runtime, id uuid.UUID) Backfill {
 func (e *env) createBackfill(t *testing.T, days int) (uuid.UUID, time.Time) {
 	t.Helper()
 	from := time.Now().AddDate(0, 0, -days-1).UTC().Truncate(24 * time.Hour)
-	id, err := e.rt.CreateBackfill(context.Background(), BackfillSpec{
+	id, err := e.rt.CreateBackfill(t.Context(), BackfillSpec{
 		ConnectionID: e.conn, Stream: stream, From: from, To: from.AddDate(0, 0, days),
 	})
 	if err != nil {
@@ -186,7 +186,7 @@ func TestBackfillFailedUnitsRetryIndividually(t *testing.T) {
 	}
 	e.runBackfill(t, e.rt, 20*time.Second, ended("failed"))
 	b := e.backfill(t, e.rt, id)
-	failed, err := e.rt.BackfillUnits(context.Background(), id, "failed")
+	failed, err := e.rt.BackfillUnits(t.Context(), id, "failed")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,7 +206,7 @@ func TestBackfillFailedUnitsRetryIndividually(t *testing.T) {
 	failing = false
 	uf.mu.Unlock()
 	first, second := failed[0].From, failed[1].From
-	if n, err := e.rt.RetryBackfill(context.Background(), id, &first); err != nil || n != 1 {
+	if n, err := e.rt.RetryBackfill(t.Context(), id, &first); err != nil || n != 1 {
 		t.Fatalf("retry one unit: %d, %v", n, err)
 	}
 	e.runBackfill(t, e.rt, 10*time.Second, ended("failed"))
@@ -215,14 +215,14 @@ func TestBackfillFailedUnitsRetryIndividually(t *testing.T) {
 		t.Fatalf("after retrying one unit: %+v, fetches %d/%d", b, uf.count(first), uf.count(second))
 	}
 
-	if n, err := e.rt.RetryBackfill(context.Background(), id, nil); err != nil || n != 1 {
+	if n, err := e.rt.RetryBackfill(t.Context(), id, nil); err != nil || n != 1 {
 		t.Fatalf("retry the rest: %d, %v", n, err)
 	}
 	e.runBackfill(t, e.rt, 10*time.Second, ended("done"))
 	if b = e.backfill(t, e.rt, id); b.Status != "done" || b.Done != 10 || uf.count(second) != 1 {
 		t.Fatalf("after retrying all: %+v", b)
 	}
-	if n, err := e.rt.RetryBackfill(context.Background(), id, nil); err != nil || n != 0 {
+	if n, err := e.rt.RetryBackfill(t.Context(), id, nil); err != nil || n != 0 {
 		t.Fatalf("retry of a done backfill: %d, %v", n, err)
 	}
 }
@@ -231,7 +231,7 @@ func TestBackfillCancel(t *testing.T) {
 	f, uf := newUnitFake()
 	e := setup(t, f)
 	id, _ := e.createBackfill(t, 30)
-	if err := e.rt.CancelBackfill(context.Background(), id); err != nil {
+	if err := e.rt.CancelBackfill(t.Context(), id); err != nil {
 		t.Fatal(err)
 	}
 	var queued, cancelled int
@@ -244,10 +244,10 @@ func TestBackfillCancel(t *testing.T) {
 	if b := e.backfill(t, e.rt, id); b.Status != "cancelled" || b.FinishedAt == nil || len(uf.fetches) != 0 {
 		t.Fatalf("after cancel: %+v, %d units fetched", b, len(uf.fetches))
 	}
-	if err := e.rt.CancelBackfill(context.Background(), id); !errors.Is(err, db.ErrNotFound) {
+	if err := e.rt.CancelBackfill(t.Context(), id); !errors.Is(err, db.ErrNotFound) {
 		t.Fatalf("second cancel: %v", err)
 	}
-	if n, err := e.rt.RetryBackfill(context.Background(), id, nil); err != nil || n != 0 {
+	if n, err := e.rt.RetryBackfill(t.Context(), id, nil); err != nil || n != 0 {
 		t.Fatalf("retry of a cancelled backfill: %d, %v", n, err)
 	}
 }
@@ -267,12 +267,12 @@ func TestCreateBackfillValidation(t *testing.T) {
 		if spec.Stream == "" {
 			spec.Stream = stream
 		}
-		if _, err := e.rt.CreateBackfill(context.Background(), spec); !errors.Is(err, ErrInvalidBackfill) {
+		if _, err := e.rt.CreateBackfill(t.Context(), spec); !errors.Is(err, ErrInvalidBackfill) {
 			t.Errorf("%s: %v, want ErrInvalidBackfill", name, err)
 		}
 	}
 	e.exec(`UPDATE connections SET status = 'needs_reauth' WHERE id = $1`, e.conn)
-	if _, err := e.rt.CreateBackfill(context.Background(), BackfillSpec{ConnectionID: e.conn, Stream: stream, From: now.Add(-48 * time.Hour)}); !errors.Is(err, ErrInvalidBackfill) {
+	if _, err := e.rt.CreateBackfill(t.Context(), BackfillSpec{ConnectionID: e.conn, Stream: stream, From: now.Add(-48 * time.Hour)}); !errors.Is(err, ErrInvalidBackfill) {
 		t.Errorf("inactive connection: %v", err)
 	}
 	var n int

@@ -3,7 +3,6 @@
 package catalog_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/KaanEmec/vitamux/internal/catalog"
@@ -13,7 +12,7 @@ import (
 // The 00010 seed must contain exactly the catalogue, with canonical units and stable ids.
 func TestSeedMatchesCatalogue(t *testing.T) {
 	_, app := dbtest.Migrated(t)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	rows, err := app.Query(ctx, `SELECT m.id, m.code, u.code FROM metric_catalog m JOIN units u ON u.id = m.unit_id ORDER BY m.id`)
 	if err != nil {

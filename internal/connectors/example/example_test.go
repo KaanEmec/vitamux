@@ -1,7 +1,6 @@
 package example
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"testing"
@@ -19,7 +18,7 @@ func TestDescriptorValidates(t *testing.T) {
 }
 
 func TestPlan(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	stored := json.RawMessage(`{"since":"2026-09-14T08:00:00Z"}`)
 	for _, mode := range []string{connectors.ModeIncremental, connectors.ModeManual} {
 		units, err := New(Config{}).Plan(ctx, connectors.Conn{}, connectors.PlanRequest{Mode: mode, Stream: Stream, Cursor: stored})

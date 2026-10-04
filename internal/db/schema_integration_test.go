@@ -3,7 +3,6 @@
 package db_test
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -21,7 +20,7 @@ const (
 )
 
 func TestMigrationsDownUp(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	owner := dbtest.Pool(t, dbtest.Empty(t), db.OwnerRole)
 	m, err := db.NewMigrator(owner)
 	if err != nil {
@@ -72,7 +71,7 @@ const (
 )
 
 func TestConstraints(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	u, app := dbtest.Migrated(t)
 	// Catalogues are read-only for the app role, so the fixture is written as owner. The metric_catalog seed (00010) provides metric id 1.
 	owner := dbtest.Pool(t, u, db.OwnerRole)
@@ -149,7 +148,7 @@ func TestConstraints(t *testing.T) {
 // assertCode runs stmts in a transaction it rolls back and checks the SQLSTATE of the last one.
 func assertCode(t *testing.T, pool *pgxpool.Pool, stmts []string, wantCode string) {
 	t.Helper()
-	ctx := context.Background()
+	ctx := t.Context()
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)

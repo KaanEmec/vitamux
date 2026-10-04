@@ -4,7 +4,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"strings"
 	"testing"
 
@@ -17,7 +16,7 @@ func TestOwnerCommands(t *testing.T) {
 	t.Setenv("VITAMUX_ENV", "development")
 	t.Setenv("VITAMUX_DATABASE_URL", url)
 	t.Setenv("VITAMUX_DATABASE_URL_FILE", "")
-	ctx := context.Background()
+	ctx := t.Context()
 	const first, second = "SENTINEL-first-password", "SENTINEL-second-password"
 
 	runOwner := func(cmd, input string) (int, string) {

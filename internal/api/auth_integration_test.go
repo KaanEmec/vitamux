@@ -4,7 +4,6 @@ package api
 
 import (
 	"bytes"
-	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"io"
@@ -82,7 +81,7 @@ func newAuthEnv(t *testing.T, development bool) *authEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
-	uid, err := auth.CreateOwner(context.Background(), d, ownerName, ownerPassword)
+	uid, err := auth.CreateOwner(t.Context(), d, ownerName, ownerPassword)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,14 +103,14 @@ func newAuthEnv(t *testing.T, development bool) *authEnv {
 		secrets: []string{ownerPassword, wrongPassword}}
 	e.exec = func(sql string, args ...any) {
 		t.Helper()
-		if _, err := pool.Exec(context.Background(), sql, args...); err != nil {
+		if _, err := pool.Exec(t.Context(), sql, args...); err != nil {
 			t.Fatal(err)
 		}
 	}
 	e.count = func(sql string, args ...any) int {
 		t.Helper()
 		var n int
-		if err := pool.QueryRow(context.Background(), sql, args...).Scan(&n); err != nil {
+		if err := pool.QueryRow(t.Context(), sql, args...).Scan(&n); err != nil {
 			t.Fatal(err)
 		}
 		return n
@@ -468,7 +467,7 @@ func TestAPIKeysAndScopes(t *testing.T) {
 
 func TestClientTokens(t *testing.T) {
 	e := newAuthEnv(t, false)
-	ctx := context.Background()
+	ctx := t.Context()
 	conn := func() uuid.UUID {
 		id := uuid.New()
 		e.exec(`INSERT INTO connections (id, user_id, provider_id, mode, status)

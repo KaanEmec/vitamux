@@ -61,7 +61,7 @@ func newReviewEnv(t *testing.T) (*docEnv, *extract.Service, func(action string) 
 	u, app := dbtest.Migrated(t)
 	owner := dbtest.Pool(t, u, db.OwnerRole)
 	e := &docEnv{t: t, user: uuid.New()}
-	if _, err := owner.Exec(context.Background(), `INSERT INTO users (id, username, password_hash) VALUES ($1, 'owner', 'synthetic')`, e.user); err != nil {
+	if _, err := owner.Exec(t.Context(), `INSERT INTO users (id, username, password_hash) VALUES ($1, 'owner', 'synthetic')`, e.user); err != nil {
 		t.Fatal(err)
 	}
 	keyPath := filepath.Join(t.TempDir(), "master.key")
@@ -89,7 +89,7 @@ func newReviewEnv(t *testing.T) (*docEnv, *extract.Service, func(action string) 
 	audits := func(action string) int {
 		t.Helper()
 		var n int
-		if err := owner.QueryRow(context.Background(), `SELECT count(*) FROM audit_events WHERE action = $1`, action).Scan(&n); err != nil {
+		if err := owner.QueryRow(t.Context(), `SELECT count(*) FROM audit_events WHERE action = $1`, action).Scan(&n); err != nil {
 			t.Fatal(err)
 		}
 		return n
@@ -101,7 +101,7 @@ func newReviewEnv(t *testing.T) (*docEnv, *extract.Service, func(action string) 
 // revise → unconfirm, each response checked against the spec and every mutation audited.
 func TestReviewEndpoints(t *testing.T) {
 	e, svc, audits := newReviewEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	const (
 		getX, patchRow, confirm, unconfirm = "GET /api/v1/extractions/{id}", "PATCH /api/v1/extractions/{id}/rows/{row}",
 			"POST /api/v1/extractions/{id}/confirm", "POST /api/v1/extractions/{id}/unconfirm"

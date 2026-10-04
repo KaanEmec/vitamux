@@ -3,7 +3,6 @@
 package withings
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
@@ -165,7 +164,7 @@ func (f *fakeWithings) hook(t *testing.T) string {
 // incremental → notify → refresh rotation → revoked grant → needs_reauth → reauth → resume →
 // notifications off. Each step checks raw rows, canonical rows, the cursor and the connection.
 func TestLifecycle(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	t1 := unix("2026-01-01T00:00:00Z")
 	measure := &fakeMeasure{pageSize: 25, now: t1}
 	f := &fakeWithings{t: t, measure: measure, codes: map[string]bool{}, subs: map[int]string{}}

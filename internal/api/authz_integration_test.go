@@ -3,7 +3,6 @@
 package api
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"io"
@@ -34,7 +33,7 @@ type matrixPrincipal struct {
 // 403 for everyone else.
 func TestAuthzMatrixEnforced(t *testing.T) {
 	e := newPushEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// A batch of the own connection, so {batch_id} names something only its client may use.
 	res, out := e.send(pushReq{method: http.MethodPost, path: "/api/ingest/v1/batches", key: "authz-seed",

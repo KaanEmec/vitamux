@@ -1,7 +1,6 @@
 package fakeprovider_test
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,7 +16,7 @@ import (
 
 func do(t *testing.T, c *http.Client, method, u, body string, hdr map[string]string) (*http.Response, string) {
 	t.Helper()
-	req, err := http.NewRequestWithContext(context.Background(), method, u, strings.NewReader(body))
+	req, err := http.NewRequestWithContext(t.Context(), method, u, strings.NewReader(body))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +85,7 @@ func TestDropAndDelayAreTransientNetworkFailures(t *testing.T) {
 
 	c := httpx.New(httpx.Options{Timeout: 200 * time.Millisecond})
 	for _, path := range []string{"/drop", "/slow"} {
-		req, err := http.NewRequestWithContext(context.Background(), "GET", s.URL+path, nil)
+		req, err := http.NewRequestWithContext(t.Context(), "GET", s.URL+path, nil)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -3,7 +3,6 @@
 package fakeprovider_test
 
 import (
-	"context"
 	"net/http"
 	"strconv"
 	"testing"
@@ -16,7 +15,7 @@ import (
 // Example integration test: a scripted provider, a fresh migrated database, assertions on rows.
 // Real tests call the code under test where this one calls the client and SQL directly.
 func TestExampleRateLimitIsPersisted(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	dbURL, pool := dbtest.Migrated(t) // fresh database per test, app-role pool
 
 	provider := fp.New(t)

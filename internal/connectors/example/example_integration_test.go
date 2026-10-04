@@ -71,7 +71,7 @@ func heartRate(since, page string, reply fp.Response) fp.Step {
 }
 
 func TestSyncThroughRuntime(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	dbURL, pool := dbtest.Migrated(t)
 	owner := dbtest.Pool(t, dbURL, db.OwnerRole)
 	if _, err := owner.Exec(ctx, `INSERT INTO providers (code, name) VALUES ('example', 'Example')`); err != nil {

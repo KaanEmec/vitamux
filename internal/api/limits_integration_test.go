@@ -5,7 +5,6 @@ package api
 import (
 	"bytes"
 	"compress/gzip"
-	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -47,7 +46,7 @@ func newLimitEnv(t *testing.T) *limitEnv {
 		{`INSERT INTO connections (id, user_id, provider_id, mode, status)
 			SELECT $1, $2, id, 'push', 'active' FROM providers WHERE code = 'apple_health'`, []any{conn, user}},
 	} {
-		if _, err := ownerPool.Exec(context.Background(), q.sql, q.args...); err != nil {
+		if _, err := ownerPool.Exec(t.Context(), q.sql, q.args...); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -63,7 +62,7 @@ func newLimitEnv(t *testing.T) *limitEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
-	clientID, _, err := auth.CreateClientToken(context.Background(), d, user, conn, "device", "phone")
+	clientID, _, err := auth.CreateClientToken(t.Context(), d, user, conn, "device", "phone")
 	if err != nil {
 		t.Fatal(err)
 	}

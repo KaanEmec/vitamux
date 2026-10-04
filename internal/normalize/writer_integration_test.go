@@ -3,7 +3,6 @@
 package normalize
 
 import (
-	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -41,8 +40,8 @@ func (e *env) write(conn uuid.UUID, version int32, out Output) WriteStats {
 	e.t.Helper()
 	src := Source{ConnectionID: conn, RawPayloadID: e.raw(conn), NormalizerVersionID: version}
 	var st WriteStats
-	err := e.d.Tx(context.Background(), func(q *dbq.Queries) (err error) {
-		st, err = Write(context.Background(), q, src, out)
+	err := e.d.Tx(e.t.Context(), func(q *dbq.Queries) (err error) {
+		st, err = Write(e.t.Context(), q, src, out)
 		return err
 	})
 	if err != nil {
@@ -370,8 +369,8 @@ func TestRegisterVersions(t *testing.T) {
 	}
 	var first, second map[string]int32
 	for _, dst := range []*map[string]int32{&first, &second} {
-		if err := e.d.Tx(context.Background(), func(q *dbq.Queries) (err error) {
-			*dst, err = RegisterVersions(context.Background(), q, r)
+		if err := e.d.Tx(t.Context(), func(q *dbq.Queries) (err error) {
+			*dst, err = RegisterVersions(t.Context(), q, r)
 			return err
 		}); err != nil {
 			t.Fatal(err)
@@ -390,7 +389,7 @@ func TestRegisterVersions(t *testing.T) {
 // fallback SELECT on the statement's old snapshot used to return none).
 func TestWriterConcurrentNewDevice(t *testing.T) {
 	e := writerEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	out := fixture(61)
 	src := func() Source {
 		return Source{ConnectionID: e.conn, RawPayloadID: e.raw(e.conn), NormalizerVersionID: 1}

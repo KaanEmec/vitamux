@@ -3,7 +3,6 @@
 package db_test
 
 import (
-	"context"
 	"strings"
 	"sync"
 	"testing"
@@ -14,7 +13,7 @@ import (
 
 func TestConcurrentMigrateUp(t *testing.T) {
 	url := dbtest.Empty(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	app := dbtest.Pool(t, url, db.AppRole)
 	if err := db.CheckSchema(ctx, app); err == nil || !strings.Contains(err.Error(), "migrate up") {
 		t.Fatalf("unmigrated schema: got %v", err)
@@ -55,7 +54,7 @@ func TestConcurrentMigrateUp(t *testing.T) {
 
 func TestAppRoleHasNoDDL(t *testing.T) {
 	_, app := dbtest.Migrated(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	for _, stmt := range []string{
 		"CREATE TABLE nope (id int)",
 		"CREATE TABLE public.nope (id int)",

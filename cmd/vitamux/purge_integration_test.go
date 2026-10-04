@@ -4,7 +4,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"strings"
 	"testing"
 
@@ -16,7 +15,7 @@ import (
 
 func TestPurgeUserCommand(t *testing.T) {
 	_, pool := dbtest.Migrated(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	d := db.New(pool)
 	if _, err := pool.Exec(ctx, `INSERT INTO users (id, username, password_hash) VALUES ($1, 'owner', 'synthetic')`, uuid.New()); err != nil {
 		t.Fatal(err)

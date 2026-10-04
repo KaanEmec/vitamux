@@ -43,7 +43,7 @@ type env struct {
 func newEnv(t *testing.T) *env {
 	t.Helper()
 	u, app := dbtest.Migrated(t)
-	e := &env{t: t, ctx: context.Background(), user: uuid.New(), pdfs: fixturePDFs(t)}
+	e := &env{t: t, ctx: t.Context(), user: uuid.New(), pdfs: fixturePDFs(t)}
 	owner := dbtest.Pool(t, u, db.OwnerRole)
 	e.exec = func(sql string, args ...any) {
 		t.Helper()

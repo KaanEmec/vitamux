@@ -37,7 +37,7 @@ func TestHistoryAndMetrics(t *testing.T) {
 	})
 	stop()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	all, err := RecentRuns(ctx, d, RunFilter{ConnectionID: &conn})
 	if err != nil || len(all) != 2 {
 		t.Fatalf("runs of the connection: %d, %v", len(all), err)

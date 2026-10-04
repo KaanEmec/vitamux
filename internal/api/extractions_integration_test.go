@@ -4,7 +4,6 @@ package api
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -30,7 +29,7 @@ func newExtractEnv(t *testing.T) (*docEnv, *extract.Service, *db.DB) {
 	t.Helper()
 	u, app := dbtest.Migrated(t)
 	e := &docEnv{t: t, user: uuid.New()}
-	if _, err := dbtest.Pool(t, u, db.OwnerRole).Exec(context.Background(),
+	if _, err := dbtest.Pool(t, u, db.OwnerRole).Exec(t.Context(),
 		`INSERT INTO users (id, username, password_hash) VALUES ($1, 'owner', 'synthetic')`, e.user); err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +92,7 @@ func TestExtractionEndpoints(t *testing.T) {
 			t.Errorf("%s: code %s, want %s", name, p.Code, tc.code)
 		}
 	}
-	if err := extract.SetEnabled(context.Background(), d, e.user, audit.Owner, extract.Gemini, true); err != nil {
+	if err := extract.SetEnabled(t.Context(), d, e.user, audit.Owner, extract.Gemini, true); err != nil {
 		t.Fatal(err)
 	}
 	if p := post(`{"provider": "gemini"}`, http.StatusConflict); p.Code != CodeConsentRequired {
@@ -122,7 +121,7 @@ func TestExtractionEndpoints(t *testing.T) {
 	e.do(http.MethodPost, create, "/api/v1/documents/doc_00000000000000000000000000000000/extractions", "application/json", strings.NewReader(`{"provider": "fake"}`), http.StatusNotFound)
 
 	// A provider that cannot be reached leaves the run queued for a retry, with its class shown.
-	if err := svc.Handle(context.Background(), jobFor(t, run.ID)); err == nil {
+	if err := svc.Handle(t.Context(), jobFor(t, run.ID)); err == nil {
 		t.Fatal("Gemini at a closed port succeeded")
 	}
 	var got oapi.Document

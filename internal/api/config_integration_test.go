@@ -3,7 +3,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -71,13 +70,13 @@ func newCfgEnv(t *testing.T) *cfgEnv {
 	e.cid = ingest.FormatConnectionID(e.conn)
 	e.exec = func(sql string, args ...any) {
 		t.Helper()
-		if _, err := ownerPool.Exec(context.Background(), sql, args...); err != nil {
+		if _, err := ownerPool.Exec(t.Context(), sql, args...); err != nil {
 			t.Fatalf("%s: %v", sql, err)
 		}
 	}
 	e.scan = func(dest any, sql string, args ...any) {
 		t.Helper()
-		if err := ownerPool.QueryRow(context.Background(), sql, args...).Scan(dest); err != nil {
+		if err := ownerPool.QueryRow(t.Context(), sql, args...).Scan(dest); err != nil {
 			t.Fatalf("%s: %v", sql, err)
 		}
 	}

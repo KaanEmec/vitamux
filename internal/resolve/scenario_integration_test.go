@@ -47,7 +47,7 @@ func generate(t testing.TB, dir, start string, days int, flags ...string) string
 	t.Helper()
 	_, file, _, _ := runtime.Caller(0)
 	args := append([]string{"run", "./tools/fixturegen", "-out", dir, "-start", start, "-days", strconv.Itoa(days)}, flags...)
-	cmd := exec.CommandContext(context.Background(), "go", args...)
+	cmd := exec.CommandContext(t.Context(), "go", args...)
 	cmd.Dir = filepath.Join(filepath.Dir(file), "..", "..")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("fixturegen: %v\n%s", err, out)
@@ -59,18 +59,18 @@ func generate(t testing.TB, dir, start string, days int, flags ...string) string
 func loadDir(t testing.TB, dir string) *slice {
 	t.Helper()
 	u, app := dbtest.Migrated(t)
-	stats, err := fixtureload.Load(context.Background(), app, dir)
+	stats, err := fixtureload.Load(t.Context(), app, dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	owner := dbtest.Pool(t, u, db.OwnerRole)
-	s := &slice{ctx: context.Background(), d: db.New(app), user: stats.UserID,
+	s := &slice{ctx: t.Context(), d: db.New(app), user: stats.UserID,
 		owner: func(stmt string, args ...any) error {
-			_, err := owner.Exec(context.Background(), stmt, args...)
+			_, err := owner.Exec(t.Context(), stmt, args...)
 			return err
 		},
 		scan: func(dest []any, query string, args ...any) error {
-			return owner.QueryRow(context.Background(), query, args...).Scan(dest...)
+			return owner.QueryRow(t.Context(), query, args...).Scan(dest...)
 		}}
 	// The persona's timezone periods (fixtures/README.md): Berlin, New York for the trip, Berlin.
 	for _, p := range []struct{ from, tz string }{
@@ -78,7 +78,7 @@ func loadDir(t testing.TB, dir string) *slice {
 		{"2025-05-11T22:00:00Z", "America/New_York"},
 		{"2025-05-22T04:00:00Z", "Europe/Berlin"},
 	} {
-		if _, err := app.Exec(context.Background(), `INSERT INTO timezone_periods (id, user_id, tz, valid_from) VALUES ($1, $2, $3, $4)`,
+		if _, err := app.Exec(t.Context(), `INSERT INTO timezone_periods (id, user_id, tz, valid_from) VALUES ($1, $2, $3, $4)`,
 			uuid.New(), s.user, p.tz, p.from); err != nil {
 			t.Fatal(err)
 		}

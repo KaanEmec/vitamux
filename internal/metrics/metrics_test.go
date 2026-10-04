@@ -56,11 +56,11 @@ func TestInstrumentSeries(t *testing.T) {
 
 // The private listener answers /metrics only (that route needs a database; see the integration test).
 func TestServeOnlyMetrics(t *testing.T) {
-	ln, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", "127.0.0.1:0")
+	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan struct{})
 	go func() { Serve(ctx, ln, nil, slog.New(slog.DiscardHandler)); close(done) }()
 
@@ -82,7 +82,7 @@ func TestServeOnlyMetrics(t *testing.T) {
 
 func get(t *testing.T, url string) *http.Response {
 	t.Helper()
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, url, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

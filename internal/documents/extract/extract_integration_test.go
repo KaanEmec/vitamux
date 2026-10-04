@@ -4,7 +4,6 @@ package extract
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -50,17 +49,17 @@ func newEnv(t *testing.T, extra ...Extractor) *env {
 	e := &env{t: t, d: db.New(app), user: uuid.New(), logs: &bytes.Buffer{}}
 	e.scan = func(dest any, sql string, args ...any) {
 		t.Helper()
-		if err := owner.QueryRow(context.Background(), sql, args...).Scan(dest); err != nil {
+		if err := owner.QueryRow(t.Context(), sql, args...).Scan(dest); err != nil {
 			t.Fatalf("%s: %v", sql, err)
 		}
 	}
 	e.exec = func(sql string, args ...any) {
 		t.Helper()
-		if _, err := owner.Exec(context.Background(), sql, args...); err != nil {
+		if _, err := owner.Exec(t.Context(), sql, args...); err != nil {
 			t.Fatalf("%s: %v", sql, err)
 		}
 	}
-	if _, err := owner.Exec(context.Background(), `INSERT INTO users (id, username, password_hash) VALUES ($1, 'owner', 'synthetic')`, e.user); err != nil {
+	if _, err := owner.Exec(t.Context(), `INSERT INTO users (id, username, password_hash) VALUES ($1, 'owner', 'synthetic')`, e.user); err != nil {
 		t.Fatal(err)
 	}
 	keyAt := filepath.Join(t.TempDir(), "master.key")
@@ -84,7 +83,7 @@ func newEnv(t *testing.T, extra ...Extractor) *env {
 
 func (e *env) upload(pdf []byte) uuid.UUID {
 	e.t.Helper()
-	d, _, err := e.docs.Upload(context.Background(), e.user, audit.Owner, "report.pdf", bytes.NewReader(pdf))
+	d, _, err := e.docs.Upload(e.t.Context(), e.user, audit.Owner, "report.pdf", bytes.NewReader(pdf))
 	if err != nil {
 		e.t.Fatal(err)
 	}
@@ -95,12 +94,12 @@ func (e *env) upload(pdf []byte) uuid.UUID {
 func (e *env) handle(run Run, n int32) error {
 	e.t.Helper()
 	p, _ := json.Marshal(payload{RunID: run.ID})
-	return e.svc.Handle(context.Background(), jobs.Job{Kind: Kind, Payload: p, Attempt: n, MaxAttempts: maxAttempts})
+	return e.svc.Handle(e.t.Context(), jobs.Job{Kind: Kind, Payload: p, Attempt: n, MaxAttempts: maxAttempts})
 }
 
 func (e *env) run(doc uuid.UUID) Run {
 	e.t.Helper()
-	runs, err := e.svc.List(context.Background(), e.user, doc)
+	runs, err := e.svc.List(e.t.Context(), e.user, doc)
 	if err != nil || len(runs) == 0 {
 		e.t.Fatalf("runs: %v (%d)", err, len(runs))
 	}
@@ -109,7 +108,7 @@ func (e *env) run(doc uuid.UUID) Run {
 
 func (e *env) docStatus(doc uuid.UUID) string {
 	e.t.Helper()
-	d, err := e.docs.Get(context.Background(), e.user, doc)
+	d, err := e.docs.Get(e.t.Context(), e.user, doc)
 	if err != nil {
 		e.t.Fatal(err)
 	}
@@ -139,7 +138,7 @@ func fixturePDFs(t *testing.T) string {
 // ground truth rows, a sealed raw response, needs_review, and a clean deletion.
 func TestFakeEndToEnd(t *testing.T) {
 	e := newEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	dir := fixturePDFs(t)
 	for _, id := range []string{"lab-01", "lab-07"} {
 		pdf, err := os.ReadFile(filepath.Join(dir, id+".pdf"))
@@ -218,7 +217,7 @@ func TestFakeEndToEnd(t *testing.T) {
 func TestFakeUnknownPDFFailsClearly(t *testing.T) {
 	e := newEnv(t)
 	doc := e.upload(minimalPDF("one"))
-	run, err := e.svc.Start(context.Background(), e.user, doc, audit.Owner, Fake, nil)
+	run, err := e.svc.Start(t.Context(), e.user, doc, audit.Owner, Fake, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -235,13 +234,13 @@ func TestFakeUnknownPDFFailsClearly(t *testing.T) {
 	}
 	// A failed run does not block a new one once its job has ended.
 	e.exec(`UPDATE jobs SET status = 'dead'`)
-	if _, err := e.svc.Start(context.Background(), e.user, doc, audit.Owner, Fake, nil); err != nil {
+	if _, err := e.svc.Start(t.Context(), e.user, doc, audit.Owner, Fake, nil); err != nil {
 		t.Errorf("re-extraction: %v", err)
 	}
 }
 
 func TestConsentEnforcement(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	g := NewGemini(GeminiConfig{APIKey: sentinelKey, Model: "gemini-test", BaseURL: "http://127.0.0.1:1", Client: httpx.New(httpx.Options{})})
 	e := newEnv(t, g)
 	doc := e.upload(minimalPDF("one"))
@@ -318,7 +317,7 @@ func TestConsentEnforcement(t *testing.T) {
 // 503 and a final rejection that echoes the key. The key appears in no log, audit event, run
 // or job row.
 func TestGeminiJobNeverLeaksTheKey(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	truthJSON := truth(t)
 	replies := []func(http.ResponseWriter){
 		jsonReply(503, map[string]any{"error": map[string]any{"message": "overloaded " + sentinelKey}}),

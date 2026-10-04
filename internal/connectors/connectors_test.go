@@ -37,7 +37,7 @@ func TestBucketLimitsRate(t *testing.T) {
 	b := newBucket(RateLimitSpec{Requests: 5, Per: 100 * time.Millisecond}) // burst 5, then one per 20 ms
 	start := time.Now()
 	for range 10 {
-		if err := b.wait(context.Background()); err != nil {
+		if err := b.wait(t.Context()); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -45,7 +45,7 @@ func TestBucketLimitsRate(t *testing.T) {
 		t.Fatalf("10 tokens in %s; want about 100 ms (5 burst + 5 × 20 ms)", el)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Millisecond)
 	defer cancel()
 	slow := newBucket(RateLimitSpec{Requests: 1, Per: time.Hour})
 	_ = slow.wait(ctx)

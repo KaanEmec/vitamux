@@ -37,14 +37,14 @@ func newEnv(t *testing.T) *env {
 	owner := dbtest.Pool(t, u, db.OwnerRole)
 	e := &env{t: t, d: db.New(app), user: uuid.New(), conn: uuid.New()}
 	e.run = func(sql string, args ...any) error {
-		_, err := owner.Exec(context.Background(), sql, args...)
+		_, err := owner.Exec(t.Context(), sql, args...)
 		return err
 	}
 	e.scan = func(dest any, sql string, args ...any) error {
-		return owner.QueryRow(context.Background(), sql, args...).Scan(dest)
+		return owner.QueryRow(t.Context(), sql, args...).Scan(dest)
 	}
 	e.col = func(sql string) ([]time.Time, error) {
-		rows, err := owner.Query(context.Background(), sql)
+		rows, err := owner.Query(t.Context(), sql)
 		if err != nil {
 			return nil, err
 		}
@@ -135,7 +135,7 @@ func (e *env) dirty() []string {
 }
 
 func TestPeriodEditRecomputesOnlyAffectedRows(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	e := newEnv(t)
 	periods := NewPeriods(e.d)
 	if _, r, err := periods.Add(ctx, e.user, "owner", utc("2026-01-01T00:00:00Z"), "Europe/Amsterdam"); err != nil || r == nil || !r.From.IsZero() || !r.To.IsZero() {
@@ -208,7 +208,7 @@ func TestPeriodEditRecomputesOnlyAffectedRows(t *testing.T) {
 }
 
 func TestRecomputePages(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	e := newEnv(t)
 	if _, _, err := NewPeriods(e.d).Add(ctx, e.user, "owner", utc("2026-01-01T00:00:00Z"), "UTC"); err != nil {
 		t.Fatal(err)
@@ -239,7 +239,7 @@ func TestRecomputePages(t *testing.T) {
 
 func mustOnlyPeriod(t *testing.T, e *env) uuid.UUID {
 	t.Helper()
-	tl, err := NewPeriods(e.d).Timeline(context.Background(), e.user)
+	tl, err := NewPeriods(e.d).Timeline(t.Context(), e.user)
 	if err != nil || len(tl) != 1 {
 		t.Fatalf("timeline %v %v", tl, err)
 	}
@@ -247,7 +247,7 @@ func mustOnlyPeriod(t *testing.T, e *env) uuid.UUID {
 }
 
 func TestPeriodService(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	e := newEnv(t)
 	p := NewPeriods(e.d)
 
@@ -302,7 +302,7 @@ func TestPeriodService(t *testing.T) {
 // TestPeriodEditEnqueuesRecomputeJob: an edit with an affected range enqueues the job in its own
 // transaction, a no-op edit enqueues nothing, and the registered handler applies the new dates.
 func TestPeriodEditEnqueuesRecomputeJob(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	e := newEnv(t)
 	periods := NewPeriods(e.d)

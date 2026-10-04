@@ -5,7 +5,6 @@ package api
 import (
 	"bytes"
 	"compress/gzip"
-	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -53,7 +52,7 @@ func newPushEnv(t *testing.T) *pushEnv {
 		conn uuid.UUID
 		tok  *string
 	}{{e.own, &e.tok}, {e.otherConn, &e.otherTok}} {
-		_, tok, err := auth.CreateClientToken(context.Background(), e.d, e.userID, c.conn, "device", "phone")
+		_, tok, err := auth.CreateClientToken(t.Context(), e.d, e.userID, c.conn, "device", "phone")
 		if err != nil {
 			t.Fatal(err)
 		}

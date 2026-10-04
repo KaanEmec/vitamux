@@ -3,7 +3,6 @@
 package db_test
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -244,7 +243,7 @@ func TestVolumeBaseline(t *testing.T) {
 		dir = generate(t)
 	}
 	ds := loadDataset(t, dir)
-	ctx := context.Background()
+	ctx := t.Context()
 	t.Logf("loaded %d measurements (%d HR), %d groups, %d sleep sessions (%d stages), %d raw payloads in %v (%.0f rows/s)",
 		ds.stats.Measurements, ds.stats.HeartRate, ds.stats.Groups, ds.stats.Sleep, ds.stats.Stages, ds.stats.Raw, ds.loadTime.Round(time.Second),
 		float64(ds.stats.Measurements)/ds.loadTime.Seconds())
