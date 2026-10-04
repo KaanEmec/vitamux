@@ -106,7 +106,7 @@ test('the resolved endpoints being unavailable is shown, not fatal', async ({ pa
 	await expect(page.getByRole('link', { name: 'All sources' }).first()).toBeVisible();
 });
 
-test('a 14,400-point day renders in under 500 ms', async ({ page }) => {
+test('a heart-rate day (the Day chart) renders in under 500 ms', async ({ page }) => {
 	await page.goto('/explore/heart_rate/day/' + fallbackDay);
 	await expect(page.getByRole('group', { name: /Heart rate on/ })).toBeVisible();
 	const ms = await page.evaluate(async () => {
@@ -116,11 +116,11 @@ test('a 14,400-point day renders in under 500 ms', async ({ page }) => {
 		}
 		return performance.getEntriesByName('vx-chart-render')[0].duration;
 	});
-	console.log(`14,400-point chart render: ${ms.toFixed(1)} ms`);
+	console.log(`Heart-rate day chart render: ${ms.toFixed(1)} ms`);
 	expect(ms).toBeLessThan(500);
-	// Both sources are in the chart's table fallback (and its legend, each with its own dash and colour).
+	// The resolved buckets and both sources are in the chart's table fallback (and its legend, each with its own dash and colour).
 	await page.getByText('Show as a table').click();
-	await expect(page.getByRole('table', { name: /Heart rate on/ }).getByRole('columnheader')).toHaveCount(3); // time + 2 sources
+	await expect(page.getByRole('table', { name: /Heart rate on/ }).getByRole('columnheader')).toHaveCount(4); // time + resolved + 2 sources
 });
 
 test('old /data links redirect to Explore', async ({ page }) => {

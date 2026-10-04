@@ -5,8 +5,9 @@
 	mean line) is drawn over them. Period changes animate through the frame's domain motion.
 -->
 <script lang="ts">
-	import ChartFrame from './ChartFrame.svelte';
-	import { DAY, extent, formatInstant, formatNumber } from './scale.ts';
+	import type { Snippet } from 'svelte';
+	import ChartFrame, { type Frame } from './ChartFrame.svelte';
+	import { DAY, extent, formatInstant, formatNumber, type Domain } from './scale.ts';
 	import type { StageColor } from './sleep.ts';
 	import type { TableData, Tip, TipAction } from './types.ts';
 	import type { DataStatus } from '../ui/status.ts';
@@ -23,8 +24,11 @@
 		providers,
 		format = (v: number) => `${formatNumber(v)}${unit ? ` ${unit}` : ''}`,
 		picked = -1,
+		zoom = false,
+		view = $bindable(null),
 		actions,
-		onselect
+		onselect,
+		overlay
 	}: {
 		xs: number[];
 		stacks: { label: string; ys: (number | null)[]; color?: StageColor | 'accent' | 'info' }[];
@@ -40,8 +44,13 @@
 		format?: (v: number) => string;
 		/** Index of the outlined window. */
 		picked?: number;
+		/** Drag to zoom (`view`, shared with a BrushNavigator). */
+		zoom?: boolean;
+		view?: Domain | null;
 		actions?: TipAction[];
 		onselect?: (i: number) => void;
+		/** Drawn under the bars (the Day view's night, workout and now marks). */
+		overlay?: Snippet<[Frame]>;
 	} = $props();
 
 	const stepMs = $derived(xs.length > 1 ? Math.min(...xs.slice(1).map((t, i) => t - xs[i])) : DAY);
@@ -75,7 +84,7 @@
 	}
 </script>
 
-<ChartFrame {label} xs={anchors} {x} {y} {timezone} {height} {tip} {table} {actions} {onselect} crosshair={false}>
+<ChartFrame {label} xs={anchors} {x} {y} {timezone} {height} {zoom} bind:view {tip} {table} {actions} {onselect} crosshair={false}>
 	{#snippet legend()}
 		{#if stacked}
 			{#each stacks as s (s.label)}<span class="key"><span class={['swatch', s.color]}></span>{s.label}</span>{/each}
@@ -84,6 +93,7 @@
 	{#snippet marks(f)}
 		{@const w = Math.max(1, (f.sx(x[0] + stepMs) - f.sx(x[0])) * 0.72)}
 		{@const r = Math.min(4, w / 3)}
+		{@render overlay?.(f)}
 		{#each xs as t, i (t)}
 			{@const cx = f.sx(t + stepMs / 2) - w / 2}
 			{#each stacks as s, k (k)}

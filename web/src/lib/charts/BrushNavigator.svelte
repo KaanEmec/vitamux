@@ -13,13 +13,16 @@
 		ys,
 		view = $bindable(null),
 		label,
-		timezone
+		timezone,
+		withTime = false
 	}: {
 		xs: number[];
 		ys: (number | null)[];
 		view?: Domain | null;
 		label: string;
 		timezone?: string;
+		/** Label the window with clock times (a day's navigator). */
+		withTime?: boolean;
 	} = $props();
 
 	type Brush = { x: unknown[]; active: boolean | undefined };
@@ -30,7 +33,7 @@
 	const rows = $derived(decimate(xs, ys, full, 400));
 	const y = $derived(extent(ys, 0.1));
 	const defined = (d: Row) => d.y != null;
-	const fmt = (t: number) => formatInstant(t, timezone, false);
+	const fmt = (t: number) => formatInstant(t, timezone, withTime);
 	const span = $derived(full[1] - full[0]);
 
 	// The chart above zoomed or reset: move the window to match.
