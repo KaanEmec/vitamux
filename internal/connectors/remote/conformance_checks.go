@@ -224,15 +224,15 @@ func (r *confRun) fetchBroken() bool {
 	return slices.ContainsFunc(r.pages, func(p confPage) bool { return p.err != nil })
 }
 
-// placeholder credentials are all a scenario-less run has: only a sidecar in REPLAY mode serves them.
-var placeholder = connectors.Credentials{AccessToken: "synthetic-access-token", RefreshToken: "synthetic-refresh-token"}
+// replayCreds are all a scenario-less run has: only a sidecar in REPLAY mode serves them.
+var replayCreds = connectors.Credentials{AccessToken: "synthetic-access-token", RefreshToken: "synthetic-refresh-token"}
 
 // mainCreds are the credentials of the scenario's own subject, or a skip when sign-in failed.
 func (r *confRun) mainCreds(ctx context.Context) (connectors.Credentials, error) {
 	l := r.login(ctx, "", r.scn.Subject)
 	switch {
 	case errors.Is(l.err, errNoLogin):
-		return placeholder, nil
+		return replayCreds, nil
 	case l.err != nil:
 		return connectors.Credentials{}, confSkip("auth_flow failed, so there are no credentials")
 	}
@@ -265,7 +265,7 @@ func (r *confRun) checkAuthRefresh(ctx context.Context) (string, error) {
 		return "", err
 	case creds.RefreshToken == "":
 		return "", confSkip("the credentials have no refresh token")
-	case creds.AccessToken == placeholder.AccessToken:
+	case creds.AccessToken == replayCreds.AccessToken:
 		return "", confSkip("the scenario has no login")
 	}
 	refreshed, err := r.refresh(ctx, creds)
@@ -646,7 +646,7 @@ func (r *confRun) checkNoSecretEcho(ctx context.Context) (string, error) {
 	for s := range r.secrets {
 		values["f"+strconv.Itoa(len(values))] = s
 	}
-	creds := connectors.Credentials{AccessToken: placeholder.AccessToken}
+	creds := connectors.Credentials{AccessToken: replayCreds.AccessToken}
 	for s := range r.secrets {
 		creds.AccessToken, creds.RefreshToken = s, s
 		break
