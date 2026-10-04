@@ -30,7 +30,8 @@ type Summary struct {
 	Deleted     int `json:"deleted"`
 }
 
-func (s *Summary) add(r Result) {
+// Add counts one Process result.
+func (s *Summary) Add(r Result) {
 	switch r.Outcome {
 	case Normalized:
 		s.Normalized++
@@ -83,7 +84,7 @@ func (p *Processor) BatchJob() jobs.Handler {
 				}
 				continue
 			}
-			sum.add(res)
+			sum.Add(res)
 		}
 		p.Log.Info("batch normalized", "batch_id", bp.BatchID, "payloads", len(ids), "summary", sum.String())
 		return first
@@ -216,7 +217,7 @@ func (p *Processor) ReprocessJob() jobs.Handler {
 				}
 				return nil
 			}
-			st.Sum.add(res)
+			st.Sum.Add(res)
 			if first == nil { // after a database error the next run starts at that payload
 				st.After = id
 			}

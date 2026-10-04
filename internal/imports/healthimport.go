@@ -119,14 +119,11 @@ type appleImport struct {
 }
 
 func (im *appleImport) setup(ctx context.Context) error {
-	owners, err := im.d.Q().ImportOwners(ctx)
+	owner, err := soleOwner(ctx, im.d, "apple health export")
 	if err != nil {
 		return err
 	}
-	if len(owners) != 1 {
-		return errors.New("apple health export: the instance needs exactly one owner (vitamux admin create-owner)")
-	}
-	im.owner = owners[0]
+	im.owner = owner
 	err = im.d.Tx(ctx, func(q *dbq.Queries) error {
 		conn, err := q.OwnerApplePushConnection(ctx, im.owner)
 		if err = db.MapErr(err); !errors.Is(err, db.ErrNotFound) {
@@ -230,20 +227,7 @@ func (im *appleImport) page(ctx context.Context, typ string, recs []applehealth.
 	if err != nil {
 		return err
 	}
-	s := &im.rep.Normalized
-	switch res.Outcome {
-	case normalize.Normalized:
-		s.Normalized++
-	case normalize.Failed:
-		s.Failed++
-	default:
-		s.Skipped++
-	}
-	s.Inserted += res.Stats.Inserted
-	s.Superseded += res.Stats.Superseded
-	s.Reversioned += res.Stats.Reversioned
-	s.Unchanged += res.Stats.Unchanged
-	s.Deleted += res.Stats.Deleted
+	im.rep.Normalized.Add(res)
 	return nil
 }
 

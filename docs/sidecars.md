@@ -42,6 +42,15 @@ Then enable it as in [install.md](install.md#sidecars): `VITAMUX_SIDECARS=<name>
 4. **Write the normalizer in Go** in the core, as for a sidecar. There is no `describe`, no auth wizard and no scheduling by Vitamux.
 5. Ship the uploader as a second container next to the tool (a Compose profile like the template's, without the shared secret; it holds the ingest token as a file secret).
 
+## Replay a collector's archive
+
+To move history that an old collector saved (raw responses on disk) into a live connection, for example before switching to a sidecar for the same account:
+
+1. Connect the account through the sidecar first and leave the connection paused. Records dedupe per provider account (`account_key`), so the archive must land in that connection, not a separate push connection.
+2. Convert the archive into ingest batch files ([schema](../schemas/ingest-batch.v1.json)): one `*.json` batch per file (at most 1,000 items each), with the connection's `conn_…` id, and each item shaped exactly as the sidecar's raw line for that record (same `stream`, `external_key`, `request` and body). Put binary items in `blobs/<sha256>` and reference them with `blob_sha256`. Set `provenance.migration_source` (e.g. `my_collector_archive`).
+3. Run `vitamux import batches --dry-run DIR`. It validates every file and runs the normalizers in memory, reporting records, warnings and failures per stream. Fix the converter until nothing fails.
+4. Run `vitamux import batches DIR`. Items already stored are skipped, so you can re-run it to import later additions. Then resume the connection: overlapping days from the live sync become no-ops or new raw versions, never copies.
+
 ## Layout
 
 ```text

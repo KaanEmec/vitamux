@@ -7,7 +7,7 @@ Read first: [connectors#remote-sidecar-mode](../../architecture/connectors.md#re
 
 **Outputs:** Frozen protocol `vitamux-connector/1`, the `remote` execution mode in the core, a conformance kit, a non-Go example sidecar, packaging and licensing conventions for third-party collectors, and automatic tracking of wrapped upstream releases.
 
-Numbered after E16, but it is a product epic that comes **before** E16 in dependency order. The unofficial Garmin ([E18](../E18-garmin/README.md)) and WHOOP ([E19](../E19-whoop/README.md)) connectors build on it.
+The unofficial Garmin ([E18](../E18-garmin/README.md)) and WHOOP ([E19](../E19-whoop/README.md)) connectors build on it.
 
 ## Acceptance
 - A sidecar registered only through configuration (URL plus a shared-secret file) appears in the Connections UI. It completes its auth flow in the existing wizard, including MFA challenges, and syncs, backfills and reports health like an in-process connector.
@@ -27,3 +27,4 @@ Numbered after E16, but it is a product epic that comes **before** E16 in depend
 | [J17.3](J17.3-conformance-kit.md) | Conformance kit and example sidecar | J17.1, J17.2 | None |
 | [J17.4](J17.4-third-party-packaging.md) | Third-party collector packaging, licensing and guide | J17.3, J14.2 | None |
 | [J17.5](J17.5-upstream-tracking.md) | Upstream tracking: automatic bumps, canary builds, sidecar image channel | J17.3, J17.4, J13.6 | None |
+| [J17.6](J17.6-batch-import.md) | Replay a collector's archive (`vitamux import batches`) | J05.3, J17.2 | None |

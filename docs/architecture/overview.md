@@ -96,6 +96,7 @@ The minimal reliable topology is **`vitamux` + `postgres`**, with volumes `pgdat
 | `vitamux reprocess` | Re-run normalizers over raw payloads |
 | `vitamux import ndjson [--merge]` | Load a Vitamux export ([exports](api.md#exports)) |
 | `vitamux import apple-health-export FILE` | Backfill from the Health app's export ([importer](apple-health.md#export-importer-fallback)) |
+| `vitamux import batches [--dry-run] DIR` | Replay ingest batch files, e.g. a collector's archive, into their connections ([sidecars.md](../sidecars.md#replay-a-collectors-archive)) |
 | `vitamux backup` / `vitamux restore` | Consistent backup bundle ([operations/backup.md](../operations/backup.md)) |
 | `vitamux resolve verify` | Compare the resolved cache with live resolution |
 | `vitamux version` | Version, commit, expected schema |

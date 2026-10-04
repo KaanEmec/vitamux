@@ -50,7 +50,7 @@ Commands:
   admin     administrative tasks (E03)
   keys      rotate (re-seal values under the current master key)
   reprocess re-normalize stored raw payloads after a normalizer change
-  import    ndjson [--merge] EXPORT (load a Vitamux export zip) | apple-health-export FILE (Health app export)
+  import    ndjson [--merge] EXPORT (load a Vitamux export zip) | apple-health-export FILE (Health app export) | batches [--dry-run] DIR (replay ingest batch files into their connections)
   backup    [--out DIR|-] (database dump, blobs and manifest; default VITAMUX_BACKUP_DIR)
   restore   --from DIR (into an empty database and data dir, then migrate up)
   resolve   verify [--windows N] (compare the resolved cache with live resolution)

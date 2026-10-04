@@ -26,6 +26,7 @@ import (
 
 const importUsage = `usage: vitamux import ndjson [--merge] EXPORT
        vitamux import apple-health-export FILE
+       vitamux import batches [--dry-run] DIR
 
 ndjson imports a Vitamux export (the zip from POST /api/v1/exports, or its unpacked directory) with
 its ids, timestamps and provenance. The instance needs its owner (vitamux admin create-owner)
@@ -38,11 +39,22 @@ apple-health-export imports the Health app's export (export.zip, or its export.x
 owner's Apple Health connection as a one-off backfill. Records that the iPhone app already
 synced are reported per type and not added; importing the same export again changes nothing.
 It needs VITAMUX_MASTER_KEY_FILE and the data directory, and may run while serve runs.
+
+batches replays a directory of ingest batch files (schemas/ingest-batch.v1.json, one batch per
+*.json file, in name order; binary items in blobs/<sha256>) into the owner's connections they
+name, as if each connection had fetched them: use it to bring a collector's archive into a live
+connection, so a later sync of the same records adds no copies. Items already stored are
+skipped, so running it again changes nothing. --dry-run validates every file and runs the
+normalizers in memory, reporting records, warnings and failures per stream, and writes nothing.
+It needs VITAMUX_MASTER_KEY_FILE and the data directory, and may run while serve runs.
 `
 
 func importCmd(args []string, stdout, stderr io.Writer) int {
 	if len(args) > 0 && args[0] == "apple-health-export" {
 		return importAppleHealth(args[1:], stdout, stderr)
+	}
+	if len(args) > 0 && args[0] == "batches" {
+		return importBatches(args[1:], stdout, stderr)
 	}
 	if len(args) == 0 || args[0] != "ndjson" {
 		fmt.Fprint(stderr, importUsage)
@@ -133,6 +145,24 @@ func importAppleHealth(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprint(stderr, importUsage)
 		return 2
 	}
+	return withImportProcessor(stderr, func(ctx context.Context, proc *normalize.Processor) error {
+		in, err := imports.OpenExport(args[0], imports.DefaultLimits)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = in.Close() }()
+		rep, err := imports.ImportAppleHealth(ctx, in, imports.AppleHealthOptions{Processor: proc, Limits: imports.DefaultLimits})
+		if err != nil {
+			return err
+		}
+		fmt.Fprint(stdout, rep)
+		return nil
+	})
+}
+
+// withImportProcessor opens what an importer that stores raw payloads needs (keys, blob store,
+// database, normalizers) and runs fn with a Processor over them. An error from fn exits 1.
+func withImportProcessor(stderr io.Writer, fn func(context.Context, *normalize.Processor) error) int {
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Fprintf(stderr, "configuration error:\n%v\n", err)
@@ -169,18 +199,32 @@ func importAppleHealth(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "import: %v\n", err)
 		return 1
 	}
-	in, err := imports.OpenExport(args[0], imports.DefaultLimits)
-	if err != nil {
-		fmt.Fprintf(stderr, "import: %v\n", err)
-		return 1
-	}
-	defer func() { _ = in.Close() }()
 	proc := &normalize.Processor{DB: db.New(pool), Blobs: blobs, Registry: reg, Log: obs.NewLogger(stderr, cfg.LogLevel)}
-	rep, err := imports.ImportAppleHealth(ctx, in, imports.AppleHealthOptions{Processor: proc, Limits: imports.DefaultLimits})
-	if err != nil {
+	if err := fn(ctx, proc); err != nil {
 		fmt.Fprintf(stderr, "import: %v\n", err)
 		return 1
 	}
-	fmt.Fprint(stdout, rep)
 	return 0
+}
+
+func importBatches(args []string, stdout, stderr io.Writer) int {
+	fset := flag.NewFlagSet("import batches", flag.ContinueOnError)
+	fset.SetOutput(stderr)
+	fset.Usage = func() { fmt.Fprint(stderr, importUsage) }
+	dryRun := fset.Bool("dry-run", false, "validate and normalize in memory; write nothing")
+	if err := fset.Parse(args); err != nil {
+		return 2
+	}
+	if fset.NArg() != 1 {
+		fmt.Fprint(stderr, importUsage)
+		return 2
+	}
+	return withImportProcessor(stderr, func(ctx context.Context, proc *normalize.Processor) error {
+		rep, err := imports.ImportBatches(ctx, fset.Arg(0), imports.BatchesOptions{Processor: proc, DryRun: *dryRun})
+		fmt.Fprint(stdout, rep)
+		if err == nil && len(rep.Failures) > 0 {
+			err = errors.New("dry run: some items fail to normalize")
+		}
+		return err
+	})
 }
