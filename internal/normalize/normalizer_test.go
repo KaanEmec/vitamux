@@ -139,6 +139,12 @@ func TestSleepTotals(t *testing.T) {
 	if tt.Deep != nil || tt.Light != nil || tt.REM != nil || *tt.Asleep != 3600 {
 		t.Errorf("unspecified: %+v", tt)
 	}
+	// A stage no event has stays nil (awake included); the session's latency is carried over.
+	lat := int32(480)
+	_, tt = sleepTotals(SleepSession{Latency: &lat, Stages: []SleepStage{st("light", 0, 60), st("deep", 60, 90)}})
+	if tt.Awake != nil || *tt.Light != 3600 || *tt.Latency != 480 {
+		t.Errorf("no awake stage: %+v", tt)
+	}
 	// unknown is neither asleep nor awake; restless and out_of_bed are not asleep either.
 	_, tt = sleepTotals(SleepSession{Stages: []SleepStage{st("light", 0, 60), st("unknown", 60, 70), st("restless", 70, 80), st("out_of_bed", 80, 90), st("awake", 90, 95)}})
 	if *tt.Asleep != 3600 || *tt.Awake != 300 {

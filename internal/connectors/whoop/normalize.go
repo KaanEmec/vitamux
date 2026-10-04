@@ -29,7 +29,7 @@ const (
 )
 
 // versions is each stream normalizer's Version(): bump only the stream whose output changes.
-var versions = map[string]int{StreamHeartRate: 1, StreamCycles: 2, StreamSleep: 2, StreamWorkouts: 1, StreamStrainDeepDive: 2}
+var versions = map[string]int{StreamHeartRate: 2, StreamCycles: 3, StreamSleep: 3, StreamWorkouts: 1, StreamStrainDeepDive: 3}
 
 // strap is the device of every WHOOP record: the private API names no device of its own.
 var strap = normalize.Device{Fingerprint: "whoop:strap", Type: "band", Manufacturer: "WHOOP"}
@@ -76,13 +76,15 @@ func (b *builder) warn(code, detail string) {
 
 // rawUnit is a raw's unit. A whoop.sleep raw has the sleep's activity id, plus its nap flag and
 // offset, which the sidecar copies from the cycle's sleeps[] because the stage events lack them.
-// A window raw has start and end; for the strain deep dive they bound the owner's local day.
+// A window raw has start and end; for the strain deep dive they bound the owner's local day and
+// date names it (an older raw has none).
 type rawUnit struct {
 	Start          *time.Time `json:"start"`
 	End            *time.Time `json:"end"`
 	ID             string     `json:"id"`
 	IsNap          *bool      `json:"is_nap"`
 	TimezoneOffset string     `json:"timezone_offset"`
+	Date           string     `json:"date"`
 }
 
 // Normalize is pure. Heart rate carries no WHOOP timezone_offset, so its local dates come from
@@ -164,10 +166,13 @@ func (b *builder) dailySteps(u rawUnit, resp json.RawMessage) error {
 				if u.Start == nil || u.End == nil {
 					return b.drift("unit without start and end")
 				}
+				// The owner's local date keys the row, so a corrected timezone supersedes it. An older raw has
+				// none: the local day's midpoint falls on that date in UTC for zones up to UTC+-11.
+				day := cmp.Or(u.Date, u.Start.Add(u.End.Sub(*u.Start)/2).UTC().Format(time.DateOnly))
 				b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: "steps",
 					Kind: catalog.DailyValue, Start: *u.Start, End: u.End, Value: float64(n), Unit: "count",
 					Device: strap.Fingerprint,
-					Key:    normalize.Key{RecordType: "day", ExternalID: u.Start.UTC().Format(time.RFC3339), Component: "steps"}})
+					Key:    normalize.Key{RecordType: "day", ExternalID: day, Component: "steps"}})
 				return nil
 			}
 		}
@@ -198,6 +203,9 @@ func (b *builder) heartRate(resp json.RawMessage) error {
 		if v.Time == nil || v.Data == nil {
 			return b.drift("value without time or data")
 		}
+		if *v.Data == 0 { // the strap was off or lost the signal: a gap, never 0 bpm
+			continue
+		}
 		t := time.UnixMilli(*v.Time).UTC()
 		if t.Year() < 2000 || t.Year() > 9999 {
 			return b.drift("value time out of range")
@@ -209,31 +217,38 @@ func (b *builder) heartRate(resp json.RawMessage) error {
 }
 
 // cycleRecord is one item of the cycles BFF's records (docs/providers/whoop.md#content-of-records).
-// Fields not read here (cycle days and during, SpO2, skin temperature, sleep need and debt,
+// Fields not read here (cycle days and during, calibrating, the day's heart rates, stage durations,
 // workouts, v2_activities) stay raw.
 type cycleRecord struct {
 	Cycle *struct {
 		ID             json.RawMessage `json:"id"`
 		TimezoneOffset string          `json:"timezone_offset"`
 		DayStrain      *float64        `json:"day_strain"`
+		DayKilojoules  *float64        `json:"day_kilojoules"`
 	} `json:"cycle"`
 	Recovery *struct {
 		RecoveryScore    *float64 `json:"recovery_score"`
 		RestingHeartRate *float64 `json:"resting_heart_rate"`
 		HRVRMSSD         *float64 `json:"hrv_rmssd"` // seconds
+		SpO2             *float64 `json:"spo2"`      // %
+		SkinTempCelsius  *float64 `json:"skin_temp_celsius"`
 	} `json:"recovery"`
 	Sleeps []cycleSleep `json:"sleeps"`
 }
 
 // cycleSleep is a sleep summary inside a cycle, naps included.
 type cycleSleep struct {
-	ActivityID      string   `json:"activity_id"`
-	During          string   `json:"during"`
-	TimezoneOffset  string   `json:"timezone_offset"`
-	IsNap           bool     `json:"is_nap"`
-	Significant     bool     `json:"significant"`
-	Score           *float64 `json:"score"` // sleep performance, %
-	RespiratoryRate *float64 `json:"respiratory_rate"`
+	ActivityID       string   `json:"activity_id"`
+	During           string   `json:"during"`
+	TimezoneOffset   string   `json:"timezone_offset"`
+	IsNap            bool     `json:"is_nap"`
+	Significant      bool     `json:"significant"`
+	Score            *float64 `json:"score"` // sleep performance, %
+	RespiratoryRate  *float64 `json:"respiratory_rate"`
+	SleepNeed        *float64 `json:"sleep_need"`        // ms
+	DebtPre          *float64 `json:"debt_pre"`          // ms, the debt inside this night's need
+	SleepConsistency *float64 `json:"sleep_consistency"` // %
+	Disturbances     *float64 `json:"disturbances"`
 }
 
 // rank orders main-sleep candidates: a non-nap sleep, else a significant one, else none.
@@ -271,7 +286,8 @@ func (b *builder) cycles(resp json.RawMessage) error {
 // sleep's performance. The main sleep is the longest of the highest rank (non-nap, else
 // significant). A cycle runs from one sleep to the next, so it is not a local day: day strain,
 // recovery, resting HR and nightly RMSSD are daily values at the main sleep's wake-up, so they
-// share its sleep_date (ADR-0009). Without a main sleep they stay raw.
+// share its sleep_date (ADR-0009), as do the day's energy, SpO2, skin temperature and the main
+// sleep's need, debt, consistency and disturbances. Without a main sleep they stay raw.
 func (b *builder) cycle(c cycleRecord) error {
 	if c.Cycle == nil {
 		return b.drift("record without cycle")
@@ -335,7 +351,15 @@ func (b *builder) cycle(c cycleRecord) error {
 		}
 	}
 	add("whoop_strain", c.Cycle.DayStrain, "index")
+	add("total_energy", c.Cycle.DayKilojoules, "kJ")
+	m := c.Sleeps[main]
+	add("whoop_sleep_need", m.SleepNeed, "ms")
+	add("whoop_sleep_debt", m.DebtPre, "ms")
+	add("whoop_sleep_consistency", m.SleepConsistency, "%")
+	add("whoop_sleep_disturbances", m.Disturbances, "count")
 	if r := c.Recovery; r != nil {
+		add("spo2_nightly", r.SpO2, "%")
+		add("skin_temperature_nightly", r.SkinTempCelsius, "°C")
 		add("whoop_recovery", r.RecoveryScore, "%")
 		add("resting_heart_rate", r.RestingHeartRate, "bpm")
 		add("hrv_rmssd_nightly", r.HRVRMSSD, "s") // WHOOP sends seconds; the writer stores ms
@@ -343,13 +367,15 @@ func (b *builder) cycle(c cycleRecord) error {
 	return nil
 }
 
-// sleepStages maps sleep-event types, compared in lower case, as @dofek/whoop reads them;
-// no_data is a gap.
-var sleepStages = map[string]string{"awake": "awake", "light": "light", "deep": "deep", "slow_wave": "deep", "rem": "rem", "no_data": ""}
+// sleepStages maps sleep-event types, compared in lower case. WHOOP's app API sends LIGHT, SWS,
+// REM, WAKE, DISTURBANCES and LATENCY; @dofek/whoop also reads awake, deep and slow_wave. no_data
+// is a gap. LATENCY is time in bed before sleep onset, not a stage: it only feeds the latency.
+var sleepStages = map[string]string{"light": "light", "sws": "deep", "deep": "deep", "slow_wave": "deep", "rem": "rem",
+	"wake": "awake", "awake": "awake", "disturbances": "awake", "no_data": ""}
 
 // sleep maps one sleep-events body, an array of stage events [{during, type}], to the session of
 // the unit's activity id, bounded by its events. It is the only writer of WHOOP sleep sessions;
-// totals are summed from the stages. An unknown type is a warning and a gap. A raw stored by
+// the writer sums the stages, leaving a stage nil when no event has it. An unknown type is a warning and a gap. A raw stored by
 // sidecar 0.2.2 or older has no is_nap in its unit and stays raw until the sleep is fetched again.
 func (b *builder) sleep(u rawUnit, resp json.RawMessage) error {
 	if u.ID == "" {
@@ -373,6 +399,7 @@ func (b *builder) sleep(u rawUnit, resp json.RawMessage) error {
 	sess := normalize.SleepSession{Zone: zone, Nap: *u.IsNap, Device: strap.Fingerprint,
 		Key: normalize.Key{RecordType: "sleep", ExternalID: u.ID}}
 	warned := map[string]bool{}
+	var latency int32
 	for _, e := range events {
 		if e.During == nil || e.Type == nil {
 			return b.drift("stage event without during or type")
@@ -387,14 +414,20 @@ func (b *builder) sleep(u rawUnit, resp json.RawMessage) error {
 		if z.After(sess.End) {
 			sess.End = z
 		}
-		kind, known := sleepStages[strings.ToLower(*e.Type)]
+		typ := strings.ToLower(*e.Type)
+		kind, known := sleepStages[typ]
 		switch {
+		case typ == "latency":
+			latency += int32(z.Sub(a) / time.Second) //nolint:gosec // an event is shorter than 68 years
 		case !known && !warned[*e.Type]:
 			warned[*e.Type] = true
 			b.warn("unknown_stage", *e.Type)
 		case kind != "":
 			sess.Stages = append(sess.Stages, normalize.SleepStage{Stage: kind, Start: a, End: z})
 		}
+	}
+	if latency > 0 {
+		sess.Latency = &latency
 	}
 	if len(events) > 0 { // none yet: not scored
 		b.out.Sleep = append(b.out.Sleep, sess)

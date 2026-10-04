@@ -172,12 +172,12 @@ test("strain deep dive: one call per local day", async (t) => {
   const r = await s.call("POST", "/v1/fetch", req({ stream: "whoop.strain_deep_dive", from: "2026-03-10T22:00:00Z", to: "2026-03-12T00:00:00Z", config: { timezone: "Europe/Istanbul" } }));
   const [raw, result] = r.lines();
   assert.equal(raw.request.params.date, "2026-03-11"); // 01:00 local
-  assert.deepEqual(raw.body.unit, { start: "2026-03-10T21:00:00.000Z", end: "2026-03-11T21:00:00.000Z" });
+  assert.deepEqual(raw.body.unit, { start: "2026-03-10T21:00:00.000Z", end: "2026-03-11T21:00:00.000Z", date: "2026-03-11" });
   assert.equal(raw.external_key, "whoop.strain_deep_dive:2026-03-10T21:00:00.000Z");
   assert.deepEqual([result.done, result.next_cursor], [false, { next: "2026-03-12" }]);
   // DST: New York springs forward on 2026-03-08, that local day is 23 hours long.
   const ny = (await s.call("POST", "/v1/fetch", req({ stream: "whoop.strain_deep_dive", from: "2026-03-08T12:00:00Z", to: "2026-03-08T13:00:00Z", config: { timezone: "America/New_York" } }))).lines()[0];
-  assert.deepEqual(ny.body.unit, { start: "2026-03-08T05:00:00.000Z", end: "2026-03-09T04:00:00.000Z" });
+  assert.deepEqual(ny.body.unit, { start: "2026-03-08T05:00:00.000Z", end: "2026-03-09T04:00:00.000Z", date: "2026-03-08" });
   assert.equal((await s.call("POST", "/v1/fetch", req({ stream: "whoop.strain_deep_dive", config: { timezone: "Mars/Olympus" } }))).json().code, "permanent");
 });
 

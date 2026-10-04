@@ -1,5 +1,4 @@
 {
-  "synthetic": true,
   "fields": {
     "response.header.deep_dive_score_type": "raw: screen layout and display text",
     "response.header.end_icon": "raw: screen layout and display text",
@@ -16,7 +15,9 @@
     "response.sections[].items[].content.score_display": "raw: screen layout and display text",
     "response.sections[].items[].content.title": "raw: screen layout and display text",
     "response.sections[].items[].type": "raw: screen layout and display text",
+    "unit.date": "raw: names the local day that keys the steps row",
     "unit.end": "raw: bounds the local day of the steps row",
     "unit.start": "raw: bounds the local day of the steps row"
-  }
+  },
+  "synthetic": true
 }
