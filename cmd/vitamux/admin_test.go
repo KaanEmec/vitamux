@@ -87,3 +87,38 @@ func TestReadCredentialsFromPipe(t *testing.T) {
 		t.Fatal("a missing password line must fail")
 	}
 }
+
+func TestInitSecretsSidecars(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("VITAMUX_DATA_DIR", dir)
+	t.Setenv("VITAMUX_SIDECARS", "example_sidecar=http://example-sidecar:8090,other=http://other:8080")
+	other := filepath.Join(dir, "elsewhere", "other.secret")
+	t.Setenv("VITAMUX_SIDECAR_OTHER_SECRET_FILE", other)
+	key := filepath.Join(dir, "master.key")
+	var out, errOut bytes.Buffer
+	if code := initSecrets([]string{"--out", key}, &out, &errOut); code != 0 {
+		t.Fatalf("code %d: %s", code, errOut.String())
+	}
+	def := filepath.Join(dir, "secrets", "sidecar-example_sidecar.secret")
+	first := map[string][]byte{}
+	for _, p := range []string{def, other} {
+		st, err := os.Stat(p)
+		if err != nil || st.Mode().Perm() != 0o600 {
+			t.Fatalf("%s: %v %v", p, err, st)
+		}
+		b, _ := os.ReadFile(p)
+		if len(strings.TrimSpace(string(b))) != 64 || strings.Contains(out.String(), strings.TrimSpace(string(b))) {
+			t.Fatalf("%s: not a 32-byte hex secret, or printed", p)
+		}
+		first[p] = b
+	}
+	// A second run keeps the master key and every existing sidecar secret.
+	if code := initSecrets([]string{"--if-missing", "--out", key}, &out, &errOut); code != 0 {
+		t.Fatalf("second run: code %d: %s", code, errOut.String())
+	}
+	for p, b := range first {
+		if after, _ := os.ReadFile(p); !bytes.Equal(b, after) {
+			t.Fatalf("%s was overwritten", p)
+		}
+	}
+}

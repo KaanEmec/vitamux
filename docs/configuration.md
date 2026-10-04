@@ -41,6 +41,8 @@ Every `VITAMUX_*` variable the binary reads, from [`internal/config`](../interna
 | --- | --- | --- | --- | --- |
 | `VITAMUX_WITHINGS_CLIENT_ID` |  |  | 0.1.0 | Client id of your own Withings application ([withings](providers/withings.md#app-registration-and-callback)). Set together with the secret, or neither. |
 | `VITAMUX_WITHINGS_CLIENT_SECRET` |  | yes | 0.1.0 | Client secret of that application. |
+| `VITAMUX_SIDECARS` |  |  | 0.2.0 | Remote sidecar connectors, `name=url[,name=url]` ([sidecars](sidecars.md)). `name` is the provider code the sidecar describes; the URL must resolve to a loopback, private or link-local address (checked on every connection). An unreachable sidecar never blocks startup. |
+| `VITAMUX_SIDECAR_<NAME>_SECRET` |  | yes | 0.2.0 | Bearer secret shared with sidecar `<name>` (upper case in the variable). Default file `<data dir>/secrets/sidecar-<name>.secret`; `vitamux admin init-secrets` creates missing ones. |
 
 ## Lab extraction providers
 

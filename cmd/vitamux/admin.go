@@ -3,6 +3,8 @@ package main
 import (
 	"bufio"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -26,7 +28,8 @@ const adminUsage = `usage: vitamux admin <command>
 Commands:
   init-secrets [--out PATH] [--if-missing]
                               generate the master key file (default: VITAMUX_MASTER_KEY_FILE, else
-                              <data dir>/master.key); never overwrites, --if-missing exits 0 if it exists
+                              <data dir>/master.key); never overwrites, --if-missing exits 0 if it exists.
+                              Also creates every missing sidecar secret of VITAMUX_SIDECARS.
   create-owner                create the owner account
   reset-password              set a new owner password and end every session
   purge-user [--username NAME] [--yes]
@@ -147,21 +150,53 @@ func initSecrets(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprint(stderr, adminUsage)
 		return 2
 	}
-	id, err := crypto.WriteKeyFile(*out)
-	if errors.Is(err, os.ErrExist) && *ifMissing {
-		fmt.Fprintf(stdout, "master key %s already exists; unchanged\n", *out)
-		return 0
-	}
-	if errors.Is(err, os.ErrExist) {
-		fmt.Fprintf(stderr, "init-secrets: %s already exists; refusing to overwrite the master key\n", *out)
-		return 1
-	}
+	sidecars, err := config.Sidecars(os.LookupEnv)
 	if err != nil {
 		fmt.Fprintf(stderr, "init-secrets: %v\n", err)
 		return 1
 	}
-	fmt.Fprintf(stdout, "master key written to %s\nkey id: %s\nBack it up separately from database backups; losing it loses provider tokens and encrypted documents.\n", *out, id)
+	id, err := crypto.WriteKeyFile(*out)
+	switch {
+	case errors.Is(err, os.ErrExist) && *ifMissing:
+		fmt.Fprintf(stdout, "master key %s already exists; unchanged\n", *out)
+	case errors.Is(err, os.ErrExist):
+		fmt.Fprintf(stderr, "init-secrets: %s already exists; refusing to overwrite the master key\n", *out)
+		return 1
+	case err != nil:
+		fmt.Fprintf(stderr, "init-secrets: %v\n", err)
+		return 1
+	default:
+		fmt.Fprintf(stdout, "master key written to %s\nkey id: %s\nBack it up separately from database backups; losing it loses provider tokens and encrypted documents.\n", *out, id)
+	}
+	for _, s := range sidecars {
+		if s.SecretFile == "" {
+			continue // set directly (development)
+		}
+		switch err := writeSidecarSecret(s.SecretFile); {
+		case errors.Is(err, os.ErrExist):
+		case err != nil:
+			fmt.Fprintf(stderr, "init-secrets: sidecar %s: %v\n", s.Name, err)
+			return 1
+		default:
+			fmt.Fprintf(stdout, "sidecar %s secret written to %s; mount it into that sidecar only\n", s.Name, s.SecretFile)
+		}
+	}
 	return 0
+}
+
+// writeSidecarSecret creates a missing sidecar secret: 32 random bytes, hex, mode 0600.
+func writeSidecarSecret(path string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600) //nolint:gosec // the admin-configured secret path
+	if err != nil {
+		return err
+	}
+	b := make([]byte, 32)
+	_, _ = rand.Read(b) // never fails (crypto/rand)
+	_, err = fmt.Fprintln(f, hex.EncodeToString(b))
+	return errors.Join(err, f.Close())
 }
 
 func defaultKeyPath() string {

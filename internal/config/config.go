@@ -63,6 +63,8 @@ type Config struct {
 	OpenAICompatibleAPIKey       Secret // optional
 	OpenAICompatibleModel        string
 	OpenAICompatibleAllowPrivate bool // allow http and private or loopback hosts in the base URL
+	// Sidecars are the remote connectors of VITAMUX_SIDECARS (docs/architecture/connectors.md#remote-sidecar-mode).
+	Sidecars []Sidecar
 }
 
 // Secret holds a sensitive value that never prints itself.
@@ -185,6 +187,7 @@ func load(env Lookup, readFile ReadFile) (Config, error) {
 	}
 
 	errs = append(errs, c.loadExtractors(env, readFile, get)...)
+	errs = append(errs, c.loadSidecars(env, readFile, get)...)
 	return c, errors.Join(errs...)
 }
 

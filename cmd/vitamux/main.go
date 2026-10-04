@@ -171,7 +171,8 @@ func serve(stderr io.Writer) int {
 		return 1
 	}
 	withingsConn := withings.New(withings.Config{ClientID: cfg.WithingsClientID, ClientSecret: cfg.WithingsClientSecret.Value()})
-	syncRegistry, err := connectors.NewRegistry(withingsConn) // provider connectors are added as arguments
+	// Provider connectors are added as arguments; sidecars never block startup.
+	syncRegistry, err := connectors.NewRegistry(append([]connectors.Connector{withingsConn}, sidecarConnectors(ctx, cfg.Sidecars, db.New(pool), log)...)...)
 	if err != nil {
 		log.Error("connector registry", "err", err)
 		return 1
