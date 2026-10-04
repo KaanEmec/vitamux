@@ -3,7 +3,7 @@
 // listed in the report but do not fail. Run with the rest: npx playwright test.
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
-import { test as connTest, expect, ids } from './connections-fake';
+import { test as connTest, expect, ids, sidecarSecret } from './connections-fake';
 import { test as dataTest, fallbackDay } from './data-fake';
 import { test as labTest, syntheticPdf } from './lab-fake';
 import { test as rulesTest } from './rules-fake';
@@ -36,6 +36,25 @@ connTest('Today and connections', async ({ page }) => {
 		await page.goto(path);
 		await scan(page, path);
 	}
+});
+
+connTest('Connect wizard: provider list, prompt step, sidecar connection', async ({ page }) => {
+	await page.goto('/connections');
+	await page.getByRole('button', { name: 'Connect a source' }).click();
+	const wizard = page.getByRole('dialog', { name: 'Connect a source' });
+	await expect(wizard.getByRole('radio', { name: /Offline sidecar/ })).toBeDisabled();
+	await scan(page, '/connections (connect dialog)');
+	await wizard.getByRole('radio', { name: /Example sidecar/ }).check();
+	await wizard.getByRole('button', { name: 'Continue to Example sidecar' }).click();
+	await expect(wizard.getByLabel('Password')).toBeVisible();
+	await scan(page, '/connections (prompt step)');
+	await wizard.getByLabel('Username').fill(sidecarSecret.username);
+	await wizard.getByLabel('Password').fill(sidecarSecret.password);
+	await wizard.getByRole('button', { name: 'Continue' }).click();
+	await wizard.getByLabel('Verification code').fill(sidecarSecret.code);
+	await wizard.getByRole('button', { name: 'Continue' }).click();
+	await expect(page.getByRole('link', { name: 'example-collector' })).toBeVisible();
+	await scan(page, '/connections/[id] (sidecar)');
 });
 
 dataTest('Data: daily view, drilldown, sleep, workouts', async ({ page }) => {

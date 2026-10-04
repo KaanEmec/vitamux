@@ -1,5 +1,5 @@
 <!-- Marks a connector that uses an unofficial API, which can change shape without notice. -->
-<span class="badge" title="Uses an unofficial API that may change without notice">Unofficial</span>
+<span class="badge" title="Uses an unofficial API that may change without notice">Unofficial API</span>
 
 <style>
 	.badge {

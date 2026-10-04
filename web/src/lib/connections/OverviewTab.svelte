@@ -1,21 +1,24 @@
 <!--
 	Connection overview: state and last outcome, manual sync (one job per stream, coalesced
-	with a pending one) and reauthorization through the provider's OAuth page.
+	with a pending one) and reauthorization: the provider's OAuth page or the connector's prompts.
 -->
 <script lang="ts">
 	import { api, type Problem, type Schemas } from '../api/client.ts';
 	import HealthBadge from '../components/HealthBadge.svelte';
+	import Modal from '../components/Modal.svelte';
 	import ProblemAlert from '../components/ProblemAlert.svelte';
 	import StatusIcon from '../components/StatusIcon.svelte';
-	import { ago, goToProvider, providerLabel, when, type Connection } from './connections.ts';
+	import AuthPrompt from './AuthPrompt.svelte';
+	import { ago, goToProvider, providerLabel, safeHref, when, type Connection } from './connections.ts';
 
 	let { connection, onchange }: { connection: Connection; onchange: (c: Connection) => void } = $props();
 
 	let problem = $state<Problem | null>(null);
 	let queued = $state<Schemas['Job'][] | null>(null);
+	let prompt = $state<Schemas['AuthPromptStep'] | null>(null);
 	let busy = $state(false);
 
-	const oauth = $derived(connection.mode === 'in_process');
+	const syncs = $derived(connection.mode !== 'push');
 	const name = $derived(providerLabel(connection.provider));
 
 	async function sync() {
@@ -39,8 +42,18 @@
 			problem = error;
 			return;
 		}
-		if ('redirect_url' in data) goToProvider(data.redirect_url);
-		else busy = false; // prompt steps are not rendered yet
+		if ('redirect_url' in data) {
+			goToProvider(data.redirect_url);
+		} else {
+			busy = false;
+			prompt = data;
+		}
+	}
+
+	async function reauthorized() {
+		prompt = null;
+		const { data } = await api.GET('/api/v1/connections/{id}', { params: { path: { id: connection.id } } });
+		if (data) onchange(data);
 	}
 
 	const streamOf = (j: Schemas['Job']) => (j.payload as { stream?: string })?.stream ?? j.kind;
@@ -60,6 +73,13 @@
 	<dd><code>{connection.status}</code></dd>
 	<dt>API</dt>
 	<dd>{connection.official === false ? 'Unofficial (may change without notice)' : connection.official ? 'Official' : 'Push uploads'}</dd>
+	{#if connection.upstream}
+		<dt>Upstream</dt>
+		<dd>
+			<a href={safeHref(connection.upstream.source_url)} rel="noreferrer noopener">{connection.upstream.package}</a>
+			<code>{connection.upstream.version}</code>
+		</dd>
+	{/if}
 	<dt>Last success</dt>
 	<dd>{ago(connection.last_success_at)}<span class="muted">{connection.last_success_at ? ` · ${when(connection.last_success_at)}` : ''}</span></dd>
 	<dt>Last error</dt>
@@ -82,7 +102,7 @@
 	</p>
 {/if}
 
-{#if oauth}
+{#if syncs}
 	<div class="actions">
 		<button class="btn primary" type="button" disabled={busy || connection.status === 'paused'} onclick={sync}>Sync now</button>
 		<button class={['btn', connection.health === 'needs_reauth' && 'primary']} type="button" disabled={busy} onclick={reauthorize}>
@@ -92,6 +112,12 @@
 	</div>
 {:else}
 	<p class="muted">This source uploads its data to Vitamux; there is nothing to sync from here.</p>
+{/if}
+
+{#if prompt}
+	<Modal title="Reauthorize {name}" onclose={() => (prompt = null)}>
+		<AuthPrompt provider={connection.provider} step={prompt} onrestart={() => (prompt = null)} ondone={reauthorized} />
+	</Modal>
 {/if}
 
 <style>

@@ -4,7 +4,8 @@
 // Seed: an unofficial "ultrahuman" connection whose stream drifted (degraded) with a backfill
 // that has failed units, a Withings connection that needs reauthorization, and a healthy
 // Apple Health push connection. The OAuth round trip is faked: auth/begin applies what the
-// callback would do and answers a redirect straight back to /connections?connected=….
+// callback would do and answers a redirect straight back to /connections?connected=…. The
+// sidecar provider asks for sign-in details, then a code (J17.2); its connection starts paused.
 import type { Page, Route } from '@playwright/test';
 import { test as base, expect } from './fake-api';
 
@@ -12,9 +13,10 @@ type Json = Record<string, unknown>;
 interface Conn {
 	id: string;
 	provider: string;
-	mode: 'in_process' | 'push';
+	mode: 'in_process' | 'push' | 'remote';
 	status: string;
 	official: boolean | null;
+	upstream: { package: string; version: string; source_url: string } | null;
 	health: string;
 	health_reason: string | null;
 	last_success_at: string | null;
@@ -43,11 +45,18 @@ export const ids = {
 	withings: 'conn_' + 'b'.repeat(32),
 	apple: 'conn_' + 'c'.repeat(32)
 };
-const streamsOf: Record<string, string[]> = { ultrahuman: ['ultrahuman.metrics'], withings: ['withings.measures'], apple_health: ['healthkit.samples.v1'] };
+export const sidecarSecret = { username: 'synthetic-user', password: 'synthetic-pass', code: '123456' };
+const upstream = { package: 'example-collector', version: '1.4.2', source_url: 'https://example.com/example-collector' };
+const providers = [
+	{ code: 'withings', name: 'Withings', official: true, auth_kind: 'oauth2', remote: false, available: true },
+	{ code: 'example_sidecar', name: 'Example sidecar', official: false, auth_kind: 'interactive_mfa', remote: true, available: true, upstream },
+	{ code: 'offline_sidecar', name: 'Offline sidecar', official: false, auth_kind: null, remote: true, available: false }
+];
+const streamsOf: Record<string, string[]> = { example_sidecar: ['example_sidecar.heart_rate'], ultrahuman: ['ultrahuman.metrics'], withings: ['withings.measures'], apple_health: ['healthkit.samples.v1'] };
 
-function conn(id: string, provider: string, over: Partial<Conn>): Conn {
+export function conn(id: string, provider: string, over: Partial<Conn>): Conn {
 	return {
-		id, provider, mode: 'in_process', status: 'active', official: true, health: 'ok', health_reason: null,
+		id, provider, mode: 'in_process', status: 'active', official: true, upstream: null, health: 'ok', health_reason: null,
 		last_success_at: new Date(Date.now() - hour).toISOString(), last_error_class: null, consecutive_failures: 0,
 		created_at: t0, updated_at: t0, ...over
 	};
@@ -86,6 +95,10 @@ export class ConnectionsApi {
 	resolvedStatus = 200;
 	/** Query strings of DELETE /connections/{id}. */
 	deletes: string[] = [];
+	/** Bodies of POST /providers/{provider}/auth/continue. */
+	continues: { state: string; values: Record<string, string> }[] = [];
+	/** Prompt steps waiting for their values: state -> what they ask and the connection being reauthorized. */
+	private pending = new Map<string, { step: 'login' | 'code'; connection: string | null }>();
 	private next = 1;
 
 	constructor(private page: Page) {}
@@ -103,7 +116,10 @@ export class ConnectionsApi {
 		if (path === '/connections' && method === 'GET') return json(r, 200, { connections: this.connections });
 		if (path === '/jobs') return json(r, 200, { jobs: q.get('status') === 'dead' ? [deadJob()] : [], has_more: false });
 		if (path === '/resolved/daily') return this.daily(r, q);
+		if (path === '/providers' && method === 'GET') return json(r, 200, { providers });
+		if ((m = path.match(/^\/providers\/([^/]+)\/auth\/continue$/)) && method === 'POST') return this.continueAuth(r, m[1]);
 		if ((m = path.match(/^\/providers\/([^/]+)\/auth\/begin$/)) && method === 'POST') {
+			if (providers.find((p) => p.code === m![1])?.auth_kind === 'interactive_mfa') return json(r, 200, this.prompt('login', null));
 			const c = conn(`conn_${String(this.next++).padStart(32, 'd')}`, m[1], { last_success_at: null });
 			this.connections.push(c);
 			return json(r, 200, { redirect_url: `/connections?connected=${m[1]}` });
@@ -134,6 +150,7 @@ export class ConnectionsApi {
 			return r.fulfill({ status: 204 });
 		}
 		if (sub === '/auth/begin' && method === 'POST') {
+			if (c.mode === 'remote') return json(r, 200, this.prompt('login', c.id));
 			Object.assign(c, { status: 'active', health: 'ok', health_reason: null, last_error_class: null, consecutive_failures: 0 });
 			return json(r, 200, { redirect_url: `/connections?connected=${c.provider}` });
 		}
@@ -189,6 +206,40 @@ export class ConnectionsApi {
 		for (const u of failed) Object.assign(u, { status: 'pending', error_class: null });
 		b.status = 'running';
 		return json(r, 200, summary(b));
+	}
+
+	private prompt(step: 'login' | 'code', connection: string | null) {
+		const state = `state-${this.next++}`;
+		this.pending.set(state, { step, connection });
+		const fields =
+			step === 'login'
+				? [{ name: 'username', label: 'Username', kind: 'text' }, { name: 'password', label: 'Password', kind: 'password' }]
+				: [{ name: 'code', label: 'Verification code', kind: 'code' }];
+		return { state, prompt: { message: step === 'login' ? 'Sign in to Example sidecar.' : 'Enter the code it sent you.', fields } };
+	}
+
+	private continueAuth(r: Route, provider: string) {
+		const body = r.request().postDataJSON() as { state: string; values: Record<string, string> };
+		this.continues.push(body);
+		const p = this.pending.get(body.state);
+		this.pending.delete(body.state); // a state is single use
+		if (!p) return problem(r, 400, 'invalid_state', 'the authorization step expired or was already used');
+		const { values } = body;
+		if (p.step === 'login') {
+			if (values.username !== sidecarSecret.username || values.password !== sidecarSecret.password) {
+				return problem(r, 422, 'auth_rejected', 'the connector did not accept the sign-in details');
+			}
+			return json(r, 200, this.prompt('code', p.connection));
+		}
+		if (values.code !== sidecarSecret.code) return problem(r, 422, 'auth_rejected', 'the code was not accepted');
+		let c = this.connections.find((x) => x.id === p.connection);
+		if (!c) {
+			c = conn(`conn_${String(this.next++).padStart(32, 'e')}`, provider, { mode: 'remote', official: false, upstream, status: 'paused', health: 'paused', last_success_at: null });
+			this.connections.push(c);
+		} else {
+			Object.assign(c, { status: 'active', health: 'ok', health_reason: null, last_error_class: null, consecutive_failures: 0 });
+		}
+		return json(r, 200, { connection_id: c.id });
 	}
 
 	private schedules() {

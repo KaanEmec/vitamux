@@ -71,7 +71,7 @@
 						{:else}–{/each}
 					</td>
 					<td>
-						{#if s.has_cursor && connection.mode === 'in_process'}
+						{#if s.has_cursor && connection.mode !== 'push'}
 							<button class="btn" type="button" onclick={() => (resetting = s.name)}>Reset cursor<span class="visually-hidden"> of {s.name}</span></button>
 						{/if}
 					</td>

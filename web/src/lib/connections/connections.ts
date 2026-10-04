@@ -11,15 +11,17 @@ interface ProviderInfo {
 	unitDays?: number;
 }
 
-// TODO: replace with a providers endpoint once the API lists registered connectors.
 const providers: Record<string, ProviderInfo> = {
 	withings: { label: 'Withings', unitDays: 30 },
 	apple_health: { label: 'Apple Health' },
 	manual: { label: 'Manual entries' }
 };
 
-/** Providers with a server-side OAuth connector, offered by the connect wizard. */
-export const connectable = [{ code: 'withings', official: true }];
+export type Provider = Schemas['Provider'];
+
+/** Providers the connect wizard offers: those a browser can authorize (not file imports or device pairing). */
+export const connectable = (providers: Provider[]) =>
+	providers.filter((p) => p.auth_kind === null || p.auth_kind === 'oauth2' || p.auth_kind === 'interactive_mfa');
 
 export function providerLabel(code: string): string {
 	if (providers[code]) return providers[code].label;
@@ -42,6 +44,11 @@ export const authErrors: Record<string, string> = {
 	exchange_failed: 'The provider did not accept the authorization. Try again later.',
 	unavailable: 'The provider or Vitamux could not complete the connection right now. Try again later.'
 };
+
+/** A link target from a connector's own description: only http(s), never a script URL. */
+export function safeHref(url: string): string | undefined {
+	return /^https?:\/\//i.test(url) ? url : undefined;
+}
 
 /** Starts the provider's OAuth page: the server answers a redirect URL for this browser. */
 export function goToProvider(url: string) {

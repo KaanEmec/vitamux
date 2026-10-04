@@ -83,10 +83,10 @@
 </script>
 
 <div class="bar">
-	<button class="btn primary" type="button" disabled={connection.mode !== 'in_process' || !streams.length} onclick={() => (dialog = true)}>
+	<button class="btn primary" type="button" disabled={connection.mode === 'push' || !streams.length} onclick={() => (dialog = true)}>
 		New backfill
 	</button>
-	{#if connection.mode !== 'in_process'}<span class="muted">Push sources upload their own history.</span>{/if}
+	{#if connection.mode === 'push'}<span class="muted">Push sources upload their own history.</span>{/if}
 </div>
 
 <ProblemAlert {problem} />
