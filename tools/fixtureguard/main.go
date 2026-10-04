@@ -1,5 +1,5 @@
 // Command fixtureguard keeps real data out of the repository: every file under a `fixtures/` or
-// `testdata/` directory must carry the synthetic marker and must not contain emails, phone
+// `testdata/` directory, or under `schemas/examples/`, must carry the synthetic marker and must not contain emails, phone
 // numbers or token-like strings. Marker convention: docs/architecture/project.md#synthetic-fixtures-policy.
 //
 //	go run ./tools/fixtureguard [root]    # default root "."; exit 1 on any violation
@@ -93,7 +93,8 @@ func main() {
 	fmt.Printf("fixtureguard: ok, %d file(s) scanned\n", scanned)
 }
 
-// Scan checks every file under any `fixtures` or `testdata` directory below root.
+// Scan checks every file under any `fixtures` or `testdata` directory below root, and under
+// schemas/examples (the published contract examples).
 func Scan(root string) (vs []Violation, scanned int, err error) {
 	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error { //nolint:gosec // root is a developer-supplied CLI argument
 		if err != nil {
@@ -108,7 +109,7 @@ func Scan(root string) (vs []Violation, scanned int, err error) {
 			if rel == "tmp" || rel == "data" || rel == "bin" { // gitignored top-level dirs
 				return filepath.SkipDir
 			}
-			if d.Name() == "fixtures" || d.Name() == "testdata" {
+			if d.Name() == "fixtures" || d.Name() == "testdata" || rel == filepath.Join("schemas", "examples") {
 				fv, n, err := scanDir(path)
 				vs, scanned = append(vs, fv...), scanned+n
 				if err != nil {
