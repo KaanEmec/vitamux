@@ -62,31 +62,40 @@ func (h *uiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
-	if name != "" && name != "index.html" && fs.ValidPath(name) {
-		if f, err := h.assets.Open(name); err == nil {
-			stat, statErr := f.Stat()
-			_ = f.Close()
-			if statErr == nil && !stat.IsDir() {
-				if strings.HasPrefix(name, "_app/immutable/") {
-					w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-				} else {
-					w.Header().Set("Cache-Control", "no-cache")
-				}
-				http.ServeFileFS(w, r, h.assets, name) // #nosec G703 -- name is cleaned, fs.ValidPath-checked, and confined to the embedded FS
-				return
-			}
-		} else if !errors.Is(err, fs.ErrNotExist) {
-			http.Error(w, "internal error", http.StatusInternalServerError)
-			return
-		}
-		// Missing asset files must not silently become the SPA shell.
-		if path.Ext(name) != "" {
-			http.NotFound(w, r)
-			return
-		}
+	if name != "" && name != "index.html" && fs.ValidPath(name) && h.serveAsset(w, r, name) {
+		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Content-Security-Policy", h.csp)
 	http.ServeContent(w, r, "index.html", zeroTime, bytes.NewReader(h.index))
+}
+
+// serveAsset answers for a file in the embedded assets, and for a missing asset file (404). It
+// reports false when the request should fall back to the SPA shell.
+func (h *uiHandler) serveAsset(w http.ResponseWriter, r *http.Request, name string) bool {
+	f, err := h.assets.Open(name)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return true
+	}
+	if err == nil {
+		stat, statErr := f.Stat()
+		_ = f.Close()
+		if statErr == nil && !stat.IsDir() {
+			if strings.HasPrefix(name, "_app/immutable/") {
+				w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			} else {
+				w.Header().Set("Cache-Control", "no-cache")
+			}
+			http.ServeFileFS(w, r, h.assets, name) // #nosec G703 -- name is cleaned, fs.ValidPath-checked, and confined to the embedded FS
+			return true
+		}
+	}
+	// Missing asset files must not silently become the SPA shell.
+	if path.Ext(name) != "" {
+		http.NotFound(w, r)
+		return true
+	}
+	return false
 }
