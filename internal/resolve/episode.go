@@ -520,77 +520,13 @@ func (a SleepAlignment) ResolveEpisode(w Window, e Episode, codes []string, opt 
 		}
 		gvs[i] = gv
 	}
-	pooled := slices.Contains([]Op{OpMean, OpMin, OpMax, OpSum}, r.Strategy.Op)
-
-	var res WindowResult
-	var err error
-	if !pooled {
-		for i := range gvs {
-			gvs[i].setSleepValues(sel.Groups[i], codes)
-		}
-		if res, err = r.Select(w, gvs, opt); err != nil {
-			return WindowResult{}, err
-		}
-		if g := r.groupIndex(res.Selected); g >= 0 {
-			pos := slices.IndexFunc(res.Groups, func(x GroupValue) bool { return x.Group == g })
-			for _, code := range codes {
-				if v := sel.Groups[g].Value(code); v.Status != StatusValid {
-					if res.Missing == nil {
-						res.Missing = map[string]GroupStatus{}
-					}
-					res.Missing[code] = v.Status
-				}
-			}
-			if len(codes) == 1 && len(res.Missing) == 1 {
-				res.Status, res.Value = ResultNoData, 0
-				res.Groups[pos].Status, res.Groups[pos].Reason = res.Missing[codes[0]], ""
-			}
-		}
-	} else {
-		// Per code: groups lacking the code drop out of that code's pool.
-		values := map[string]float64{}
-		for _, code := range codes {
-			per := slices.Clone(gvs)
-			for i := range per {
-				v := sel.Groups[i].Value(code)
-				per[i].Value = v.Value
-				if per[i].Status == StatusValid && v.Status != StatusValid {
-					per[i].Status = v.Status
-				}
-			}
-			cr, err := r.Select(w, per, opt)
-			if err != nil {
-				return WindowResult{}, err
-			}
-			if len(codes) == 1 {
-				res = cr
-				break
-			}
-			if cr.Status == ResultNoData {
-				if res.Missing == nil {
-					res.Missing = map[string]GroupStatus{}
-				}
-				res.Missing[code] = StatusNoStageData
-				if !stageCodes[code] {
-					res.Missing[code] = StatusNoData
-				}
-				continue
-			}
-			values[code] = cr.Value
-		}
-		if len(codes) > 1 {
-			missing := res.Missing
-			for i := range gvs {
-				gvs[i].setSleepValues(sel.Groups[i], codes)
-			}
-			if res, err = r.Select(w, gvs, opt); err != nil {
-				return WindowResult{}, err
-			}
-			res.Missing = missing
-			if res.Status != ResultNoData {
-				res.Value, res.Components = 0, values
-			}
-		}
+	resolveCodes := r.selectCodes
+	if slices.Contains([]Op{OpMean, OpMin, OpMax, OpSum}, r.Strategy.Op) {
+		resolveCodes = r.poolCodes
+	}
+	res, err := resolveCodes(w, sel.Groups, gvs, codes, opt)
+	if err != nil {
+		return WindowResult{}, err
 	}
 	res.Groups = append(res.Groups, a.sessionEntries(a.Excluded, e, StatusExcluded)...)
 	res.Groups = append(res.Groups, a.sessionEntries(a.NotInRule, e, StatusNotInRule)...)
@@ -605,6 +541,80 @@ func (a SleepAlignment) ResolveEpisode(w Window, e Episode, codes []string, opt 
 		}
 	}
 	res.Partial = !opt.Now.IsZero() && w.Partial(opt.Now)
+	return res, nil
+}
+
+// selectCodes reads every code from the group the strategy selects; a code that group lacks
+// goes to Missing, and with a single code the window has no value.
+func (r *Rule) selectCodes(w Window, sgs []SleepGroup, gvs []GroupValue, codes []string, opt Options) (WindowResult, error) {
+	for i := range gvs {
+		gvs[i].setSleepValues(sgs[i], codes)
+	}
+	res, err := r.Select(w, gvs, opt)
+	if err != nil {
+		return WindowResult{}, err
+	}
+	g := r.groupIndex(res.Selected)
+	if g < 0 {
+		return res, nil
+	}
+	for _, code := range codes {
+		if v := sgs[g].Value(code); v.Status != StatusValid {
+			if res.Missing == nil {
+				res.Missing = map[string]GroupStatus{}
+			}
+			res.Missing[code] = v.Status
+		}
+	}
+	if len(codes) == 1 && len(res.Missing) == 1 {
+		pos := slices.IndexFunc(res.Groups, func(x GroupValue) bool { return x.Group == g })
+		res.Status, res.Value = ResultNoData, 0
+		res.Groups[pos].Status, res.Groups[pos].Reason = res.Missing[codes[0]], ""
+	}
+	return res, nil
+}
+
+// poolCodes pools each code over the groups that have it: groups lacking the code drop out of
+// that code's pool. Several codes fill Components, and a code no group has goes to Missing.
+func (r *Rule) poolCodes(w Window, sgs []SleepGroup, gvs []GroupValue, codes []string, opt Options) (WindowResult, error) {
+	var missing map[string]GroupStatus
+	values := map[string]float64{}
+	for _, code := range codes {
+		per := slices.Clone(gvs)
+		for i := range per {
+			v := sgs[i].Value(code)
+			per[i].Value = v.Value
+			if per[i].Status == StatusValid && v.Status != StatusValid {
+				per[i].Status = v.Status
+			}
+		}
+		cr, err := r.Select(w, per, opt)
+		if err != nil || len(codes) == 1 {
+			return cr, err
+		}
+		if cr.Status != ResultNoData {
+			values[code] = cr.Value
+			continue
+		}
+		if missing == nil {
+			missing = map[string]GroupStatus{}
+		}
+		missing[code] = StatusNoStageData
+		if !stageCodes[code] {
+			missing[code] = StatusNoData
+		}
+	}
+	for i := range gvs {
+		gvs[i].setSleepValues(sgs[i], codes)
+	}
+	res, err := r.Select(w, gvs, opt)
+	if err != nil {
+		return WindowResult{}, err
+	}
+	res.Missing = missing
+	if res.Status != ResultNoData {
+		res.Value, res.Components = 0, values
+	}
 	return res, nil
 }
 
