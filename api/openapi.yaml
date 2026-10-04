@@ -3999,7 +3999,7 @@ components:
       required: [ref, metric, version, builtin, active, spec, based_on, note, created_by, created_at]
       properties:
         ref: {type: string, description: 'rule:<metric>:<n> for the owner''s versions, builtin:<metric>:<n> for built-ins.'}
-        metric: {type: string, description: Catalogue code or rule family (sleep, blood_pressure).}
+        metric: {type: string, description: "Catalogue code or rule family (sleep, blood_pressure)."}
         version: {type: integer, minimum: 1}
         builtin: {type: boolean}
         active: {type: boolean, description: The rule in effect for the metric.}

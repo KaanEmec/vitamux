@@ -2952,7 +2952,7 @@ export interface components {
         RuleVersion: {
             /** @description rule:<metric>:<n> for the owner's versions, builtin:<metric>:<n> for built-ins. */
             ref: string;
-            /** @description Catalogue code or rule family (sleep */
+            /** @description Catalogue code or rule family (sleep, blood_pressure). */
             metric: string;
             version: number;
             builtin: boolean;

@@ -3148,7 +3148,7 @@ type RuleVersion struct {
 	// CreatedBy Audit actor; null for built-ins.
 	CreatedBy *string `json:"created_by"`
 
-	// Metric Catalogue code or rule family (sleep
+	// Metric Catalogue code or rule family (sleep, blood_pressure).
 	Metric string  `json:"metric"`
 	Note   *string `json:"note"`
 
