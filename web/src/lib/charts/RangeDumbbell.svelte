@@ -1,8 +1,11 @@
-<!-- A low–high pair per point, e.g. diastolic and systolic blood pressure: two dots and a bar. -->
+<!--
+	A low–high pair per point, e.g. diastolic and systolic blood pressure: a filled dot (high), a
+	ring (low) and a bar between them, in the metric hue. The tooltip leads with "high/low".
+-->
 <script lang="ts">
 	import ChartFrame from './ChartFrame.svelte';
 	import { extent, formatInstant, formatNumber } from './scale.ts';
-	import type { TableData, Tip } from './types.ts';
+	import type { TableData, Tip, TipAction } from './types.ts';
 
 	let {
 		xs,
@@ -14,6 +17,7 @@
 		unit = '',
 		timezone,
 		height,
+		actions,
 		onselect
 	}: {
 		xs: number[];
@@ -25,6 +29,7 @@
 		unit?: string;
 		timezone?: string;
 		height?: number;
+		actions?: TipAction[];
 		onselect?: (i: number) => void;
 	} = $props();
 
@@ -35,6 +40,7 @@
 
 	const tip = (i: number): Tip => ({
 		title: formatInstant(xs[i], timezone),
+		lead: hi[i] == null && lo[i] == null ? { value: 'No data' } : { value: `${hi[i] == null ? '–' : formatNumber(hi[i] ?? 0)}/${lo[i] == null ? '–' : formatNumber(lo[i] ?? 0)}`, unit },
 		rows: [
 			{ label: hiLabel, value: fmt(hi[i]) },
 			{ label: loLabel, value: fmt(lo[i]) }
@@ -46,7 +52,7 @@
 	});
 </script>
 
-<ChartFrame {label} {xs} {x} {y} {timezone} {height} {tip} {table} {onselect}>
+<ChartFrame {label} {xs} {x} {y} {timezone} {height} {tip} {table} {actions} {onselect}>
 	{#snippet legend()}
 		<span class="key"><span class="swatch hi"></span>{hiLabel}</span>
 		<span class="key"><span class="swatch lo"></span>{loLabel}</span>
@@ -65,8 +71,9 @@
 </ChartFrame>
 
 <style>
+	/* Drawn in the metric hue when a parent sets --metric (lib/ui/metric.ts). */
 	.stem {
-		stroke: var(--color-accent);
+		stroke: var(--metric, var(--color-accent));
 		stroke-opacity: 0.45;
 		stroke-width: 3;
 		stroke-linecap: round;
@@ -75,15 +82,15 @@
 		stroke-opacity: 1;
 	}
 	.hi {
-		fill: var(--color-accent);
-		background: var(--color-accent);
+		fill: var(--metric, var(--color-accent));
+		background: var(--metric, var(--color-accent));
 	}
 	/* Low is a ring: position and shape both tell the two apart. */
 	.lo {
 		fill: var(--color-surface);
-		stroke: var(--color-accent);
+		stroke: var(--metric, var(--color-accent));
 		stroke-width: 2;
-		border: 2px solid var(--color-accent);
+		border: 2px solid var(--metric, var(--color-accent));
 	}
 	.key {
 		display: inline-flex;

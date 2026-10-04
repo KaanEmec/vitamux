@@ -1,4 +1,4 @@
-// Scales, ticks, paths and formatting for the chart kit. Plain functions, no dependencies.
+// Scales, ticks, paths, reduction and formatting for the chart kit. Plain functions, no dependencies.
 // Time is epoch milliseconds; local clock times use the person's IANA timezone when given.
 export type Domain = [number, number];
 
@@ -84,6 +84,11 @@ export function formatInstant(t: number, timeZone?: string, withTime = true): st
 	return new Intl.DateTimeFormat(undefined, o).format(t);
 }
 
+/** "07:12" in the timezone. */
+export function formatClock(t: number, timeZone?: string): string {
+	return new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', timeZone }).format(t);
+}
+
 const numberFormats = new Map<number, Intl.NumberFormat>();
 /** A number with at most `digits` decimals, in the browser's locale. */
 export function formatNumber(v: number, digits = 1): string {
@@ -139,18 +144,64 @@ export function linePath(xs: number[], ys: (number | null)[], sx: (v: number) =>
 	return d;
 }
 
-/** Closed area between `lo` and `hi` (a range band); windows missing either bound are skipped. */
-export function bandPath(xs: number[], lo: (number | null)[], hi: (number | null)[], sx: (v: number) => number, sy: (v: number) => number): string {
-	const top: string[] = [];
-	const bottom: string[] = [];
-	xs.forEach((x, i) => {
-		const a = lo[i];
-		const b = hi[i];
-		if (a == null || b == null) return;
-		top.push(`${sx(x).toFixed(1)} ${sy(b).toFixed(1)}`);
-		bottom.unshift(`${sx(x).toFixed(1)} ${sy(a).toFixed(1)}`);
+/** A row LayerChart draws: x in epoch ms (or any number), y null for a gap. */
+export interface Row {
+	x: number;
+	y: number | null;
+}
+
+/**
+ * Rows for a line over `domain`: a dense series (a 14,400-point day) is reduced to the min and max
+ * of each of `columns` columns, which keeps its shape at any density. A null stays a gap (never
+ * zero), and one point beyond each edge is kept so the line reaches the plot's sides.
+ */
+export function decimate(xs: number[], ys: (number | null)[], [lo, hi]: Domain, columns = 1600): Row[] {
+	let a = 0;
+	while (a < xs.length - 1 && xs[a + 1] < lo) a++;
+	let b = xs.length - 1;
+	while (b > 0 && xs[b - 1] > hi) b--;
+	const out: Row[] = [];
+	const push = (i: number) => out.push({ x: xs[i], y: ys[i] });
+	if (b - a < columns * 2) {
+		for (let i = a; i <= b; i++) push(i);
+		return out;
+	}
+	const w = (hi - lo) / columns;
+	let col = NaN;
+	let min = -1;
+	let max = -1;
+	const flush = () => {
+		if (min < 0) return;
+		push(Math.min(min, max));
+		if (min !== max) push(Math.max(min, max));
+		min = max = -1;
+	};
+	for (let i = a; i <= b; i++) {
+		const y = ys[i];
+		if (y == null || !Number.isFinite(y)) {
+			flush();
+			col = NaN;
+			if (out.at(-1)?.y != null) out.push({ x: xs[i], y: null });
+			continue;
+		}
+		const c = Math.floor((xs[i] - lo) / w);
+		if (c !== col) {
+			flush();
+			col = c;
+			min = max = i;
+		} else if (y < (ys[min] as number)) min = i;
+		else if (y > (ys[max] as number)) max = i;
+	}
+	flush();
+	return out;
+}
+
+/** Step-after rows: each reading holds until the next one. */
+export function stepRows(rows: Row[]): Row[] {
+	return rows.flatMap((r, i) => {
+		const next = rows[i + 1];
+		return next && r.y != null && next.y != null ? [r, { x: next.x, y: r.y }] : [r];
 	});
-	return top.length ? `M${top.join('L')}L${bottom.join('L')}Z` : '';
 }
 
 /** Index of the value in sorted `xs` nearest to `x`, or -1 when empty. */

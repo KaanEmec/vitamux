@@ -1,11 +1,13 @@
 <!--
 	Events on a shared time axis, one lane per source or event type (workouts, sessions,
-	notifications). Each event is a bar with a tooltip; the events are also available as a table.
+	notifications), labelled on the left. Each event is a bar in its lane's source colour; the
+	arrow keys and the pointer move from event to event in time order, and the events are also
+	available as a table.
 -->
 <script lang="ts">
 	import { sourceClass } from '../ui/source.ts';
-	import ChartTable from './ChartTable.svelte';
-	import { formatInstant, linear, measureRender } from './scale.ts';
+	import ChartFrame from './ChartFrame.svelte';
+	import { formatInstant, nearest } from './scale.ts';
 
 	let {
 		lanes,
@@ -21,62 +23,70 @@
 		timezone?: string;
 	} = $props();
 
-	const width = 1000;
-	const sx = $derived(linear([from, to], [0, width]));
+	const n = $derived(lanes.length);
+	const events = $derived(
+		lanes.flatMap((l, lane) => l.events.map((e) => ({ ...e, lane }))).sort((a, b) => a.start - b.start || a.lane - b.lane)
+	);
+	const mids = $derived(events.map((e) => (e.start + e.end) / 2));
+	const short = (s: string) => (s.length > 24 ? `${s.slice(0, 23)}…` : s);
+	const pick = (t: number) => {
+		const i = events.findIndex((e) => e.start <= t && t <= e.end);
+		return i >= 0 ? i : nearest(mids, t);
+	};
+	const tip = (i: number) => {
+		const e = events[i];
+		return {
+			title: e.end > e.start ? `${formatInstant(e.start, timezone)} – ${formatInstant(e.end, timezone)}` : formatInstant(e.start, timezone),
+			lead: { value: e.label },
+			rows: [{ label: 'Lane', value: lanes[e.lane].label, source: lanes[e.lane].source }]
+		};
+	};
 	const table = () => ({
 		columns: ['Lane', 'Event', 'Start', 'End'],
 		rows: lanes.flatMap((l) => l.events.map((e) => [l.label, e.label, formatInstant(e.start, timezone), formatInstant(e.end, timezone)]))
 	});
-
-	const start = performance.now();
-	$effect(() => measureRender(start));
 </script>
 
-<div class="lanes" role="img" aria-label={label}>
-	{#each lanes as l, i (i)}
-		<div class={['lane', l.source && sourceClass(l.source)]}>
-			<span class="label">{l.label}</span>
-			<svg viewBox="0 0 {width} 16" preserveAspectRatio="none" aria-hidden="true">
-				<line class="track" x1="0" x2={width} y1="8" y2="8" />
-				{#each l.events as e, j (j)}
-					<rect x={sx(e.start)} width={Math.max(sx(e.end) - sx(e.start), 2)} y="2" height="12" rx="3">
-						<title>{e.label}: {formatInstant(e.start, timezone)} – {formatInstant(e.end, timezone)}</title>
-					</rect>
-				{/each}
-			</svg>
-		</div>
-	{/each}
-</div>
-<ChartTable caption={label} data={table} />
+<ChartFrame
+	{label}
+	xs={mids}
+	x={[from, to]}
+	y={[0, n]}
+	{timezone}
+	height={n * 28 + 38}
+	padding={{ left: 168 }}
+	crosshair={false}
+	{pick}
+	{tip}
+	{table}
+	yTicks={lanes.map((_, i) => n - i - 0.5)}
+	yFormat={(v) => short(lanes[Math.round(n - 0.5 - v)]?.label ?? '')}
+>
+	{#snippet marks(f)}
+		{@const h = f.sy(0) - f.sy(1)}
+		{#each events as e, i (i)}
+			{@const w = Math.max(f.sx(e.end) - f.sx(e.start), 3)}
+			<rect
+				class={['event', lanes[e.lane].source ? sourceClass(lanes[e.lane].source ?? '') : 'hue', f.active === i && 'active']}
+				x={f.sx(e.start) - (w === 3 ? 1.5 : 0)}
+				y={f.sy(n - e.lane) + h * 0.2}
+				width={w}
+				height={h * 0.6}
+				rx="3"
+			/>
+		{/each}
+	{/snippet}
+</ChartFrame>
 
 <style>
-	.lanes {
-		display: grid;
-		gap: var(--space-2);
+	.event {
+		fill: var(--src);
 	}
-	.lane {
-		display: grid;
-		grid-template-columns: 8rem minmax(0, 1fr);
-		align-items: center;
-		gap: var(--space-2);
-		font-size: var(--text-xs);
+	.hue {
+		--src: var(--metric, var(--color-accent));
 	}
-	.label {
-		overflow: hidden;
-		color: var(--color-text-muted);
-		white-space: nowrap;
-		text-overflow: ellipsis;
-	}
-	svg {
-		display: block;
-		width: 100%;
-		height: 1rem;
-	}
-	.track {
-		stroke: var(--chart-grid);
-		vector-effect: non-scaling-stroke;
-	}
-	rect {
-		fill: var(--src, var(--color-accent));
+	.event.active {
+		stroke: var(--color-text);
+		stroke-width: 1.5;
 	}
 </style>

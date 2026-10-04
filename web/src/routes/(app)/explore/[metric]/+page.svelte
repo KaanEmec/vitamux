@@ -3,8 +3,9 @@
 	Up to a year it plots one resolved value per day (GET /resolved/daily) with status markers;
 	"All" plots weekly or monthly rollups (GET /resolved/trend). Overlays: the 30-day baseline
 	band (GET /resolved/summary, or each rollup's min–max), each source's own values
-	(GET /sources/series) and per-source coverage (GET /coverage). Every day opens its
-	explanation, inputs, provenance and overrides (PointPanel) and the all-sources day view.
+	(GET /sources/series) and per-source coverage (GET /coverage), with a brush navigator and the
+	distribution of the values. Every day opens its explanation, inputs, provenance and overrides
+	(PointPanel) and the all-sources day view, also from the chart's pinned tooltip.
 	The rule lens (lib/rules/RuleLens.svelte) overlays a draft rule as a ghost series.
 	Query: ?range=1W|1M|3M|1Y|All&end=YYYY-MM-DD (shareable).
 -->
@@ -69,6 +70,8 @@
 	let draft = $state<Draft | null>(null);
 	let selected = $state<string | null>(null);
 	let rows = $state(pageRows);
+	/** The chart's zoom, shared with the navigator under it; reset with the range. */
+	let zoomed = $state<[number, number] | null>(null);
 	const pins = new Pins();
 
 	onMount(() => void pins.load());
@@ -102,6 +105,7 @@
 		if (r === 'All') daily = null;
 		else trend = null;
 		rows = pageRows;
+		zoomed = null;
 		void loadSeries(m, r, e).then((out) => {
 			if (mine !== seriesGen) return;
 			({ daily, trend } = out);
@@ -244,6 +248,17 @@
 		void goto(`?${q}`);
 	}
 
+	/** The tooltip's actions on a plotted day: its explanation and overrides (PointPanel), or its records. */
+	const actions = $derived(
+		trend
+			? undefined
+			: [
+					{ label: 'Explain', run: select },
+					{ label: 'Override', run: select },
+					{ label: 'Raw records', run: (i: number) => void goto(`/explore/${encodeURIComponent(metric)}/day/${dates[i]}`) }
+				]
+	);
+
 	const warningCodes = (r: Resolved) => (r.warnings ?? []).map((w) => (w.group ? `${w.code} (${w.group})` : w.code));
 </script>
 
@@ -322,7 +337,17 @@
 						{#await import('#lib/charts/Bars.svelte')}
 							<Skeleton variant="chart" label="Loading chart" />
 						{:then { default: Bars }}
-							<Bars xs={resolved.xs} stacks={[{ label: 'Resolved', ys: resolved.ys }]} label="{label}, resolved per day" {unit} timezone="UTC" {baseline} onselect={select} />
+							<Bars
+								xs={resolved.xs}
+								stacks={[{ label: 'Resolved', ys: resolved.ys }]}
+								status={resolved.status}
+								label="{label}, resolved per day"
+								{unit}
+								timezone="UTC"
+								{baseline}
+								{actions}
+								onselect={select}
+							/>
 						{/await}
 					{:else}
 						{#await import('#lib/charts/TimeSeries.svelte')}
@@ -337,8 +362,16 @@
 								step={view === 'step' || view === 'dumbbell'}
 								{band}
 								{baseline}
+								area={view !== 'step' && view !== 'dumbbell'}
+								bind:view={zoomed}
+								{actions}
 								onselect={select}
 							/>
+							{#if resolved.xs.length > 14}
+								{#await import('#lib/charts/BrushNavigator.svelte') then { default: BrushNavigator }}
+									<BrushNavigator xs={resolved.xs} ys={resolved.ys} bind:view={zoomed} label="{label} range" timezone="UTC" />
+								{/await}
+							{/if}
 						{/await}
 					{/if}
 				{:else if !seriesProblem}
@@ -356,6 +389,15 @@
 					<ProblemAlert problem={coverageProblem} />
 				{/if}
 			</section>
+
+			{#if values.length > 2}
+				<section class="card chart" aria-labelledby="dist-h">
+					<h2 id="dist-h" class="sub">Distribution</h2>
+					{#await import('#lib/charts/Histogram.svelte') then { default: Histogram }}
+						<Histogram values={resolved?.ys ?? []} label="{label}, distribution in range" {unit} noun={trend ? (trend.grain === 'week' ? 'weeks' : 'months') : 'days'} />
+					{/await}
+				</section>
+			{/if}
 
 			{#if selected}
 				<PointPanel {metric} date={selected} value={daily?.[selected]} onchanged={() => version++} onclose={() => (selected = null)} />

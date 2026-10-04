@@ -7,7 +7,6 @@
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import ResultStatus from '../components/ResultStatus.svelte';
-	import { stageColor } from '../charts/sleep.ts';
 	import { metricHref } from '../nav.ts';
 	import Chip from '../ui/Chip.svelte';
 	import { metricLook } from '../ui/metric.ts';
@@ -39,10 +38,10 @@
 		tools?: Snippet;
 	} & HTMLAttributes<HTMLElement> = $props();
 
-	// The kit's sparkline is tiny, but it stays a lazy chunk like the other charts.
+	// The kit's sparkline and stage stack are tiny, but they stay lazy chunks like the other charts.
 	const kit = import('../charts/Sparkline.svelte');
+	const stack = import('../charts/StageStack.svelte');
 	const titleId = $props.id();
-	const stage = (s: string) => `var(--stage-${stageColor(s)})`;
 	const shown = $derived(view?.chips.slice(0, 3) ?? []);
 </script>
 
@@ -72,16 +71,9 @@
 		{#if view.sub}<p class="sub">{view.sub}</p>{/if}
 
 		{#if view.stages}
-			<div class="stages" role="img" aria-label="Time in each sleep stage">
-				{#each view.stages as s (s.stage)}
-					<span style:flex={s.seconds} style:background={stage(s.stage)}></span>
-				{/each}
-			</div>
-			<ul class="legend">
-				{#each view.stages as s (s.stage)}
-					<li><span class="swatch" style:background={stage(s.stage)}></span>{s.label} <b>{hoursMinutes(s.seconds)}</b></li>
-				{/each}
-			</ul>
+			{#await stack then { default: StageStack }}
+				<StageStack stages={view.stages} label="Time in each sleep stage" format={hoursMinutes} />
+			{/await}
 		{/if}
 
 		{#if view.ys.some((y) => y != null)}
@@ -184,37 +176,6 @@
 	}
 	.l .spark :global(.spark) {
 		height: 5rem;
-	}
-	.stages {
-		display: flex;
-		gap: 2px;
-		height: 0.75rem;
-		overflow: hidden;
-		border-radius: var(--radius-xs);
-	}
-	.stages span {
-		min-width: 2px;
-	}
-	.legend {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-1) var(--space-4);
-		margin: 0;
-		padding: 0;
-		font-size: var(--text-xs);
-		color: var(--color-text-muted);
-		list-style: none;
-	}
-	.legend b {
-		font-weight: 600;
-		color: var(--color-text);
-	}
-	.swatch {
-		display: inline-block;
-		width: 0.5rem;
-		height: 0.5rem;
-		margin-right: var(--space-1);
-		border-radius: 2px;
 	}
 	footer {
 		display: flex;

@@ -1,12 +1,15 @@
 <!--
-	Bars per window (additive metrics: steps, energy), or stacked bars (sleep stages per night,
-	`color` per stack). xs are window starts, evenly spaced. An optional baseline is drawn over them.
+	Bars per window (additive metrics: steps, energy) in the metric hue, or bars stacked by stage
+	(sleep stages per night, `color` per stack, deep at the bottom). xs are window starts, evenly
+	spaced; a missing window has no bar (never a zero bar). An optional labelled baseline (the
+	mean line) is drawn over them. Period changes animate through the frame's domain motion.
 -->
 <script lang="ts">
 	import ChartFrame from './ChartFrame.svelte';
 	import { DAY, extent, formatInstant, formatNumber } from './scale.ts';
 	import type { StageColor } from './sleep.ts';
-	import type { TableData, Tip } from './types.ts';
+	import type { TableData, Tip, TipAction } from './types.ts';
+	import type { DataStatus } from '../ui/status.ts';
 
 	let {
 		xs,
@@ -16,7 +19,9 @@
 		timezone,
 		height,
 		baseline,
+		status,
 		format = (v: number) => `${formatNumber(v)}${unit ? ` ${unit}` : ''}`,
+		actions,
 		onselect
 	}: {
 		xs: number[];
@@ -26,73 +31,93 @@
 		timezone?: string;
 		height?: number;
 		baseline?: { value: number; label: string };
+		/** Per window, for the tooltip of a single stack. */
+		status?: (DataStatus | null)[];
 		format?: (v: number) => string;
+		actions?: TipAction[];
 		onselect?: (i: number) => void;
 	} = $props();
 
 	const stepMs = $derived(xs.length > 1 ? Math.min(...xs.slice(1).map((t, i) => t - xs[i])) : DAY);
-	const totals = $derived(xs.map((_, i) => stacks.reduce((n, s) => n + (s.ys[i] ?? 0), 0)));
+	const totals = $derived(xs.map((_, i) => (stacks.some((s) => s.ys[i] != null) ? stacks.reduce((n, s) => n + (s.ys[i] ?? 0), 0) : null)));
 	const x = $derived<[number, number]>(xs.length ? [xs[0], xs[xs.length - 1] + stepMs] : [0, 1]);
 	const y = $derived<[number, number]>([0, extent([...totals, baseline?.value])[1] * 1.08]);
 	const anchors = $derived(xs.map((t) => t + stepMs / 2));
 	const withTime = $derived(stepMs < DAY);
+	const stacked = $derived(stacks.length > 1);
 
 	function tip(i: number): Tip {
-		const rows = stacks.map((s) => ({ label: s.label, value: s.ys[i] == null ? '–' : format(s.ys[i] ?? 0) }));
-		if (stacks.length > 1) rows.push({ label: 'Total', value: format(totals[i]) });
-		return { title: formatInstant(xs[i], timezone, withTime), rows };
+		const total = totals[i];
+		return {
+			title: formatInstant(xs[i], timezone, withTime),
+			lead: total == null ? { value: 'No data' } : { value: format(total), status: status?.[i] ?? undefined },
+			rows: stacked ? stacks.map((s) => ({ label: s.label, value: s.ys[i] == null ? '–' : format(s.ys[i] ?? 0) })) : []
+		};
 	}
 
 	function table(): TableData {
 		return {
-			columns: ['Window', ...stacks.map((s) => s.label), ...(stacks.length > 1 ? ['Total'] : [])],
+			columns: ['Window', ...stacks.map((s) => s.label), ...(stacked ? ['Total'] : [])],
 			rows: xs
 				.map((t, i) => [
 					formatInstant(t, timezone, withTime),
 					...stacks.map((s) => (s.ys[i] == null ? '–' : format(s.ys[i] ?? 0))),
-					...(stacks.length > 1 ? [format(totals[i])] : [])
+					...(stacked ? [totals[i] == null ? '–' : format(totals[i] ?? 0)] : [])
 				])
 				.reverse()
 		};
 	}
 </script>
 
-<ChartFrame {label} xs={anchors} {x} {y} {timezone} {height} {tip} {table} {onselect}>
+<ChartFrame {label} xs={anchors} {x} {y} {timezone} {height} {tip} {table} {actions} {onselect} crosshair={false}>
 	{#snippet legend()}
-		{#if stacks.length > 1}
+		{#if stacked}
 			{#each stacks as s (s.label)}<span class="key"><span class={['swatch', s.color]}></span>{s.label}</span>{/each}
 		{/if}
 	{/snippet}
 	{#snippet marks(f)}
 		{@const w = Math.max(1, (f.sx(x[0] + stepMs) - f.sx(x[0])) * 0.72)}
+		{@const r = Math.min(4, w / 3)}
 		{#each xs as t, i (t)}
 			{@const cx = f.sx(t + stepMs / 2) - w / 2}
 			{#each stacks as s, k (k)}
 				{@const below = stacks.slice(0, k).reduce((n, o) => n + (o.ys[i] ?? 0), 0)}
 				{@const v = s.ys[i]}
 				{#if v}
+					<!-- Stacked segments keep a hairline gap; the top of a bar is rounded. -->
 					<rect
-						class={['bar', s.color, f.active === i && 'active']}
+						class={['bar', s.color ?? 'hue', f.active >= 0 && f.active !== i && 'dim']}
 						x={cx}
 						y={f.sy(below + v)}
 						width={w}
-						height={Math.max(0, f.sy(below) - f.sy(below + v))}
-						rx={stacks.length > 1 ? 0 : Math.min(3, w / 3)}
+						height={Math.max(0, f.sy(below) - f.sy(below + v) - (stacked ? 1 : 0))}
+						rx={stacked ? Math.min(2, w / 4) : r}
 					/>
 				{/if}
 			{/each}
 		{/each}
-		{#if baseline}<line class="baseline" x1={f.left} x2={f.right} y1={f.sy(baseline.value)} y2={f.sy(baseline.value)} />{/if}
+		{#if baseline}
+			<line class="baseline" x1={f.left} x2={f.right} y1={f.sy(baseline.value)} y2={f.sy(baseline.value)} />
+			<text class="baseline-label" x={f.right - 4} y={f.sy(baseline.value) - 5} text-anchor="end">{baseline.label}</text>
+		{/if}
 	{/snippet}
 </ChartFrame>
 
 <style>
 	.bar {
-		fill: var(--color-accent);
-		fill-opacity: 0.8;
+		transition: fill-opacity 120ms;
 	}
-	.bar.active {
-		fill-opacity: 1;
+	.bar.dim {
+		fill-opacity: 0.55;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.bar {
+			transition: none;
+		}
+	}
+	/* Drawn in the metric hue when a parent sets --metric (lib/ui/metric.ts). */
+	.hue {
+		fill: var(--metric, var(--color-accent));
 	}
 	.deep {
 		fill: var(--stage-deep);
@@ -123,9 +148,14 @@
 		background: var(--color-info);
 	}
 	.baseline {
-		stroke: var(--color-text);
-		stroke-dasharray: 3 3;
-		stroke-opacity: 0.5;
+		stroke: var(--color-text-muted);
+		stroke-width: 1.5;
+		stroke-dasharray: 4 4;
+		stroke-opacity: 0.8;
+	}
+	.baseline-label {
+		font-size: var(--text-2xs);
+		fill: var(--color-text-muted);
 	}
 	.key {
 		display: inline-flex;

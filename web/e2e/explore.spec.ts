@@ -91,7 +91,7 @@ test('metric detail: range, rollups, sources overlay, coverage and the rule lens
 	// Each source's own values join the chart (legend and table fallback).
 	await page.getByLabel('Show sources').check();
 	await expect(page.getByText('Garmin · watch')).toBeVisible();
-	await page.getByText('Show as a table').click();
+	await page.getByRole('region', { name: 'Resting heart rate chart' }).getByText('Show as a table').click();
 	await expect(page.getByRole('table', { name: /Resting heart rate/ }).getByRole('columnheader')).toHaveCount(4); // date + resolved + 2 sources
 
 	await page.getByRole('button', { name: 'How it’s calculated' }).click();
@@ -143,7 +143,7 @@ test('a point opens its explanation, provenance and override', async ({ page, da
 test('additive metrics are bars; unknown codes say so', async ({ page }) => {
 	await page.goto('/explore/steps?range=1W&end=2026-09-16');
 	await expect(page.getByRole('group', { name: 'Steps, resolved per day' })).toBeVisible();
-	await expect(page.locator('rect.bar')).toHaveCount(7);
+	await expect(page.getByRole('group', { name: 'Steps, resolved per day' }).locator('rect.bar')).toHaveCount(7);
 	await page.goto('/explore/not_a_metric');
 	await expect(page.getByText('No metric with the code not_a_metric')).toBeVisible();
 });

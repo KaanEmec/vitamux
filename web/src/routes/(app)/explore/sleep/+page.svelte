@@ -150,8 +150,19 @@
 		<section class="card" aria-labelledby="bed-h">
 			<h2 id="bed-h">Bed and wake time</h2>
 			<p class="muted note">From the start of the first session to the end of the last, in the local time of each night.</p>
-			{#await import('#lib/views/BedWake.svelte') then { default: BedWake }}
-				<BedWake nights={spans} picked={night.local_date} label="Bed and wake time per night" onselect={pickNight} />
+			{#await import('#lib/charts/RangeBars.svelte') then { default: RangeBars }}
+				<RangeBars
+					{xs}
+					lo={spans.map((s) => s.span?.bed ?? null)}
+					hi={spans.map((s) => s.span?.wake ?? null)}
+					loLabel="Bed"
+					hiLabel="Wake"
+					picked={nights.indexOf(night)}
+					timezone="UTC"
+					format={clockText}
+					label="Bed and wake time per night"
+					onselect={pickNight}
+				/>
 			{/await}
 		</section>
 

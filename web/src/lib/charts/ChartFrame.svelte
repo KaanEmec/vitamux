@@ -1,12 +1,16 @@
 <!--
-	The frame every x/y chart of the kit draws in: size, scales, grid and axes, a crosshair with
-	the tooltip, keyboard focus per point (arrows, Home/End, PageUp/PageDown, Enter selects),
-	brush-to-zoom, a polite live region, the table fallback and the "vx-chart-render" mark.
-	Chart components pass `marks`, a snippet that draws with the frame's scales. Geometry is SVG
-	attributes and CSSOM (style: directives): the CSP blocks inline style attributes.
+	The frame every x/y chart of the kit draws in (ADR-0022): LayerChart's <ChartCore> and <Svg>
+	(lighter than <Chart>, whose extra marks the kit never uses) with our scales' domains, grid and axes (timezone-aware ticks), animated domain changes (none under
+	reduced motion), and one interaction model on top: pointer, touch scrub and keyboard all move
+	one active point (arrows, Home/End, PageUp/PageDown, Enter opens it), shown by a crosshair and
+	the ChartTooltip card. A click pins the card so its actions can be used. Drag zooms (`view`,
+	shared with a BrushNavigator). Also a polite live region, the table fallback and the
+	"vx-chart-render" User Timing mark. Chart components pass `marks`, drawn with the frame's
+	scales in plot coordinates. Geometry is SVG attributes and CSSOM: the CSP blocks inline styles.
 -->
 <script lang="ts" module>
 	export interface Frame {
+		/** Scales from data to plot coordinates (0 is the plot's left and top). */
 		sx: (v: number) => number;
 		sy: (v: number) => number;
 		left: number;
@@ -15,17 +19,19 @@
 		bottom: number;
 		/** Visible x domain (after zoom). */
 		x: [number, number];
-		/** Index of the focused or hovered point, or -1. */
+		/** Index of the focused, hovered or pinned point, or -1. */
 		active: number;
 	}
 </script>
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { prefersReducedMotion } from 'svelte/motion';
+	import { Axis, ChartCore, Svg } from 'layerchart/svg';
 	import ChartTable from './ChartTable.svelte';
 	import ChartTooltip from './ChartTooltip.svelte';
 	import { formatNumber, linear, measureRender, nearest, ticks, timeTicks, type Domain } from './scale.ts';
-	import { tipText, type TableData, type Tip } from './types.ts';
+	import { tipText, type TableData, type Tip, type TipAction } from './types.ts';
 
 	let {
 		label,
@@ -36,17 +42,22 @@
 		timezone,
 		height = 280,
 		zoom = false,
+		view = $bindable(null),
+		padding,
+		crosshair = true,
+		pick,
 		tip,
 		table,
-		marks,
+		marks: draw,
 		legend,
+		actions = [],
 		onselect,
 		yFormat = (v: number) => formatNumber(v),
 		yTicks: fixedTicks
 	}: {
 		/** Accessible name of the chart. */
 		label: string;
-		/** Sorted x of the points that the pointer and the keyboard visit. */
+		/** x of the points that the pointer and the keyboard visit, ascending. */
 		xs: number[];
 		x: Domain;
 		y: Domain;
@@ -55,33 +66,44 @@
 		height?: number;
 		/** Drag across the plot to zoom into that range. */
 		zoom?: boolean;
+		/** The zoomed x domain, or null for all of `x` (bind it to a BrushNavigator). */
+		view?: Domain | null;
+		/** Plot margins, for wide axis labels. */
+		padding?: Partial<Record<'top' | 'right' | 'bottom' | 'left', number>>;
+		/** Draw the vertical crosshair (charts of intervals highlight the interval instead). */
+		crosshair?: boolean;
+		/** The point under an x value (default: the nearest of `xs`). */
+		pick?: (t: number) => number;
 		tip: (i: number) => Tip;
 		table: () => TableData;
 		marks: Snippet<[Frame]>;
 		legend?: Snippet;
+		/** Point actions, offered in the pinned tooltip; the first is also Enter's without `onselect`. */
+		actions?: TipAction[];
 		onselect?: (i: number) => void;
 		yFormat?: (v: number) => string;
 		/** Y tick values, when round numbers are not the right marks (a clock axis). */
 		yTicks?: number[];
 	} = $props();
 
-	const margin = { top: 12, right: 12, bottom: 26, left: 48 };
-	const clipId = $props.id();
-
 	let width = $state(0);
 	let active = $state(-1);
-	let zoomed = $state<Domain | null>(null);
+	let pinned = $state(false);
 	let brush = $state<{ from: number; to: number } | null>(null);
 	let announce = $state('');
+	let plot = $state<HTMLElement>();
+	let touch: { x: number; moved: boolean } | null = null;
 
-	const xd = $derived(zoomed ?? x);
-	const right = $derived(Math.max(width - margin.right, margin.left + 1));
-	const bottom = $derived(height - margin.bottom);
-	const sx = $derived(linear(xd, [margin.left, right]));
-	const sy = $derived(linear(y, [bottom, margin.top]));
-	const yTicks = $derived(fixedTicks ?? ticks(y, Math.max(2, Math.round((bottom - margin.top) / 56))));
+	const clipId = $props.id();
+	// Read once: LayerChart sets up its domain motion when the chart is created.
+	const motion = prefersReducedMotion.current ? undefined : ({ type: 'tween', duration: 300 } as const);
+	const m = $derived({ top: 12, right: 12, bottom: 26, left: 48, ...padding });
+	const xd = $derived(view ?? x);
+	const plotW = $derived(Math.max(width - m.left - m.right, 1));
+	const sx = $derived(linear(xd, [0, plotW]));
+	const yTicks = $derived(fixedTicks ?? ticks(y, Math.max(2, Math.round((height - m.top - m.bottom) / 56))));
 	const xAxis = $derived.by(() => {
-		const count = Math.max(2, Math.floor((right - margin.left) / 96));
+		const count = Math.max(2, Math.floor(plotW / 96));
 		if (time) return timeTicks(xd, count, timezone);
 		return { ticks: ticks(xd, count), format: (v: number) => formatNumber(v) };
 	});
@@ -93,9 +115,9 @@
 		while (b >= a && xs[b] > xd[1]) b--;
 		return [a, b] as const;
 	});
-	const frame = $derived<Frame>({ sx, sy, left: margin.left, right, top: margin.top, bottom, x: xd, active });
 	const tipAt = $derived(active >= 0 && active < xs.length ? tip(active) : null);
-	const tipLeft = $derived(active >= 0 ? sx(xs[active]) : 0);
+	const tipLeft = $derived(active >= 0 ? m.left + sx(xs[active]) : 0);
+	const hint = $derived(actions.length ? 'Click to pin, Enter to open' : onselect ? 'Click or press Enter for details' : undefined);
 
 	// "vx-chart-render": from receiving data to the next paint, once the width is known.
 	let start = 0;
@@ -111,33 +133,58 @@
 		}
 	});
 
-	const invert = (px: number) => xd[0] + ((px - margin.left) / (right - margin.left)) * (xd[1] - xd[0]);
-	const plotX = (e: PointerEvent) => e.clientX - (e.currentTarget as Element).getBoundingClientRect().left;
+	const plotX = (e: PointerEvent) => e.clientX - (plot?.getBoundingClientRect().left ?? 0) - m.left;
+	const at = (px: number) => xd[0] + (px / plotW) * (xd[1] - xd[0]);
+	// With motion, LayerChart sets the first domain in an effect: draw once the scales have one.
+	const ready = (c: { xDomain: unknown[]; yDomain: unknown[] }) => c.xDomain.length === 2 && c.yDomain.length === 2;
+	const inTip = (e: Event) => !!(e.target as Element | null)?.closest?.('.tip-at');
 
-	function pointerMove(e: PointerEvent) {
-		const px = plotX(e);
-		if (brush) brush.to = px;
-		const i = nearest(xs, invert(px));
+	function hover(px: number) {
+		const i = pick ? pick(at(px)) : nearest(xs, at(px));
 		active = i >= visible[0] && i <= visible[1] ? i : -1;
 	}
 
-	function pointerDown(e: PointerEvent) {
-		if (!zoom || e.button !== 0) return;
-		(e.currentTarget as Element).setPointerCapture(e.pointerId);
-		brush = { from: plotX(e), to: plotX(e) };
+	function pointerMove(e: PointerEvent) {
+		if (pinned || inTip(e)) return;
+		const px = plotX(e);
+		if (brush) brush.to = px;
+		if (touch && Math.abs(e.clientX - touch.x) > 6) touch.moved = true;
+		hover(px);
 	}
 
-	function pointerUp() {
+	function pointerDown(e: PointerEvent) {
+		if (inTip(e) || e.button !== 0) return;
+		pinned = false;
+		if (e.pointerType === 'touch') {
+			// Touch scrubs through the points; a tap selects like a click.
+			touch = { x: e.clientX, moved: false };
+			hover(plotX(e));
+		} else if (zoom) {
+			plot?.setPointerCapture(e.pointerId);
+			brush = { from: plotX(e), to: plotX(e) };
+		}
+	}
+
+	function pointerUp(e: PointerEvent) {
+		if (inTip(e)) return;
 		const b = brush;
+		const t = touch;
 		brush = null;
+		touch = null;
 		if (b && Math.abs(b.to - b.from) > 6) {
-			const [a, c] = [invert(Math.min(b.from, b.to)), invert(Math.max(b.from, b.to))];
-			zoomed = [Math.max(a, xd[0]), Math.min(c, xd[1])];
-		} else if (active >= 0) onselect?.(active);
+			const [lo, hi] = [at(Math.min(b.from, b.to)), at(Math.max(b.from, b.to))];
+			view = [Math.max(lo, xd[0]), Math.min(hi, xd[1])];
+		} else if (active >= 0 && !t?.moved) choose(active);
+	}
+
+	function choose(i: number) {
+		if (actions.length) pinned = true;
+		else onselect?.(i);
 	}
 
 	function move(i: number) {
 		if (visible[1] < visible[0]) return;
+		pinned = false;
 		active = Math.min(Math.max(i, visible[0]), visible[1]);
 		announce = tipText(tip(active));
 	}
@@ -152,56 +199,93 @@
 			PageUp: () => move(active - page),
 			Home: () => move(visible[0]),
 			End: () => move(visible[1]),
-			Enter: () => active >= 0 && onselect?.(active),
-			' ': () => active >= 0 && onselect?.(active),
-			Escape: () => (zoomed ? (zoomed = null) : (active = -1))
+			Enter: () => active >= 0 && (onselect ?? actions[0]?.run)?.(active),
+			' ': () => active >= 0 && (onselect ?? actions[0]?.run)?.(active),
+			Escape: () => (pinned ? (pinned = false) : view ? (view = null) : (active = -1))
 		};
 		if (!keys[e.key]) return;
 		e.preventDefault();
 		keys[e.key]();
 	}
+
+	function focusOut(e: FocusEvent) {
+		if (plot?.contains(e.relatedTarget as Node | null)) return;
+		pinned = false;
+		active = -1;
+	}
+
+	function leave(e: PointerEvent) {
+		if (!brush && !pinned && e.pointerType !== 'touch') active = -1;
+	}
+
+	// A pinned card closes when the pointer goes down anywhere else.
+	function outside(e: PointerEvent) {
+		if (pinned && !plot?.contains(e.target as Node)) {
+			pinned = false;
+			active = -1;
+		}
+	}
 </script>
+
+<svelte:window onpointerdown={outside} />
 
 <div class="chart">
 	{#if legend}<div class="legend">{@render legend()}</div>{/if}
 	<!-- One tab stop: the arrows move between points (announced in the live region). -->
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 	<div
-		class="plot"
+		class={['plot', zoom && 'zoom']}
 		role="group"
 		aria-roledescription="chart"
-		aria-label="{label}. Arrow keys move between points{onselect ? ', Enter opens one' : ''}."
+		aria-label="{label}. Arrow keys move between points{onselect || actions.length ? ', Enter opens one' : ''}."
 		tabindex="0"
+		bind:this={plot}
 		bind:clientWidth={width}
 		onkeydown={keydown}
 		onfocus={() => active < 0 && move(visible[1])}
-		onblur={() => (active = -1)}
+		onfocusout={focusOut}
 		onpointermove={pointerMove}
-		onpointerleave={() => !brush && (active = -1)}
+		onpointerleave={leave}
 		onpointerdown={pointerDown}
 		onpointerup={pointerUp}
+		onpointercancel={() => {
+			touch = null;
+			brush = null;
+		}}
 	>
 		{#if width > 0}
-			<svg {width} {height} viewBox="0 0 {width} {height}" aria-hidden="true">
-				<defs>
-					<clipPath id="{clipId}-clip"><rect x={margin.left} y="0" width={right - margin.left} height={bottom + 1} /></clipPath>
-				</defs>
-				{#each yTicks as t (t)}
-					<line class="grid" x1={margin.left} x2={right} y1={sy(t)} y2={sy(t)} />
-					<text class="axis" x={margin.left - 8} y={sy(t)} dy="0.32em" text-anchor="end">{yFormat(t)}</text>
-				{/each}
-				{#each xAxis.ticks as t (t)}
-					<text class="axis" x={sx(t)} y={height - 8} text-anchor="middle">{xAxis.format(t)}</text>
-				{/each}
-				<g clip-path="url(#{clipId}-clip)">{@render marks(frame)}</g>
-				{#if active >= 0}<line class="crosshair" x1={tipLeft} x2={tipLeft} y1={margin.top} y2={bottom} />{/if}
-				{#if brush}
-					<rect class="brush" x={Math.min(brush.from, brush.to)} y={margin.top} width={Math.abs(brush.to - brush.from)} height={bottom - margin.top} />
-				{/if}
-			</svg>
+			<div class="canvas" aria-hidden="true">
+				<ChartCore {width} {height} xDomain={xd} yDomain={y} padding={m} {motion}>
+					{#snippet children({ context })}
+						<Svg>
+							{#if ready(context)}
+								{#each yTicks as t (t)}
+									<line class="grid" x1="0" x2={context.width} y1={context.yScale(t)} y2={context.yScale(t)} />
+								{/each}
+								<clipPath id="{clipId}-clip"><rect x="-1" y="-6" width={context.width + 2} height={context.height + 7} /></clipPath>
+								<g clip-path="url(#{clipId}-clip)">
+									{@render draw({ sx: context.xScale, sy: context.yScale, left: 0, right: context.width, top: 0, bottom: context.height, x: xd, active })}
+								</g>
+								<Axis placement="left" ticks={yTicks} format={yFormat} tickMarks={false} classes={{ tickLabel: 'axis' }} />
+								<Axis placement="bottom" ticks={xAxis.ticks} format={xAxis.format} tickMarks={false} classes={{ tickLabel: 'axis' }} />
+								{#if crosshair && active >= 0}
+									{@const cx = context.xScale(xs[active])}
+									<line class="crosshair" x1={cx} x2={cx} y1="0" y2={context.height} />
+								{/if}
+								{#if brush}
+									<rect class="brush" x={Math.min(brush.from, brush.to)} y="0" width={Math.abs(brush.to - brush.from)} height={context.height} />
+								{/if}
+							{/if}
+						</Svg>
+					{/snippet}
+				</ChartCore>
+			</div>
 			{#if tipAt && !brush}
-				<div class={['tip', tipLeft > width / 2 && 'flip']} style:left="{tipLeft}px">
-					<ChartTooltip tip={onselect ? { ...tipAt, note: tipAt.note ?? 'Click or press Enter for details' } : tipAt} />
+				<div class={['tip-at', tipLeft > width / 2 && 'flip', pinned && 'pinned']} style:left="{tipLeft}px">
+					<ChartTooltip
+						tip={pinned || !hint ? tipAt : { ...tipAt, note: tipAt.note ?? hint }}
+						actions={pinned ? actions.map((a) => ({ label: a.label, onclick: () => a.run(active) })) : []}
+					/>
 				</div>
 			{/if}
 		{/if}
@@ -209,7 +293,7 @@
 	<p class="visually-hidden" aria-live="polite">{announce}</p>
 	<div class="below">
 		<ChartTable caption={label} data={table} />
-		{#if zoomed}<button class="btn ghost sm" type="button" onclick={() => (zoomed = null)}>Reset zoom</button>{/if}
+		{#if view}<button class="btn ghost sm" type="button" onclick={() => (view = null)}>Reset zoom</button>{/if}
 	</div>
 </div>
 
@@ -230,38 +314,46 @@
 		touch-action: pan-y;
 		border-radius: var(--radius-sm);
 	}
-	svg {
-		display: block;
-		overflow: visible;
-		user-select: none;
+	.plot.zoom {
+		cursor: crosshair;
 	}
-	.grid {
+	.canvas :global(svg) {
+		overflow: visible;
+	}
+	.canvas :global(.grid) {
 		stroke: var(--chart-grid);
 		shape-rendering: crispEdges;
 	}
-	.axis {
+	.canvas :global(.axis) {
 		font-family: var(--font-mono);
 		font-size: var(--text-2xs);
 		fill: var(--chart-axis);
+		stroke: none;
 	}
-	.crosshair {
+	.canvas :global(.lc-axis-rule) {
+		display: none;
+	}
+	.canvas :global(.crosshair) {
 		stroke: var(--color-text);
 		stroke-opacity: 0.35;
 		shape-rendering: crispEdges;
 	}
-	.brush {
+	.canvas :global(.brush) {
 		fill: var(--chart-band);
 		stroke: var(--color-accent);
 	}
-	.tip {
+	.tip-at {
 		position: absolute;
 		top: var(--space-2);
 		z-index: 2;
 		padding: 0 var(--space-3);
 		pointer-events: none;
 	}
-	.tip.flip {
+	.tip-at.flip {
 		transform: translateX(-100%);
+	}
+	.tip-at.pinned {
+		pointer-events: auto;
 	}
 	.below {
 		display: flex;

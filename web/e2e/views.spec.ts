@@ -12,10 +12,10 @@ test('sleep: stages and bed times per night, and one night across three sources'
 	const across = page.getByRole('region', { name: /Night of .*14.*2026/ });
 	const watch = across.getByRole('article', { name: 'Apple Health · Apple Watch' });
 	await expect(watch.getByText('Selected')).toBeVisible();
-	await expect(watch.getByRole('img', { name: /Sleep stages of Apple Health · Apple Watch/ })).toBeVisible();
+	await expect(watch.getByRole('group', { name: /Sleep stages of Apple Health · Apple Watch/ })).toBeVisible();
 	const band = across.getByRole('article', { name: 'WHOOP · Band' });
 	await expect(band.getByText('In the rule')).toBeVisible();
-	await expect(band.getByRole('img', { name: /Sleep stages of WHOOP · Band/ })).toBeVisible();
+	await expect(band.getByRole('group', { name: /Sleep stages of WHOOP · Band/ })).toBeVisible();
 	const relay = across.getByRole('article', { name: 'Apple Health · Garmin Connect' });
 	await expect(relay.getByText('Excluded: exclude: relayed=true')).toBeVisible();
 	await expect(relay.getByText('This source reported no sleep stages.')).toBeVisible();
@@ -106,8 +106,8 @@ test('events: one lane per type, and a single type with ?code=', async ({ page, 
 	await page.goto('/explore/events');
 	await expect(page).toHaveTitle('Events · Vitamux');
 	await expect(page.getByRole('heading', { name: '3 events in 2 types' })).toBeVisible();
-	await expect(page.getByRole('img', { name: 'Events by type over time' })).toBeVisible();
-	await expect(page.getByRole('img', { name: 'Events by type over time' }).getByText('Environment audio alert')).toBeVisible();
+	await expect(page.getByRole('group', { name: /^Events by type over time/ })).toBeVisible();
+	await expect(page.getByRole('group', { name: /^Events by type over time/ }).getByText('Environment audio alert')).toBeVisible();
 
 	await page.getByLabel('Event type').selectOption('headphone_audio_alert');
 	await expect(page).toHaveURL(/\?code=headphone_audio_alert/);
