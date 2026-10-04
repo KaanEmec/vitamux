@@ -272,8 +272,8 @@ func TestCoolifySecretVolumes(t *testing.T) {
 		}
 	}
 	e := env(t, f.Services["vitamux"])
-	if _, ok := e["SERVICE_URL_VITAMUX_8080"]; !ok || e["VITAMUX_PUBLIC_URL"] != "${SERVICE_URL_VITAMUX_8080}" {
-		t.Error("vitamux must take VITAMUX_PUBLIC_URL from Coolify's SERVICE_URL_VITAMUX_8080")
+	if _, ok := e["SERVICE_URL_VITAMUX_8080"]; !ok || e["VITAMUX_PUBLIC_URL"] != "${SERVICE_URL_VITAMUX}" {
+		t.Error("vitamux must declare SERVICE_URL_VITAMUX_8080 and take VITAMUX_PUBLIC_URL from Coolify's SERVICE_URL_VITAMUX")
 	}
 }
 

@@ -157,7 +157,9 @@ services:
     restart: unless-stopped
     environment:
       - SERVICE_URL_VITAMUX_8080 # Coolify: the domain you give this service, routed to port 8080
-      - VITAMUX_PUBLIC_URL=${SERVICE_URL_VITAMUX_8080}
+      # The port-less variable: Coolify writes it to the project .env with the domain you set,
+      # while the _8080 one keeps its first generated value and is not there for interpolation.
+      - VITAMUX_PUBLIC_URL=${SERVICE_URL_VITAMUX}
       - VITAMUX_ENV=production
       - VITAMUX_TRUSTED_PROXIES=${VITAMUX_TRUSTED_PROXIES:-}
       - VITAMUX_LOG_LEVEL=${VITAMUX_LOG_LEVEL:-info}

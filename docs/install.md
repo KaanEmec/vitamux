@@ -167,7 +167,7 @@ Coolify deploys [`deploy/coolify/compose.yaml`](../deploy/coolify/compose.yaml),
 | Release file | Coolify file |
 | --- | --- |
 | Publishes `127.0.0.1:8080` for your proxy | No published ports; Coolify's proxy routes the service's domain to port 8080 and handles TLS |
-| `VITAMUX_PUBLIC_URL` from `.env` | From Coolify's `SERVICE_URL_VITAMUX_8080`, i.e. the domain you give the `vitamux` service |
+| `VITAMUX_PUBLIC_URL` from `.env` | From Coolify's `SERVICE_URL_VITAMUX`, i.e. the domain you give the `vitamux` service |
 | Secret files in `./secrets` from `init-secrets.sh`, master key from a manual `init-secrets` run | One-shot services generate the database passwords (`secrets`) and the master key (`master-key`, `init-secrets --if-missing`) into named volumes on every deploy, never overwriting; each volume is mounted only where the release file mounts that secret |
 | Withings secret in `secrets/withings_client_secret` | Coolify environment variable `WITHINGS_CLIENT_SECRET`, seen only by the offline `secrets` service, which writes it to a file for `vitamux` |
 | Init SQL mounted from `deploy/sql/` | Inlined with Coolify's `content:` (a test keeps it in step) |
@@ -175,7 +175,7 @@ Coolify deploys [`deploy/coolify/compose.yaml`](../deploy/coolify/compose.yaml),
 Steps:
 
 1. Create a resource of type Docker Compose from this public Git repository with the Compose file `/deploy/coolify/compose.yaml`, or paste the file into an empty Docker Compose resource.
-2. In the `vitamux` service's domain field enter your domain with the container port, e.g. `https://vitamux.example.com:8080`. Coolify serves it on 443; after saving, `SERVICE_URL_VITAMUX_8080` under Environment Variables must read `https://vitamux.example.com` (that is `VITAMUX_PUBLIC_URL`).
+2. Under Domains, edit the `vitamux` service's domain: protocol `https`, your domain (e.g. `vitamux.example.com`), port `8080`; Noindex is a good idea. Coolify serves it on 443 and fills `SERVICE_URL_VITAMUX` (that is `VITAMUX_PUBLIC_URL`) from it on the next deploy. `SERVICE_URL_VITAMUX_8080` may keep a generated placeholder; Vitamux does not read it. After deploying, `/healthz` over HTTPS carries a `Strict-Transport-Security` header only when the public URL is right.
 3. Set environment variables: `VITAMUX_IMAGE` (a pinned tag), and for Withings `VITAMUX_WITHINGS_CLIENT_ID` and `WITHINGS_CLIENT_SECRET` (mark it as a secret). Optional: `VITAMUX_TRUSTED_PROXIES` with the subnet of Coolify's proxy network (`docker network inspect coolify`).
 4. Deploy. `secrets`, `master-key` and `migrate` run and exit; `vitamux` turns healthy. Volumes persist across redeploys, so the generated secrets and the key stay.
 5. Create the owner from the server's shell (the image has no shell, so Coolify's web terminal cannot attach): `docker exec -it <vitamux container> /vitamux admin create-owner`.
@@ -184,4 +184,4 @@ Steps:
 
 Daily backups go to the `vitamux-backups` volume as above; Coolify's own backup feature covers its database resources, not PostgreSQL inside a Compose resource. A restore runs from the server's shell with the `restore` profile service of the Coolify file ([backup#restore](operations/backup.md#restore)). Upgrades: change `VITAMUX_IMAGE` and redeploy ([upgrade](operations/upgrade.md#coolify)).
 
-Not yet verified on a live Coolify instance: if Coolify attaches every service to its own network for the resource, PostgreSQL is reachable from the resource's other services as well (it still publishes no port).
+Networking, as seen on a live Coolify instance: Coolify adds every service to the resource's own network, which its proxy joins too. So PostgreSQL is reachable from the resource's services and from the proxy, but not from other Coolify resources, and it publishes no port.
