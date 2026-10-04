@@ -54,6 +54,7 @@ ADRs are written during implementation (J01.1 and the owning jobs).
 | ADR-014 | Apple Health | Swift package + minimal SwiftUI app; anchor committed after ack | [apple-health.md](apple-health.md) |
 | ADR-015 | API | REST + OpenAPI 3.1 contract-first, problem+json, cursor pagination | [api.md](api.md) |
 | ADR-016 | Dedupe | Account-scoped dedupe keys; corrections supersede | [ADR-0016](../adr/0016-canonical-writer.md) |
+| ADR-017 | Sidecar protocol | `vitamux-connector/1`, frozen; additive only within v1 | [ADR-0017](../adr/0017-sidecar-protocol.md) |
 
 Libraries: `pgx` v5, `sqlc`, `goose`, `log/slog`, `oapi-codegen`, `openapi-typescript`, `klauspost/compress` (zstd), `x/crypto` (argon2id; HKDF is stdlib `crypto/hkdf`), `pquerna/otp`, `uPlot`, `pdf.js`.
 
