@@ -1,0 +1,46 @@
+{
+  "synthetic": true,
+  "about": "Chart grammar cases shared by web/e2e/chart-grammar.spec.ts (grammar.ts) and VitamuxKit's ChartGrammarTests (chartFor). metric is a GET /metrics entry as the server writes it; expect.view is the chart, expect.day the Day view's default and finest bucket (null: no Day view). Catalogue metadata only, no health values.",
+  "cases": [
+    {
+      "note": "intensive, sent seconds apart: 1-minute day view down to raw",
+      "metric": {"aggregation": "intensive", "code": "heart_rate", "intraday": {"default": "1m", "finest": "raw"}, "kinds": ["sample"], "plausible_range": [20, 250], "provider_scoped": false, "section": "Heart and circulation", "selection_only": false, "strategies": ["single_source", "first_available", "mean_across_sources", "minimum_across_sources", "maximum_across_sources", "latest", "earliest"], "unit": "bpm", "windows": ["bucket", "hour", "local_day", "local_night", "sleep_episode", "latest"]},
+      "expect": {"view": "line-band", "day": {"default": "1m", "finest": "raw"}}
+    },
+    {
+      "note": "intensive, a minute or more apart: 5-minute day view",
+      "metric": {"aggregation": "intensive", "code": "hrv_rmssd", "intraday": {"default": "5m", "finest": "raw"}, "kinds": ["sample"], "plausible_range": [1, 500], "provider_scoped": false, "section": "Heart and circulation", "selection_only": false, "strategies": ["single_source", "first_available", "mean_across_sources", "minimum_across_sources", "maximum_across_sources", "latest", "earliest"], "unit": "ms", "windows": ["bucket", "hour", "local_day", "local_night", "sleep_episode", "latest"]},
+      "expect": {"view": "line-band", "day": {"default": "5m", "finest": "raw"}}
+    },
+    {
+      "note": "additive: 30-minute day view down to 1 minute",
+      "metric": {"aggregation": "additive", "code": "steps", "intraday": {"default": "30m", "finest": "1m"}, "kinds": ["interval", "daily_value"], "plausible_range": [0, 200000], "provider_scoped": false, "section": "Activity", "selection_only": false, "strategies": ["single_source", "first_available", "mean_across_sources", "minimum_across_sources", "maximum_across_sources", "sum_across_sources", "latest", "earliest"], "unit": "count", "windows": ["bucket", "hour", "local_day"]},
+      "expect": {"view": "bars", "day": {"default": "30m", "finest": "1m"}}
+    },
+    {
+      "note": "daily summary: no day view",
+      "metric": {"aggregation": "daily_summary", "code": "resting_heart_rate", "kinds": ["sample", "daily_value"], "plausible_range": [20, 150], "provider_scoped": false, "section": "Heart and circulation", "selection_only": true, "strategies": ["single_source", "first_available", "latest", "earliest"], "unit": "bpm", "windows": ["local_day", "latest"]},
+      "expect": {"view": "line-baseline", "day": null}
+    },
+    {
+      "note": "latest reading: no day view",
+      "metric": {"aggregation": "latest", "code": "weight", "group": "body_composition", "kinds": ["sample"], "plausible_range": [2, 500], "provider_scoped": false, "section": "Body composition", "selection_only": false, "strategies": ["single_source", "first_available", "mean_across_sources", "minimum_across_sources", "maximum_across_sources", "latest", "earliest"], "unit": "kg", "windows": ["local_day", "latest", "reading"]},
+      "expect": {"view": "step", "day": null}
+    },
+    {
+      "note": "a bp_ group is a dumbbell, whatever its aggregation",
+      "metric": {"aggregation": "latest", "code": "bp_systolic", "family": "blood_pressure", "group": "bp_reading", "kinds": ["sample"], "plausible_range": [40, 300], "provider_scoped": false, "section": "Blood pressure", "selection_only": false, "strategies": ["single_source", "first_available", "mean_across_sources", "minimum_across_sources", "maximum_across_sources", "latest", "earliest"], "unit": "mmHg", "windows": ["local_day", "latest", "reading"]},
+      "expect": {"view": "dumbbell", "day": null}
+    },
+    {
+      "note": "sleep-derived: stage stack and hypnogram, no day view",
+      "metric": {"aggregation": "sleep_derived", "code": "sleep_total", "family": "sleep", "kinds": [], "plausible_range": [0, 86400], "provider_scoped": false, "section": "Sleep", "selection_only": false, "strategies": ["single_source", "first_available", "mean_across_sources", "minimum_across_sources", "maximum_across_sources", "latest", "earliest", "event_priority"], "unit": "s", "windows": ["local_night", "sleep_episode"]},
+      "expect": {"view": "sleep", "day": null}
+    },
+    {
+      "note": "derived intensive night code: a band line without intraday",
+      "metric": {"aggregation": "intensive", "code": "spo2_night_min", "derived_from": "spo2", "kinds": [], "plausible_range": [50, 100], "provider_scoped": false, "section": "Derived", "selection_only": false, "strategies": ["single_source", "first_available", "mean_across_sources", "minimum_across_sources", "maximum_across_sources", "latest", "earliest"], "unit": "%", "windows": ["local_night", "sleep_episode"]},
+      "expect": {"view": "line-band", "day": null}
+    }
+  ]
+}

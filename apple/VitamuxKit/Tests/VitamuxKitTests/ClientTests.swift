@@ -77,15 +77,15 @@ struct ClientTests {
 
     @Test func `an expired session clears the store and reports it`() async throws {
         try await login()
-        _ = try await client.getSystemVersion().ok
+        _ = try await client.getSession().ok
         fake.expireSessions()
 
-        let problem = await failure { _ = try await client.getSystemVersion().ok }
+        let problem = await failure { _ = try await client.getSession().ok }
         #expect(problem?.status == 401)
         #expect(try sessions.load() == nil)
         #expect(expired.value == 1)
 
-        let again = await failure { _ = try await client.getSystemVersion().ok }
+        let again = await failure { _ = try await client.getSession().ok }
         #expect(again?.status == 401)
         #expect(expired.value == 1, "without a session there is nothing left to expire")
     }
@@ -128,6 +128,20 @@ struct ClientTests {
         _ = try await client.logout().noContent
         let after = await failure { _ = try await client.getSession().ok }
         #expect(after?.status == 401)
+    }
+
+    @Test func `the version handshake answers before sign-in`() async throws {
+        let anonymous = try await client.getSystemVersion().ok.body.json
+        #expect(anonymous.product == .vitamux)
+        #expect(anonymous.apiVersion >= 1)
+        #expect(anonymous.version == nil, "the build is for signed-in callers only")
+        try await login()
+        #expect(try await client.getSystemVersion().ok.body.json.version != nil)
+
+        let old = FakeServer(handshake: .beforeHandshake)
+        let before = await failure { _ = try await old.client(sessions: sessions).getSystemVersion().ok }
+        #expect(before?.status == 401)
+        #expect(before?.code == "unauthenticated")
     }
 
     @Test func `unstubbed endpoints answer not found`() async throws {
