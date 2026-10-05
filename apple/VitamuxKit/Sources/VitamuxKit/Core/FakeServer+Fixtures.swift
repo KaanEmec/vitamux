@@ -23,6 +23,7 @@ extension FakeServer {
         guard let token, let device = state.sessions[token] else {
             return problem(401, "unauthenticated", token == nil ? "sign in or send a bearer token" : "invalid, revoked or expired token")
         }
+        if let reply = explore(method: method, url: url, body: body) { return reply } // FakeServer+Explore.swift
         switch (method, url.path) {
         case ("POST", "/api/v1/auth/logout"):
             state.sessions[token] = nil
@@ -128,7 +129,7 @@ extension FakeServer {
         ]
     }
 
-    private static var metrics: [[String: Any]] { [
+    static var metrics: [[String: Any]] { exploreMetrics + [
         metric("heart_rate", section: "heart", unit: "bpm", kind: "sample", aggregation: "intensive"),
         metric("heart_rate_resting", section: "heart", unit: "bpm", kind: "daily_value", aggregation: "intensive"),
         metric("steps", section: "activity", unit: "count", kind: "cumulative", aggregation: "additive"),

@@ -12,10 +12,8 @@ struct RouteView: View {
         case .lab: LabView()
         case .more: MoreView()
 
-        case .metric(let code, let range, let end):
-            PlaceholderView(title: metricLabel(code), detail: [code, range, end], job: "J22.8")
-        case .metricDay(let code, let date):
-            PlaceholderView(title: "All sources", detail: [code, date], job: "J22.8")
+        case .metric(let code, let range, let end): MetricDetailView(code: code, range: range, end: end)
+        case .metricDay(let code, let date): AllSourcesDayRoute(code: code, date: date)
         case .exploreView(let kind):
             PlaceholderView(title: kind.title, detail: [], job: "J22.9")
         case .events(let code):
