@@ -17,7 +17,7 @@ rules:
       functionOptions:
         schema:
           type: object
-          propertyNames: {enum: [session, csrf, apiKey, clientToken]}
+          propertyNames: {enum: [session, csrf, appSession, apiKey, clientToken]}
 
   vitamux-api-key-scopes:
     description: API key roles are Vitamux scopes (internal/auth/principal.go).

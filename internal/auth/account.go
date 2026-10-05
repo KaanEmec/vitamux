@@ -60,9 +60,11 @@ func (s *Service) ChangePassword(ctx context.Context, by *Principal, current, ne
 }
 
 // SessionInfo is one live session as listed to its owner. ExpiresAt is the absolute end;
-// a session also ends after SessionIdle without use.
+// a session also ends after its kind's idle timeout. Name is the app's device name.
 type SessionInfo struct {
 	ID         uuid.UUID `json:"id"`
+	Kind       string    `json:"kind"`
+	Name       *string   `json:"name"`
 	CreatedAt  time.Time `json:"created_at"`
 	LastSeenAt time.Time `json:"last_seen_at"`
 	ExpiresAt  time.Time `json:"expires_at"`
@@ -73,13 +75,14 @@ type SessionInfo struct {
 // by's own.
 func (s *Service) ListSessions(ctx context.Context, by *Principal) ([]SessionInfo, error) {
 	now := s.now()
-	rows, err := s.db.Q().ListLiveSessions(ctx, dbq.ListLiveSessionsParams{UserID: by.UserID, Now: now, IdleSince: now.Add(-SessionIdle)})
+	rows, err := s.db.Q().ListLiveSessions(ctx, dbq.ListLiveSessionsParams{UserID: by.UserID, Now: now,
+		IdleSince: now.Add(-SessionIdle), AppIdleSince: now.Add(-s.appIdle)})
 	if err != nil {
 		return nil, db.MapErr(err)
 	}
 	out := make([]SessionInfo, len(rows))
 	for i, r := range rows {
-		out[i] = SessionInfo{ID: r.ID, CreatedAt: r.CreatedAt, LastSeenAt: r.LastSeenAt, ExpiresAt: r.ExpiresAt,
+		out[i] = SessionInfo{ID: r.ID, Kind: r.Kind, Name: r.Name, CreatedAt: r.CreatedAt, LastSeenAt: r.LastSeenAt, ExpiresAt: r.ExpiresAt,
 			Current: by.Kind == OwnerSession && r.ID == by.ID}
 	}
 	return out, nil

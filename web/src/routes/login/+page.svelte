@@ -39,7 +39,7 @@
 		const { data, error, response } = await api.POST('/api/v1/auth/login', { body });
 		busy = false;
 		if (data) {
-			setSession(data);
+			if ('csrf_token' in data) setSession(data); // always: the panel never asks for an app session
 			password = code = '';
 			await goto(safeNext(page.url.searchParams.get('next')), { replaceState: true });
 			return;

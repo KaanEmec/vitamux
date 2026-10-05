@@ -59,7 +59,7 @@ func (q *Queries) DeleteSession(ctx context.Context, id uuid.UUID) error {
 }
 
 const deleteSessionByTokenHash = `-- name: DeleteSessionByTokenHash :exec
-DELETE FROM sessions WHERE token_hash = $1
+DELETE FROM sessions WHERE token_hash = $1 AND kind = 'browser'
 `
 
 func (q *Queries) DeleteSessionByTokenHash(ctx context.Context, tokenHash []byte) error {
@@ -68,17 +68,25 @@ func (q *Queries) DeleteSessionByTokenHash(ctx context.Context, tokenHash []byte
 }
 
 const deleteStaleSessions = `-- name: DeleteStaleSessions :exec
-DELETE FROM sessions WHERE user_id = $1 AND (expires_at <= $2 OR last_seen_at <= $3)
+DELETE FROM sessions WHERE user_id = $1 AND (expires_at <= $2
+  OR last_seen_at <= CASE WHEN kind = 'app' THEN $3::timestamptz ELSE $4::timestamptz END)
 `
 
 type DeleteStaleSessionsParams struct {
-	UserID    uuid.UUID
-	Now       time.Time
-	IdleSince time.Time
+	UserID       uuid.UUID
+	Now          time.Time
+	AppIdleSince time.Time
+	IdleSince    time.Time
 }
 
+// Each kind has its own idle timeout.
 func (q *Queries) DeleteStaleSessions(ctx context.Context, arg DeleteStaleSessionsParams) error {
-	_, err := q.db.Exec(ctx, deleteStaleSessions, arg.UserID, arg.Now, arg.IdleSince)
+	_, err := q.db.Exec(ctx, deleteStaleSessions,
+		arg.UserID,
+		arg.Now,
+		arg.AppIdleSince,
+		arg.IdleSince,
+	)
 	return err
 }
 
@@ -141,8 +149,37 @@ func (q *Queries) EnableTOTP(ctx context.Context, arg EnableTOTPParams) (int64, 
 	return result.RowsAffected(), nil
 }
 
+const getLiveAppSession = `-- name: GetLiveAppSession :one
+SELECT id, user_id, token_hash, created_at, last_seen_at, expires_at, kind, name FROM sessions
+WHERE id = $1 AND kind = 'app' AND expires_at > $2 AND last_seen_at > $3
+`
+
+type GetLiveAppSessionParams struct {
+	ID        uuid.UUID
+	Now       time.Time
+	IdleSince time.Time
+}
+
+// An app session by the id in its vmx_ses_ token; the caller compares the secret's hash.
+func (q *Queries) GetLiveAppSession(ctx context.Context, arg GetLiveAppSessionParams) (Session, error) {
+	row := q.db.QueryRow(ctx, getLiveAppSession, arg.ID, arg.Now, arg.IdleSince)
+	var i Session
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.TokenHash,
+		&i.CreatedAt,
+		&i.LastSeenAt,
+		&i.ExpiresAt,
+		&i.Kind,
+		&i.Name,
+	)
+	return i, err
+}
+
 const getLiveSession = `-- name: GetLiveSession :one
-SELECT id, user_id, token_hash, created_at, last_seen_at, expires_at FROM sessions WHERE token_hash = $1 AND expires_at > $2 AND last_seen_at > $3
+SELECT id, user_id, token_hash, created_at, last_seen_at, expires_at, kind, name FROM sessions
+WHERE token_hash = $1 AND kind = 'browser' AND expires_at > $2 AND last_seen_at > $3
 `
 
 type GetLiveSessionParams struct {
@@ -151,6 +188,7 @@ type GetLiveSessionParams struct {
 	IdleSince time.Time
 }
 
+// A browser session by its cookie token. App tokens never match: their rows are kind 'app'.
 func (q *Queries) GetLiveSession(ctx context.Context, arg GetLiveSessionParams) (Session, error) {
 	row := q.db.QueryRow(ctx, getLiveSession, arg.TokenHash, arg.Now, arg.IdleSince)
 	var i Session
@@ -161,6 +199,8 @@ func (q *Queries) GetLiveSession(ctx context.Context, arg GetLiveSessionParams) 
 		&i.CreatedAt,
 		&i.LastSeenAt,
 		&i.ExpiresAt,
+		&i.Kind,
+		&i.Name,
 	)
 	return i, err
 }
@@ -201,14 +241,16 @@ func (q *Queries) InsertRecoveryCode(ctx context.Context, arg InsertRecoveryCode
 }
 
 const insertSession = `-- name: InsertSession :exec
-INSERT INTO sessions (id, user_id, token_hash, created_at, last_seen_at, expires_at)
-VALUES ($1, $2, $3, $4, $4, $5)
+INSERT INTO sessions (id, user_id, token_hash, kind, name, created_at, last_seen_at, expires_at)
+VALUES ($1, $2, $3, $4, $5, $6, $6, $7)
 `
 
 type InsertSessionParams struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID
 	TokenHash []byte
+	Kind      string
+	Name      *string
 	Now       time.Time
 	ExpiresAt time.Time
 }
@@ -218,6 +260,8 @@ func (q *Queries) InsertSession(ctx context.Context, arg InsertSessionParams) er
 		arg.ID,
 		arg.UserID,
 		arg.TokenHash,
+		arg.Kind,
+		arg.Name,
 		arg.Now,
 		arg.ExpiresAt,
 	)
@@ -240,26 +284,35 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) error {
 }
 
 const listLiveSessions = `-- name: ListLiveSessions :many
-SELECT id, created_at, last_seen_at, expires_at FROM sessions
-WHERE user_id = $1 AND expires_at > $2 AND last_seen_at > $3
+SELECT id, kind, name, created_at, last_seen_at, expires_at FROM sessions
+WHERE user_id = $1 AND expires_at > $2
+  AND last_seen_at > CASE WHEN kind = 'app' THEN $3::timestamptz ELSE $4::timestamptz END
 ORDER BY last_seen_at DESC, id
 `
 
 type ListLiveSessionsParams struct {
-	UserID    uuid.UUID
-	Now       time.Time
-	IdleSince time.Time
+	UserID       uuid.UUID
+	Now          time.Time
+	AppIdleSince time.Time
+	IdleSince    time.Time
 }
 
 type ListLiveSessionsRow struct {
 	ID         uuid.UUID
+	Kind       string
+	Name       *string
 	CreatedAt  time.Time
 	LastSeenAt time.Time
 	ExpiresAt  time.Time
 }
 
 func (q *Queries) ListLiveSessions(ctx context.Context, arg ListLiveSessionsParams) ([]ListLiveSessionsRow, error) {
-	rows, err := q.db.Query(ctx, listLiveSessions, arg.UserID, arg.Now, arg.IdleSince)
+	rows, err := q.db.Query(ctx, listLiveSessions,
+		arg.UserID,
+		arg.Now,
+		arg.AppIdleSince,
+		arg.IdleSince,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -269,6 +322,8 @@ func (q *Queries) ListLiveSessions(ctx context.Context, arg ListLiveSessionsPara
 		var i ListLiveSessionsRow
 		if err := rows.Scan(
 			&i.ID,
+			&i.Kind,
+			&i.Name,
 			&i.CreatedAt,
 			&i.LastSeenAt,
 			&i.ExpiresAt,

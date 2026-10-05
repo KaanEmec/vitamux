@@ -1624,8 +1624,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Sign in; sets the session cookie
-         * @description Answers 429 with Retry-After while the username or address is locked out.
+         * Sign in; sets the session cookie, or returns an app session token
+         * @description Answers 429 with Retry-After while the username or address is locked out. With `client: app` it sets no cookie and answers an app session: a bearer token `vmx_ses_<id>_<secret>`, shown in this response only, listed under `device_name`.
          */
         post: operations["login"];
         delete?: never;
@@ -1643,7 +1643,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Sign out and clear the session cookie */
+        /** Sign out (ends the calling browser or app session) */
         post: operations["logout"];
         delete?: never;
         options?: never;
@@ -1658,7 +1658,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Current user and CSRF token */
+        /** Current user and CSRF token (empty for an app session) */
         get: operations["getSession"];
         put?: never;
         post?: never;
@@ -1766,7 +1766,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** End one session (ending the current one also clears its cookie) */
+        /** End one browser or app session (ending the current one also clears its cookie) */
         delete: operations["revokeSession"];
         options?: never;
         head?: never;
@@ -2746,6 +2746,13 @@ export interface components {
             password: string;
             totp_code?: string;
             recovery_code?: string;
+            /**
+             * @description Omitted means `browser`; `app` answers a bearer app session instead of a cookie.
+             * @enum {string}
+             */
+            client?: "browser" | "app";
+            /** @description Required with `client: app`, not allowed otherwise; Settings › Security lists the session under it. */
+            device_name?: string;
         };
         User: {
             /** Format: uuid */
@@ -2755,11 +2762,26 @@ export interface components {
         };
         Session: {
             user: components["schemas"]["User"];
+            /** @description Empty for an app session */
             csrf_token: string;
+        };
+        AppSession: {
+            user: components["schemas"]["User"];
+            /** @description Bearer token `vmx_ses_<id>_<secret>`; shown in this response only. */
+            token: string;
+            /**
+             * Format: date-time
+             * @description Absolute end; the session also ends after VITAMUX_APP_SESSION_IDLE without use.
+             */
+            expires_at: string;
         };
         ActiveSession: {
             /** Format: uuid */
             id: string;
+            /** @enum {string} */
+            kind: "browser" | "app";
+            /** @description The device name of an app session; null for a browser session. */
+            name: string | null;
             /** Format: date-time */
             created_at: string;
             /**
@@ -2769,7 +2791,7 @@ export interface components {
             last_seen_at: string;
             /**
              * Format: date-time
-             * @description Absolute end; the session also ends after 12 h without use.
+             * @description Absolute end; the session also ends without use after 12 h (browser) or VITAMUX_APP_SESSION_IDLE (app).
              */
             expires_at: string;
             /** @description This request's session. */
@@ -7031,13 +7053,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Signed in. */
+            /** @description Signed in: a browser session, or an app session with `client: app`. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Session"];
+                    "application/json": components["schemas"]["Session"] | components["schemas"]["AppSession"];
                 };
             };
             401: components["responses"]["Problem"];

@@ -21,6 +21,24 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for ActiveSessionKind.
+const (
+	ActiveSessionKindApp     ActiveSessionKind = "app"
+	ActiveSessionKindBrowser ActiveSessionKind = "browser"
+)
+
+// Valid indicates whether the value is a known member of the ActiveSessionKind enum.
+func (e ActiveSessionKind) Valid() bool {
+	switch e {
+	case ActiveSessionKindApp:
+		return true
+	case ActiveSessionKindBrowser:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AnalyteAliasSource.
 const (
 	Owner AnalyteAliasSource = "owner"
@@ -648,6 +666,24 @@ func (e JobStatus) Valid() bool {
 	case JobStatusRunning:
 		return true
 	case JobStatusSucceeded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LoginRequestClient.
+const (
+	LoginRequestClientApp     LoginRequestClient = "app"
+	LoginRequestClientBrowser LoginRequestClient = "browser"
+)
+
+// Valid indicates whether the value is a known member of the LoginRequestClient enum.
+func (e LoginRequestClient) Valid() bool {
+	switch e {
+	case LoginRequestClientApp:
+		return true
+	case LoginRequestClientBrowser:
 		return true
 	default:
 		return false
@@ -1833,13 +1869,20 @@ type ActiveSession struct {
 	// Current This request's session.
 	Current bool `json:"current"`
 
-	// ExpiresAt Absolute end; the session also ends after 12 h without use.
+	// ExpiresAt Absolute end; the session also ends without use after 12 h (browser) or VITAMUX_APP_SESSION_IDLE (app).
 	ExpiresAt time.Time          `json:"expires_at"`
 	ID        openapi_types.UUID `json:"id"`
+	Kind      ActiveSessionKind  `json:"kind"`
 
 	// LastSeenAt Updated at most once a minute.
 	LastSeenAt time.Time `json:"last_seen_at"`
+
+	// Name The device name of an app session; null for a browser session.
+	Name *string `json:"name"`
 }
+
+// ActiveSessionKind defines model for ActiveSession.Kind.
+type ActiveSessionKind string
 
 // AnalyteAlias A printed label mapped to an analyte (docs/analytes.md). Owner aliases take precedence over seeded ones.
 type AnalyteAlias struct {
@@ -1905,6 +1948,16 @@ type AppCredentialsVerification struct {
 
 // AppCredentialsVerificationResult defines model for AppCredentialsVerification.Result.
 type AppCredentialsVerificationResult string
+
+// AppSession defines model for AppSession.
+type AppSession struct {
+	// ExpiresAt Absolute end; the session also ends after VITAMUX_APP_SESSION_IDLE without use.
+	ExpiresAt time.Time `json:"expires_at"`
+
+	// Token Bearer token `vmx_ses_<id>_<secret>`; shown in this response only.
+	Token string `json:"token"`
+	User  User   `json:"user"`
+}
 
 // AuthContinueInput defines model for AuthContinueInput.
 type AuthContinueInput struct {
@@ -2734,11 +2787,19 @@ type LabResultPage struct {
 
 // LoginRequest defines model for LoginRequest.
 type LoginRequest struct {
+	// Client Omitted means `browser`; `app` answers a bearer app session instead of a cookie.
+	Client *LoginRequestClient `json:"client,omitempty"`
+
+	// DeviceName Required with `client: app`, not allowed otherwise; Settings › Security lists the session under it.
+	DeviceName   *string `json:"device_name,omitempty"`
 	Password     string  `json:"password"`
 	RecoveryCode *string `json:"recovery_code,omitempty"`
 	TotpCode     *string `json:"totp_code,omitempty"`
 	Username     string  `json:"username"`
 }
+
+// LoginRequestClient Omitted means `browser`; `app` answers a bearer app session instead of a cookie.
+type LoginRequestClient string
 
 // ManualMeasurementInput A value the owner entered. It is stored as a raw payload of the owner's manual connection and normalized like any source (provider manual, quality flag manual_entry). A sample without end_at, an interval with it. Grouped metrics (blood-pressure components) are not accepted here.
 type ManualMeasurementInput struct {
@@ -3652,6 +3713,7 @@ type SeriesWindow struct {
 
 // Session defines model for Session.
 type Session struct {
+	// CsrfToken Empty for an app session
 	CsrfToken string `json:"csrf_token"`
 	User      User   `json:"user"`
 }
@@ -4217,6 +4279,11 @@ type CreateAPIKeyJSONBody struct {
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 	Name      string     `json:"name"`
 	Scopes    []Scope    `json:"scopes"`
+}
+
+// Login200JSONResponseBody defines parameters for Login.
+type Login200JSONResponseBody struct {
+	union json.RawMessage
 }
 
 // ChangePasswordJSONBody defines parameters for ChangePassword.
@@ -4960,6 +5027,68 @@ func (t *AuthStep) UnmarshalJSON(b []byte) error {
 	return err
 }
 
+// AsSession returns the union data inside the Login200JSONResponseBody as a Session
+func (t Login200JSONResponseBody) AsSession() (Session, error) {
+	var body Session
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSession overwrites any union data inside the Login200JSONResponseBody as the provided Session
+func (t *Login200JSONResponseBody) FromSession(v Session) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSession performs a merge with any union data inside the Login200JSONResponseBody, using the provided Session
+func (t *Login200JSONResponseBody) MergeSession(v Session) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAppSession returns the union data inside the Login200JSONResponseBody as a AppSession
+func (t Login200JSONResponseBody) AsAppSession() (AppSession, error) {
+	var body AppSession
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAppSession overwrites any union data inside the Login200JSONResponseBody as the provided AppSession
+func (t *Login200JSONResponseBody) FromAppSession(v AppSession) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAppSession performs a merge with any union data inside the Login200JSONResponseBody, using the provided AppSession
+func (t *Login200JSONResponseBody) MergeAppSession(v AppSession) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t Login200JSONResponseBody) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *Login200JSONResponseBody) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
 // AsAuthRedirect returns the union data inside the ContinueProviderAuth200JSONResponseBody as a AuthRedirect
 func (t ContinueProviderAuth200JSONResponseBody) AsAuthRedirect() (AuthRedirect, error) {
 	var body AuthRedirect
@@ -5068,22 +5197,22 @@ type ServerInterface interface {
 	// RevokeAPIKey Revoke an API key
 	// (DELETE /api/v1/api-keys/{id})
 	RevokeAPIKey(w http.ResponseWriter, r *http.Request, id ID)
-	// Login Sign in; sets the session cookie
+	// Login Sign in; sets the session cookie, or returns an app session token
 	// (POST /api/v1/auth/login)
 	Login(w http.ResponseWriter, r *http.Request)
-	// Logout Sign out and clear the session cookie
+	// Logout Sign out (ends the calling browser or app session)
 	// (POST /api/v1/auth/logout)
 	Logout(w http.ResponseWriter, r *http.Request)
 	// ChangePassword Change the password; ends every other session
 	// (POST /api/v1/auth/password)
 	ChangePassword(w http.ResponseWriter, r *http.Request)
-	// GetSession Current user and CSRF token
+	// GetSession Current user and CSRF token (empty for an app session)
 	// (GET /api/v1/auth/session)
 	GetSession(w http.ResponseWriter, r *http.Request)
 	// ListSessions List the owner's live sessions
 	// (GET /api/v1/auth/sessions)
 	ListSessions(w http.ResponseWriter, r *http.Request)
-	// RevokeSession End one session (ending the current one also clears its cookie)
+	// RevokeSession End one browser or app session (ending the current one also clears its cookie)
 	// (DELETE /api/v1/auth/sessions/{id})
 	RevokeSession(w http.ResponseWriter, r *http.Request, id ID)
 	// ConfirmTOTP Confirm TOTP enrolment with a code
@@ -10225,12 +10354,12 @@ type LoginResponseObject interface {
 	VisitLoginResponse(w http.ResponseWriter) error
 }
 
-type Login200JSONResponse Session
+type Login200JSONResponse = Login200JSONResponseBody
 
 func (response Login200JSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+	if err := json.NewEncoder(&buf).Encode(response.union); err != nil {
 		return err
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -18211,22 +18340,22 @@ type StrictServerInterface interface {
 	// RevokeAPIKey Revoke an API key
 	// (DELETE /api/v1/api-keys/{id})
 	RevokeAPIKey(ctx context.Context, request RevokeAPIKeyRequestObject) (RevokeAPIKeyResponseObject, error)
-	// Login Sign in; sets the session cookie
+	// Login Sign in; sets the session cookie, or returns an app session token
 	// (POST /api/v1/auth/login)
 	Login(ctx context.Context, request LoginRequestObject) (LoginResponseObject, error)
-	// Logout Sign out and clear the session cookie
+	// Logout Sign out (ends the calling browser or app session)
 	// (POST /api/v1/auth/logout)
 	Logout(ctx context.Context, request LogoutRequestObject) (LogoutResponseObject, error)
 	// ChangePassword Change the password; ends every other session
 	// (POST /api/v1/auth/password)
 	ChangePassword(ctx context.Context, request ChangePasswordRequestObject) (ChangePasswordResponseObject, error)
-	// GetSession Current user and CSRF token
+	// GetSession Current user and CSRF token (empty for an app session)
 	// (GET /api/v1/auth/session)
 	GetSession(ctx context.Context, request GetSessionRequestObject) (GetSessionResponseObject, error)
 	// ListSessions List the owner's live sessions
 	// (GET /api/v1/auth/sessions)
 	ListSessions(ctx context.Context, request ListSessionsRequestObject) (ListSessionsResponseObject, error)
-	// RevokeSession End one session (ending the current one also clears its cookie)
+	// RevokeSession End one browser or app session (ending the current one also clears its cookie)
 	// (DELETE /api/v1/auth/sessions/{id})
 	RevokeSession(ctx context.Context, request RevokeSessionRequestObject) (RevokeSessionResponseObject, error)
 	// ConfirmTOTP Confirm TOTP enrolment with a code

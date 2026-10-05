@@ -14,6 +14,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const prefix = "VITAMUX_"
@@ -65,6 +66,9 @@ type Config struct {
 	OpenAICompatibleAllowPrivate bool // allow http and private or loopback hosts in the base URL
 	// Sidecars are the remote connectors of VITAMUX_SIDECARS (docs/architecture/connectors.md#remote-sidecar-mode).
 	Sidecars []Sidecar
+	// AppSessionIdle and AppSessionMax are the idle and absolute timeouts of app sessions
+	// (VITAMUX_APP_SESSION_IDLE, default 30 days; VITAMUX_APP_SESSION_MAX, default 90 days).
+	AppSessionIdle, AppSessionMax time.Duration
 	// Install names the deployment (VITAMUX_INSTALL: compose, coolify, or empty), so the panel
 	// shows the matching instruction for turning on a bundled sidecar.
 	Install string
@@ -140,6 +144,11 @@ func load(env Lookup, readFile ReadFile) (Config, error) {
 			c.PreviousMasterKeyFiles = append(c.PreviousMasterKeyFiles, p)
 		}
 	}
+	c.AppSessionIdle = duration("APP_SESSION_IDLE", get("APP_SESSION_IDLE", "720h"), &errs)
+	c.AppSessionMax = duration("APP_SESSION_MAX", get("APP_SESSION_MAX", "2160h"), &errs)
+	if c.AppSessionIdle > c.AppSessionMax && c.AppSessionMax > 0 {
+		errs = append(errs, fmt.Errorf("%sAPP_SESSION_IDLE must not exceed %sAPP_SESSION_MAX", prefix, prefix))
+	}
 	if c.Env != Production && c.Env != Development {
 		errs = append(errs, fmt.Errorf("%sENV must be %q or %q, got %q", prefix, Production, Development, c.Env))
 	}
@@ -201,6 +210,16 @@ func load(env Lookup, readFile ReadFile) (Config, error) {
 	errs = append(errs, c.loadExtractors(env, readFile, get)...)
 	errs = append(errs, c.loadSidecars(env, readFile, get)...)
 	return c, errors.Join(errs...)
+}
+
+// duration parses a positive Go duration such as 720h, adding an error for anything else.
+func duration(name, v string, errs *[]error) time.Duration {
+	d, err := time.ParseDuration(v)
+	if err != nil || d <= 0 {
+		*errs = append(*errs, fmt.Errorf("%s%s must be a positive duration such as 720h, got %q", prefix, name, v))
+		return 0
+	}
+	return d
 }
 
 // loadExtractors reads the extraction provider settings. The openai_compatible base URL must

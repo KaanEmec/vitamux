@@ -6,7 +6,10 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 
@@ -41,8 +44,36 @@ type sessionResponse struct {
 	CSRFToken string    `json:"csrf_token"`
 }
 
+// appSessionResponse answers an app login; the token appears in this response only.
+type appSessionResponse struct {
+	User      auth.User `json:"user"`
+	Token     string    `json:"token"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+// loginClient checks the client and device_name of a login body and returns the device name
+// of an app login ("" for the browser).
+func loginClient(client, deviceName string) (string, []FieldError) {
+	switch client {
+	case "", "browser":
+		if deviceName != "" {
+			return "", []FieldError{{Pointer: "/device_name", Detail: "only with client app"}}
+		}
+		return "", nil
+	case "app":
+		name := strings.TrimSpace(deviceName)
+		if name == "" || utf8.RuneCountInString(name) > auth.MaxDeviceNameLen || strings.ContainsFunc(name, unicode.IsControl) {
+			return "", []FieldError{{Pointer: "/device_name", Detail: "must be 1 to 100 characters without control characters"}}
+		}
+		return name, nil
+	default:
+		return "", []FieldError{{Pointer: "/client", Detail: "must be browser or app"}}
+	}
+}
+
 // login answers 429 with Retry-After while the username or address is locked out, rather
-// than holding the connection open for the delay.
+// than holding the connection open for the delay. An app login (client app) sets no cookie
+// and answers the bearer token instead.
 func (rt *router) login(w http.ResponseWriter, r *http.Request) {
 	svc := rt.opts.Auth
 	if svc == nil {
@@ -54,14 +85,25 @@ func (rt *router) login(w http.ResponseWriter, r *http.Request) {
 		Password     string `json:"password"`
 		TOTPCode     string `json:"totp_code"`
 		RecoveryCode string `json:"recovery_code"`
+		Client       string `json:"client"`
+		DeviceName   string `json:"device_name"`
 	}
 	if !readJSON(w, r, &in) {
 		return
 	}
-	ns, err := svc.Login(r.Context(), auth.Login{
+	device, errs := loginClient(in.Client, in.DeviceName)
+	if len(errs) > 0 {
+		writeProblem(w, r, CodeValidationFailed, "invalid sign-in request", errs...)
+		return
+	}
+	login := auth.Login{
 		Username: in.Username, Password: in.Password, TOTPCode: in.TOTPCode, RecoveryCode: in.RecoveryCode,
-		ClientIP: ClientAddr(r.Context()), PreviousToken: sessionToken(r),
-	})
+		ClientIP: ClientAddr(r.Context()), DeviceName: device,
+	}
+	if device == "" {
+		login.PreviousToken = sessionToken(r)
+	}
+	ns, err := svc.Login(r.Context(), login)
 	var throttled *auth.ThrottledError
 	switch {
 	case errors.As(err, &throttled):
@@ -83,26 +125,41 @@ func (rt *router) login(w http.ResponseWriter, r *http.Request) {
 		rt.internal(w, r, "login", err)
 		return
 	}
+	if device != "" {
+		writeJSON(rt.log, w, http.StatusOK, appSessionResponse{User: user, Token: ns.Token, ExpiresAt: ns.ExpiresAt})
+		return
+	}
 	http.SetCookie(w, rt.sessionCookie(r, ns.Token, int(time.Until(ns.ExpiresAt).Seconds())))
 	writeJSON(rt.log, w, http.StatusOK, sessionResponse{User: user, CSRFToken: svc.CSRFToken(ns.Token)})
 }
 
+// logout ends the calling session; only a browser session has a cookie to clear.
 func (rt *router) logout(w http.ResponseWriter, r *http.Request) {
-	if err := rt.opts.Auth.Logout(r.Context(), auth.PrincipalFrom(r.Context())); err != nil {
+	p := auth.PrincipalFrom(r.Context())
+	if err := rt.opts.Auth.Logout(r.Context(), p); err != nil {
 		rt.internal(w, r, "logout", err)
 		return
 	}
-	http.SetCookie(w, rt.sessionCookie(r, "", -1))
+	if !p.App {
+		http.SetCookie(w, rt.sessionCookie(r, "", -1))
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// session answers the user and, for a browser session, its CSRF token; an app session
+// needs none, so its csrf_token is empty.
 func (rt *router) session(w http.ResponseWriter, r *http.Request) {
-	user, err := rt.opts.Auth.User(r.Context(), auth.PrincipalFrom(r.Context()).UserID)
+	p := auth.PrincipalFrom(r.Context())
+	user, err := rt.opts.Auth.User(r.Context(), p.UserID)
 	if err != nil {
 		rt.internal(w, r, "session", err)
 		return
 	}
-	writeJSON(rt.log, w, http.StatusOK, sessionResponse{User: user, CSRFToken: rt.opts.Auth.CSRFToken(sessionToken(r))})
+	out := sessionResponse{User: user}
+	if !p.App {
+		out.CSRFToken = rt.opts.Auth.CSRFToken(sessionToken(r))
+	}
+	writeJSON(rt.log, w, http.StatusOK, out)
 }
 
 func (rt *router) totpEnroll(w http.ResponseWriter, r *http.Request) {

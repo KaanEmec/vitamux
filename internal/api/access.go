@@ -41,8 +41,9 @@ func (rt *router) handle(pattern string, a access, h http.HandlerFunc) {
 const csrfHeader = "X-CSRF-Token"
 
 // authorize enforces a route's access: 401 without a principal, 403 for the wrong kind
-// of credential or scope, and 403 for a session request that changes state without the
-// CSRF header. Bearer tokens need no CSRF token: browsers never attach them on their own.
+// of credential or scope, and 403 for a cookie session request that changes state without
+// the CSRF header. Bearer tokens, app sessions included, need no CSRF token: browsers never
+// attach them on their own.
 func (rt *router) authorize(a access, next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if a.public {
@@ -71,7 +72,7 @@ func (rt *router) authorize(a access, next http.HandlerFunc) http.Handler {
 			writeProblem(w, r, CodeForbidden, "this credential may not use this endpoint")
 			return
 		}
-		if p.Kind == auth.OwnerSession && !safeMethod(r.Method) && !rt.opts.Auth.CheckCSRF(sessionToken(r), r.Header.Get(csrfHeader)) {
+		if p.Kind == auth.OwnerSession && !p.App && !safeMethod(r.Method) && !rt.opts.Auth.CheckCSRF(sessionToken(r), r.Header.Get(csrfHeader)) {
 			writeProblem(w, r, CodeForbidden, "missing or invalid "+csrfHeader+" header")
 			return
 		}
@@ -90,8 +91,8 @@ func sessionToken(r *http.Request) string {
 	return ""
 }
 
-// authenticate sets the principal of /api requests from `Authorization: Bearer` or the
-// session cookie. A bearer token that does not verify is refused at once; a stale session
+// authenticate sets the principal of /api requests from `Authorization: Bearer` (API key,
+// client token or app session) or the session cookie. A bearer token that does not verify is refused at once; a stale session
 // cookie only leaves the request anonymous, so login still works. Routes decide whether
 // anonymous is enough (authorize).
 func authenticate(log *slog.Logger, svc *auth.Service, next http.Handler) http.Handler {

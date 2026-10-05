@@ -2,11 +2,13 @@
 # One line per operation in openapi.yaml, keyed "METHOD /path" with the spec's path.
 #
 #   allow:   public    no credentials (authorized by something else: OAuth state, hook token)
-#            session   the owner's browser session only
+#            session   an owner session only: the browser cookie or an app session
+#                      (bearer vmx_ses_); never an API key
 #            client    a client or device token, only for its own connection
-#            <scope>   the owner's session, or an API key with this scope or admin
+#            <scope>   an owner session, or an API key with this scope or admin
 #                      (read:health, read:config, write:config, write:documents, admin)
-#   csrf:    true      a session request needs X-CSRF-Token (unsafe method allowing a session)
+#   csrf:    true      a cookie session request needs X-CSRF-Token (unsafe method allowing a
+#                      session); app sessions are bearer tokens and never need it
 #   planned: true      in the spec but not served yet; delete it when the route is registered
 #
 # TestAuthzMatrix fails when this file, the registered routes and the spec's `security`

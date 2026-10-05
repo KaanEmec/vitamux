@@ -42,9 +42,9 @@ export class SettingsApi {
 	/** Bodies of POST /auth/password, in order. */
 	passwordBodies: Json[] = [];
 	sessions = [
-		{ id: '00000000-0000-4000-8000-0000000000c1', created_at: '2026-10-03T08:00:00Z', last_seen_at: '2026-10-03T09:00:00Z', expires_at: '2026-10-10T08:00:00Z', current: true },
-		{ id: '00000000-0000-4000-8000-0000000000c2', created_at: '2026-10-01T08:00:00Z', last_seen_at: '2026-10-02T09:00:00Z', expires_at: '2026-10-08T08:00:00Z', current: false },
-		{ id: '00000000-0000-4000-8000-0000000000c3', created_at: '2026-09-30T08:00:00Z', last_seen_at: '2026-10-01T09:00:00Z', expires_at: '2026-10-07T08:00:00Z', current: false }
+		{ id: '00000000-0000-4000-8000-0000000000c1', kind: 'browser', name: null, created_at: '2026-10-03T08:00:00Z', last_seen_at: '2026-10-03T09:00:00Z', expires_at: '2026-10-10T08:00:00Z', current: true },
+		{ id: '00000000-0000-4000-8000-0000000000c2', kind: 'browser', name: null, created_at: '2026-10-01T08:00:00Z', last_seen_at: '2026-10-02T09:00:00Z', expires_at: '2026-10-08T08:00:00Z', current: false },
+		{ id: '00000000-0000-4000-8000-0000000000c3', kind: 'app', name: 'Synthetic iPhone', created_at: '2026-09-30T08:00:00Z', last_seen_at: '2026-10-01T09:00:00Z', expires_at: '2026-12-29T08:00:00Z', current: false }
 	];
 	private next = 1;
 

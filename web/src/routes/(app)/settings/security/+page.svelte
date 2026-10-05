@@ -1,6 +1,6 @@
 <!--
-	Security: password, two-factor (TOTP) and sessions, all through the session-only auth
-	endpoints. Changing the password signs out every other session.
+	Security: password, two-factor (TOTP) and sessions (browser and app), all through the
+	session-only auth endpoints. Changing the password signs out every other session.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
@@ -33,6 +33,8 @@
 	let newPassword = $state('');
 	let sessions = $state<Schemas['ActiveSession'][] | null>(null);
 	const others = $derived((sessions ?? []).filter((s) => !s.current));
+	// An app session is listed under the device name the app sent at sign-in.
+	const device = (s: Schemas['ActiveSession']) => (s.kind === 'app' ? `App · ${s.name ?? 'unnamed device'}` : 'Browser');
 
 	async function loadSessions() {
 		const { data, error } = await api.GET('/api/v1/auth/sessions');
@@ -188,7 +190,7 @@
 	{/if}
 </Card>
 
-<Card title="Sessions" id="sessions-h">
+<Card title="Sessions" id="sessions-h" description="Browsers and the Vitamux app signed in to this server. Signing out an app ends it at its next request.">
 	{#snippet aside()}
 		<button class="btn sm" type="button" onclick={() => revoke(others.map((s) => s.id), 'Other sessions signed out.')} disabled={busy || others.length === 0}>Sign out other sessions</button>
 	{/snippet}
@@ -199,16 +201,17 @@
 			<table>
 				<caption class="visually-hidden">Sessions</caption>
 				<thead>
-					<tr><th scope="col">Signed in</th><th scope="col">Last active</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+					<tr><th scope="col">Device</th><th scope="col">Signed in</th><th scope="col">Last active</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
 				</thead>
 				<tbody>
 					{#each sessions as s (s.id)}
 						<tr>
+							<td>{device(s)}</td>
 							<td>{when(s.created_at)}</td>
 							<td>{when(s.last_seen_at)}</td>
 							<td>
 								{#if s.current}This browser{:else}
-									<button class="btn sm" type="button" onclick={() => revoke([s.id], 'Session signed out.')} disabled={busy} aria-label="Sign out session from {when(s.created_at)}">Sign out</button>
+									<button class="btn sm" type="button" onclick={() => revoke([s.id], 'Session signed out.')} disabled={busy} aria-label="Sign out {device(s)} session from {when(s.created_at)}">Sign out</button>
 								{/if}
 							</td>
 						</tr>

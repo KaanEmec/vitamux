@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/KaanEmec/vitamux/internal/audit"
 )
 
 func TestPasswordHash(t *testing.T) {
@@ -41,7 +43,7 @@ func TestPasswordHash(t *testing.T) {
 }
 
 func TestTokenRoundTrip(t *testing.T) {
-	for _, prefix := range []string{PATPrefix, ClientPrefix} {
+	for _, prefix := range []string{PATPrefix, ClientPrefix, SessionPrefix} {
 		id, token, hash, err := newToken(prefix)
 		if err != nil {
 			t.Fatal(err)
@@ -158,17 +160,38 @@ func TestRecoveryCode(t *testing.T) {
 	}
 }
 
+func TestSessionTokenKinds(t *testing.T) {
+	id, browser, hash, err := newSessionToken(false)
+	if err != nil || strings.HasPrefix(browser, "vmx_") || string(hash) != string(hashToken(browser)) || id.Version() != 7 {
+		t.Fatalf("browser token %q: %v", browser, err)
+	}
+	id, app, hash, err := newSessionToken(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, gotID, gotHash, err := ParseToken(app)
+	if err != nil || p != SessionPrefix || gotID != id || string(gotHash) != string(hash) {
+		t.Fatalf("app token %q: %v %v %v", app, p, gotID, err)
+	}
+	if string(hash) == string(hashToken(app)) {
+		t.Fatal("an app session must store SHA-256 of its secret, like the other bearer tokens")
+	}
+}
+
 func TestPrincipalCan(t *testing.T) {
 	sess := &Principal{Kind: OwnerSession}
+	app := &Principal{Kind: OwnerSession, App: true}
 	reader := &Principal{Kind: APIKey, Scopes: []Scope{ReadHealth}}
 	admin := &Principal{Kind: APIKey, Scopes: []Scope{Admin}}
 	conn := uuid.New()
 	client := &Principal{Kind: Client, ConnectionID: conn}
 	switch {
-	case !sess.Can(WriteConfig), !reader.Can(ReadHealth), reader.Can(WriteConfig), reader.Can(Admin),
+	case !sess.Can(WriteConfig), !app.Can(Admin), !reader.Can(ReadHealth), reader.Can(WriteConfig), reader.Can(Admin),
 		!admin.Can(WriteConfig), client.Can(ReadHealth):
 		t.Fatal("scope check")
 	case !client.CanIngest(conn), client.CanIngest(uuid.New()), sess.CanIngest(conn):
 		t.Fatal("ingest check")
+	case app.Actor() != audit.Owner:
+		t.Fatal("an app session acts as the owner")
 	}
 }

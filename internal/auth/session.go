@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -26,6 +27,12 @@ const (
 	SessionIdle = 12 * time.Hour
 	// SessionLifetime ends every session this long after login, however active.
 	SessionLifetime = 7 * 24 * time.Hour
+	// AppSessionIdle and AppSessionLifetime are the defaults for app sessions
+	// (VITAMUX_APP_SESSION_IDLE and VITAMUX_APP_SESSION_MAX).
+	AppSessionIdle     = 30 * 24 * time.Hour
+	AppSessionLifetime = 90 * 24 * time.Hour
+	// MaxDeviceNameLen bounds the device name an app session is listed under.
+	MaxDeviceNameLen = 100
 
 	sessionTokenLen = 32
 	csrfLabel       = "vitamux/csrf/v1\x00"
@@ -53,6 +60,8 @@ type Service struct {
 	csrfKey  []byte
 	throttle *throttle
 	now      func() time.Time
+	// appIdle and appLifetime are the app session timeouts.
+	appIdle, appLifetime time.Duration
 }
 
 // New returns a Service over d using keys for CSRF tokens and sealed TOTP secrets.
@@ -61,7 +70,19 @@ func New(d *db.DB, keys *crypto.Keyring) (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Service{db: d, keys: keys, csrfKey: k, throttle: newThrottle(), now: time.Now}, nil
+	return &Service{db: d, keys: keys, csrfKey: k, throttle: newThrottle(), now: time.Now,
+		appIdle: AppSessionIdle, appLifetime: AppSessionLifetime}, nil
+}
+
+// SetAppSessionLifetimes replaces the app session idle and absolute timeouts; call it before
+// serving. Non-positive values keep the current ones.
+func (s *Service) SetAppSessionLifetimes(idle, lifetime time.Duration) {
+	if idle > 0 {
+		s.appIdle = idle
+	}
+	if lifetime > 0 {
+		s.appLifetime = lifetime
+	}
 }
 
 // Login is one login attempt.
@@ -71,12 +92,16 @@ type Login struct {
 	TOTPCode, RecoveryCode string
 	ClientIP               netip.Addr
 	// PreviousToken is the session cookie the request carried, if any; it is deleted so
-	// a login always starts a fresh session.
+	// a login always starts a fresh session. Ignored for app logins.
 	PreviousToken string
+	// DeviceName, when set, makes this an app login: the session is kind app, listed under
+	// this name, and its token is a vmx_ses_ bearer token instead of a cookie value.
+	DeviceName string
 }
 
 // NewSession is a session just created by Login.
 type NewSession struct {
+	// Token is the cookie value, or for an app session the vmx_ses_ bearer token.
 	Token     string
 	UserID    uuid.UUID
 	ExpiresAt time.Time
@@ -125,36 +150,56 @@ func (s *Service) Login(ctx context.Context, in Login) (*NewSession, error) {
 	}
 	s.throttle.Reset(keys...)
 
-	token := make([]byte, sessionTokenLen)
-	if _, err := rand.Read(token); err != nil {
-		return nil, err
-	}
-	sid, err := uuid.NewV7()
+	now := s.now()
+	sid, token, hash, err := newSessionToken(in.DeviceName != "")
 	if err != nil {
 		return nil, err
 	}
-	now := s.now()
-	out := &NewSession{Token: base64.RawURLEncoding.EncodeToString(token), UserID: user.ID, ExpiresAt: now.Add(SessionLifetime)}
+	kind, name, lifetime := "browser", (*string)(nil), SessionLifetime
+	if in.DeviceName != "" {
+		kind, name, lifetime = "app", &in.DeviceName, s.appLifetime
+	}
+	out := &NewSession{Token: token, UserID: user.ID, ExpiresAt: now.Add(lifetime)}
 	err = s.db.Tx(ctx, func(q *dbq.Queries) error {
-		if in.PreviousToken != "" {
+		if in.PreviousToken != "" && kind == "browser" {
 			if err := q.DeleteSessionByTokenHash(ctx, hashToken(in.PreviousToken)); err != nil {
 				return err
 			}
 		}
-		if err := q.DeleteStaleSessions(ctx, dbq.DeleteStaleSessionsParams{UserID: user.ID, Now: now, IdleSince: now.Add(-SessionIdle)}); err != nil {
+		err := q.DeleteStaleSessions(ctx, dbq.DeleteStaleSessionsParams{UserID: user.ID, Now: now,
+			IdleSince: now.Add(-SessionIdle), AppIdleSince: now.Add(-s.appIdle)})
+		if err != nil {
 			return err
 		}
-		err := q.InsertSession(ctx, dbq.InsertSessionParams{ID: sid, UserID: user.ID, TokenHash: hashToken(out.Token), Now: now, ExpiresAt: out.ExpiresAt})
+		err = q.InsertSession(ctx, dbq.InsertSessionParams{ID: sid, UserID: user.ID, TokenHash: hash, Kind: kind, Name: name, Now: now, ExpiresAt: out.ExpiresAt})
 		if err != nil {
 			return err
 		}
 		return audit.Record(ctx, q, audit.Event{UserID: &user.ID, Actor: audit.Owner, Action: "auth.login",
-			TargetType: "session", TargetID: sid.String(), Detail: map[string]any{"method": method, "client_ip": in.ClientIP.String()}})
+			TargetType: "session", TargetID: sid.String(), Detail: map[string]any{"method": method, "client_ip": in.ClientIP.String(), "kind": kind}})
 	})
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
+}
+
+// newSessionToken returns a new session id, its token and the hash the row keeps. A browser
+// token is 32 random bytes for the cookie, stored as SHA-256(token); an app token is
+// vmx_ses_<id>_<secret>, stored as SHA-256(secret) like the other bearer tokens.
+func newSessionToken(app bool) (id uuid.UUID, token string, hash []byte, err error) {
+	if app {
+		return newToken(SessionPrefix)
+	}
+	raw := make([]byte, sessionTokenLen)
+	if _, err := rand.Read(raw); err != nil {
+		return uuid.Nil, "", nil, err
+	}
+	if id, err = uuid.NewV7(); err != nil {
+		return uuid.Nil, "", nil, err
+	}
+	token = base64.RawURLEncoding.EncodeToString(raw)
+	return id, token, hashToken(token), nil
 }
 
 // loginFailed counts the failure and audits it. The attempted username is not recorded,
@@ -169,8 +214,8 @@ func (s *Service) loginFailed(ctx context.Context, keys []string, userID *uuid.U
 	return ErrInvalidCredentials
 }
 
-// Session returns the owner principal for a session token, sliding its idle expiry.
-// Unknown, idle and expired sessions are ErrInvalidToken.
+// Session returns the owner principal for a browser session token, sliding its idle expiry.
+// Unknown, idle and expired sessions are ErrInvalidToken; app sessions go through Bearer.
 func (s *Service) Session(ctx context.Context, token string) (*Principal, error) {
 	now := s.now()
 	q := s.db.Q()
@@ -182,6 +227,23 @@ func (s *Service) Session(ctx context.Context, token string) (*Principal, error)
 		return nil, err
 	}
 	return &Principal{Kind: OwnerSession, UserID: row.UserID, ID: row.ID}, nil
+}
+
+// appSession returns the principal of an app session token, sliding its idle expiry.
+func (s *Service) appSession(ctx context.Context, id uuid.UUID, hash []byte) (*Principal, error) {
+	now := s.now()
+	q := s.db.Q()
+	row, err := q.GetLiveAppSession(ctx, dbq.GetLiveAppSessionParams{ID: id, Now: now, IdleSince: now.Add(-s.appIdle)})
+	if err != nil {
+		return nil, notFoundAs(err, ErrInvalidToken)
+	}
+	if subtle.ConstantTimeCompare(row.TokenHash, hash) != 1 {
+		return nil, ErrInvalidToken
+	}
+	if err := q.TouchSession(ctx, dbq.TouchSessionParams{ID: row.ID, Now: now, Before: now.Add(-touchEvery)}); err != nil {
+		return nil, err
+	}
+	return &Principal{Kind: OwnerSession, App: true, UserID: row.UserID, ID: row.ID}, nil
 }
 
 // Logout deletes the session.

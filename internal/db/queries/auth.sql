@@ -39,11 +39,18 @@ UPDATE recovery_codes SET used_at = @now::timestamptz
 WHERE user_id = @user_id AND code_hash = @code_hash AND used_at IS NULL;
 
 -- name: InsertSession :exec
-INSERT INTO sessions (id, user_id, token_hash, created_at, last_seen_at, expires_at)
-VALUES (@id, @user_id, @token_hash, @now, @now, @expires_at);
+INSERT INTO sessions (id, user_id, token_hash, kind, name, created_at, last_seen_at, expires_at)
+VALUES (@id, @user_id, @token_hash, @kind, sqlc.narg('name'), @now, @now, @expires_at);
 
 -- name: GetLiveSession :one
-SELECT * FROM sessions WHERE token_hash = @token_hash AND expires_at > @now AND last_seen_at > @idle_since;
+-- A browser session by its cookie token. App tokens never match: their rows are kind 'app'.
+SELECT * FROM sessions
+WHERE token_hash = @token_hash AND kind = 'browser' AND expires_at > @now AND last_seen_at > @idle_since;
+
+-- name: GetLiveAppSession :one
+-- An app session by the id in its vmx_ses_ token; the caller compares the secret's hash.
+SELECT * FROM sessions
+WHERE id = @id AND kind = 'app' AND expires_at > @now AND last_seen_at > @idle_since;
 
 -- name: TouchSession :exec
 UPDATE sessions SET last_seen_at = @now WHERE id = @id AND last_seen_at < @before;
@@ -52,17 +59,20 @@ UPDATE sessions SET last_seen_at = @now WHERE id = @id AND last_seen_at < @befor
 DELETE FROM sessions WHERE id = @id;
 
 -- name: DeleteSessionByTokenHash :exec
-DELETE FROM sessions WHERE token_hash = @token_hash;
+DELETE FROM sessions WHERE token_hash = @token_hash AND kind = 'browser';
 
 -- name: DeleteStaleSessions :exec
-DELETE FROM sessions WHERE user_id = @user_id AND (expires_at <= @now OR last_seen_at <= @idle_since);
+-- Each kind has its own idle timeout.
+DELETE FROM sessions WHERE user_id = @user_id AND (expires_at <= @now
+  OR last_seen_at <= CASE WHEN kind = 'app' THEN @app_idle_since::timestamptz ELSE @idle_since::timestamptz END);
 
 -- name: DeleteUserSessions :execrows
 DELETE FROM sessions WHERE user_id = @user_id;
 
 -- name: ListLiveSessions :many
-SELECT id, created_at, last_seen_at, expires_at FROM sessions
-WHERE user_id = @user_id AND expires_at > @now AND last_seen_at > @idle_since
+SELECT id, kind, name, created_at, last_seen_at, expires_at FROM sessions
+WHERE user_id = @user_id AND expires_at > @now
+  AND last_seen_at > CASE WHEN kind = 'app' THEN @app_idle_since::timestamptz ELSE @idle_since::timestamptz END
 ORDER BY last_seen_at DESC, id;
 
 -- name: DeleteUserSession :execrows

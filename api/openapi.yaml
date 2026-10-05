@@ -215,7 +215,7 @@ paths:
       tags: [catalogue]
       operationId: listMetrics
       summary: List catalogue metrics
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       responses:
         '200':
           description: All metrics.
@@ -234,7 +234,7 @@ paths:
       tags: [catalogue]
       operationId: getMetric
       summary: Get one catalogue metric
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/MetricCodePath'
       responses:
@@ -253,7 +253,7 @@ paths:
       operationId: listEventTypes
       summary: List health event types
       description: The event codes health_events may hold (docs/architecture/metric-catalog.md#events), with their level words.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       responses:
         '200':
           description: All event types.
@@ -279,7 +279,7 @@ paths:
         first and last seen and the latest value come from the rows; count, days, providers,
         devices and origins come from the hourly aggregates plus the daily values, so they lag
         while aggregates_pending is true.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       responses:
         '200':
           description: The inventory.
@@ -298,7 +298,7 @@ paths:
       description: >
         Rows of health_events (alerts and other typed events), ordered by (start_at, id). code
         filters the event code; the other filters and include work as on /measurements.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/Start'
         - $ref: '#/components/parameters/End'
@@ -340,7 +340,7 @@ paths:
         active sample and interval rows for spans of at most a day (25 hours across a DST change),
         and each source reports its native spacing; raw lists the rows in time order, at most
         2,000 per page. Sleep and derived codes have no source series (422).
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - name: metric
           in: query
@@ -381,7 +381,7 @@ paths:
         versions and include=deleted adds rows deleted upstream. start/end filter start_at,
         start_date/end_date the local date. include=provenance adds the raw payload's fetch
         metadata.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/Start'
         - $ref: '#/components/parameters/End'
@@ -411,7 +411,7 @@ paths:
       tags: [source-data]
       operationId: createManualMeasurement
       summary: Record a manual measurement (provider manual, audited)
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       requestBody:
         required: true
         content:
@@ -436,7 +436,7 @@ paths:
       description: >
         Groups with their components, ordered by (measured_at, id). Filters and include work as
         on /measurements.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - name: kind
           in: query
@@ -471,7 +471,7 @@ paths:
       description: >
         bp_reading groups with their components side by side, ordered by (measured_at, id).
         Filters and include work as on /measurements.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/Start'
         - $ref: '#/components/parameters/End'
@@ -503,7 +503,7 @@ paths:
         Ordered by (start_at, id). start_date/end_date filter sleep_date (the local wake date),
         start/end filter start_at. include=stages adds the stages; other filters and include
         work as on /measurements.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/Start'
         - $ref: '#/components/parameters/End'
@@ -532,7 +532,7 @@ paths:
       operationId: getSleep
       summary: Get one sleep session
       description: Any version, superseded or deleted included, always with its stages.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/ID'
         - $ref: '#/components/parameters/Include'
@@ -555,7 +555,7 @@ paths:
       description: >
         Ordered by (start_at, id). include=segments adds the laps, sets or intervals; other
         filters and include work as on /measurements.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/Start'
         - $ref: '#/components/parameters/End'
@@ -584,7 +584,7 @@ paths:
       operationId: getWorkout
       summary: Get one workout
       description: Any version, superseded or deleted included, always with its segments.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/ID'
         - $ref: '#/components/parameters/Include'
@@ -604,7 +604,7 @@ paths:
       tags: [source-data]
       operationId: getProvenance
       summary: Trace a record back to its raw payload, batch and normalizer
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - name: entity
           in: path
@@ -629,7 +629,7 @@ paths:
       operationId: getResolvedDaily
       summary: Resolved values per local day
       description: Example in docs/architecture/api.md#example-resolved-day.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/StartDateRequired'
         - $ref: '#/components/parameters/EndDateRequired'
@@ -661,7 +661,7 @@ paths:
       description: >
         One point per window whose start lies in [start, end) (latest windows: whose as-of instant
         does), in start order, paged. The range spans at most 366 local dates.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - name: metric
           in: query
@@ -704,7 +704,7 @@ paths:
       operationId: getResolvedSleep
       summary: Resolved sleep episodes per night
       description: The sleep rule's main episode of every night in the range (at most 366), with every source that recorded it.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/StartDateRequired'
         - $ref: '#/components/parameters/EndDateRequired'
@@ -728,7 +728,7 @@ paths:
         Overlapping workouts clustered as in docs/architecture/resolution.md#sleep-episode-alignment,
         one entry per cluster starting on a local date of the range (at most 366), with the member
         the rule picks marked as selected.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/StartDateRequired'
         - $ref: '#/components/parameters/EndDateRequired'
@@ -749,7 +749,7 @@ paths:
       operationId: getResolvedSources
       summary: All-sources drilldown for one metric and window
       description: Example in docs/architecture/api.md#example-all-sources-drilldown.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/MetricPath'
         - name: window_key
@@ -786,7 +786,7 @@ paths:
         rule_warning_unacknowledged) and resolves it live beside the rule in effect, one window per
         local date (at most 366): the draft's local_day or local_night window, else local_day.
         Nothing is stored: no rule version, no cache rows, no jobs.
-      security: [{session: [], csrf: []}, {apiKey: ['read:health']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['read:health']}]
       requestBody:
         required: true
         content:
@@ -814,7 +814,7 @@ paths:
         values ending at date (mean, min, max, n, coverage). Rollups are plain statistics of
         resolved values, not a resolution strategy; values of windows still open are left out.
         Everything comes from the resolver and its cache.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - name: metrics
           in: query
@@ -856,7 +856,7 @@ paths:
         resolved daily values per ISO week (Monday first) or calendar month, clipped to the range.
         The range may span up to 3,660 dates, past the 366-date cap of the daily endpoints. Values
         of windows still open are left out. Everything comes from the resolver and its cache.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - name: metric
           in: query
@@ -885,7 +885,7 @@ paths:
       tags: [rules]
       operationId: listRules
       summary: List active rules per metric
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: Active rules.
@@ -904,7 +904,7 @@ paths:
       tags: [rules]
       operationId: listRuleVersions
       summary: List the versions of a metric's rule
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       parameters:
         - $ref: '#/components/parameters/MetricPath'
       responses:
@@ -924,7 +924,7 @@ paths:
       tags: [rules]
       operationId: createRuleVersion
       summary: Save a new rule version (not yet active)
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/MetricPath'
       requestBody:
@@ -949,7 +949,7 @@ paths:
       tags: [rules]
       operationId: activateRule
       summary: Activate a rule version
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/MetricPath'
       requestBody:
@@ -974,7 +974,7 @@ paths:
       tags: [rules]
       operationId: listOverrides
       summary: List manual overrides
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       parameters:
         - $ref: '#/components/parameters/MetricFilter'
         - $ref: '#/components/parameters/Limit'
@@ -992,7 +992,7 @@ paths:
       tags: [rules]
       operationId: createOverride
       summary: Create a manual override (audited, reversible)
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       requestBody:
         required: true
         content:
@@ -1014,7 +1014,7 @@ paths:
       tags: [rules]
       operationId: revokeOverride
       summary: Revoke a manual override
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -1034,7 +1034,7 @@ paths:
       tags: [system]
       operationId: getCoverage
       summary: Source × day coverage matrix
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/StartDateRequired'
         - $ref: '#/components/parameters/EndDateRequired'
@@ -1056,7 +1056,7 @@ paths:
       operationId: getSystemStatus
       summary: Instance diagnostics
       description: Versions, database and blob sizes, last backup, degraded connections, failing jobs.
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: Status.
@@ -1071,7 +1071,7 @@ paths:
       tags: [system]
       operationId: getSystemVersion
       summary: Build version of the running server
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: Version.
@@ -1086,7 +1086,7 @@ paths:
       tags: [system]
       operationId: listJobs
       summary: List background jobs
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       parameters:
         - name: status
           in: query
@@ -1110,7 +1110,7 @@ paths:
       tags: [connections]
       operationId: listConnections
       summary: List connections with health
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: All connections.
@@ -1127,7 +1127,7 @@ paths:
       tags: [connections]
       operationId: createConnection
       summary: Create a connection
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       requestBody:
         required: true
         content:
@@ -1149,7 +1149,7 @@ paths:
       tags: [connections]
       operationId: getConnection
       summary: Get one connection
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
       responses:
@@ -1165,7 +1165,7 @@ paths:
       tags: [connections]
       operationId: updateConnection
       summary: Update a connection
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
       requestBody:
@@ -1188,7 +1188,7 @@ paths:
       tags: [connections]
       operationId: deleteConnection
       summary: Delete a connection, keeping or deleting its data
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
         - name: data
@@ -1220,7 +1220,7 @@ paths:
         Sets the short-lived browser-binding cookie that the callback and continue need
         (docs/architecture/connectors.md#oauth-connection-flow). Owner session only, since the
         state is bound to it.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
       responses:
@@ -1244,7 +1244,7 @@ paths:
         Like beginConnectionAuth, for an account not connected yet. The last step creates the
         connection, or reuses the existing one when the same provider account connects again.
         A new connection of an unofficial connector starts paused.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - name: provider
           in: path
@@ -1271,7 +1271,7 @@ paths:
         without a restart (docs/adr/0021-source-setup.md). The secret is never returned. 409
         while the environment sets them (managed_by_environment). Audited as provider_app.set.
         Owner session only.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - name: provider
           in: path
@@ -1302,7 +1302,7 @@ paths:
         409 while connections hold tokens that refresh with these credentials, unless
         confirm=true (those connections then need new credentials before their next refresh),
         and while the environment sets them. Audited as provider_app.delete. Owner session only.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - name: provider
           in: path
@@ -1332,7 +1332,7 @@ paths:
         unverifiable where it needs a user grant, and the first connect checks them. 404 when
         none are set; 429 or 503 when the provider is rate limiting or unreachable. Audited as
         provider_app.verify. Owner session only.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - name: provider
           in: path
@@ -1359,7 +1359,7 @@ paths:
         Describes the provider's sidecar at once instead of waiting for the once-a-minute
         re-check, and answers the provider with its new setup state. Other providers are
         answered as they are.
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - name: provider
           in: path
@@ -1381,7 +1381,7 @@ paths:
       tags: [connections]
       operationId: listSidecars
       summary: List the sidecar connectors, from the environment and added in the panel
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: Every registered sidecar, by name. Environment ones are read-only.
@@ -1404,7 +1404,7 @@ paths:
         shared bearer secret, stores it sealed and returns it once, to configure the sidecar with;
         the provider is needs_sidecar until the sidecar answers describe (probeProvider checks
         again). Audited as sidecar.add. Owner session only.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       requestBody:
         required: true
         content:
@@ -1436,7 +1436,7 @@ paths:
       description: >
         409 for a sidecar of the environment, and while connections of its provider exist unless
         confirm=true (they stop syncing). Audited as sidecar.remove. Owner session only.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - name: name
           in: path
@@ -1466,7 +1466,7 @@ paths:
         setup_state, readiness problems, the OAuth callback URL to register, its app credentials
         (never the secret) and, for a sidecar, how to turn it on. A sidecar is re-checked on this
         call at most once a minute; probeProvider checks at once.
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: Every registered connector, by provider code.
@@ -1492,7 +1492,7 @@ paths:
         ends the flow; begin again: 422 when the provider refused the values (a wrong password
         or code), 429 with Retry-After while it limits sign-ins, 503 when the provider or its
         sidecar is unavailable. Owner session only, with the binding cookie of begin.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - name: provider
           in: path
@@ -1526,7 +1526,7 @@ paths:
       operationId: syncConnection
       summary: Queue a manual sync (coalesced with a pending one)
       description: One sync job per stream of the connector. A request while one is queued or running answers that job, so repeated clicks queue nothing new.
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
         - $ref: '#/components/parameters/IdempotencyKeyOptional'
@@ -1547,7 +1547,7 @@ paths:
       tags: [connections]
       operationId: listBackfills
       summary: List a connection's backfills, newest first
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
       responses:
@@ -1568,7 +1568,7 @@ paths:
       tags: [connections]
       operationId: createBackfill
       summary: Start a bounded, resumable backfill
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
         - $ref: '#/components/parameters/IdempotencyKeyOptional'
@@ -1595,7 +1595,7 @@ paths:
       tags: [connections]
       operationId: getBackfill
       summary: Get a backfill with its units
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
         - $ref: '#/components/parameters/BackfillIDPath'
@@ -1615,7 +1615,7 @@ paths:
       tags: [connections]
       operationId: retryBackfill
       summary: Requeue a backfill's failed (or unfinished) units
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
         - $ref: '#/components/parameters/BackfillIDPath'
@@ -1641,7 +1641,7 @@ paths:
       tags: [connections]
       operationId: cancelBackfill
       summary: Cancel a running or failed backfill (fetched data stays)
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
         - $ref: '#/components/parameters/BackfillIDPath'
@@ -1662,7 +1662,7 @@ paths:
       tags: [connections]
       operationId: listConnectionRuns
       summary: List sync and backfill runs of a connection
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
         - $ref: '#/components/parameters/Limit'
@@ -1683,7 +1683,7 @@ paths:
       tags: [connections]
       operationId: listConnectionStreams
       summary: List the streams of a connection with cursor and status
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
       responses:
@@ -1705,7 +1705,7 @@ paths:
       tags: [connections]
       operationId: resetStreamCursor
       summary: Reset a stream's sync cursor
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
         - name: stream
@@ -1732,7 +1732,7 @@ paths:
       tags: [connections]
       operationId: listSchedules
       summary: List sync schedules
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       parameters:
         - name: connection
           in: query
@@ -1758,7 +1758,7 @@ paths:
       tags: [connections]
       operationId: updateSchedule
       summary: Change a schedule's interval, lookback or enabled flag
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       requestBody:
@@ -1783,7 +1783,7 @@ paths:
       tags: [devices]
       operationId: listDevices
       summary: List paired devices, newest first, including revoked ones
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: Devices.
@@ -1803,7 +1803,7 @@ paths:
       operationId: createPairingCode
       summary: Create a single-use pairing code, valid for 10 minutes
       description: At most 5 codes per 10 minutes (429 with Retry-After). 503 without VITAMUX_PUBLIC_URL.
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       responses:
         '201':
           description: The code (shown once).
@@ -1823,7 +1823,7 @@ paths:
       description: >
         The device reads the request from GET /api/ingest/v1/devices/self. Re-sent samples are
         deduplicated by UUID.
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       requestBody:
@@ -1852,7 +1852,7 @@ paths:
       tags: [devices]
       operationId: revokeDevice
       summary: Revoke a device's token; its next request is 401
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -1870,7 +1870,7 @@ paths:
       description: >
         Every origin seen inside a transport provider such as apple_health, by provider and key.
         relay_targets are the vendors an origin can be classified as relaying.
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: Origins and the vendors they may relay.
@@ -1894,7 +1894,7 @@ paths:
         The `relayed` rule selector and the all-sources view read the new state at once; resolved
         results are recomputed. The edit is audited and wins over the known relay defaults, which only seed
         new origins.
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       requestBody:
@@ -1925,7 +1925,7 @@ paths:
       description: >-
         The values the device_type, device_manufacturer and device_model rule selectors match (the rule builder's
         brand and device choices), the owner's names and merges, and the device types the owner can set. `include=records` adds each device's active records per connection.
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       parameters:
         - name: include
           in: query
@@ -1962,7 +1962,7 @@ paths:
         Merge patch: a field present replaces the value, null clears it. A type set here wins over the one the
         normalizer reports (null hands it back); rules that select by device type are recomputed. 409 for a merged
         device: edit the device it was merged into.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - $ref: '#/components/parameters/ID'
       requestBody:
@@ -1991,7 +1991,7 @@ paths:
         to the target. Dedupe keys keep the fingerprint, so reprocessing changes nothing. Rules that name the merged
         device by id stop matching it. 409 when either device is already merged; 422 for the device itself or a
         device of another provider.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - $ref: '#/components/parameters/ID'
       requestBody:
@@ -2027,7 +2027,7 @@ paths:
       tags: [documents]
       operationId: listDocuments
       summary: List documents
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
@@ -2050,7 +2050,7 @@ paths:
         `application/pdf` body. Encrypted, oversized, too-long and non-PDF files are refused: 413 `payload_too_large`,
         or 422 `validation_failed` whose `errors[0].detail` is the reason (`not_pdf`, `empty`, `encrypted`,
         `too_many_pages`, `malformed`). Content the owner already stored links to the existing document (200).
-      security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:documents']}]
       requestBody:
         required: true
         content:
@@ -2084,7 +2084,7 @@ paths:
       tags: [documents]
       operationId: getDocument
       summary: Get one document
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2101,7 +2101,7 @@ paths:
       tags: [documents]
       operationId: deleteDocument
       summary: Delete a document, keeping or deleting derived lab results
-      security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:documents']}]
       parameters:
         - $ref: '#/components/parameters/ID'
         - name: derived
@@ -2122,7 +2122,7 @@ paths:
       tags: [documents]
       operationId: getDocumentFile
       summary: Download the original PDF
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2141,7 +2141,7 @@ paths:
       tags: [documents]
       operationId: listExtractions
       summary: List a document's extraction runs, newest first (never the raw provider response)
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2167,7 +2167,7 @@ paths:
         (`documents.external_ai.<provider>.enabled`), else 403 `forbidden`; the body must carry `consent` naming the
         same provider and its configured model, else 409 `consent_required`. `fake` needs neither. A run already
         queued or running answers 409 `conflict`. Idempotency-Key is accepted.
-      security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:documents']}]
       parameters:
         - $ref: '#/components/parameters/ID'
         - $ref: '#/components/parameters/IdempotencyKeyOptional'
@@ -2197,7 +2197,7 @@ paths:
       description: >-
         `fake` is always listed. An external provider is listed once the admin configured it; `enabled` is the owner's
         setting `documents.external_ai.<provider>.enabled` (always true for `fake`). The consent dialog names `model`.
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: The providers, in a fixed order.
@@ -2220,7 +2220,7 @@ paths:
       description: >-
         Rows carry the extractor's warnings, deterministic validation warnings (lab-documents.md#validation), the alias
         suggestion and their review trail. Warnings only point at what to compare with the PDF; nothing is interpreted.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2243,7 +2243,7 @@ paths:
         appended to the row's edit trail with their previous values. `review` accepts or rejects the row; any change
         marks it edited. Rows of a confirmed run may still be edited; confirm again to revise the results. 409 when the
         run has no rows to review (not succeeded).
-      security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:documents']}]
       parameters:
         - $ref: '#/components/parameters/ID'
         - name: row
@@ -2279,7 +2279,7 @@ paths:
         and kept rows missing a value or collection date; an accepted row without a unit is confirmed as unitless. 409
         when the run is not succeeded or another run of the document is confirmed. Confirming again applies later edits:
         changed results get a new revision (see /lab-results/{id}/history).
-      security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:documents']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2300,7 +2300,7 @@ paths:
       operationId: unconfirmExtraction
       summary: Delete the lab results confirmed from a run and return it to review (audited)
       description: 409 when the run is not the document's confirmed one.
-      security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:documents']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2319,7 +2319,7 @@ paths:
       tags: [documents]
       operationId: listLabResults
       summary: List confirmed lab results by collection date
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/StartDate'
         - $ref: '#/components/parameters/EndDate'
@@ -2340,7 +2340,7 @@ paths:
       tags: [documents]
       operationId: getLabResultHistory
       summary: Revisions of one lab result
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2362,7 +2362,7 @@ paths:
       tags: [documents]
       operationId: listAnalyteAliases
       summary: List analyte aliases
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: Aliases.
@@ -2379,7 +2379,7 @@ paths:
       tags: [documents]
       operationId: createAnalyteAlias
       summary: Map a printed label to an analyte
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       requestBody:
         required: true
         content:
@@ -2401,7 +2401,7 @@ paths:
       tags: [documents]
       operationId: deleteAnalyteAlias
       summary: Remove an owner alias (seeded aliases cannot be removed)
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2421,7 +2421,7 @@ paths:
       description: >
         Needs the admin scope: an export holds every health row, raw payload, rule and audit
         event at once. 409 while another export is queued or running.
-      security: [{session: [], csrf: []}, {apiKey: [admin]}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: [admin]}]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKeyOptional'
       requestBody:
@@ -2445,7 +2445,7 @@ paths:
       tags: [exports]
       operationId: getExport
       summary: Export status; carries a one-time download URL when done
-      security: [{session: []}, {apiKey: [admin]}]
+      security: [{session: []}, {appSession: []}, {apiKey: [admin]}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2464,7 +2464,7 @@ paths:
       operationId: downloadExport
       summary: Download the export zip with its one-time, short-lived token
       description: The token comes from getExport, works once and expires after 10 minutes (403 otherwise).
-      security: [{session: []}, {apiKey: [admin]}]
+      security: [{session: []}, {appSession: []}, {apiKey: [admin]}]
       parameters:
         - $ref: '#/components/parameters/ID'
         - name: token
@@ -2486,8 +2486,11 @@ paths:
     post:
       tags: [auth]
       operationId: login
-      summary: Sign in; sets the session cookie
-      description: Answers 429 with Retry-After while the username or address is locked out.
+      summary: Sign in; sets the session cookie, or returns an app session token
+      description: >
+        Answers 429 with Retry-After while the username or address is locked out. With
+        `client: app` it sets no cookie and answers an app session: a bearer token
+        `vmx_ses_<id>_<secret>`, shown in this response only, listed under `device_name`.
       security: []
       requestBody:
         required: true
@@ -2496,10 +2499,13 @@ paths:
             schema: {$ref: '#/components/schemas/LoginRequest'}
       responses:
         '200':
-          description: Signed in.
+          description: 'Signed in: a browser session, or an app session with `client: app`.'
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/Session'}
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Session'
+                  - $ref: '#/components/schemas/AppSession'
         '401': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
         '429': {$ref: '#/components/responses/Problem'}
@@ -2509,8 +2515,8 @@ paths:
     post:
       tags: [auth]
       operationId: logout
-      summary: Sign out and clear the session cookie
-      security: [{session: [], csrf: []}]
+      summary: Sign out (ends the calling browser or app session)
+      security: [{session: [], csrf: []}, {appSession: []}]
       responses:
         '204':
           description: Signed out.
@@ -2521,8 +2527,8 @@ paths:
     get:
       tags: [auth]
       operationId: getSession
-      summary: Current user and CSRF token
-      security: [{session: []}]
+      summary: Current user and CSRF token (empty for an app session)
+      security: [{session: []}, {appSession: []}]
       responses:
         '200':
           description: The session.
@@ -2537,7 +2543,7 @@ paths:
       tags: [auth]
       operationId: enrollTOTP
       summary: Start TOTP enrolment
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       responses:
         '200':
           description: Secret and otpauth URI (shown once).
@@ -2553,7 +2559,7 @@ paths:
       tags: [auth]
       operationId: confirmTOTP
       summary: Confirm TOTP enrolment with a code
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       requestBody:
         required: true
         content:
@@ -2583,7 +2589,7 @@ paths:
       tags: [auth]
       operationId: disableTOTP
       summary: Disable TOTP (password plus a code or recovery code)
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       requestBody:
         required: true
         content:
@@ -2612,7 +2618,7 @@ paths:
         Re-checks the current password (a wrong one is 422 on /current_password; repeated
         failures answer 429 with Retry-After). The new password needs at least 12 characters.
         The calling session stays signed in. Audited.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       requestBody:
         required: true
         content:
@@ -2636,7 +2642,7 @@ paths:
       tags: [auth]
       operationId: listSessions
       summary: List the owner's live sessions
-      security: [{session: []}]
+      security: [{session: []}, {appSession: []}]
       responses:
         '200':
           description: Live sessions, most recently used first.
@@ -2654,8 +2660,8 @@ paths:
     delete:
       tags: [auth]
       operationId: revokeSession
-      summary: End one session (ending the current one also clears its cookie)
-      security: [{session: [], csrf: []}]
+      summary: End one browser or app session (ending the current one also clears its cookie)
+      security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2670,7 +2676,7 @@ paths:
       tags: [auth]
       operationId: listAPIKeys
       summary: List API keys
-      security: [{session: []}, {apiKey: [admin]}]
+      security: [{session: []}, {appSession: []}, {apiKey: [admin]}]
       responses:
         '200':
           description: API keys (never the secret).
@@ -2687,7 +2693,7 @@ paths:
       tags: [auth]
       operationId: createAPIKey
       summary: Create an API key; the token is returned once
-      security: [{session: [], csrf: []}, {apiKey: [admin]}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: [admin]}]
       requestBody:
         required: true
         content:
@@ -2714,7 +2720,7 @@ paths:
       tags: [auth]
       operationId: revokeAPIKey
       summary: Revoke an API key
-      security: [{session: [], csrf: []}, {apiKey: [admin]}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: [admin]}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2730,7 +2736,7 @@ paths:
       tags: [settings]
       operationId: getSettings
       summary: Owner settings
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: Settings.
@@ -2743,7 +2749,7 @@ paths:
       tags: [settings]
       operationId: updateSettings
       summary: Change settings (merge patch)
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       requestBody:
         required: true
         content:
@@ -2768,7 +2774,7 @@ paths:
       description: >
         The stored layout, or the curated default (is_default) while none is stored. Cards whose
         metric is no longer a catalogue code or rule family are dropped.
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: The layout.
@@ -2782,7 +2788,7 @@ paths:
       operationId: putDashboardLayout
       summary: Replace the dashboard layout
       description: Card order is array order. Audited.
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       requestBody:
         required: true
         content:
@@ -2803,7 +2809,7 @@ paths:
       tags: [settings]
       operationId: listTimezonePeriods
       summary: List timezone periods
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: Periods, oldest first.
@@ -2820,7 +2826,7 @@ paths:
       tags: [settings]
       operationId: createTimezonePeriod
       summary: Add a timezone period (local dates are recomputed)
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       requestBody:
         required: true
         content:
@@ -2842,7 +2848,7 @@ paths:
       tags: [settings]
       operationId: updateTimezonePeriod
       summary: Change a timezone period's zone or start (local dates are recomputed)
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       requestBody:
@@ -2865,7 +2871,7 @@ paths:
       tags: [settings]
       operationId: deleteTimezonePeriod
       summary: Remove a timezone period (the previous one extends; local dates are recomputed)
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2948,6 +2954,10 @@ components:
       in: header
       name: X-CSRF-Token
       description: Required with the session cookie on mutating requests; the value comes from login or GET /api/v1/auth/session.
+    appSession:
+      type: http
+      scheme: bearer
+      description: 'App session token `vmx_ses_<id>_<secret>` from POST /api/v1/auth/login with `client: app`. Admitted wherever the session is, without CSRF.'
     apiKey:
       type: http
       scheme: bearer
@@ -3957,6 +3967,8 @@ components:
         password: {type: string}
         totp_code: {type: string}
         recovery_code: {type: string}
+        client: {type: string, enum: [browser, app], description: 'Omitted means `browser`; `app` answers a bearer app session instead of a cookie.'}
+        device_name: {type: string, minLength: 1, maxLength: 100, description: 'Required with `client: app`, not allowed otherwise; Settings › Security lists the session under it.'}
     User:
       type: object
       required: [id, username, totp_enabled]
@@ -3969,15 +3981,24 @@ components:
       required: [user, csrf_token]
       properties:
         user: {$ref: '#/components/schemas/User'}
-        csrf_token: {type: string}
+        csrf_token: {type: string, description: Empty for an app session, which needs none.}
+    AppSession:
+      type: object
+      required: [user, token, expires_at]
+      properties:
+        user: {$ref: '#/components/schemas/User'}
+        token: {type: string, description: 'Bearer token `vmx_ses_<id>_<secret>`; shown in this response only.'}
+        expires_at: {type: string, format: date-time, description: Absolute end; the session also ends after VITAMUX_APP_SESSION_IDLE without use.}
     ActiveSession:
       type: object
-      required: [id, created_at, last_seen_at, expires_at, current]
+      required: [id, kind, name, created_at, last_seen_at, expires_at, current]
       properties:
         id: {type: string, format: uuid}
+        kind: {type: string, enum: [browser, app]}
+        name: {type: [string, 'null'], description: The device name of an app session; null for a browser session.}
         created_at: {type: string, format: date-time}
         last_seen_at: {type: string, format: date-time, description: Updated at most once a minute.}
-        expires_at: {type: string, format: date-time, description: Absolute end; the session also ends after 12 h without use.}
+        expires_at: {type: string, format: date-time, description: 'Absolute end; the session also ends without use after 12 h (browser) or VITAMUX_APP_SESSION_IDLE (app).'}
         current: {type: boolean, description: This request's session.}
     TOTPEnrollment:
       type: object

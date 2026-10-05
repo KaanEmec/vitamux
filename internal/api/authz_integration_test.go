@@ -5,6 +5,7 @@ package api
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/hex"
 	"io"
 	"net/http"
 	"slices"
@@ -26,8 +27,10 @@ type matrixPrincipal struct {
 }
 
 // TestAuthzMatrixEnforced calls every served route in api/authz.yaml as every kind of
-// principal: anonymous, owner session without and with the CSRF header, an API key of each
-// scope, and client tokens of the connection the request targets and of another one.
+// principal: anonymous, owner session without and with the CSRF header, an app session
+// without and with a (meaningless) CSRF header, which is admitted exactly where a browser
+// session with CSRF is, an API key of each scope, and client tokens of the connection the
+// request targets and of another one.
 // Admitted means authorization let the handler run, so any answer but 401, 403 or 500
 // (bodies are minimal, so 404 and 422 are expected). Refused means 401 for anonymous and
 // 403 for everyone else.
@@ -47,6 +50,17 @@ func TestAuthzMatrixEnforced(t *testing.T) {
 		token := base64.RawURLEncoding.EncodeToString(b)
 		e.exec(`INSERT INTO sessions (id, user_id, token_hash, expires_at) VALUES ($1, $2, $3, now() + interval '1 day')`,
 			uuid.New(), e.userID, sha(token))
+		e.secrets = append(e.secrets, token)
+		return token
+	}
+	// An app session row, as POST /auth/login with client app writes it.
+	newAppSession := func() string {
+		id := uuid.New()
+		secret := make([]byte, 32)
+		_, _ = rand.Read(secret)
+		e.exec(`INSERT INTO sessions (id, user_id, token_hash, kind, name, expires_at) VALUES ($1, $2, $3, 'app', 'Synthetic iPhone', now() + interval '1 day')`,
+			id, e.userID, sha(string(secret)))
+		token := auth.SessionPrefix + hex.EncodeToString(id[:]) + "_" + base64.RawURLEncoding.EncodeToString(secret)
 		e.secrets = append(e.secrets, token)
 		return token
 	}
@@ -73,6 +87,13 @@ func TestAuthzMatrixEnforced(t *testing.T) {
 				tok := newSession()
 				req.AddCookie(&http.Cookie{Name: auth.SessionCookie, Value: tok})
 				req.Header.Set(csrfHeader, e.svc.CSRFToken(tok))
+			}},
+		{"app session", func(e authzEntry) bool { return public(e) || e.Allow == "session" || e.scoped() },
+			func(req *http.Request) { req.Header.Set("Authorization", "Bearer "+newAppSession()) }},
+		{"app session with a csrf header", func(e authzEntry) bool { return public(e) || e.Allow == "session" || e.scoped() },
+			func(req *http.Request) {
+				req.Header.Set("Authorization", "Bearer "+newAppSession())
+				req.Header.Set(csrfHeader, e.svc.CSRFToken(newSession()))
 			}},
 		// Fresh tokens per request: rotate-token replaces the caller's token. A device's own
 		// routes (/devices/self) admit any client.

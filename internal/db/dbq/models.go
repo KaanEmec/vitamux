@@ -736,7 +736,7 @@ type Schedule struct {
 	Mode string
 }
 
-// Server-side UI sessions; the cookie holds the token, the row only its SHA-256.
+// Owner sessions: browser (cookie token) or app (bearer vmx_ses_ token, named after the device). The row keeps only a SHA-256.
 type Session struct {
 	ID         uuid.UUID
 	UserID     uuid.UUID
@@ -744,6 +744,9 @@ type Session struct {
 	CreatedAt  time.Time
 	LastSeenAt time.Time
 	ExpiresAt  time.Time
+	Kind       string
+	// Device name the app sent at sign-in; NULL for browser sessions.
+	Name *string
 }
 
 // Owner settings as key/value.

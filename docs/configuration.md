@@ -36,6 +36,15 @@ Every `VITAMUX_*` variable the binary reads, from [`internal/config`](../interna
 | `VITAMUX_BACKUP_DIR` |  |  | 0.1.0 | Enables the daily backup job and is the default `vitamux backup --out` ([backup](operations/backup.md)). |
 | `VITAMUX_BACKUP_KEEP` | `3` |  | 0.1.0 | How many scheduled backups to keep (positive integer). |
 
+## Sign-in
+
+Browser sessions end after 12 h idle or 7 days ([owner sign-in](architecture/security.md#owner-sign-in)); app sessions, the iOS app's bearer sign-in ([ios-app](architecture/ios-app.md#server-and-sign-in)), use these. Values are Go durations (`h`, `m`, `s`).
+
+| Variable | Default | Secret | Since | Description |
+| --- | --- | --- | --- | --- |
+| `VITAMUX_APP_SESSION_IDLE` | `720h` |  | 0.4.0 | An app session ends after this long without a request (30 days). At most `VITAMUX_APP_SESSION_MAX`. |
+| `VITAMUX_APP_SESSION_MAX` | `2160h` |  | 0.4.0 | An app session ends this long after sign-in, however active (90 days). |
+
 ## Providers
 
 Provider app credentials and sidecars are normally set up in the panel ([ADR-0021](adr/0021-source-setup.md)); these variables are optional overrides for automated installs. A value set here wins over the panel's and shows there as "managed by the environment".
