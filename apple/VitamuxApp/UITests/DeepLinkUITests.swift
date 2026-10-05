@@ -16,9 +16,8 @@ final class DeepLinkUITests: XCTestCase {
         ("vitamux://explore/body-composition", "Explore", "Body composition", nil),
         ("vitamux://explore/workouts", "Explore", "Workouts", nil),
         ("vitamux://explore/events?code=sleep_session", "Explore", "Events", nil), // the filter: SpecialisedUITests
-        ("vitamux://connections?connected=withings", "Sources", "Sources", "connected withings"),
-        ("vitamux://connections/conn_00000000000000000000000000000001?tab=backfills", "Sources", "Connection",
-         "conn_00000000000000000000000000000001 · backfills"),
+        ("vitamux://connections?connected=withings", "Sources", "Sources", nil), // the banner: SourcesUITests
+        ("vitamux://connections/conn_00000000000000000000000000000001?tab=backfills", "Sources", "Withings", nil),
         ("vitamux://lab", "Lab", "Lab", nil),
         ("vitamux://lab/documents/doc-synthetic", "Lab", "Review", "doc-synthetic"),
         ("vitamux://lab/results", "Lab", "Results", nil),

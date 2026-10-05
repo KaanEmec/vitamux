@@ -26,6 +26,7 @@ extension FakeServer {
         if let reply = dashboard(method: method, url: url, body: body) { return reply } // FakeServer+Dashboard.swift
         if let reply = explore(method: method, url: url, body: body) { return reply } // FakeServer+Explore.swift
         if let reply = specialised(method: method, url: url) { return reply } // FakeServer+Specialised.swift
+        if let reply = sources(method: method, url: url, body: body) { return reply } // FakeServer+Sources.swift
         switch (method, url.path) {
         case ("POST", "/api/v1/auth/logout"):
             state.sessions[token] = nil
@@ -39,8 +40,6 @@ extension FakeServer {
             return json(200, handshakeBody.merging(["version": "0.0.0-fake", "commit": "fake"]) { $1 })
         case ("GET", "/api/v1/metrics"):
             return json(200, ["metrics": allMetrics])
-        case ("GET", "/api/v1/connections"):
-            return json(200, ["connections": connections])
         case ("POST", _) where url.path.hasPrefix("/api/v1/devices/") && url.path.hasSuffix("/revoke"):
             return Reply(status: 204)
         case ("GET", "/api/v1/timezone-periods"):
@@ -121,7 +120,7 @@ extension FakeServer {
 
     static var handshakeBody: [String: Any] { ["product": "vitamux", "api_version": 1, "min_app_version": "0.4.0"] }
 
-    // MARK: - Catalogue and connections (the shell's search and sync status)
+    // MARK: - Catalogue (the shell's search; connections are in FakeServer+Sources.swift)
 
     private static func metric(_ code: String, section: String, unit: String, kind: String, aggregation: String) -> [String: Any] {
         [
@@ -144,21 +143,6 @@ extension FakeServer {
         let known = Set(base.compactMap { $0["code"] as? String })
         return base + dashboardMetrics.filter { !known.contains($0["code"] as? String ?? "") }
     }
-
-    private static func connection(_ index: Int, _ provider: String, health: String, lastSuccess: Any) -> [String: Any] {
-        [
-            "id": "conn_" + String(format: "%032x", index), "provider": provider, "mode": "in_process",
-            "status": health == "ok" ? "active" : "needs_reauth", "official": provider == "withings",
-            "upstream": NSNull(), "health": health, "health_reason": health == "ok" ? NSNull() : "sign in again",
-            "last_success_at": lastSuccess, "last_error_class": NSNull(), "consecutive_failures": health == "ok" ? 0 : 3,
-            "created_at": "2026-01-01T08:00:00Z", "updated_at": "2026-01-02T08:00:00Z",
-        ]
-    }
-
-    private static var connections: [[String: Any]] { [
-        connection(1, "withings", health: "ok", lastSuccess: "2026-01-02T08:00:00Z"),
-        connection(2, "garmin", health: "needs_reauth", lastSuccess: "2026-01-01T08:00:00Z"),
-    ] }
 
     // MARK: - Settings
 
