@@ -1,6 +1,6 @@
 # Vitamux iOS app
 
-This document is for epic [E22](../plan/E22-ios-app/README.md). Its structural decisions are recorded in [ADR-0023](../adr/0023-ios-app.md) (proposed until the owner accepts it); the Apple Watch data contract is [J22.15](../plan/E22-ios-app/J22.15-watch-data-contract.md)'s ADR-0024. Screens and deep links: [ios-app-screens](ios-app-screens.md). Visual design is deliberately out of the first pass: screens use stock SwiftUI with the panel's data-status and source cues, and a design pass follows parity ([J22.24](../plan/E22-ios-app/J22.24-design-pass.md)).
+This document is for epic [E22](../plan/E22-ios-app/README.md). Its structural decisions are recorded in [ADR-0023](../adr/0023-ios-app.md) (proposed until the owner accepts it); the Apple Watch data contract is [ADR-0024](../adr/0024-watch-data.md) ([J22.15](../plan/E22-ios-app/J22.15-watch-data-contract.md)), also proposed. Screens and deep links: [ios-app-screens](ios-app-screens.md). Visual design is deliberately out of the first pass: screens use stock SwiftUI with the panel's data-status and source cues, and a design pass follows parity ([J22.24](../plan/E22-ios-app/J22.24-design-pass.md)).
 
 ## Goal and scope
 
@@ -134,28 +134,14 @@ The app embeds HealthBridgeKit and owns the HealthKit entitlements, purpose stri
 
 ## Apple Watch
 
-There is no watchOS app. Apple Watch writes into the iPhone's Health store, which the app already reads, so Watch data arrives the same way and keeps its origin: `device` (`HKDevice`, model `Watch`) and `source_revision.product_type` (`Watch7,1`, …). Rules can already prefer or exclude it (`provider: apple_health, device_type: watch`). Settled in ADR-0024 ([J22.15](../plan/E22-ios-app/J22.15-watch-data-contract.md)).
+There is no watchOS app. Apple Watch writes into the iPhone's Health store, which the app already reads, so Watch data arrives the same way and keeps its origin: `device` (`HKDevice`, model `Watch`) and `source_revision.product_type` (`Watch7,1`, …). Rules can already prefer or exclude it (`provider: apple_health, device_type: watch`). The contract is [ADR-0024](../adr/0024-watch-data.md) (proposed until the owner accepts it; [J22.15](../plan/E22-ios-app/J22.15-watch-data-contract.md)).
 
-- **Coverage:** type registry v2 adds every HealthKit type Apple Watch records that a third-party app may read. The [catalogue's](metric-catalog.md) `later` rows with an HK id become implemented codes. Types the iOS version does not know are skipped, as today.
-
-| Group (on the phone) | What it adds | Default |
-| --- | --- | --- |
-| Heart | AFib burden, heart-rate recovery, irregular-rhythm alerts | on with Heart |
-| Fitness | running power, speed, stride, vertical oscillation, ground contact; cycling power, cadence, speed, FTP; physical effort; swim strokes; snow, rowing and paddle distances; workout effort scores, events, laps and multisport activities | on with Workouts |
-| Activity | move time, time in daylight, Apple's daily activity summary (rings with their goals) | on with Activity |
-| Mobility | walking and stair speed, six-minute walk, falls | on with Activity |
-| Hearing and environment | environmental and headphone audio levels, sound reduction, water temperature, underwater depth | off |
-| Mind | mindful sessions, State of Mind | off |
-| Cycle tracking and symptoms | cycle-tracking categories, wrist-temperature ovulation estimates, symptoms | off |
-| ECG | recordings: classification, average HR, symptoms and the voltage waveform | off |
-| Beat-to-beat | heartbeat series behind HRV readings | off |
-| Routes | GPS route per workout | off |
-
-- **Payload:** still `healthkit.samples.v1`, extended only with optional fields ([ADR-0014](../adr/0014-healthkit-contract.md)): `ecg` (classification, sampling rate, voltages), `beats` (offset and gap flag per beat), `route` (location points with accuracy, linked to a workout UUID), `workout.events` and `workout.activities`, `state_of_mind`. Heavy types use small pages (draft for ADR-0024: ECG 10, beat series 100, one route per page) to stay under the 1 MiB batch limit. Apple's activity summary has no UUID or anchor: the app re-reads the last 7 days on each sync with a UUIDv5 of the day, so a changed day replaces the old row.
-- **Storage (draft for ADR-0024, no new tables):** quantities go to `measurements`; beats become `rr_interval` samples, which are not resolved; ECG recordings and rhythm alerts go to `health_events`, with the waveform in a blob referenced from the event, as workouts already do with route files (`health_events` gains `file_blob_sha256`); routes go to the existing `workouts.file_blob_sha256`; laps and activities to `workout_segments`; activity summaries become daily values (`D`) of the existing codes, with Apple's goals in `context`. Blob-held series survive raw retention because the canonical row references them.
+- **Coverage:** type registry v2 = v1 plus the Watch types v1 lacks ([table](../adr/0024-watch-data.md#type-registry-v2)). v1 types keep their groups and defaults; six new groups (ECG, beats, routes, cycle, symptoms, mind) are off until turned on. Types the iOS version does not know are skipped, as today.
+- **Payload:** still `healthkit.samples.v1`, extended only with optional fields ([fields](../adr/0024-watch-data.md#payload-fields), [apple-health › Payload](apple-health.md#payload)). Activity summaries have no UUID or anchor: the app re-reads the last 7 days on each sync, keyed by a UUIDv5 of the day, so a changed day replaces the old row.
+- **Storage:** no new tables ([ADR-0024](../adr/0024-watch-data.md#storage-no-new-tables)). Beats become `rr_interval` samples (not resolved); ECG recordings and routes are `health_events` with their waveform or route in a blob (`health_events.file_blob_sha256`); workout events and activities go to `workout_segments`; activity summaries become daily values with Apple's goals in `context`.
 - **Reading:** `GET /events/{id}/waveform`, `GET /workouts/{id}/route` and the existing measurement endpoints. Exports, deletion and purge cover the new blobs.
 - **Views:** in the app and the panel, an ECG strip at the standard paper scale (shown, never interpreted), an RR plot, activity rings as plain value-against-goal bars, and a route map. The app draws routes on MapKit, which fetches Apple map tiles for the area; the panel draws them as a plain path without third-party tiles. An **Apple Watch** card on the Apple Health screen lists what the Watch contributed per type, with the last sample time.
-- **Privacy:** ECG, beats, routes, cycle tracking and State of Mind are separate opt-in groups with their own HealthKit prompts. Routes are the most sensitive data Vitamux holds; like other canonical data they are not app-encrypted, which [security.md](security.md#threat-model) states.
+- **Privacy:** the [opt-in rules](../adr/0024-watch-data.md#privacy-opt-in). Routes are the most sensitive data Vitamux holds; like other canonical data they are not app-encrypted, which [security.md](security.md#threat-model) states.
 
 ## Offline cache, widgets and notifications
 

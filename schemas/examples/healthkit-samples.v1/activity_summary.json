@@ -1,0 +1,58 @@
+{
+ "synthetic": true,
+ "type": "HKActivitySummaryTypeIdentifier",
+ "anchor": {
+  "before_hash": "17529ce19894857b992eb6863fbcbaca2fd11096f74cb87b2cd1921c7b54a772",
+  "after_hash": "17529ce19894857b992eb6863fbcbaca2fd11096f74cb87b2cd1921c7b54a772",
+  "query_started_at": "2026-09-14T21:00:03+02:00"
+ },
+ "samples": [
+  {
+   "uuid": "E5D48049-0256-55FC-9C9B-8DC92A4B2531",
+   "start": "2026-09-13T00:00:00+02:00",
+   "end": "2026-09-14T00:00:00+02:00",
+   "source_revision": {
+    "bundle_id": "vitamux.activity-summary",
+    "name": "Activity summary"
+   },
+   "was_user_entered": false,
+   "activity_summary": {
+    "date": "2026-09-13",
+    "move_mode": 1,
+    "paused": false,
+    "active_energy_kcal": 512.4,
+    "active_energy_goal_kcal": 600,
+    "move_time_s": 2400,
+    "move_time_goal_s": 1800,
+    "exercise_time_s": 1980,
+    "exercise_time_goal_s": 1800,
+    "stand_hours": 10,
+    "stand_hours_goal": 12
+   }
+  },
+  {
+   "uuid": "97A2E82F-4B27-50A6-9867-8699C9151D8F",
+   "start": "2026-09-14T00:00:00+02:00",
+   "end": "2026-09-15T00:00:00+02:00",
+   "source_revision": {
+    "bundle_id": "vitamux.activity-summary",
+    "name": "Activity summary"
+   },
+   "was_user_entered": false,
+   "activity_summary": {
+    "date": "2026-09-14",
+    "move_mode": 1,
+    "paused": false,
+    "active_energy_kcal": 655.0,
+    "active_energy_goal_kcal": 600,
+    "move_time_s": 3600,
+    "move_time_goal_s": 1800,
+    "exercise_time_s": 3540,
+    "exercise_time_goal_s": 1800,
+    "stand_hours": 12,
+    "stand_hours_goal": 12
+   }
+  }
+ ],
+ "deleted": []
+}

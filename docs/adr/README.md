@@ -24,3 +24,4 @@ ADRs record decisions that code depends on. Keep each one short and link to the 
 | [0021](0021-source-setup.md) | Source setup in the panel: sealed provider apps and panel sidecars, environment wins, setup states | Proposed |
 | [0022](0022-layerchart.md) | LayerChart for the chart kit (lazy chunk ≤ 150 KiB gzip); supersedes 0020 | Accepted |
 | [0023](0023-ios-app.md) | Native SwiftUI iPhone app replacing Bridge: lean rules (two packages, one app target, `AppState`, `Route`), bearer app sessions, fixed `vitamux://` OAuth return, generated client | Proposed |
+| [0024](0024-watch-data.md) | Apple Watch data: registry v2 with six off-by-default sensitive groups, optional `healthkit.samples.v1` fields, no new tables (ECG and routes as events with blobs), waveform and route endpoints | Proposed |

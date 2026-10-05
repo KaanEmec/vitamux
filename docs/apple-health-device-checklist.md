@@ -25,6 +25,12 @@ Run before a v0.2.0 release ([J15.7](plan/E15-apple-health/J15.7-device-campaign
 | D10 | Source bundle ids | Connect the brand apps the tester owns and read the origins list | Each brand appears as an origin with its bundle id | Observed bundle id and device name per brand, compared with the [brand table](architecture/apple-health.md#brand-origin-sets); which types it wrote |
 | D11 | Free-account build | Build with a free Personal Team, if available | Record whether the Background Delivery capability and entitlement are accepted, and when the profile expires | Accepted (yes/no), error text, days until expiry; closes the open point in [Distribution](architecture/apple-health.md#distribution) |
 | D12 | Sleeping breathing disturbances unit | On a watch with sleep apnea notifications, read `AppleSleepingBreathingDisturbances` for a few nights | The bridge reads it as `count` and the catalogue stores it as `events/h` ([`breathing_disturbances`](metrics.md)); confirm the value is Apple's per-hour index and not a night total | Unit string the sample carries, whether values look like a rate or a count (no values), the source of truth used |
+| D13 | ECG ([ADR-0024](adr/0024-watch-data.md)) | Turn on ECG, record one ECG on the Watch, then delete an older one in Health | One page per up to 5 recordings; the deletion tombstones the event | Identifier HealthKit reports for the ECG type, voltage count, sampling rate, whether the spacing was even (no `offsets_s`), algorithm-version key present, page gzip size |
+| D14 | Beats and RMSSD | Turn on beats, wear the Watch overnight | One heartbeat series per HRV reading | Series count, beats and gaps per series, whether each series shares start and end with an HRV SDNN sample; on iOS 27, whether the Watch writes `HeartRateVariabilityRMSSD` and over what span |
+| D15 | Route | Turn on routes, record an outdoor workout, later delete one workout in Health | Route page carries `workout_uuid`; the panel finds it from the workout | Whether the route arrived before or after its workout, points per minute, page gzip size, whether deleting the workout also deleted its route |
+| D16 | Activity summary | Sync several times in one day, pause rings for a day, travel across a time zone if possible | Today's day is re-sent only when it changes; earlier days stay duplicates | Identifier HealthKit reports for the summary type, days returned, move mode, `paused`, whether the day after a zone change carries the phone's calendar date |
+| D17 | Workout detail and effort | Record a multisport or interval workout with laps and a pause, rate its effort afterwards | Events and activities arrive with the workout; the effort sample carries `workout_uuid` | Event and activity counts, whether the effort sample spans the workout, whether a later rating adds a sample or deletes the estimate |
+| D18 | Background delivery of new types | Register observers for ECG, heartbeat series, routes and State of Mind; log a State of Mind on the Watch | `enableBackgroundDelivery` succeeds or fails without breaking the other types | Per type: accepted (yes/no), error text, callback lag; State of Mind source bundle id |
 
 ## Results
 
@@ -44,5 +50,11 @@ Copy one block per run. Leave health values out.
 | | | | | D10 | | | |
 | | | | | D11 | | | |
 | | | | | D12 | | | |
+| | | | | D13 | | | |
+| | | | | D14 | | | |
+| | | | | D15 | | | |
+| | | | | D16 | | | |
+| | | | | D17 | | | |
+| | | | | D18 | | | |
 
 Observed behaviour that differs from [apple-health.md](architecture/apple-health.md) goes into the known-limitations doc (J15.7, T15.7.4), and the architecture doc is corrected in place.

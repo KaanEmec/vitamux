@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Vitamux healthkit.samples.v1 item body",
-  "description": "Body of one ingest item of stream healthkit.samples.v1: one HKAnchoredObjectQuery page of one type, as sent by HealthBridgeKit (apple/HealthBridgeKit). Raw HealthKit values in the units of the type registry; the server converts. Percent types are fractions (0.97), as HealthKit reports them. Only additive, optional changes within v1. See docs/architecture/apple-health.md#payload.",
+  "description": "Body of one ingest item of stream healthkit.samples.v1: one HKAnchoredObjectQuery page of one type, as sent by HealthBridgeKit (apple/HealthBridgeKit). Raw HealthKit values in the units of the type registry; the server converts. Percent types are fractions (0.97), as HealthKit reports them. Only additive, optional changes within v1; the Apple Watch fields (workout_uuid, ecg, beats, route, state_of_mind, activity_summary, workout.stats, workout.events, workout.activities) were added by ADR-0024. See docs/architecture/apple-health.md#payload.",
   "type": "object",
   "required": ["type", "anchor", "samples", "deleted"],
   "properties": {
     "type": {
-      "description": "Full HealthKit identifier, e.g. HKQuantityTypeIdentifierHeartRate, HKCorrelationTypeIdentifierBloodPressure, HKWorkoutTypeIdentifier.",
+      "description": "Full HealthKit identifier, e.g. HKQuantityTypeIdentifierHeartRate, HKCorrelationTypeIdentifierBloodPressure, HKWorkoutTypeIdentifier, HKDataTypeIdentifierHeartbeatSeries, HKWorkoutRouteTypeIdentifier; for activity summaries the identifier of HKObjectType.activitySummaryType().",
       "type": "string",
       "pattern": "^HK[A-Za-z0-9]+$"
     },
@@ -72,9 +72,124 @@
           "properties": {
             "activity_type": {"description": "HKWorkoutActivityType raw value.", "type": "integer", "minimum": 0},
             "duration_s": {"type": "number", "minimum": 0},
-            "totals": {"description": "Sums by quantity type identifier, in the registry unit.", "type": "object", "additionalProperties": {"type": "number"}}
+            "totals": {"description": "Sums by quantity type identifier, in the registry unit.", "type": "object", "additionalProperties": {"type": "number"}},
+            "stats": {"$ref": "#/$defs/stats"},
+            "events": {"description": "HKWorkout.workoutEvents, in order.", "type": "array", "items": {"$ref": "#/$defs/workout_event"}},
+            "activities": {"description": "HKWorkout.workoutActivities, in order.", "type": "array", "items": {"$ref": "#/$defs/workout_activity"}}
+          }
+        },
+        "workout_uuid": {"description": "The workout this sample belongs to, when HealthKit links it: a route's workout (predicateForObjectsFromWorkout), an effort score's workout (HKWorkoutEffortRelationshipQuery).", "$ref": "#/$defs/uuid"},
+        "ecg": {
+          "description": "HKElectrocardiogram with its voltages (HKElectrocardiogramQuery).",
+          "type": "object",
+          "required": ["classification", "symptoms_status", "voltage_count", "voltage_unit", "voltages"],
+          "properties": {
+            "classification": {"description": "HKElectrocardiogram.Classification raw value: 0 not set, 1 sinus rhythm, 2 atrial fibrillation, 3 inconclusive low heart rate, 4 inconclusive high heart rate, 5 inconclusive poor reading, 6 inconclusive other, 100 unrecognized.", "type": "integer", "minimum": 0},
+            "symptoms_status": {"description": "HKElectrocardiogram.SymptomsStatus raw value: 0 not set, 1 none, 2 present.", "type": "integer", "minimum": 0},
+            "average_heart_rate": {"description": "averageHeartRate in count/min.", "type": "number"},
+            "sampling_frequency_hz": {"type": "number", "exclusiveMinimum": 0},
+            "lead": {"description": "HKElectrocardiogram.Lead raw value of the voltages (1 = Apple Watch, similar to lead I).", "type": "integer", "minimum": 1},
+            "voltage_count": {"description": "numberOfVoltageMeasurements; voltages has this many entries.", "type": "integer", "minimum": 0},
+            "voltage_unit": {"description": "HKUnit string of voltages: mcV.", "type": "string"},
+            "voltages": {"description": "One voltage per measurement, in order.", "$ref": "#/$defs/numbers"},
+            "offsets_s": {"description": "timeSinceSampleStart per measurement; sent only when the spacing differs from 1/sampling_frequency_hz.", "$ref": "#/$defs/numbers"}
+          }
+        },
+        "beats": {
+          "description": "HKHeartbeatSeriesSample with its beats (HKHeartbeatSeriesQuery); both arrays have count entries.",
+          "type": "object",
+          "required": ["count", "offsets_s", "preceded_by_gap"],
+          "properties": {
+            "count": {"type": "integer", "minimum": 0},
+            "offsets_s": {"description": "timeSinceSeriesStart per beat, ascending.", "$ref": "#/$defs/numbers"},
+            "preceded_by_gap": {"description": "precededByGap per beat: true when beats before it were not recorded.", "type": "array", "items": {"type": "boolean"}}
+          }
+        },
+        "route": {
+          "description": "HKWorkoutRoute with its locations (HKWorkoutRouteQuery) as parallel arrays of count entries. CoreLocation values as given: a negative accuracy, speed or course means invalid.",
+          "type": "object",
+          "required": ["count", "offsets_s", "latitude", "longitude"],
+          "properties": {
+            "count": {"type": "integer", "minimum": 0},
+            "offsets_s": {"description": "Location timestamp minus the sample start, in seconds.", "$ref": "#/$defs/numbers"},
+            "latitude": {"type": "array", "items": {"type": "number", "minimum": -90, "maximum": 90}},
+            "longitude": {"type": "array", "items": {"type": "number", "minimum": -180, "maximum": 180}},
+            "altitude_m": {"$ref": "#/$defs/numbers"},
+            "ellipsoidal_altitude_m": {"$ref": "#/$defs/numbers"},
+            "horizontal_accuracy_m": {"$ref": "#/$defs/numbers"},
+            "vertical_accuracy_m": {"$ref": "#/$defs/numbers"},
+            "speed_mps": {"$ref": "#/$defs/numbers"},
+            "speed_accuracy_mps": {"$ref": "#/$defs/numbers"},
+            "course_deg": {"$ref": "#/$defs/numbers"},
+            "course_accuracy_deg": {"$ref": "#/$defs/numbers"}
+          }
+        },
+        "state_of_mind": {
+          "description": "HKStateOfMind.",
+          "type": "object",
+          "required": ["kind", "valence"],
+          "properties": {
+            "kind": {"description": "HKStateOfMind.Kind raw value: 1 momentary emotion, 2 daily mood.", "type": "integer", "minimum": 1},
+            "valence": {"type": "number", "minimum": -1, "maximum": 1},
+            "valence_classification": {"description": "HKStateOfMind.ValenceClassification raw value.", "type": "integer", "minimum": 1},
+            "labels": {"description": "HKStateOfMind.Label raw values.", "type": "array", "items": {"type": "integer", "minimum": 1}},
+            "associations": {"description": "HKStateOfMind.Association raw values.", "type": "array", "items": {"type": "integer", "minimum": 1}}
+          }
+        },
+        "activity_summary": {
+          "description": "HKActivitySummary of one day (HKActivitySummaryQuery). It has no UUID, source or anchor: uuid is the UUIDv5 of the day, start and end bound the local day, source_revision is the fixed marker vitamux.activity-summary (ADR-0024).",
+          "type": "object",
+          "required": ["date"],
+          "properties": {
+            "date": {"description": "The summary's day (its dateComponents in the phone's calendar).", "type": "string", "format": "date"},
+            "move_mode": {"description": "HKActivityMoveMode raw value: 1 active energy, 2 move time.", "type": "integer", "minimum": 1},
+            "paused": {"type": "boolean"},
+            "active_energy_kcal": {"type": "number"},
+            "active_energy_goal_kcal": {"type": "number"},
+            "move_time_s": {"type": "number"},
+            "move_time_goal_s": {"type": "number"},
+            "exercise_time_s": {"type": "number"},
+            "exercise_time_goal_s": {"type": "number"},
+            "stand_hours": {"type": "number"},
+            "stand_hours_goal": {"type": "number"}
           }
         }
+      }
+    },
+    "numbers": {"type": "array", "items": {"type": "number"}},
+    "stats": {
+      "description": "Discrete statistics by quantity type identifier, in the registry unit (e.g. heart rate average, minimum and maximum).",
+      "type": "object",
+      "additionalProperties": {"type": "object", "properties": {"avg": {"type": "number"}, "min": {"type": "number"}, "max": {"type": "number"}}}
+    },
+    "workout_event": {
+      "description": "HKWorkoutEvent.",
+      "type": "object",
+      "required": ["type", "start", "end"],
+      "properties": {
+        "type": {"description": "HKWorkoutEventType raw value: 1 pause, 2 resume, 3 lap, 4 marker, 5 motion paused, 6 motion resumed, 7 segment, 8 pause or resume request.", "type": "integer", "minimum": 1},
+        "start": {"type": "string", "format": "date-time"},
+        "end": {"description": "Equal to start for an event without a duration.", "type": "string", "format": "date-time"},
+        "metadata": {"type": "object", "additionalProperties": {"type": ["string", "number"]}}
+      }
+    },
+    "workout_activity": {
+      "description": "HKWorkoutActivity: one leg of a multisport workout, or one interval.",
+      "type": "object",
+      "required": ["uuid", "activity_type", "start", "duration_s"],
+      "properties": {
+        "uuid": {"$ref": "#/$defs/uuid"},
+        "activity_type": {"description": "workoutConfiguration.activityType raw value.", "type": "integer", "minimum": 0},
+        "location_type": {"description": "workoutConfiguration.locationType raw value: 1 unknown, 2 indoor, 3 outdoor.", "type": "integer"},
+        "swimming_location_type": {"description": "workoutConfiguration.swimmingLocationType raw value.", "type": "integer"},
+        "lap_length_m": {"type": "number", "minimum": 0},
+        "start": {"type": "string", "format": "date-time"},
+        "end": {"type": "string", "format": "date-time"},
+        "duration_s": {"type": "number", "minimum": 0},
+        "totals": {"type": "object", "additionalProperties": {"type": "number"}},
+        "stats": {"$ref": "#/$defs/stats"},
+        "events": {"type": "array", "items": {"$ref": "#/$defs/workout_event"}},
+        "metadata": {"type": "object", "additionalProperties": {"type": ["string", "number"]}}
       }
     }
   }
