@@ -1,6 +1,6 @@
 # E24 Resolution defaults, opt-in gates and visible data (v0.3.1)
 
-Release: v0.3.1 (with E25) · Status: done (pending release tag) · Depends on: E09, E21, E23 · [Plan index](../README.md)
+Release: v0.3.1 (with E25) · Status: done (2026-10-05) · Depends on: E09, E21, E23 · [Plan index](../README.md)
 Read first: [resolution#extensions](../../architecture/resolution.md#extensions), [resolution-defaults#suggested-defaults](../../architecture/resolution-defaults.md#suggested-defaults), [connectors#remote-sidecar-mode](../../architecture/connectors.md#remote-sidecar-mode)
 
 **Objective:** Every metric a source sends is visible and resolves to a real value. No metric is left without a rule, no gate silently discards a source, and no device that never reports a metric stands in for it with a 0.

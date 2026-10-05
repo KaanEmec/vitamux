@@ -1,6 +1,6 @@
 # E26 Intraday views on the server and the panel (v0.3.1)
 
-Release: v0.3.1 (with E24 and E25) · Status: done (pending release tag) · Depends on: E23, E25 · [Plan index](../README.md)
+Release: v0.3.1 (with E24 and E25) · Status: done (2026-10-05) · Depends on: E23, E25 · [Plan index](../README.md)
 Read first: [J22.26](../E22-ios-app/J22.26-intraday-views.md) (the resolution ladder), [resolution#windows](../../architecture/resolution.md#windows), [frontend#chart-grammar](../../architecture/frontend.md#chart-grammar)
 
 **Objective:** A metric can be looked at inside a day at the resolution that suits it: heart rate down to 30-second buckets and raw readings, steps as 30-minute bars, nothing finer than a day for metrics measured once. This epic delivers the catalogue, engine, API and panel half of J22.26; the iOS app's Day view stays in J22.26 and builds on it.

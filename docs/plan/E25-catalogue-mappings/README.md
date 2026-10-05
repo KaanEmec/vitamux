@@ -1,6 +1,6 @@
 # E25 Catalogue completeness and mapping corrections (v0.3.1)
 
-Release: v0.3.1 (with E24) · Status: done (pending release tag) · Depends on: E07, E08, E15, E18, E19 · [Plan index](../README.md)
+Release: v0.3.1 (with E24) · Status: done (2026-10-05) · Depends on: E07, E08, E15, E18, E19 · [Plan index](../README.md)
 Read first: [metric-catalog#rules](../../architecture/metric-catalog.md#rules), [connectors#normalizer-contract](../../architecture/connectors.md#normalizer-contract), the provider pages ([withings](../../providers/withings.md), [garmin](../../providers/garmin.md), [whoop](../../providers/whoop.md))
 
 **Objective:** Every health value a provider sends is catalogued, stored and shown, and every mapping matches the provider's official or best-verified unofficial documentation.
