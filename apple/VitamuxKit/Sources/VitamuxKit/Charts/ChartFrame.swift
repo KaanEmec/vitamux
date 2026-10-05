@@ -18,6 +18,43 @@ struct LegendItem: Identifiable {
     var mark: Mark
 }
 
+extension ChartOverlay {
+    /// Legend keys, one per label.
+    static func legend(_ overlays: [ChartOverlay], hue: MetricHue) -> [LegendItem] {
+        var seen = Set<String>()
+        return overlays.filter { seen.insert($0.label).inserted }.map { o in
+            switch o.style {
+            case .shade: LegendItem(label: o.label, mark: .swatch(Color.chartMuted.opacity(0.8)))
+            case .tint: LegendItem(label: o.label, mark: .swatch(hue.color.opacity(0.3)))
+            case .line: LegendItem(label: o.label, mark: .line(.primary, dash: [2, 3]))
+            }
+        }
+    }
+}
+
+/// The overlays as chart content, under the other marks.
+struct OverlayMarks: ChartContent {
+    let overlays: [ChartOverlay]
+    let hue: MetricHue
+
+    var body: some ChartContent {
+        ForEach(overlays) { o in
+            switch o.style {
+            case .shade:
+                RectangleMark(xStart: .value("From", o.start), xEnd: .value("To", o.end))
+                    .foregroundStyle(Color.chartMuted.opacity(0.45))
+            case .tint:
+                RectangleMark(xStart: .value("From", o.start), xEnd: .value("To", o.end))
+                    .foregroundStyle(hue.color.opacity(0.16))
+            case .line:
+                RuleMark(x: .value("At", o.start))
+                    .foregroundStyle(Color.primary.opacity(0.7))
+                    .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [2, 3]))
+            }
+        }
+    }
+}
+
 /// Frames a chart: its legend above, and a toggle that swaps it for its table.
 struct ChartFrame<Content: View>: View {
     let title: String
@@ -283,52 +320,90 @@ struct ChartCallout: View {
 }
 
 /// Pinch to zoom the time axis; when zoomed, dragging pans and "Reset zoom" returns to the whole
-/// range. `zoom` (whole span / visible span) is written when a pinch ends, for decimation.
+/// range. `zoom` (whole span / visible span) follows the visible length, for decimation. The
+/// visible window lives here, or in `window` when the owner reads or sets it (nil: the whole
+/// domain), e.g. to pick a finer bucket or to step through zoom levels.
 struct ChartZoom: ViewModifier {
     let domain: ClosedRange<Date>
     @Binding var zoom: CGFloat
     var enabled = true
     var maxZoom: CGFloat = 96
+    var window: Binding<ClosedRange<Date>?>?
 
-    @State private var visible: TimeInterval?
-    @State private var start: Date?
+    @State private var own: ClosedRange<Date>?
     @GestureState private var pinch: CGFloat = 1
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var span: TimeInterval { max(domain.upperBound.timeIntervalSince(domain.lowerBound), 1) }
 
+    private var current: ClosedRange<Date>? {
+        if let window { window.wrappedValue } else { own }
+    }
+
+    private func set(_ new: ClosedRange<Date>?) {
+        if let window { window.wrappedValue = new } else { own = new }
+    }
+
+    private var visible: TimeInterval {
+        current.map { min(span, max($0.upperBound.timeIntervalSince($0.lowerBound), 1)) } ?? span
+    }
+
     func body(content: Content) -> some View {
-        let length = min(span, max(span / Double(maxZoom), (visible ?? span) / Double(pinch)))
+        let visible = visible
+        let length = min(span, max(span / Double(maxZoom), visible / Double(pinch)))
         let zoomed = length < span * 0.999
         content
             .chartScrollableAxes(zoomed ? .horizontal : [])
             .chartXVisibleDomain(length: length)
-            .chartScrollPosition(x: Binding(get: { start ?? domain.lowerBound }, set: { start = $0 }))
+            .chartScrollPosition(x: Binding(get: { current?.lowerBound ?? domain.lowerBound }, set: { start in
+                guard zoomed, current != nil else { return }
+                let from = max(domain.lowerBound, min(start, domain.upperBound.addingTimeInterval(-visible)))
+                set(from ... from.addingTimeInterval(visible))
+            }))
             .simultaneousGesture(
                 MagnifyGesture()
                     .updating($pinch) { value, state, _ in state = value.magnification }
                     .onEnded { value in
-                        let old = visible ?? span
-                        let new = min(span, max(span / Double(maxZoom), old / Double(value.magnification)))
-                        let center = (start ?? domain.lowerBound).addingTimeInterval(old / 2)
-                        start = max(domain.lowerBound, min(center.addingTimeInterval(-new / 2), domain.upperBound.addingTimeInterval(-new)))
-                        visible = new
-                        zoom = CGFloat(span / new)
+                        let new = min(span, max(span / Double(maxZoom), visible / Double(value.magnification)))
+                        let center = (current?.lowerBound ?? domain.lowerBound).addingTimeInterval(visible / 2)
+                        let from = max(domain.lowerBound, min(center.addingTimeInterval(-new / 2), domain.upperBound.addingTimeInterval(-new)))
+                        set(new >= span * 0.999 ? nil : from ... from.addingTimeInterval(new))
                     },
                 including: enabled ? .all : .subviews
             )
+            .onChange(of: visible, initial: true) { zoom = CGFloat(span / visible) }
             .overlay(alignment: .topTrailing) {
                 if zoomed {
                     Button("Reset zoom") {
-                        withAnimation(reduceMotion ? nil : .default) {
-                            visible = nil
-                            start = nil
-                            zoom = 1
-                        }
+                        withAnimation(reduceMotion ? nil : .default) { set(nil) }
                     }
                     .font(.caption)
                     .buttonStyle(.bordered)
                 }
             }
+    }
+}
+
+/// Taps on the plot: the instant under the finger, for a chart's `onSelect`.
+struct ChartTap: ViewModifier {
+    let action: ((Date) -> Void)?
+
+    func body(content: Content) -> some View {
+        if let action {
+            content.chartOverlay { proxy in
+                GeometryReader { geometry in
+                    Rectangle()
+                        .fill(.clear)
+                        .contentShape(Rectangle())
+                        .onTapGesture { location in
+                            guard let plot = proxy.plotFrame else { return }
+                            let x = location.x - geometry[plot].origin.x
+                            if let date: Date = proxy.value(atX: x) { action(date) }
+                        }
+                }
+            }
+        } else {
+            content
+        }
     }
 }

@@ -7,6 +7,8 @@ import VitamuxKit
 /// note why. Local dates plot at UTC midnight and format in UTC, so a date never shifts.
 struct MetricChart: View {
     let model: MetricDetailModel
+    /// A tapped day of the daily chart.
+    var onDay: ((LocalDate) -> Void)?
 
     var body: some View {
         Group {
@@ -40,14 +42,15 @@ struct MetricChart: View {
             if (view == .bars || view == .sleep) && overlays.isEmpty {
                 Bars(
                     title: "\(title), resolved per day", xs: resolved.points.map(\.x), values: resolved.points.map(\.y), unit: model.unit,
-                    hue: hue, baseline: baseline, status: resolved.points.map(\.status), providers: resolved.points.map(\.providers), timeZone: .gmt
+                    hue: hue, baseline: baseline, status: resolved.points.map(\.status), providers: resolved.points.map(\.providers), timeZone: .gmt,
+                    onSelect: selectDay
                 )
                 .accessibilityIdentifier("metricChart")
             } else {
                 TimeSeries(
                     title: "\(title), resolved per day", series: [resolved] + overlays, unit: model.unit, hue: hue,
                     kind: view == .step || view == .dumbbell ? .step : .line, area: view != .step && view != .dumbbell,
-                    band: model.showBaseline ? band(resolved) : nil, baseline: baseline, timeZone: .gmt, withTime: false
+                    band: model.showBaseline ? band(resolved) : nil, baseline: baseline, timeZone: .gmt, withTime: false, onSelect: selectDay
                 )
                 .accessibilityIdentifier("metricChart")
             }
@@ -61,6 +64,11 @@ struct MetricChart: View {
             ContentUnavailableView("No values in this range", systemImage: "chart.xyaxis.line", description: Text("Choose a longer range, or check the sources on the Sources tab."))
                 .accessibilityIdentifier("noValues")
         }
+    }
+
+    /// The day at an index of the daily chart, for `onDay`.
+    private var selectDay: ((Int) -> Void)? {
+        onDay.map { open in { i in if model.dates.indices.contains(i) { open(model.dates[i]) } } }
     }
 
     /// One resolved value per day, with its status and the providers behind it.
@@ -121,7 +129,7 @@ struct SeriesToggles: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                Toggle("Baseline", isOn: $model.showBaseline).accessibilityIdentifier("toggleBaseline")
+                Toggle(model.range == .day ? "Min–max band" : "Baseline", isOn: $model.showBaseline).accessibilityIdentifier("toggleBaseline")
                 ForEach(model.providers, id: \.self) { provider in
                     Toggle(isOn: Binding {
                         model.shownSources.contains(provider)
