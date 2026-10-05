@@ -8,7 +8,7 @@ The native iPhone client of a self-hosted Vitamux server ([E22](../../docs/plan/
 brew install xcodegen
 cd apple/VitamuxApp
 xcodegen generate
-xcodebuild -project Vitamux.xcodeproj -scheme Vitamux \
+xcodebuild -project Vitamux.xcodeproj -scheme Vitamux -skipPackagePluginValidation \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
 ```
 

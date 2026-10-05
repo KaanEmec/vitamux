@@ -56,9 +56,10 @@ vulncheck: ## Known-vulnerability scan: Go (govulncheck, reachable code) and npm
 sqlc: ## Regenerate internal/db/dbq from migrations and queries
 	go tool sqlc generate
 
-openapi: web-install ## Regenerate Go server types and the TS client from api/openapi.yaml
+openapi: web-install ## Regenerate Go server types, the TS client and VitamuxKit's spec copy from api/openapi.yaml
 	go tool oapi-codegen -config internal/api/oapi/config.yaml api/openapi.yaml
 	npm --prefix web run openapi
+	apple/VitamuxKit/copy-openapi.sh
 
 lint: web-install ## Go and web linters
 	golangci-lint run ./...

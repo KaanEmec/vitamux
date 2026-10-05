@@ -2,8 +2,9 @@
 import PackageDescription
 
 // One library target (folders API/, Core/, Charts/) and one test target: docs/adr/0023-ios-app.md.
-// Allowed dependencies: Apple's swift-openapi generator, runtime and URLSession transport only,
-// plus what they resolve (pinned in Package.resolved; CI rejects anything else).
+// Allowed dependencies: Apple's swift-openapi generator, runtime and URLSession transport (and
+// swift-http-types, which they use), plus what they resolve: pinned in Package.resolved, and CI
+// rejects anything else. The generator plugin reads API/openapi.yaml (API/README.md).
 let package = Package(
     name: "VitamuxKit",
     platforms: [.iOS(.v18), .macOS(.v15)],
@@ -11,9 +12,9 @@ let package = Package(
         .library(name: "VitamuxKit", targets: ["VitamuxKit"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-openapi-generator", from: "1.10.0"),
-        .package(url: "https://github.com/apple/swift-openapi-runtime", from: "1.8.0"),
-        .package(url: "https://github.com/apple/swift-openapi-urlsession", from: "1.1.0"),
+        .package(url: "https://github.com/apple/swift-openapi-generator", from: "1.13.0"),
+        .package(url: "https://github.com/apple/swift-openapi-runtime", from: "1.12.0"),
+        .package(url: "https://github.com/apple/swift-openapi-urlsession", from: "1.3.0"),
         .package(url: "https://github.com/apple/swift-http-types", from: "1.0.0"),
     ],
     targets: [

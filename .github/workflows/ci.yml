@@ -77,6 +77,25 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: swift test --package-path apple/HealthBridgeKit
+      # VitamuxKit's spec copy (apple/VitamuxKit/copy-openapi.sh, J22.4) matches api/openapi.yaml.
+      - name: VitamuxKit spec copy is current
+        run: apple/VitamuxKit/copy-openapi.sh && git diff --exit-code -- apple/VitamuxKit/Sources/VitamuxKit/API/openapi.yaml
+      # ADR-0023: Apple's swift-openapi packages and what they resolve, nothing else.
+      - name: VitamuxKit dependencies are the pinned list
+        run: |
+          diff <(jq -r '.pins[] | "\(.identity) \(.location)"' apple/VitamuxKit/Package.resolved | sort) - <<'EOF'
+          openapikit https://github.com/mattpolzin/OpenAPIKit
+          swift-algorithms https://github.com/apple/swift-algorithms
+          swift-argument-parser https://github.com/apple/swift-argument-parser
+          swift-collections https://github.com/apple/swift-collections
+          swift-http-types https://github.com/apple/swift-http-types
+          swift-numerics https://github.com/apple/swift-numerics.git
+          swift-openapi-generator https://github.com/apple/swift-openapi-generator
+          swift-openapi-runtime https://github.com/apple/swift-openapi-runtime
+          swift-openapi-urlsession https://github.com/apple/swift-openapi-urlsession
+          yams https://github.com/jpsim/Yams
+          EOF
+      - run: swift test --package-path apple/VitamuxKit
 
   integration:
     runs-on: ubuntu-latest

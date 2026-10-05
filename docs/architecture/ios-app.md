@@ -42,7 +42,7 @@ The app is plain SwiftUI. A contributor who knows SwiftUI should find any screen
 - **A feature is a folder.** `Dashboard/`, `Explore/`, `Rules/`, `Sources/`, `Lab/`, `Settings/`, `AppleHealth/`: a few views and, where a screen loads or changes data, one `@Observable` model that calls the generated client directly. No repositories, use-case layers, coordinators, view-model protocols or DI containers.
 - **One shared state object.** `AppState` in the environment holds the server profile, the session, the client and the router. Screens get what they need from it and keep their own loading and error state through one `Loadable<Value>` and one `ProblemView`.
 - **One navigation model.** A `NavigationStack` per tab and one `Route` enum. Deep links, widgets, notifications and the OAuth return all parse into a `Route`.
-- **Generated, not written.** The API types and calls come from the spec through Apple's swift-openapi-generator build plugin, reading `api/openapi.yaml` through a symlink. Nothing generated is committed, so there is no copy to drift.
+- **Generated, not written.** The API types and calls come from the spec through Apple's swift-openapi-generator build plugin, reading a copy of `api/openapi.yaml` that `make openapi` writes into the package (`copy-openapi.sh` rewrites nullable `$ref`s the generator drops; CI fails if the copy drifts). Nothing generated is committed.
 - **Few dependencies.** Apple frameworks and Apple's swift-openapi packages (generator, runtime, URLSession transport) only, plus the packages they resolve themselves (J22.4 pins that list). No analytics, UI kits, Combine pipelines, Core Data or SwiftData; the cache is files. A CI check fails on any other package in `Package.resolved`.
 - **Extract on second use.** A shared component appears when a second screen needs it, as in the panel. No speculative abstractions, feature flags or plugin points.
 - **Swift 6 strict concurrency**, `async`/`await` only. The app target is main-actor by default, so models are main-actor without annotations; VitamuxKit stays `nonisolated` so the widget can use it.
@@ -64,7 +64,7 @@ The app is plain SwiftUI. A contributor who knows SwiftUI should find any screen
 
 ## API client
 
-- The generator plugin reads `api/openapi.yaml` through a symlink in `VitamuxKit/Sources/VitamuxKit/API/`, so a spec change shows up at the next build. If the plugin ever refuses the symlink, a copy made by `make openapi` with a CI drift check takes its place.
+- The generator plugin reads `VitamuxKit/Sources/VitamuxKit/API/openapi.yaml`, a copy that `make openapi` refreshes from `api/openapi.yaml` (a symlink was tried first; the generator silently drops nullable `$ref` fields, so the copy step rewrites them). CI fails when the copy drifts.
 - One middleware adds `Authorization: Bearer`, maps `application/problem+json` to `Problem` (title, detail, field `pointer`s), turns `429` into a wait with `Retry-After`, and sends `401` to sign-in.
 - Polling copies the panel's intervals (backfills 5 s, extraction 2 s, export 1 s), only while the screen is visible.
 - A fake server (`URLProtocol` stub with synthetic JSON, the counterpart of `web/e2e/fake-api.ts`) serves unit tests, and the app's debug build under `-uitest` for UI tests, as Bridge does today.
