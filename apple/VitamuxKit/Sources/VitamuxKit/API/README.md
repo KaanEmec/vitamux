@@ -1,0 +1,1 @@
+The client generated from `api/openapi.yaml` (swift-openapi-generator over a symlink, nothing generated committed) and its one middleware land here in [J22.4](../../../../../docs/plan/E22-ios-app/J22.4-vitamuxkit-client.md).

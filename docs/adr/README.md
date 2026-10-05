@@ -23,3 +23,4 @@ ADRs record decisions that code depends on. Keep each one short and link to the 
 | [0020](0020-chart-kit.md) | Hand-written SVG chart kit (lazy chunk ≤ 40 KiB gzip); uPlot removed | Superseded by 0022 |
 | [0021](0021-source-setup.md) | Source setup in the panel: sealed provider apps and panel sidecars, environment wins, setup states | Proposed |
 | [0022](0022-layerchart.md) | LayerChart for the chart kit (lazy chunk ≤ 150 KiB gzip); supersedes 0020 | Accepted |
+| [0023](0023-ios-app.md) | Native SwiftUI iPhone app replacing Bridge: lean rules (two packages, one app target, `AppState`, `Route`), bearer app sessions, fixed `vitamux://` OAuth return, generated client | Proposed |

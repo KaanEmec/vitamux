@@ -20,7 +20,7 @@ Owner decisions (2026-10-04):
 - Design comes after parity: stock SwiftUI first, then a design pass ([J22.24](J22.24-design-pass.md)).
 
 **Outputs:**
-- ADR-0021 (app) and ADR-0022 (Watch data), and the parity matrix in [ios-app](../../architecture/ios-app.md#parity-matrix);
+- ADR-0023 (app) and ADR-0024 (Watch data), and the parity matrix in [ios-app](../../architecture/ios-app.md#parity-matrix);
 - app sessions and the native connection-auth return on the server;
 - `apple/VitamuxKit` (generated API client, core, chart kit);
 - `apple/VitamuxApp` (app, widget extension, UI tests), replacing `apple/HealthBridgeApp`;
@@ -69,7 +69,7 @@ Owner decisions (2026-10-04):
 | [J22.12](J22.12-lab.md) | Lab documents, review and results | J22.5, J22.6 | None |
 | [J22.13](J22.13-settings.md) | Settings parity | J22.5 | None |
 | [J22.14](J22.14-apple-health.md) | Apple Health in the app | J22.3, J22.5 | None |
-| [J22.15](J22.15-watch-data-contract.md) | Apple Watch data contract (ADR-0022) | None | None |
+| [J22.15](J22.15-watch-data-contract.md) | Apple Watch data contract (ADR-0024) | None | None |
 | [J22.16](J22.16-watch-kit.md) | HealthBridgeKit: type registry v2 and Watch readers | J22.15 | None |
 | [J22.17](J22.17-watch-normalizer.md) | Server: Watch data normalizer, storage and endpoints | J22.15 | None |
 | [J22.18](J22.18-watch-views.md) | Apple Watch views in the app and the panel | J22.6, J22.14, J22.17 | None |

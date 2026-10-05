@@ -1,6 +1,6 @@
 # Vitamux iOS app
 
-This document is for epic [E22](../plan/E22-ios-app/README.md). It is a plan: [J22.1](../plan/E22-ios-app/J22.1-app-adr-parity.md) turns the decisions below into ADR-0021 and fixes anything marked *proposed*. Visual design is deliberately out of the first pass: screens use stock SwiftUI with the panel's data-status and source cues, and a design pass follows parity ([J22.24](../plan/E22-ios-app/J22.24-design-pass.md)).
+This document is for epic [E22](../plan/E22-ios-app/README.md). Its structural decisions are recorded in [ADR-0023](../adr/0023-ios-app.md) (proposed until the owner accepts it); the Apple Watch data contract is [J22.15](../plan/E22-ios-app/J22.15-watch-data-contract.md)'s ADR-0024. Screens and deep links: [ios-app-screens](ios-app-screens.md). Visual design is deliberately out of the first pass: screens use stock SwiftUI with the panel's data-status and source cues, and a design pass follows parity ([J22.24](../plan/E22-ios-app/J22.24-design-pass.md)).
 
 ## Goal and scope
 
@@ -30,8 +30,8 @@ Not in scope: iPad layouts, a watchOS app, HealthKit write-back, APNs push, seve
 | Part | Contents |
 | --- | --- |
 | `apple/HealthBridgeKit` (existing package) | Unchanged role: Core and HealthKit sync. Gains only what in-app pairing and status need (J22.14). Still usable by a third-party app. |
-| `apple/VitamuxKit` (new package) | One library target, three folders: `API/` (client generated from `api/openapi.yaml`, one middleware), `Core/` (server profile, session store, `Problem`, poller, file cache), `Charts/` (Swift Charts views and the chart grammar). One test target, run with `swift test` on macOS, no simulator needed. |
-| `apple/VitamuxApp` (xcodegen project) | One app target with a folder per feature, the widget extension and UI tests. Grows out of `apple/HealthBridgeApp`, which it replaces. |
+| `apple/VitamuxKit` (new package) | One library target, three folders: `API/` (client generated from `api/openapi.yaml`, one middleware), `Core/` (server profile, session store, `Problem`, `Loadable`, poller, file cache), `Charts/` (Swift Charts views and the chart grammar). One test target, run with `swift test` on macOS, no simulator needed. |
+| `apple/VitamuxApp` (xcodegen project) | One app target with a folder per feature, the widget extension and UI tests. Replaces `apple/HealthBridgeApp`, which stays until J22.14 has moved its screens. |
 | Backend | App sessions and the native connection-auth return ([J22.2](../plan/E22-ios-app/J22.2-app-sessions.md), [J22.3](../plan/E22-ios-app/J22.3-native-auth-return.md)). No other iOS coupling. |
 
 ## Lean architecture
@@ -43,14 +43,15 @@ The app is plain SwiftUI. A contributor who knows SwiftUI should find any screen
 - **One shared state object.** `AppState` in the environment holds the server profile, the session, the client and the router. Screens get what they need from it and keep their own loading and error state through one `Loadable<Value>` and one `ProblemView`.
 - **One navigation model.** A `NavigationStack` per tab and one `Route` enum. Deep links, widgets, notifications and the OAuth return all parse into a `Route`.
 - **Generated, not written.** The API types and calls come from the spec through Apple's swift-openapi-generator build plugin, reading `api/openapi.yaml` through a symlink. Nothing generated is committed, so there is no copy to drift.
-- **Few dependencies.** Apple frameworks and Apple's swift-openapi packages (generator, runtime, URLSession transport) only. No analytics, UI kits, Combine pipelines, Core Data or SwiftData; the cache is files. A CI check fails on any other package in `Package.resolved`.
+- **Few dependencies.** Apple frameworks and Apple's swift-openapi packages (generator, runtime, URLSession transport) only, plus the packages they resolve themselves (J22.4 pins that list). No analytics, UI kits, Combine pipelines, Core Data or SwiftData; the cache is files. A CI check fails on any other package in `Package.resolved`.
 - **Extract on second use.** A shared component appears when a second screen needs it, as in the panel. No speculative abstractions, feature flags or plugin points.
-- **Swift 6 strict concurrency**, `async`/`await` only, `@MainActor` models.
+- **Swift 6 strict concurrency**, `async`/`await` only. The app target is main-actor by default, so models are main-actor without annotations; VitamuxKit stays `nonisolated` so the widget can use it.
+- **Copy the worked example.** A new screen starts as a copy of the [worked example](../../apple/VitamuxApp/README.md#worked-example): a view, its model, a `Route` case and a UI test.
 
 ## Server and sign-in
 
 - **Server profile:** a base URL, `https` only. A debug build also accepts `http` for `localhost`, `*.local` and private addresses, matching `VITAMUX_ENV=development`. The app reads `GET /api/v1/system/version` before sign-in and refuses a server older than its minimum API version with a plain message. QR: the pairing QR (`{"url","code"}`) also fills the URL.
-- **App sessions (proposed):** `POST /api/v1/auth/login` with `{"client": "app", "device_name": …}` answers a bearer token `vmx_ses_<id>_<secret>` in the body instead of a cookie. It is a row in the same sessions table with `kind = app` and a name, so Settings › Security lists and ends it like a browser session. Bearer requests need no CSRF token. Lifetime: 30 days idle, 90 days absolute, configurable (`VITAMUX_APP_SESSION_*`). Login throttling, TOTP and recovery codes behave exactly as for the panel, and the login API stays stateless between the password and code steps.
+- **App sessions:** `POST /api/v1/auth/login` with `{"client": "app", "device_name": …}` answers a bearer token `vmx_ses_<id>_<secret>` in the body instead of a cookie. It is a row in the same sessions table with `kind = app` and a name, so Settings › Security lists and ends it like a browser session. Bearer requests need no CSRF token. Lifetime: 30 days idle, 90 days absolute, configurable (`VITAMUX_APP_SESSION_*`). Login throttling, TOTP and recovery codes behave exactly as for the panel, and the login API stays stateless between the password and code steps.
 - **Session-only endpoints** (auth, TOTP, password, sessions, connection auth) admit an app session as a `session` principal; API keys still never reach them. `api/authz.yaml` and `TestAuthzMatrixEnforced` gain the app-session caller.
 - **Storage:** the token sits in the Keychain (`AfterFirstUnlockThisDeviceOnly`, shared with the widget through an access group) so background refresh works while locked. Optional Face ID or passcode app lock (LocalAuthentication); the app-switcher snapshot is blurred.
 - **Expiry:** any `401` other than on login clears the session and returns to sign-in with "session expired", keeping the server URL. Sign-out revokes the app session. It does **not** stop Apple Health sync, which uses its own device token; the sign-out sheet offers "also unpair this iPhone".
@@ -58,7 +59,7 @@ The app is plain SwiftUI. A contributor who knows SwiftUI should find any screen
 ## Connecting sources from the phone
 
 - **Prompt steps** (Garmin and WHOOP sign-in with MFA) are plain JSON: `auth/begin` and `auth/continue` work over the bearer session. The `vitamux_oauth` binding cookie lives in the app's `URLSession` cookie store, so it returns on `continue`.
-- **OAuth redirects** (Withings) run in `ASWebAuthenticationSession`, whose cookie store is not the app's. Proposed ([J22.3](../plan/E22-ios-app/J22.3-native-auth-return.md)): `auth/begin` with `{"return": "app"}` answers a `redirect_url` on the Vitamux server, `/oauth/{provider}/start?ticket=…`, that sets the binding cookie inside the auth browser and redirects to the provider. The callback, for a state marked as app-originated, redirects to `vitamux://connections?connected=<provider>` or `?auth_error=<code>` instead of `/connections`. The scheme is fixed, so this is not an open redirect. The browser flow is unchanged.
+- **OAuth redirects** (Withings) run in `ASWebAuthenticationSession`, whose cookie store is not the app's. Decided ([J22.3](../plan/E22-ios-app/J22.3-native-auth-return.md)): `auth/begin` with `{"return": "app"}` answers a `redirect_url` on the Vitamux server, `/oauth/{provider}/start?ticket=…`, that sets the binding cookie inside the auth browser and redirects to the provider. The callback, for a state marked as app-originated, redirects to `vitamux://connections?connected=<provider>` or `?auth_error=<code>` instead of `/connections`. The scheme is fixed, so this is not an open redirect. The browser flow is unchanged.
 - **Guided setup** (E20): the same setup states, Withings app-credential wizard (write-only secrets, callback URL shown with a copy button) and "sidecar not running" card.
 
 ## API client
@@ -70,7 +71,7 @@ The app is plain SwiftUI. A contributor who knows SwiftUI should find any screen
 
 ## Navigation
 
-Proposed tab bar: **Dashboard · Explore · Sources · Lab · More**. More holds Rules, Settings and Apple Health; Sources opens with a "This iPhone" card for Apple Health. Global search (the ⌘K palette's job) is a search field over sections, settings pages, connections, metrics and their rules. Deep links use `vitamux://` and match panel paths (`vitamux://explore/heart_rate_resting?range=3M`), so widgets, notifications and the OAuth return share one router.
+Tab bar: **Dashboard · Explore · Sources · Lab · More**. More holds Rules, Settings and Apple Health; Sources opens with a "This iPhone" card for Apple Health. Global search (the ⌘K palette's job) is a search field over sections, settings pages, connections, metrics and their rules. Deep links use `vitamux://` and match panel paths (`vitamux://explore/heart_rate_resting?range=3M`), so widgets, notifications and the OAuth return share one router. Every screen, sheet and link: [ios-app-screens](ios-app-screens.md).
 
 ## Parity matrix
 
@@ -90,7 +91,7 @@ Every panel route and every owner endpoint the panel calls has an app screen. "S
 | Rule lens (draft overlay, save, activate, revert) | Bottom sheet over the chart | | J22.10 |
 | Rule builder (5 steps, live preview, field errors) | Same, one step per screen | | J22.10 |
 | Connections list, run strip, banners | Sources | | J22.11 |
-| Connection detail: overview, streams, backfills, history, settings, delete | Same | | J22.11 |
+| Connection detail: overview, streams, devices (type, name, merge), backfills, history, settings and schedules, delete | Same | | J22.11 |
 | Connect wizard: OAuth, prompt steps, E20 setup states and wizards | Same | `ASWebAuthenticationSession` | J22.11 |
 | Lab documents: upload, extract with consent, delete | Same, plus camera scan, Files, share sheet | | J22.12 |
 | Lab review: PDF with row outline, row editor, accept/reject, confirm, unconfirm | Same | PDFKit, no pdf.js | J22.12 |
@@ -100,12 +101,18 @@ Every panel route and every owner endpoint the panel calls has an app screen. "S
 | Apple Health source filter (take or ignore per app and type) | Apple Health › Sources | New in both clients | J22.25 |
 | Intraday Day view with zoom to buckets and raw samples | Day range on metric detail | New in both clients | J22.26 |
 | Settings › AI providers, API keys (shown once), Security (password, TOTP, sessions) | Same | TOTP: `otpauth://` link and copy | J22.13 |
+| Settings › Sources: source order, provider apps (write-only secrets, verify), sidecars (add, remove, secret shown once) | Same | Reuses J22.11's app wizard | J22.13 |
 | Settings › Retention, Backups and export, System status | Same | Export saved to Files | J22.13 |
 | Bridge app: pairing, groups, per-type status, sync now, anchor reset, privacy | Apple Health | Pairing is one tap when signed in | J22.14 |
 
 New in both clients: the Apple Watch views ([J22.18](../plan/E22-ios-app/J22.18-watch-views.md)).
 
-Operations the panel does not call stay out (manual measurements, push connection creation, alias management) unless a later panel job adds them.
+Checked against `web/src/routes` and `api/authz.yaml` (2026-10-05). Out of scope, with the reason:
+
+- `/data/*`: redirects that keep old panel bookmarks working; the app has no old links.
+- Operations the panel does not call: `POST /measurements/manual`, `POST /connections` (push connections), `POST`/`DELETE /analytes/aliases`, `GET /event-types`, `GET /workouts`, `GET /workouts/{id}` and `GET /sleep/{id}` (the panel uses the resolved views). They join when a panel job adds them.
+- `/api/ingest/v1/*`: the device API, called by HealthBridgeKit, not by screens (J22.14).
+- `GET /oauth/{provider}/callback` and `/webhooks/withings/*`: reached by the provider, not by a client.
 
 ## Charts
 
@@ -127,7 +134,7 @@ The app embeds HealthBridgeKit and owns the HealthKit entitlements, purpose stri
 
 ## Apple Watch
 
-There is no watchOS app. Apple Watch writes into the iPhone's Health store, which the app already reads, so Watch data arrives the same way and keeps its origin: `device` (`HKDevice`, model `Watch`) and `source_revision.product_type` (`Watch7,1`, …). Rules can already prefer or exclude it (`provider: apple_health, device_type: watch`). Settled in ADR-0022 ([J22.15](../plan/E22-ios-app/J22.15-watch-data-contract.md)).
+There is no watchOS app. Apple Watch writes into the iPhone's Health store, which the app already reads, so Watch data arrives the same way and keeps its origin: `device` (`HKDevice`, model `Watch`) and `source_revision.product_type` (`Watch7,1`, …). Rules can already prefer or exclude it (`provider: apple_health, device_type: watch`). Settled in ADR-0024 ([J22.15](../plan/E22-ios-app/J22.15-watch-data-contract.md)).
 
 - **Coverage:** type registry v2 adds every HealthKit type Apple Watch records that a third-party app may read. The [catalogue's](metric-catalog.md) `later` rows with an HK id become implemented codes. Types the iOS version does not know are skipped, as today.
 
@@ -144,8 +151,8 @@ There is no watchOS app. Apple Watch writes into the iPhone's Health store, whic
 | Beat-to-beat | heartbeat series behind HRV readings | off |
 | Routes | GPS route per workout | off |
 
-- **Payload:** still `healthkit.samples.v1`, extended only with optional fields ([ADR-0014](../adr/0014-healthkit-contract.md)): `ecg` (classification, sampling rate, voltages), `beats` (offset and gap flag per beat), `route` (location points with accuracy, linked to a workout UUID), `workout.events` and `workout.activities`, `state_of_mind`. Heavy types use small pages (proposed: ECG 10, beat series 100, one route per page) to stay under the 1 MiB batch limit. Apple's activity summary has no UUID or anchor: the app re-reads the last 7 days on each sync with a UUIDv5 of the day, so a changed day replaces the old row.
-- **Storage (proposed, no new tables):** quantities go to `measurements`; beats become `rr_interval` samples, which are not resolved; ECG recordings and rhythm alerts go to `health_events`, with the waveform in a blob referenced from the event, as workouts already do with route files (`health_events` gains `file_blob_sha256`); routes go to the existing `workouts.file_blob_sha256`; laps and activities to `workout_segments`; activity summaries become daily values (`D`) of the existing codes, with Apple's goals in `context`. Blob-held series survive raw retention because the canonical row references them.
+- **Payload:** still `healthkit.samples.v1`, extended only with optional fields ([ADR-0014](../adr/0014-healthkit-contract.md)): `ecg` (classification, sampling rate, voltages), `beats` (offset and gap flag per beat), `route` (location points with accuracy, linked to a workout UUID), `workout.events` and `workout.activities`, `state_of_mind`. Heavy types use small pages (draft for ADR-0024: ECG 10, beat series 100, one route per page) to stay under the 1 MiB batch limit. Apple's activity summary has no UUID or anchor: the app re-reads the last 7 days on each sync with a UUIDv5 of the day, so a changed day replaces the old row.
+- **Storage (draft for ADR-0024, no new tables):** quantities go to `measurements`; beats become `rr_interval` samples, which are not resolved; ECG recordings and rhythm alerts go to `health_events`, with the waveform in a blob referenced from the event, as workouts already do with route files (`health_events` gains `file_blob_sha256`); routes go to the existing `workouts.file_blob_sha256`; laps and activities to `workout_segments`; activity summaries become daily values (`D`) of the existing codes, with Apple's goals in `context`. Blob-held series survive raw retention because the canonical row references them.
 - **Reading:** `GET /events/{id}/waveform`, `GET /workouts/{id}/route` and the existing measurement endpoints. Exports, deletion and purge cover the new blobs.
 - **Views:** in the app and the panel, an ECG strip at the standard paper scale (shown, never interpreted), an RR plot, activity rings as plain value-against-goal bars, and a route map. The app draws routes on MapKit, which fetches Apple map tiles for the area; the panel draws them as a plain path without third-party tiles. An **Apple Watch** card on the Apple Health screen lists what the Watch contributed per type, with the last sample time.
 - **Privacy:** ECG, beats, routes, cycle tracking and State of Mind are separate opt-in groups with their own HealthKit prompts. Routes are the most sensitive data Vitamux holds; like other canonical data they are not app-encrypted, which [security.md](security.md#threat-model) states.
