@@ -36,7 +36,11 @@ final class SpecialisedUITests: XCTestCase {
     }
 
     private func checkProvenance(_ app: XCUIApplication) {
-        let button = app.scrollTo(any(app, "identifier BEGINSWITH %@", "provenance-"))
+        // The first match can already sit under the navigation bar (an earlier scroll passed it),
+        // so tap the first one that is actually on screen.
+        let buttons = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "provenance-"))
+        app.scrollTo(buttons.firstMatch)
+        let button = buttons.allElementsBoundByIndex.first(where: \.isHittable) ?? buttons.firstMatch
         XCTAssertTrue(button.waitForExistence(timeout: 5))
         button.tap()
         XCTAssertTrue(app.element("thisVersion").waitForExistence(timeout: 10), "the record's provenance chain opens")
