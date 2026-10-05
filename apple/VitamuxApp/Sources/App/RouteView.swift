@@ -29,12 +29,9 @@ struct RouteView: View {
             PlaceholderView(title: "Results", detail: [], job: "J22.12")
         case .analyte(let code): LabAnalyteView(code: code)
 
-        case .rules:
-            PlaceholderView(title: "Rules", detail: [], job: "J22.10")
-        case .rule(let metric):
-            PlaceholderView(title: "Rule", detail: [metric], job: "J22.10")
-        case .ruleNew:
-            PlaceholderView(title: "New rule", detail: [], job: "J22.10")
+        case .rules: RulesView()
+        case .rule(let metric, let saved): RuleView(metric: metric, saved: saved)
+        case .ruleNew(let metric, let from, let blank): RuleBuilderView(metric: metric, from: from, blank: blank)
         case .settings(.system): SystemStatusView()
         case .settings(.app): AppSettingsView()
         case .settings(let page):

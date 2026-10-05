@@ -121,7 +121,7 @@ final class ExploreUITests: XCTestCase {
         XCTAssertTrue(app.element("coverageStrip").waitForExistence(timeout: 10))
         app.assertNoProblem("toggles")
         app.scrollTo(app.buttons["editRule"]).tap()
-        XCTAssertTrue(app.navigationBars["Rule"].waitForExistence(timeout: 5), "Edit rule opens the rule (J22.10)")
+        XCTAssertTrue(app.navigationBars["How it's calculated"].waitForExistence(timeout: 5), "Edit rule opens the rule lens (J22.10)")
     }
 
     /// A local date `offset` days from today, as the app's links write it.

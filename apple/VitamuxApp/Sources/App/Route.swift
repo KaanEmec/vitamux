@@ -27,8 +27,9 @@ enum Route: Hashable {
 
     // More
     case rules
-    case rule(metric: String)
-    case ruleNew
+    case rule(metric: String, saved: Int? = nil)
+    /// The builder: from the rule in effect, version `from`, or an empty rule (`blank`).
+    case ruleNew(metric: String? = nil, from: Int? = nil, blank: Bool = false)
     case settings(SettingsPage)
     case appleHealth
 
@@ -75,8 +76,9 @@ enum Route: Hashable {
         case ("lab", "results", nil, nil): self = .labResults
         case ("lab", "analytes", let code?, nil): self = .analyte(code: code)
         case ("rules", nil, nil, nil): self = .rules
-        case ("rules", "new", nil, nil): self = .ruleNew
-        case ("rules", let metric?, nil, nil): self = .rule(metric: metric)
+        case ("rules", "new", nil, nil):
+            self = .ruleNew(metric: value("metric"), from: value("from").flatMap(Int.init), blank: value("blank") != nil)
+        case ("rules", let metric?, nil, nil): self = .rule(metric: metric, saved: value("saved").flatMap(Int.init))
         case ("settings", nil, nil, nil): self = .settings(.profile)
         case ("settings", let page?, nil, nil) where page != "profile" && SettingsPage(rawValue: page) != nil:
             self = .settings(SettingsPage(rawValue: page)!)

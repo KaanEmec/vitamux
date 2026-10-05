@@ -66,3 +66,7 @@ Coverage: table, inline, stacked and two-panel layouts; Letter and A4; mg/dL and
 ## Chart grammar
 
 `chart-grammar.json` (hand-written, catalogue metadata only): `GET /metrics` entries with the chart view and Day-view bucket each should get. Checked by the panel (`web/e2e/chart-grammar.spec.ts`) and VitamuxKit (`ChartsTests`), so the two grammars cannot drift ([J22.6](../docs/plan/E22-ios-app/J22.6-chart-kit.md)).
+
+## Rule model
+
+`rule-model.json` (generated from the panel's `web/src/lib/rules/rule.ts` and `sentence.ts`, catalogue-free): builder forms, the exact rule JSON each saves and its plain sentence, including every rule in `internal/resolve/testdata/valid`. Checked by the panel (`web/e2e/rule-model.spec.ts`) and VitamuxKit (`RuleModelTests`), so a rule saved on the phone is byte-identical to the same rule saved in the panel ([J22.10](../docs/plan/E22-ios-app/J22.10-rules.md)).

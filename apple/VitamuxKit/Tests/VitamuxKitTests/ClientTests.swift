@@ -146,7 +146,7 @@ struct ClientTests {
 
     @Test func `unstubbed endpoints answer not found`() async throws {
         try await login()
-        let problem = await failure { _ = try await client.listRules().ok }
+        let problem = await failure { _ = try await client.listEventTypes().ok } // the app never calls it (docs/architecture/ios-app.md)
         #expect(problem?.status == 404)
         #expect(problem?.code == "not_found")
     }
