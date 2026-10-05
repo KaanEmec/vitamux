@@ -1,0 +1,2387 @@
+{
+	"synthetic": true,
+	"cases": [
+		{
+			"note": "internal/resolve/testdata/valid/blood-pressure-family.json",
+			"rule": {
+				"schema": "vitamux.rule/1",
+				"metric": "blood_pressure",
+				"window": {
+					"kind": "local_day"
+				},
+				"groups": [
+					{
+						"id": "cuff",
+						"match": [
+							{
+								"device_type": "bp_monitor"
+							}
+						]
+					},
+					{
+						"id": "manual",
+						"match": [
+							{
+								"entry": "manual"
+							}
+						]
+					}
+				],
+				"within_source": {
+					"statistic": "mean"
+				},
+				"strategy": {
+					"op": "first_available"
+				}
+			},
+			"form": {
+				"metric": "blood_pressure",
+				"windowKind": "local_day",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "cuff",
+						"match": [
+							{
+								"device_type": "bp_monitor"
+							}
+						]
+					},
+					{
+						"id": "manual",
+						"match": [
+							{
+								"entry": "manual"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "mean",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"blood_pressure\",\"window\":{\"kind\":\"local_day\"},\"groups\":[{\"id\":\"cuff\",\"match\":[{\"device_type\":\"bp_monitor\"}]},{\"id\":\"manual\",\"match\":[{\"entry\":\"manual\"}]}],\"within_source\":{\"statistic\":\"mean\"},\"strategy\":{\"op\":\"first_available\"}}",
+			"sentence": "For each day, use the first source in order with data; if none has, the day has no value."
+		},
+		{
+			"note": "internal/resolve/testdata/valid/brand-selectors.json",
+			"rule": {
+				"schema": "vitamux.rule/1",
+				"metric": "heart_rate",
+				"window": {
+					"kind": "bucket",
+					"size": "5m"
+				},
+				"groups": [
+					{
+						"id": "whoop",
+						"match": [
+							{
+								"provider": "whoop"
+							}
+						]
+					},
+					{
+						"id": "garmin_any",
+						"match": [
+							{
+								"device_manufacturer": "Garmin"
+							}
+						]
+					},
+					{
+						"id": "apple_watch",
+						"match": [
+							{
+								"provider": "apple_health",
+								"device_manufacturer": "Apple Inc.",
+								"device_model": "Watch"
+							}
+						]
+					}
+				],
+				"exclude": [
+					{
+						"device_manufacturer": "Garmin",
+						"device_model": "Forerunner 965",
+						"relayed": true
+					}
+				],
+				"strategy": {
+					"op": "first_available"
+				}
+			},
+			"form": {
+				"metric": "heart_rate",
+				"windowKind": "bucket",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "whoop",
+						"match": [
+							{
+								"provider": "whoop"
+							}
+						]
+					},
+					{
+						"id": "garmin_any",
+						"match": [
+							{
+								"device_manufacturer": "Garmin"
+							}
+						]
+					},
+					{
+						"id": "apple_watch",
+						"match": [
+							{
+								"provider": "apple_health",
+								"device_manufacturer": "Apple Inc.",
+								"device_model": "Watch"
+							}
+						]
+					}
+				],
+				"exclude": [
+					{
+						"device_manufacturer": "Garmin",
+						"device_model": "Forerunner 965",
+						"relayed": true
+					}
+				],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"heart_rate\",\"window\":{\"kind\":\"bucket\",\"size\":\"5m\"},\"groups\":[{\"id\":\"whoop\",\"match\":[{\"provider\":\"whoop\"}]},{\"id\":\"garmin_any\",\"match\":[{\"device_manufacturer\":\"Garmin\"}]},{\"id\":\"apple_watch\",\"match\":[{\"provider\":\"apple_health\",\"device_manufacturer\":\"Apple Inc.\",\"device_model\":\"Watch\"}]}],\"exclude\":[{\"device_manufacturer\":\"Garmin\",\"device_model\":\"Forerunner 965\",\"relayed\":true}],\"strategy\":{\"op\":\"first_available\"}}",
+			"sentence": "For each 5-minute bucket, use the first source in order with data; if none has, the 5-minute bucket has no value. 1 excluded source is never used."
+		},
+		{
+			"note": "internal/resolve/testdata/valid/claude-apple-watch-first.json",
+			"rule": {
+				"schema": "vitamux.rule/1",
+				"metric": "heart_rate",
+				"window": {
+					"kind": "bucket",
+					"size": "5m"
+				},
+				"groups": [
+					{
+						"id": "apple_watch",
+						"match": [
+							{
+								"provider": "apple_health",
+								"device_type": "watch",
+								"relayed": false
+							}
+						]
+					},
+					{
+						"id": "withings",
+						"match": [
+							{
+								"provider": "withings"
+							}
+						]
+					},
+					{
+						"id": "iphone",
+						"match": [
+							{
+								"provider": "apple_health",
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [
+					{
+						"provider": "apple_health",
+						"origin_key_prefix": "com.garmin."
+					},
+					{
+						"entry": "manual"
+					}
+				],
+				"strategy": {
+					"op": "first_available"
+				},
+				"quality": {
+					"plausible_range": [
+						25,
+						230
+					],
+					"exclude_flags": [
+						"manual_entry"
+					]
+				}
+			},
+			"form": {
+				"metric": "heart_rate",
+				"windowKind": "bucket",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "apple_watch",
+						"match": [
+							{
+								"provider": "apple_health",
+								"device_type": "watch",
+								"relayed": false
+							}
+						]
+					},
+					{
+						"id": "withings",
+						"match": [
+							{
+								"provider": "withings"
+							}
+						]
+					},
+					{
+						"id": "iphone",
+						"match": [
+							{
+								"provider": "apple_health",
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [
+					{
+						"provider": "apple_health",
+						"origin_key_prefix": "com.garmin."
+					},
+					{
+						"entry": "manual"
+					}
+				],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "25",
+				"rangeHigh": "230",
+				"excludeFlags": [
+					"manual_entry"
+				],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"heart_rate\",\"window\":{\"kind\":\"bucket\",\"size\":\"5m\"},\"groups\":[{\"id\":\"apple_watch\",\"match\":[{\"provider\":\"apple_health\",\"device_type\":\"watch\",\"relayed\":false}]},{\"id\":\"withings\",\"match\":[{\"provider\":\"withings\"}]},{\"id\":\"iphone\",\"match\":[{\"provider\":\"apple_health\",\"device_type\":\"phone\"}]}],\"exclude\":[{\"provider\":\"apple_health\",\"origin_key_prefix\":\"com.garmin.\"},{\"entry\":\"manual\"}],\"strategy\":{\"op\":\"first_available\"},\"quality\":{\"plausible_range\":[25,230],\"exclude_flags\":[\"manual_entry\"]}}",
+			"sentence": "For each 5-minute bucket, use the first source in order with data; if none has, the 5-minute bucket has no value. 2 excluded sources are never used."
+		},
+		{
+			"note": "internal/resolve/testdata/valid/claude-heart-rate-mean.json",
+			"rule": {
+				"schema": "vitamux.rule/1",
+				"metric": "heart_rate",
+				"window": {
+					"kind": "bucket",
+					"size": "5m"
+				},
+				"groups": [
+					{
+						"id": "garmin",
+						"match": [
+							{
+								"provider": "garmin"
+							}
+						]
+					},
+					{
+						"id": "whoop",
+						"match": [
+							{
+								"provider": "whoop"
+							}
+						]
+					},
+					{
+						"id": "apple_watch",
+						"match": [
+							{
+								"provider": "apple_health",
+								"device_type": "watch",
+								"relayed": false
+							}
+						]
+					}
+				],
+				"exclude": [
+					{
+						"provider": "apple_health",
+						"relayed": true
+					}
+				],
+				"within_source": {
+					"intra_group": "auto"
+				},
+				"strategy": {
+					"op": "mean_across_sources",
+					"min_sources": 1,
+					"on_insufficient": "use_available"
+				},
+				"quality": {
+					"min_coverage": 0.5,
+					"plausible_range": [
+						25,
+						230
+					],
+					"exclude_flags": [
+						"manual_entry"
+					],
+					"max_staleness": "36h",
+					"sleep": {
+						"match_overlap": 0.5,
+						"min_episode_coverage": 0.7,
+						"include_naps": false,
+						"night_anchor": "18:00"
+					}
+				},
+				"acknowledged_warnings": []
+			},
+			"form": {
+				"metric": "heart_rate",
+				"windowKind": "bucket",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "garmin",
+						"match": [
+							{
+								"provider": "garmin"
+							}
+						]
+					},
+					{
+						"id": "whoop",
+						"match": [
+							{
+								"provider": "whoop"
+							}
+						]
+					},
+					{
+						"id": "apple_watch",
+						"match": [
+							{
+								"provider": "apple_health",
+								"device_type": "watch",
+								"relayed": false
+							}
+						]
+					}
+				],
+				"exclude": [
+					{
+						"provider": "apple_health",
+						"relayed": true
+					}
+				],
+				"op": "mean_across_sources",
+				"minSources": "1",
+				"onInsufficient": "use_available",
+				"intraGroup": "auto",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "0.5",
+				"rangeLow": "25",
+				"rangeHigh": "230",
+				"excludeFlags": [
+					"manual_entry"
+				],
+				"maxStaleness": "36h",
+				"requireWear": "",
+				"matchOverlap": "0.5",
+				"minEpisodeCoverage": "0.7",
+				"includeNaps": "false",
+				"nightAnchor": "18:00",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"heart_rate\",\"window\":{\"kind\":\"bucket\",\"size\":\"5m\"},\"groups\":[{\"id\":\"garmin\",\"match\":[{\"provider\":\"garmin\"}]},{\"id\":\"whoop\",\"match\":[{\"provider\":\"whoop\"}]},{\"id\":\"apple_watch\",\"match\":[{\"provider\":\"apple_health\",\"device_type\":\"watch\",\"relayed\":false}]}],\"exclude\":[{\"provider\":\"apple_health\",\"relayed\":true}],\"within_source\":{\"intra_group\":\"auto\"},\"strategy\":{\"op\":\"mean_across_sources\",\"min_sources\":1,\"on_insufficient\":\"use_available\"},\"quality\":{\"min_coverage\":0.5,\"plausible_range\":[25,230],\"exclude_flags\":[\"manual_entry\"],\"max_staleness\":\"36h\",\"sleep\":{\"match_overlap\":0.5,\"min_episode_coverage\":0.7,\"include_naps\":false,\"night_anchor\":\"18:00\"}}}",
+			"sentence": "For each 5-minute bucket, average the sources with at least 50% coverage. 1 excluded source is never used."
+		},
+		{
+			"note": "internal/resolve/testdata/valid/claude-resting-hr-first-available.json",
+			"rule": {
+				"schema": "vitamux.rule/1",
+				"metric": "resting_heart_rate",
+				"window": {
+					"kind": "local_day"
+				},
+				"groups": [
+					{
+						"id": "oura",
+						"match": [
+							{
+								"provider": "oura"
+							},
+							{
+								"provider": "apple_health",
+								"origin_key": "com.example.ring"
+							}
+						]
+					},
+					{
+						"id": "garmin",
+						"match": [
+							{
+								"provider": "garmin"
+							}
+						]
+					},
+					{
+						"id": "apple",
+						"match": [
+							{
+								"provider": "apple_health",
+								"relayed": false
+							}
+						]
+					}
+				],
+				"strategy": {
+					"op": "first_available"
+				},
+				"quality": {
+					"max_staleness": "36h"
+				}
+			},
+			"form": {
+				"metric": "resting_heart_rate",
+				"windowKind": "local_day",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "oura",
+						"match": [
+							{
+								"provider": "oura"
+							},
+							{
+								"provider": "apple_health",
+								"origin_key": "com.example.ring"
+							}
+						]
+					},
+					{
+						"id": "garmin",
+						"match": [
+							{
+								"provider": "garmin"
+							}
+						]
+					},
+					{
+						"id": "apple",
+						"match": [
+							{
+								"provider": "apple_health",
+								"relayed": false
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "36h",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"resting_heart_rate\",\"window\":{\"kind\":\"local_day\"},\"groups\":[{\"id\":\"oura\",\"match\":[{\"provider\":\"oura\"},{\"provider\":\"apple_health\",\"origin_key\":\"com.example.ring\"}]},{\"id\":\"garmin\",\"match\":[{\"provider\":\"garmin\"}]},{\"id\":\"apple\",\"match\":[{\"provider\":\"apple_health\",\"relayed\":false}]}],\"strategy\":{\"op\":\"first_available\"},\"quality\":{\"max_staleness\":\"36h\"}}",
+			"sentence": "For each day, use the first source in order with data; if none has, the day has no value."
+		},
+		{
+			"note": "internal/resolve/testdata/valid/claude-steps-sum.json",
+			"rule": {
+				"schema": "vitamux.rule/1",
+				"metric": "steps",
+				"window": {
+					"kind": "local_day"
+				},
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"within_source": {
+					"daily_value_policy": "prefer_reported"
+				},
+				"strategy": {
+					"op": "sum_across_sources",
+					"min_sources": 2,
+					"on_insufficient": "no_value"
+				},
+				"acknowledged_warnings": [
+					"cross_source_sum_duplicate_risk"
+				]
+			},
+			"form": {
+				"metric": "steps",
+				"windowKind": "local_day",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "sum_across_sources",
+				"minSources": "2",
+				"onInsufficient": "no_value",
+				"intraGroup": "",
+				"dailyValuePolicy": "prefer_reported",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": [
+					"cross_source_sum_duplicate_risk"
+				]
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"steps\",\"window\":{\"kind\":\"local_day\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"within_source\":{\"daily_value_policy\":\"prefer_reported\"},\"strategy\":{\"op\":\"sum_across_sources\",\"min_sources\":2,\"on_insufficient\":\"no_value\"},\"acknowledged_warnings\":[\"cross_source_sum_duplicate_risk\"]}",
+			"sentence": "For each day, add the sources together, when at least 2 have data; the same activity can be counted twice."
+		},
+		{
+			"note": "internal/resolve/testdata/valid/e1-workout-hr-contexts.json",
+			"rule": {
+				"schema": "vitamux.rule/1",
+				"metric": "heart_rate",
+				"window": {
+					"kind": "bucket",
+					"size": "5m"
+				},
+				"groups": [
+					{
+						"id": "apple_watch",
+						"match": [
+							{
+								"provider": "apple_health",
+								"device_type": "watch",
+								"relayed": false
+							}
+						]
+					},
+					{
+						"id": "garmin",
+						"match": [
+							{
+								"provider": "garmin"
+							}
+						]
+					},
+					{
+						"id": "chest_strap",
+						"match": [
+							{
+								"device_type": "chest_strap"
+							}
+						]
+					},
+					{
+						"id": "ring",
+						"match": [
+							{
+								"device_type": "ring"
+							}
+						]
+					}
+				],
+				"strategy": {
+					"op": "first_available"
+				},
+				"contexts": {
+					"workout": [
+						"chest_strap",
+						"@workout_source"
+					],
+					"sleep": [
+						"ring"
+					]
+				}
+			},
+			"form": {
+				"metric": "heart_rate",
+				"windowKind": "bucket",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "apple_watch",
+						"match": [
+							{
+								"provider": "apple_health",
+								"device_type": "watch",
+								"relayed": false
+							}
+						]
+					},
+					{
+						"id": "garmin",
+						"match": [
+							{
+								"provider": "garmin"
+							}
+						]
+					},
+					{
+						"id": "chest_strap",
+						"match": [
+							{
+								"device_type": "chest_strap"
+							}
+						]
+					},
+					{
+						"id": "ring",
+						"match": [
+							{
+								"device_type": "ring"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": [],
+				"contexts": {
+					"workout": [
+						"chest_strap",
+						"@workout_source"
+					],
+					"sleep": [
+						"ring"
+					]
+				}
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"heart_rate\",\"window\":{\"kind\":\"bucket\",\"size\":\"5m\"},\"groups\":[{\"id\":\"apple_watch\",\"match\":[{\"provider\":\"apple_health\",\"device_type\":\"watch\",\"relayed\":false}]},{\"id\":\"garmin\",\"match\":[{\"provider\":\"garmin\"}]},{\"id\":\"chest_strap\",\"match\":[{\"device_type\":\"chest_strap\"}]},{\"id\":\"ring\",\"match\":[{\"device_type\":\"ring\"}]}],\"strategy\":{\"op\":\"first_available\"},\"contexts\":{\"workout\":[\"chest_strap\",\"@workout_source\"],\"sleep\":[\"ring\"]}}",
+			"sentence": "For each 5-minute bucket, use the first source in order with data; if none has, the 5-minute bucket has no value."
+		},
+		{
+			"note": "internal/resolve/testdata/valid/e2-nocturnal-min-rolling-mean.json",
+			"rule": {
+				"schema": "vitamux.rule/1",
+				"metric": "heart_rate",
+				"window": {
+					"kind": "local_night"
+				},
+				"groups": [
+					{
+						"id": "ring",
+						"match": [
+							{
+								"device_type": "ring"
+							}
+						]
+					},
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					}
+				],
+				"within_source": {
+					"statistic": "min_rolling_mean",
+					"span": "30m"
+				},
+				"strategy": {
+					"op": "first_available"
+				},
+				"quality": {
+					"min_coverage": 0.7
+				},
+				"contexts": {
+					"sleep": [
+						"ring"
+					]
+				}
+			},
+			"form": {
+				"metric": "heart_rate",
+				"windowKind": "local_night",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "ring",
+						"match": [
+							{
+								"device_type": "ring"
+							}
+						]
+					},
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "min_rolling_mean",
+				"span": "30m",
+				"minCoverage": "0.7",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": [],
+				"contexts": {
+					"sleep": [
+						"ring"
+					]
+				}
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"heart_rate\",\"window\":{\"kind\":\"local_night\"},\"groups\":[{\"id\":\"ring\",\"match\":[{\"device_type\":\"ring\"}]},{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]}],\"within_source\":{\"statistic\":\"min_rolling_mean\",\"span\":\"30m\"},\"strategy\":{\"op\":\"first_available\"},\"quality\":{\"min_coverage\":0.7},\"contexts\":{\"sleep\":[\"ring\"]}}",
+			"sentence": "For each night, use the first source in order with at least 70% coverage; if none has, the night has no value."
+		},
+		{
+			"note": "internal/resolve/testdata/valid/e3-active-energy-wear.json",
+			"rule": {
+				"schema": "vitamux.rule/1",
+				"metric": "active_energy",
+				"window": {
+					"kind": "local_day"
+				},
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "ring",
+						"match": [
+							{
+								"device_type": "ring"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"strategy": {
+					"op": "first_available"
+				},
+				"quality": {
+					"min_coverage": 0.8,
+					"require_wear": "heart_rate"
+				}
+			},
+			"form": {
+				"metric": "active_energy",
+				"windowKind": "local_day",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "ring",
+						"match": [
+							{
+								"device_type": "ring"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "0.8",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "heart_rate",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"active_energy\",\"window\":{\"kind\":\"local_day\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"ring\",\"match\":[{\"device_type\":\"ring\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"strategy\":{\"op\":\"first_available\"},\"quality\":{\"min_coverage\":0.8,\"require_wear\":\"heart_rate\"}}",
+			"sentence": "For each day, use the first source in order with at least 80% coverage; if none has, the day has no value."
+		},
+		{
+			"note": "internal/resolve/testdata/valid/e5-body-fat-follow.json",
+			"rule": {
+				"schema": "vitamux.rule/1",
+				"metric": "body_fat_ratio",
+				"window": {
+					"kind": "local_day"
+				},
+				"groups": [
+					{
+						"id": "scale",
+						"match": [
+							{
+								"device_type": "scale"
+							}
+						]
+					},
+					{
+						"id": "manual",
+						"match": [
+							{
+								"entry": "manual"
+							}
+						]
+					}
+				],
+				"within_source": {
+					"statistic": "latest"
+				},
+				"strategy": {
+					"op": "first_available"
+				},
+				"follow": "weight"
+			},
+			"form": {
+				"metric": "body_fat_ratio",
+				"windowKind": "local_day",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "scale",
+						"match": [
+							{
+								"device_type": "scale"
+							}
+						]
+					},
+					{
+						"id": "manual",
+						"match": [
+							{
+								"entry": "manual"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "latest",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "weight",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"body_fat_ratio\",\"window\":{\"kind\":\"local_day\"},\"groups\":[{\"id\":\"scale\",\"match\":[{\"device_type\":\"scale\"}]},{\"id\":\"manual\",\"match\":[{\"entry\":\"manual\"}]}],\"within_source\":{\"statistic\":\"latest\"},\"strategy\":{\"op\":\"first_available\"},\"follow\":\"weight\"}",
+			"sentence": "For each day, use the first source in order with data; if none has, the day has no value. It uses the source that weight selected when it can."
+		},
+		{
+			"note": "internal/resolve/testdata/valid/e9-steps-compose.json",
+			"rule": {
+				"schema": "vitamux.rule/1",
+				"metric": "steps",
+				"window": {
+					"kind": "local_day"
+				},
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "ring",
+						"match": [
+							{
+								"device_type": "ring"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [
+					{
+						"relayed": true
+					}
+				],
+				"strategy": {
+					"op": "first_available"
+				},
+				"quality": {
+					"min_coverage": 0.6,
+					"require_wear": "heart_rate"
+				},
+				"compose": {
+					"from": "hour",
+					"op": "first_available"
+				}
+			},
+			"form": {
+				"metric": "steps",
+				"windowKind": "local_day",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "ring",
+						"match": [
+							{
+								"device_type": "ring"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [
+					{
+						"relayed": true
+					}
+				],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "0.6",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "heart_rate",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "first_available",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"steps\",\"window\":{\"kind\":\"local_day\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"ring\",\"match\":[{\"device_type\":\"ring\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"exclude\":[{\"relayed\":true}],\"strategy\":{\"op\":\"first_available\"},\"quality\":{\"min_coverage\":0.6,\"require_wear\":\"heart_rate\"},\"compose\":{\"from\":\"hour\",\"op\":\"first_available\"}}",
+			"sentence": "For each day, use the first source in order with at least 60% coverage; if none has, the day has no value. Each hour is picked first, then the hours are added up. 1 excluded source is never used."
+		},
+		{
+			"note": "internal/resolve/testdata/valid/sleep-family.json",
+			"rule": {
+				"schema": "vitamux.rule/1",
+				"metric": "sleep",
+				"window": {
+					"kind": "local_night"
+				},
+				"groups": [
+					{
+						"id": "ring",
+						"match": [
+							{
+								"device_type": "ring"
+							}
+						]
+					},
+					{
+						"id": "apple_watch",
+						"match": [
+							{
+								"provider": "apple_health",
+								"device_type": "watch",
+								"relayed": false
+							}
+						]
+					},
+					{
+						"id": "mattress",
+						"match": [
+							{
+								"provider": "withings",
+								"device_type": "sleep_mat"
+							}
+						]
+					}
+				],
+				"strategy": {
+					"op": "event_priority"
+				},
+				"quality": {
+					"max_staleness": "36h",
+					"sleep": {
+						"match_overlap": 0.5,
+						"min_episode_coverage": 0.7
+					}
+				}
+			},
+			"form": {
+				"metric": "sleep",
+				"windowKind": "local_night",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "ring",
+						"match": [
+							{
+								"device_type": "ring"
+							}
+						]
+					},
+					{
+						"id": "apple_watch",
+						"match": [
+							{
+								"provider": "apple_health",
+								"device_type": "watch",
+								"relayed": false
+							}
+						]
+					},
+					{
+						"id": "mattress",
+						"match": [
+							{
+								"provider": "withings",
+								"device_type": "sleep_mat"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "event_priority",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "36h",
+				"requireWear": "",
+				"matchOverlap": "0.5",
+				"minEpisodeCoverage": "0.7",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"sleep\",\"window\":{\"kind\":\"local_night\"},\"groups\":[{\"id\":\"ring\",\"match\":[{\"device_type\":\"ring\"}]},{\"id\":\"apple_watch\",\"match\":[{\"provider\":\"apple_health\",\"device_type\":\"watch\",\"relayed\":false}]},{\"id\":\"mattress\",\"match\":[{\"provider\":\"withings\",\"device_type\":\"sleep_mat\"}]}],\"strategy\":{\"op\":\"event_priority\"},\"quality\":{\"max_staleness\":\"36h\",\"sleep\":{\"match_overlap\":0.5,\"min_episode_coverage\":0.7}}}",
+			"sentence": "For each night, use the whole event from the first source in order that recorded one."
+		},
+		{
+			"note": "internal/resolve/testdata/valid/vo2max-latest.json",
+			"rule": {
+				"schema": "vitamux.rule/1",
+				"metric": "vo2max",
+				"window": {
+					"kind": "latest"
+				},
+				"groups": [
+					{
+						"id": "garmin",
+						"match": [
+							{
+								"provider": "garmin"
+							}
+						]
+					},
+					{
+						"id": "apple",
+						"match": [
+							{
+								"provider": "apple_health"
+							}
+						]
+					}
+				],
+				"strategy": {
+					"op": "first_available"
+				},
+				"quality": {
+					"max_staleness": "30d"
+				}
+			},
+			"form": {
+				"metric": "vo2max",
+				"windowKind": "latest",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "garmin",
+						"match": [
+							{
+								"provider": "garmin"
+							}
+						]
+					},
+					{
+						"id": "apple",
+						"match": [
+							{
+								"provider": "apple_health"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "30d",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"vo2max\",\"window\":{\"kind\":\"latest\"},\"groups\":[{\"id\":\"garmin\",\"match\":[{\"provider\":\"garmin\"}]},{\"id\":\"apple\",\"match\":[{\"provider\":\"apple_health\"}]}],\"strategy\":{\"op\":\"first_available\"},\"quality\":{\"max_staleness\":\"30d\"}}",
+			"sentence": "For the latest value, use the first source in order with data; if none has, the latest value has no value."
+		},
+		{
+			"note": "an empty rule",
+			"form": {
+				"metric": "steps",
+				"windowKind": "local_day",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "",
+						"match": [
+							{
+								"provider": ""
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"steps\",\"window\":{\"kind\":\"local_day\"},\"groups\":[{\"id\":\"\",\"match\":[{}]}],\"strategy\":{\"op\":\"first_available\"}}",
+			"sentence": "For each day, use the first source in order with data; if none has, the day has no value."
+		},
+		{
+			"note": "strategy single_source on a day",
+			"form": {
+				"metric": "steps",
+				"windowKind": "local_day",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "single_source",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"steps\",\"window\":{\"kind\":\"local_day\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]}],\"strategy\":{\"op\":\"single_source\"}}",
+			"sentence": "For each day, use only watch; without it, the day has no value."
+		},
+		{
+			"note": "strategy first_available on a day",
+			"form": {
+				"metric": "steps",
+				"windowKind": "local_day",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"steps\",\"window\":{\"kind\":\"local_day\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"strategy\":{\"op\":\"first_available\"}}",
+			"sentence": "For each day, use the first source in order with data; if none has, the day has no value."
+		},
+		{
+			"note": "strategy mean_across_sources on a day",
+			"form": {
+				"metric": "steps",
+				"windowKind": "local_day",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "mean_across_sources",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"steps\",\"window\":{\"kind\":\"local_day\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"strategy\":{\"op\":\"mean_across_sources\"}}",
+			"sentence": "For each day, average the sources."
+		},
+		{
+			"note": "strategy minimum_across_sources on a day",
+			"form": {
+				"metric": "steps",
+				"windowKind": "local_day",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "minimum_across_sources",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"steps\",\"window\":{\"kind\":\"local_day\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"strategy\":{\"op\":\"minimum_across_sources\"}}",
+			"sentence": "For each day, take the lowest of the sources."
+		},
+		{
+			"note": "strategy maximum_across_sources on a day",
+			"form": {
+				"metric": "steps",
+				"windowKind": "local_day",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "maximum_across_sources",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"steps\",\"window\":{\"kind\":\"local_day\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"strategy\":{\"op\":\"maximum_across_sources\"}}",
+			"sentence": "For each day, take the highest of the sources."
+		},
+		{
+			"note": "strategy sum_across_sources on a day",
+			"form": {
+				"metric": "steps",
+				"windowKind": "local_day",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "sum_across_sources",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": [
+					"cross_source_sum_duplicate_risk"
+				]
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"steps\",\"window\":{\"kind\":\"local_day\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"strategy\":{\"op\":\"sum_across_sources\"},\"acknowledged_warnings\":[\"cross_source_sum_duplicate_risk\"]}",
+			"sentence": "For each day, add the sources together; the same activity can be counted twice."
+		},
+		{
+			"note": "strategy latest on a day",
+			"form": {
+				"metric": "steps",
+				"windowKind": "local_day",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "latest",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"steps\",\"window\":{\"kind\":\"local_day\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"strategy\":{\"op\":\"latest\"}}",
+			"sentence": "For each day, use the newest value of the sources; ties go by order."
+		},
+		{
+			"note": "strategy earliest on a day",
+			"form": {
+				"metric": "steps",
+				"windowKind": "local_day",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "earliest",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"steps\",\"window\":{\"kind\":\"local_day\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"strategy\":{\"op\":\"earliest\"}}",
+			"sentence": "For each day, use the oldest value of the sources; ties go by order."
+		},
+		{
+			"note": "strategy event_priority on a day",
+			"form": {
+				"metric": "steps",
+				"windowKind": "local_day",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "event_priority",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"steps\",\"window\":{\"kind\":\"local_day\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"strategy\":{\"op\":\"event_priority\"}}",
+			"sentence": "For each day, use the whole event from the first source in order that recorded one."
+		},
+		{
+			"note": "window bucket 30s",
+			"form": {
+				"metric": "heart_rate",
+				"windowKind": "bucket",
+				"bucketSize": "30s",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"heart_rate\",\"window\":{\"kind\":\"bucket\",\"size\":\"30s\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"strategy\":{\"op\":\"first_available\"}}",
+			"sentence": "For each 30-minute bucket, use the first source in order with data; if none has, the 30-minute bucket has no value."
+		},
+		{
+			"note": "window bucket 15m",
+			"form": {
+				"metric": "heart_rate",
+				"windowKind": "bucket",
+				"bucketSize": "15m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"heart_rate\",\"window\":{\"kind\":\"bucket\",\"size\":\"15m\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"strategy\":{\"op\":\"first_available\"}}",
+			"sentence": "For each 15-minute bucket, use the first source in order with data; if none has, the 15-minute bucket has no value."
+		},
+		{
+			"note": "window hour",
+			"form": {
+				"metric": "heart_rate",
+				"windowKind": "hour",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"heart_rate\",\"window\":{\"kind\":\"hour\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"strategy\":{\"op\":\"first_available\"}}",
+			"sentence": "For each hour, use the first source in order with data; if none has, the hour has no value."
+		},
+		{
+			"note": "window local_night",
+			"form": {
+				"metric": "heart_rate",
+				"windowKind": "local_night",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"heart_rate\",\"window\":{\"kind\":\"local_night\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"strategy\":{\"op\":\"first_available\"}}",
+			"sentence": "For each night, use the first source in order with data; if none has, the night has no value."
+		},
+		{
+			"note": "window sleep_episode",
+			"form": {
+				"metric": "heart_rate",
+				"windowKind": "sleep_episode",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"heart_rate\",\"window\":{\"kind\":\"sleep_episode\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"strategy\":{\"op\":\"first_available\"}}",
+			"sentence": "For each sleep episode, use the first source in order with data; if none has, the sleep episode has no value."
+		},
+		{
+			"note": "window latest",
+			"form": {
+				"metric": "heart_rate",
+				"windowKind": "latest",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"heart_rate\",\"window\":{\"kind\":\"latest\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"strategy\":{\"op\":\"first_available\"}}",
+			"sentence": "For the latest value, use the first source in order with data; if none has, the latest value has no value."
+		},
+		{
+			"note": "window reading",
+			"form": {
+				"metric": "heart_rate",
+				"windowKind": "reading",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"heart_rate\",\"window\":{\"kind\":\"reading\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"strategy\":{\"op\":\"first_available\"}}",
+			"sentence": "For each reading, use the first source in order with data; if none has, the reading has no value."
+		},
+		{
+			"note": "pooling with a minimum, coverage and an exclusion",
+			"form": {
+				"metric": "heart_rate",
+				"windowKind": "local_day",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [
+					{
+						"provider": "apple_health",
+						"relayed": true
+					}
+				],
+				"op": "mean_across_sources",
+				"minSources": "2",
+				"onInsufficient": "no_value",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "0.6",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"heart_rate\",\"window\":{\"kind\":\"local_day\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"exclude\":[{\"provider\":\"apple_health\",\"relayed\":true}],\"strategy\":{\"op\":\"mean_across_sources\",\"min_sources\":2,\"on_insufficient\":\"no_value\"},\"quality\":{\"min_coverage\":0.6}}",
+			"sentence": "For each day, average the sources with at least 60% coverage, when at least 2 have data. 1 excluded source is never used."
+		},
+		{
+			"note": "min_sources is dropped for a non-pooling strategy",
+			"form": {
+				"metric": "heart_rate",
+				"windowKind": "local_day",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "first_available",
+				"minSources": "3",
+				"onInsufficient": "no_value",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "",
+				"span": "",
+				"minCoverage": "0.6",
+				"rangeLow": "",
+				"rangeHigh": "",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"heart_rate\",\"window\":{\"kind\":\"local_day\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"strategy\":{\"op\":\"first_available\"},\"quality\":{\"min_coverage\":0.6}}",
+			"sentence": "For each day, use the first source in order with at least 60% coverage; if none has, the day has no value."
+		},
+		{
+			"note": "inputs are trimmed, empty fields left out, bad numbers kept as text",
+			"form": {
+				"metric": "heart_rate",
+				"windowKind": "local_day",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": " Bad Id ",
+						"match": [
+							{
+								"provider": "",
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "garmin",
+						"match": [
+							{
+								"provider": "garmin"
+							},
+							{
+								"origin_key": "com.example.health",
+								"relayed": false
+							}
+						]
+					}
+				],
+				"exclude": [
+					{
+						"provider": "apple_health",
+						"relayed": true
+					},
+					{
+						"entry": "manual"
+					}
+				],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "sum",
+				"dailyValuePolicy": "intervals_only",
+				"statistic": "min_rolling_mean",
+				"span": " 30m ",
+				"minCoverage": "abc",
+				"rangeLow": "25",
+				"rangeHigh": "",
+				"excludeFlags": [
+					"manual_entry",
+					"implausible"
+				],
+				"maxStaleness": " 36h ",
+				"requireWear": "heart_rate",
+				"matchOverlap": "0.5",
+				"minEpisodeCoverage": "0.75",
+				"includeNaps": "true",
+				"nightAnchor": " 19:00 ",
+				"follow": " weight ",
+				"compose": "max",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"heart_rate\",\"window\":{\"kind\":\"local_day\"},\"groups\":[{\"id\":\"Bad Id\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"garmin\",\"match\":[{\"provider\":\"garmin\"},{\"origin_key\":\"com.example.health\",\"relayed\":false}]}],\"exclude\":[{\"provider\":\"apple_health\",\"relayed\":true},{\"entry\":\"manual\"}],\"within_source\":{\"intra_group\":\"sum\",\"daily_value_policy\":\"intervals_only\",\"statistic\":\"min_rolling_mean\",\"span\":\"30m\"},\"strategy\":{\"op\":\"first_available\"},\"quality\":{\"min_coverage\":\"abc\",\"plausible_range\":[25,null],\"exclude_flags\":[\"manual_entry\",\"implausible\"],\"max_staleness\":\"36h\",\"require_wear\":\"heart_rate\",\"sleep\":{\"match_overlap\":0.5,\"min_episode_coverage\":0.75,\"include_naps\":true,\"night_anchor\":\"19:00\"}},\"follow\":\"weight\",\"compose\":{\"from\":\"hour\",\"op\":\"max\"}}",
+			"sentence": "For each day, use the first source in order with data; if none has, the day has no value. Each hour is picked first, then the hours are added up. It uses the source that weight selected when it can. 2 excluded sources are never used."
+		},
+		{
+			"note": "a span without min_rolling_mean is left out; naps off",
+			"form": {
+				"metric": "heart_rate",
+				"windowKind": "local_day",
+				"bucketSize": "5m",
+				"groups": [
+					{
+						"id": "watch",
+						"match": [
+							{
+								"device_type": "watch"
+							}
+						]
+					},
+					{
+						"id": "phone",
+						"match": [
+							{
+								"device_type": "phone"
+							}
+						]
+					}
+				],
+				"exclude": [],
+				"op": "first_available",
+				"minSources": "",
+				"onInsufficient": "",
+				"intraGroup": "",
+				"dailyValuePolicy": "",
+				"statistic": "min",
+				"span": "30m",
+				"minCoverage": "",
+				"rangeLow": "",
+				"rangeHigh": "230",
+				"excludeFlags": [],
+				"maxStaleness": "",
+				"requireWear": "",
+				"matchOverlap": "",
+				"minEpisodeCoverage": "",
+				"includeNaps": "false",
+				"nightAnchor": "",
+				"follow": "",
+				"compose": "",
+				"acknowledged": []
+			},
+			"spec": "{\"schema\":\"vitamux.rule/1\",\"metric\":\"heart_rate\",\"window\":{\"kind\":\"local_day\"},\"groups\":[{\"id\":\"watch\",\"match\":[{\"device_type\":\"watch\"}]},{\"id\":\"phone\",\"match\":[{\"device_type\":\"phone\"}]}],\"within_source\":{\"statistic\":\"min\"},\"strategy\":{\"op\":\"first_available\"},\"quality\":{\"plausible_range\":[null,230],\"sleep\":{\"include_naps\":false}}}",
+			"sentence": "For each day, use the first source in order with data; if none has, the day has no value."
+		}
+	]
+}

@@ -139,19 +139,21 @@ private struct SpecialisedNote: View {
     }
 }
 
-/// The rule in effect and the way to change it (J22.10).
+/// The rule in effect and the way to change it: the rule lens over the chart (J22.10).
 private struct RuleSection: View {
     let model: MetricDetailModel
+    @State private var isEditing = false
 
     var body: some View {
         Section("How it’s calculated") {
             if let rule = model.rule {
                 Text(ruleSummary(rule)).accessibilityIdentifier("ruleSummary")
             }
-            NavigationLink(value: Route.rule(metric: model.code)) {
-                Label("Edit rule", systemImage: "slider.horizontal.3")
-            }
-            .accessibilityIdentifier("editRule")
+            Button("Edit rule", systemImage: "slider.horizontal.3") { isEditing = true }
+                .accessibilityIdentifier("editRule")
+                .sheet(isPresented: $isEditing, onDismiss: model.changed) {
+                    RuleLensSheet(metric: model.code, start: model.from ?? model.end.adding(days: -29), end: model.end)
+                }
         }
     }
 }

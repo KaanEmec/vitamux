@@ -24,8 +24,8 @@ final class DeepLinkUITests: XCTestCase {
         ("vitamux://lab/results", "Lab", "Results", nil),
         ("vitamux://lab/analytes/ldl", "Lab", "Analyte history", nil), // the view: SpecialisedUITests
         ("vitamux://rules", "More", "Rules", nil),
-        ("vitamux://rules/heart_rate", "More", "Rule", "heart_rate"),
-        ("vitamux://rules/new", "More", "New rule", nil),
+        ("vitamux://rules/heart_rate", "More", "heart_rate", nil), // the page: RulesUITests
+        ("vitamux://rules/new?metric=steps", "More", "Rule builder", nil),
         ("vitamux://settings", "More", "Profile", nil),
         ("vitamux://settings/sources", "More", "Sources", nil),
         ("vitamux://settings/devices", "More", "Devices", nil),
