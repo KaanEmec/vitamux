@@ -20,6 +20,7 @@ extension FakeServer {
             break
         }
         guard url.path.hasPrefix("/api/") else { return problem(404, "not_found", "not stubbed in the fake server") }
+        if let reply = appleHealth(method: method, url: url, token: token, signedIn: token.map { state.sessions[$0] != nil } ?? false, body: body) { return reply } // FakeServer+AppleHealth.swift, before the session check: device tokens
         guard let token, let device = state.sessions[token] else {
             return problem(401, "unauthenticated", token == nil ? "sign in or send a bearer token" : "invalid, revoked or expired token")
         }

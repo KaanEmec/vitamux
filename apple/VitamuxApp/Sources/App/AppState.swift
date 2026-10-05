@@ -89,7 +89,7 @@ final class AppState {
             sessions: .keychain(),
             urlSession: .shared,
             defaults: UserDefaults(suiteName: "group.org.vitamux.healthbridge") ?? .standard,
-            device: ThisDevice(tokens: TokenStore(), defaults: .standard, stopsHealthKit: true)
+            device: .live()
         )
     }
 
@@ -284,19 +284,17 @@ enum LockTimeout: Int, CaseIterable {
 #if DEBUG
 extension AppState {
     /// Under `-uitest`: the fake server (`FakeServer.uiTestServers`), an in-memory session, and
-    /// cleared preferences. `-uitest-totp` turns two-factor on; `-uitest-paired` starts with a
-    /// paired device; `-uitest-keep-device` keeps what a Bridge build left (the upgrade check);
-    /// `-uitest-empty-install` and `-uitest-panel-layout` pick the dashboard's start.
+    /// cleared preferences. `-uitest-totp` turns two-factor on; `-uitest-paired`,
+    /// `-uitest-keep-device`, `-uitest-revoked` and `-uitest-anchor-reset` set up this iPhone's
+    /// pairing (`ThisDevice.uiTest`); `-uitest-empty-install` and `-uitest-panel-layout` pick the
+    /// dashboard's start.
     static func uiTest(arguments: [String]) -> AppState {
         let servers = FakeServer.uiTestServers
         FakeServer.uiTest.totpEnabled = arguments.contains("-uitest-totp")
         FakeServer.uiTest.dashboardInstall = .init(arguments: arguments)
         let defaults = UserDefaults(suiteName: "org.vitamux.app.uitest")!
         defaults.removePersistentDomain(forName: "org.vitamux.app.uitest")
-        let device = ThisDevice.uiTest(
-            paired: arguments.contains("-uitest-paired"),
-            keep: arguments.contains("-uitest-keep-device")
-        )
+        let device = ThisDevice.uiTest(arguments: arguments)
         return AppState(
             sessions: .inMemory(), urlSession: servers[0].urlSession, defaults: defaults, device: device, isUITest: true
         )

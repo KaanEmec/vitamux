@@ -39,8 +39,7 @@ struct RouteView: View {
         case .settings(.app): AppSettingsView()
         case .settings(let page):
             PlaceholderView(title: page.title, detail: [], job: "J22.13")
-        case .appleHealth:
-            PlaceholderView(title: "Apple Health", detail: [], job: "J22.14")
+        case .appleHealth: AppleHealthView()
         }
     }
 }
