@@ -44,24 +44,24 @@ No data is removed. Migrations 00032-00041 run on start. Upgrade steps:
 
 1. Pull the new core and sidecar images (`vitamux`, `vitamux-sidecar-garmin`, `vitamux-sidecar-whoop`; the sidecars share the core's tag, or `:stable`). Garmin and WHOOP need the new images for their new streams.
 2. Reconnect Withings for the new scope, then run its new streams' backfills.
-3. Renormalize stored data, one line per normalizer whose version changed (Apple Health 2 to 3, Withings measures 1 to 3, WHOOP and Garmin below):
+3. Renormalize stored data (add `--wait` to see each result; on Coolify use `docker exec <vitamux container> /vitamux …`), one line per normalizer whose version changed (Apple Health 2 to 3, Withings measures 1 to 3, WHOOP and Garmin below):
 
    ```sh
-   vitamux reprocess --normalizer healthkit.samples
-   vitamux reprocess --stream withings.measures
-   vitamux reprocess --stream whoop.heart_rate
-   vitamux reprocess --stream whoop.cycles
-   vitamux reprocess --stream whoop.sleep
-   vitamux reprocess --stream whoop.workouts
-   vitamux reprocess --stream whoop.strain_deep_dive
-   vitamux reprocess --stream garmin.daily_summary
-   vitamux reprocess --stream garmin.steps
-   vitamux reprocess --stream garmin.sleep
-   vitamux reprocess --stream garmin.hrv
-   vitamux reprocess --stream garmin.spo2
-   vitamux reprocess --stream garmin.training
-   vitamux reprocess --stream garmin.body_composition
-   vitamux reprocess --stream garmin.activities
+   docker compose exec vitamux /vitamux reprocess --normalizer healthkit.samples
+   docker compose exec vitamux /vitamux reprocess --stream withings.measures
+   docker compose exec vitamux /vitamux reprocess --stream whoop.heart_rate
+   docker compose exec vitamux /vitamux reprocess --stream whoop.cycles
+   docker compose exec vitamux /vitamux reprocess --stream whoop.sleep
+   docker compose exec vitamux /vitamux reprocess --stream whoop.workouts
+   docker compose exec vitamux /vitamux reprocess --stream whoop.strain_deep_dive
+   docker compose exec vitamux /vitamux reprocess --stream garmin.daily_summary
+   docker compose exec vitamux /vitamux reprocess --stream garmin.steps
+   docker compose exec vitamux /vitamux reprocess --stream garmin.sleep
+   docker compose exec vitamux /vitamux reprocess --stream garmin.hrv
+   docker compose exec vitamux /vitamux reprocess --stream garmin.spo2
+   docker compose exec vitamux /vitamux reprocess --stream garmin.training
+   docker compose exec vitamux /vitamux reprocess --stream garmin.body_composition
+   docker compose exec vitamux /vitamux reprocess --stream garmin.activities
    ```
 
 4. Built-in rule versions changed: steps, distance and active energy `:4` (no gates), heart rate `:3` (WHOOP above Garmin), resting heart rate nocturnal `:3` and sleep `:3` (no coverage gates); total energy is new (`:1`, follows active energy). Rules you edited keep their copy and are untouched; open Rules to compare or reset to the new default.
