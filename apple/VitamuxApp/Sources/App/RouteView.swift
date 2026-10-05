@@ -14,10 +14,11 @@ struct RouteView: View {
 
         case .metric(let code, let range, let end): MetricDetailView(code: code, range: range, end: end)
         case .metricDay(let code, let date): AllSourcesDayRoute(code: code, date: date)
-        case .exploreView(let kind):
-            PlaceholderView(title: kind.title, detail: [], job: "J22.9")
-        case .events(let code):
-            PlaceholderView(title: "Events", detail: [code], job: "J22.9")
+        case .exploreView(.sleep): SleepView()
+        case .exploreView(.bloodPressure): BloodPressureView()
+        case .exploreView(.bodyComposition): BodyCompositionView()
+        case .exploreView(.workouts): WorkoutsView()
+        case .events(let code): EventsView(code: code)
 
         case .connection(let id, let tab):
             PlaceholderView(title: "Connection", detail: [id, tab], job: "J22.11")
@@ -26,8 +27,7 @@ struct RouteView: View {
             PlaceholderView(title: "Review", detail: [id], job: "J22.12")
         case .labResults:
             PlaceholderView(title: "Results", detail: [], job: "J22.12")
-        case .analyte(let code):
-            PlaceholderView(title: "Analyte history", detail: [code], job: "J22.12")
+        case .analyte(let code): LabAnalyteView(code: code)
 
         case .rules:
             PlaceholderView(title: "Rules", detail: [], job: "J22.10")
