@@ -226,6 +226,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/events/{id}/waveform": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the waveform of an ECG recording
+         * @description The vitamux.waveform/1 document of an ecg_recording event, any version (docs/adr/0024-watch-data.md#read-endpoints). The ETag is the document's SHA-256. 404 when the event does not exist or has no waveform.
+         */
+        get: operations["getEventWaveform"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sources/series": {
         parameters: {
             query?: never;
@@ -395,6 +415,26 @@ export interface paths {
          * @description Any version, superseded or deleted included, always with its segments.
          */
         get: operations["getWorkout"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/{id}/route": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the route of a workout
+         * @description The vitamux.route/1 document of the workout's route (docs/adr/0024-watch-data.md#read-endpoints): the active workout_route event whose context.workout_uuid is the workout's external id, else one of the same connection and origin inside the workout. Locations are CoreLocation values as given (a negative accuracy, speed or course means invalid). The ETag is the document's SHA-256. 404 when the workout does not exist or has no route.
+         */
+        get: operations["getWorkoutRoute"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2537,9 +2577,47 @@ export interface components {
             /** @description Source metadata as given. */
             context: Record<string, never>;
             quality_flags: number;
+            /** @description SHA-256 of the event's blob document, when it has one: the waveform of an ecg_recording (GET /events/{id}/waveform) or the route of a workout_route. */
+            file_sha256?: string;
             source: components["schemas"]["SourceRef"];
             provenance: components["schemas"]["RecordProvenance"];
         };
+        /** @description ECG waveform, vitamux.waveform/1 (ADR-0024). Values are the recorded voltages in order, as given. */
+        WaveformDocument: {
+            /** @enum {string} */
+            format: "vitamux.waveform/1";
+            /** Format: date-time */
+            start: string;
+            /** Format: double */
+            sampling_frequency_hz?: number;
+            /** @description µV. */
+            unit: string;
+            /** @description Lead word, e.g. apple_watch_similar_to_lead_i. */
+            lead?: string;
+            values: number[];
+            /** @description Seconds since start per value; only when the spacing is not 1/sampling_frequency_hz. */
+            offsets_s?: number[];
+        };
+        /** @description Workout route, vitamux.route/1 (ADR-0024). Parallel arrays of count entries; CoreLocation values as given (negative accuracy, speed or course = invalid). */
+        RouteDocument: {
+            /** @enum {string} */
+            format: "vitamux.route/1";
+            /** Format: date-time */
+            start: string;
+            count: number;
+            offsets_s: components["schemas"]["Numbers"];
+            latitude: components["schemas"]["Numbers"];
+            longitude: components["schemas"]["Numbers"];
+            altitude_m?: components["schemas"]["Numbers"];
+            ellipsoidal_altitude_m?: components["schemas"]["Numbers"];
+            horizontal_accuracy_m?: components["schemas"]["Numbers"];
+            vertical_accuracy_m?: components["schemas"]["Numbers"];
+            speed_mps?: components["schemas"]["Numbers"];
+            speed_accuracy_mps?: components["schemas"]["Numbers"];
+            course_deg?: components["schemas"]["Numbers"];
+            course_accuracy_deg?: components["schemas"]["Numbers"];
+        };
+        Numbers: number[];
         HealthEventPage: components["schemas"]["PageInfo"] & {
             events: components["schemas"]["HealthEvent"][];
         };
@@ -2879,6 +2957,8 @@ export interface components {
             selection_only: boolean;
             /** @description The source metric of a derived code (rule extension E2). */
             derived_from?: string;
+            /** @description A raw series (rr_interval): stored and drawn, never resolved, so no windows or strategies. */
+            unresolved?: boolean;
             intraday?: components["schemas"]["Intraday"];
         };
         /** @description A metric's day-view bucket ladder (resolution.md#windows); absent for metrics measured once a day or night. */
@@ -2928,6 +3008,8 @@ export interface components {
             quality_flags: number;
             /** @description Measurement group (blood-pressure reading */
             group_id: string | null;
+            /** @description Source detail kept with the value, when any: an activity-summary goal, move mode and paused flag; the workout_uuid of an effort score. */
+            context?: Record<string, never>;
             source: components["schemas"]["SourceRef"];
             provenance: components["schemas"]["RecordProvenance"];
         };
@@ -3123,8 +3205,11 @@ export interface components {
         };
         WorkoutSegment: {
             seq: number;
-            /** @enum {string} */
-            kind: "lap" | "set" | "interval";
+            /**
+             * @description activity: a leg of a multisport workout; pause: pause to resume; marker: a marker or pause request (HealthKit).
+             * @enum {string}
+             */
+            kind: "lap" | "set" | "interval" | "activity" | "pause" | "marker";
             /** Format: date-time */
             start_at: string;
             /** Format: date-time */
@@ -4570,6 +4655,34 @@ export interface operations {
             422: components["responses"]["Problem"];
         };
     };
+    getEventWaveform: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The waveform document. */
+            200: {
+                headers: {
+                    /** @description SHA-256 of the document, hex in quotes. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaveformDocument"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
     getSourceSeries: {
         parameters: {
             query: {
@@ -4922,6 +5035,34 @@ export interface operations {
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+        };
+    };
+    getWorkoutRoute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The route document. */
+            200: {
+                headers: {
+                    /** @description SHA-256 of the document, hex in quotes. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RouteDocument"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     getProvenance: {

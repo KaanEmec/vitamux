@@ -35,12 +35,15 @@ const (
 var errUnreadable = errors.New("healthkit.samples: unreadable page")
 
 // Normalizer turns one healthkit.samples.v1 page into canonical rows: quantities, stand hours,
-// sleep sessions, blood-pressure groups, workouts and health events, plus tombstones for deleted
-// UUIDs. A type it does not map is a warning; its raw page stays stored for a later version.
+// sleep sessions, blood-pressure groups, workouts with their segments and health events, plus
+// tombstones for deleted UUIDs. Version 4 adds the Apple Watch types of ADR-0024 (watch.go):
+// beat-to-beat series, ECG waveforms and workout routes as blob documents, State of Mind,
+// activity summaries, workout detail and the registry v2 categories. A type it does not map is
+// a warning; its raw page stays stored for a later version.
 type Normalizer struct{}
 
 func (Normalizer) ID() string                    { return NormalizerID }
-func (Normalizer) Version() int                  { return 3 }
+func (Normalizer) Version() int                  { return 4 }
 func (Normalizer) Accepts(stream, _ string) bool { return stream == StreamSamples }
 
 type page struct {
@@ -65,12 +68,23 @@ type sample struct {
 	WasUserEntered bool                       `json:"was_user_entered"`
 	Objects        []member                   `json:"objects"`
 	Workout        *workoutInfo               `json:"workout"`
+
+	// Apple Watch fields (ADR-0024).
+	WorkoutUUID     string           `json:"workout_uuid"`
+	ECG             *ecgInfo         `json:"ecg"`
+	Beats           *beatsInfo       `json:"beats"`
+	Route           *routeInfo       `json:"route"`
+	StateOfMind     *stateOfMind     `json:"state_of_mind"`
+	ActivitySummary *activitySummary `json:"activity_summary"`
 }
 
 type workoutInfo struct {
 	ActivityType int                `json:"activity_type"`
 	DurationS    float64            `json:"duration_s"`
 	Totals       map[string]float64 `json:"totals"`
+	Stats        map[string]stat    `json:"stats"`
+	Events       []workoutEvent     `json:"events"`
+	Activities   []workoutActivity  `json:"activities"`
 }
 
 // member is a correlation member. Type is optional: v1 senders omit it (see bp).
@@ -145,6 +159,26 @@ func normalizePage(p page) normalize.Output {
 		for _, s := range p.Samples {
 			b.workout(s)
 		}
+	case p.Type == typeHeartbeat:
+		for _, s := range p.Samples {
+			b.beats(s)
+		}
+	case p.Type == typeECG:
+		for _, s := range p.Samples {
+			b.ecg(s)
+		}
+	case p.Type == typeRoute:
+		for _, s := range p.Samples {
+			b.route(s)
+		}
+	case p.Type == typeStateOfMind:
+		for _, s := range p.Samples {
+			b.stateOfMind(s)
+		}
+	case p.Type == typeActivitySummary:
+		for _, s := range p.Samples {
+			b.activitySummary(s)
+		}
 	default:
 		if len(p.Samples) > 0 {
 			b.warn("unmapped_type", p.Type)
@@ -155,7 +189,12 @@ func normalizePage(p page) normalize.Output {
 			b.warn("deleted_without_uuid", p.Type)
 			continue
 		}
-		b.out.Tombstones = append(b.out.Tombstones, normalize.Key{RecordType: p.Type, ExternalID: strings.ToUpper(d.UUID)})
+		id := strings.ToUpper(d.UUID)
+		if p.Type == typeHeartbeat { // one row per beat: withdraw the whole series
+			b.out.SeriesTombstones = append(b.out.SeriesTombstones, normalize.SeriesKey{Metric: metricRR, ExternalID: id})
+			continue
+		}
+		b.out.Tombstones = append(b.out.Tombstones, normalize.Key{RecordType: p.Type, ExternalID: id})
 	}
 	for _, k := range sortedKeys(b.devices) {
 		b.out.Devices = append(b.out.Devices, b.devices[k])
@@ -212,7 +251,7 @@ func (b *builder) source(s sample) (device, origin string) {
 // native: Apple's own per-device sources (com.apple.health.<UUID>), or an Apple app on an Apple device.
 func native(s sample) bool {
 	id := s.Source.BundleID
-	return strings.HasPrefix(id, "com.apple.health.") ||
+	return strings.HasPrefix(id, "com.apple.health.") || id == activitySummaryBundle ||
 		strings.HasPrefix(id, "com.apple.") && s.Device != nil && s.Device.Manufacturer == "Apple Inc."
 }
 
@@ -264,6 +303,9 @@ func (b *builder) quantity(s sample, q quantity) {
 	m := normalize.Measurement{Metric: q.metric, Kind: q.kind, Start: s.Start, Value: *s.Value, Unit: q.unit}
 	if q.kind != catalog.Sample {
 		m.End = &s.End
+	}
+	if s.WorkoutUUID != "" { // an effort score's workout (ADR-0024)
+		m.Context = mustJSON(map[string]string{"workout_uuid": strings.ToUpper(s.WorkoutUUID)})
 	}
 	b.measurement(s, m)
 }
@@ -406,6 +448,10 @@ func (b *builder) workout(s sample) {
 	if v, ok := s.Workout.Totals[hkQuantity+"ActiveEnergyBurned"]; ok && finite(v) {
 		w.EnergyKcal = &v
 	}
+	if hr, ok := s.Workout.Stats[typeHeartRate]; ok {
+		w.AvgHRBpm, w.MaxHRBpm = finitePtr(hr.Avg), finitePtr(hr.Max)
+	}
+	w.Segments = b.segments(s)
 	w.Device, w.Origin = b.source(s)
 	b.out.Workouts = append(b.out.Workouts, w)
 }

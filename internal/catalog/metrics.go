@@ -46,7 +46,7 @@ var metrics = []Metric{
 	{Code: "heart_rate", Section: secHeart, Unit: "bpm", Kinds: sample, Agg: Intensive, Min: 20, Max: 250, HK: "HeartRate", Withings: "11 (outside BP)"},
 	{Code: "resting_heart_rate", Section: secHeart, Unit: "bpm", Kinds: sampleDaily, Agg: DailySummary, Min: 20, Max: 150, SelectionOnly: true, HK: "RestingHeartRate"},
 	{Code: "hrv_sdnn", Section: secHeart, Unit: "ms", Kinds: sample, Agg: Intensive, Min: 1, Max: 500, HK: "HeartRateVariabilitySDNN"},
-	{Code: "hrv_rmssd", Section: secHeart, Unit: "ms", Kinds: sample, Agg: Intensive, Min: 1, Max: 500},
+	{Code: "hrv_rmssd", Section: secHeart, Unit: "ms", Kinds: sample, Agg: Intensive, Min: 1, Max: 500, HK: "HeartRateVariabilityRMSSD"},
 	{Code: "hrv_rmssd_nightly", Section: secHeart, Unit: "ms", Kinds: daily, Agg: DailySummary, Min: 1, Max: 500, SelectionOnly: true},
 	{Code: "vo2max", Section: secHeart, Unit: "mL/kg/min", Kinds: sample, Agg: Latest, Min: 10, Max: 100, HK: "VO2Max", Withings: "123"},
 	{Code: "pulse_wave_velocity", Section: secHeart, Unit: "m/s", Kinds: sample, Agg: Latest, Min: 2, Max: 30, Withings: "91"},
@@ -152,7 +152,7 @@ var metrics = []Metric{
 	{Code: "intensity_moderate_time", Section: secActivity, Unit: "s", Kinds: intervalDaily, Agg: Additive, Min: 0, Max: 86400, SelectionOnly: true, Since: SeedMappings},
 	{Code: "intensity_vigorous_time", Section: secActivity, Unit: "s", Kinds: intervalDaily, Agg: Additive, Min: 0, Max: 86400, SelectionOnly: true, Since: SeedMappings},
 	{Code: "sedentary_time", Section: secActivity, Unit: "s", Kinds: intervalDaily, Agg: Additive, Min: 0, Max: 86400, SelectionOnly: true, Since: SeedMappings},
-	{Code: "move_time", Section: secActivity, Unit: "s", Kinds: interval, Agg: Additive, Min: 0, Max: 86400, HK: "AppleMoveTime", Since: SeedMappings},
+	{Code: "move_time", Section: secActivity, Unit: "s", Kinds: intervalDaily, Agg: Additive, Min: 0, Max: 86400, HK: "AppleMoveTime", Since: SeedMappings},
 	{Code: "daylight_time", Section: secActivity, Unit: "s", Kinds: interval, Agg: Additive, Min: 0, Max: 86400, HK: "TimeInDaylight", Since: SeedMappings},
 	{Code: "wheelchair_pushes", Section: secActivity, Unit: "count", Kinds: interval, Agg: Additive, Min: 0, Max: 50000, HK: "PushCount", Since: SeedMappings},
 	{Code: "swim_strokes", Section: secActivity, Unit: "count", Kinds: interval, Agg: Additive, Min: 0, Max: 100000, HK: "SwimmingStrokeCount", Since: SeedMappings},
@@ -326,4 +326,10 @@ var metrics = []Metric{
 	{Code: "garmin_activity_sets_total", Section: secActivity, Unit: "count", Kinds: interval, Agg: Additive, Min: 0, Max: 1000, ProviderScoped: true, Since: SeedMore},
 	{Code: "garmin_activity_reps_total", Section: secActivity, Unit: "count", Kinds: interval, Agg: Additive, Min: 0, Max: 100000, ProviderScoped: true, Since: SeedMore},
 	{Code: "swim_laps", Section: secActivity, Unit: "count", Kinds: interval, Agg: Additive, Min: 0, Max: 10000, Since: SeedMore},
+
+	// Apple Watch (E22, J22.17; ADR-0024). rr_interval is a raw beat-to-beat series: stored and drawn, never resolved.
+	{Code: "speed_xc_ski", Section: secActivity, Unit: "m/s", Kinds: sample, Agg: Intensive, Min: 0, Max: 20, HK: "CrossCountrySkiingSpeed", Since: SeedWatch},
+	{Code: "apple_workout_effort", Section: secActivity, Unit: "index", Kinds: interval, Agg: Latest, Min: 1, Max: 10, ProviderScoped: true, HK: "WorkoutEffortScore", Since: SeedWatch},
+	{Code: "apple_workout_effort_estimated", Section: secActivity, Unit: "index", Kinds: interval, Agg: Latest, Min: 1, Max: 10, ProviderScoped: true, HK: "EstimatedWorkoutEffortScore", Since: SeedWatch},
+	{Code: "rr_interval", Section: secHeart, Unit: "s", Kinds: sample, Agg: Intensive, Min: 0.2, Max: 3, Unresolved: true, HK: "HeartbeatSeries (data type)", Since: SeedWatch},
 }

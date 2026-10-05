@@ -98,6 +98,55 @@ func (q *Queries) DeleteGroupsByKey(ctx context.Context, arg DeleteGroupsByKeyPa
 	return items, nil
 }
 
+const deleteMeasurementSeries = `-- name: DeleteMeasurementSeries :many
+UPDATE measurements SET deleted_at = now(), deleted_by_raw_id = $1
+WHERE user_id = $2 AND metric_id = $3 AND connection_id = $4
+  AND superseded_at IS NULL AND deleted_at IS NULL
+  AND external_id LIKE '%#%' AND split_part(external_id, '#', 1) = ANY($5::text[])
+RETURNING metric_id, local_date
+`
+
+type DeleteMeasurementSeriesParams struct {
+	RawPayloadID *int64
+	UserID       uuid.UUID
+	MetricID     int16
+	ConnectionID uuid.UUID
+	ExternalIds  []string
+}
+
+type DeleteMeasurementSeriesRow struct {
+	MetricID  int16
+	LocalDate time.Time
+}
+
+// Tombstones every active row of the named series records of one metric: a heartbeat series is
+// stored as one row per beat with external id <uuid>#<beat index>.
+func (q *Queries) DeleteMeasurementSeries(ctx context.Context, arg DeleteMeasurementSeriesParams) ([]DeleteMeasurementSeriesRow, error) {
+	rows, err := q.db.Query(ctx, deleteMeasurementSeries,
+		arg.RawPayloadID,
+		arg.UserID,
+		arg.MetricID,
+		arg.ConnectionID,
+		arg.ExternalIds,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []DeleteMeasurementSeriesRow
+	for rows.Next() {
+		var i DeleteMeasurementSeriesRow
+		if err := rows.Scan(&i.MetricID, &i.LocalDate); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const deleteMeasurementsByKey = `-- name: DeleteMeasurementsByKey :many
 UPDATE measurements SET deleted_at = now(), deleted_by_raw_id = $1
 WHERE dedupe_key = ANY($2::bytea[]) AND superseded_at IS NULL AND deleted_at IS NULL
@@ -184,8 +233,8 @@ func (q *Queries) DeleteWorkoutsByKey(ctx context.Context, arg DeleteWorkoutsByK
 }
 
 const getActiveEvent = `-- name: GetActiveEvent :one
-SELECT id, code, start_at, end_at, tz_offset_min, local_date, value, level, context, quality_flags, device_id,
-       origin_id, external_id, normalizer_version_id, deleted_at
+SELECT id, code, start_at, end_at, tz_offset_min, local_date, value, level, context, quality_flags, file_blob_sha256,
+       device_id, origin_id, external_id, normalizer_version_id, deleted_at
 FROM health_events WHERE dedupe_key = $1 AND superseded_at IS NULL
 `
 
@@ -200,6 +249,7 @@ type GetActiveEventRow struct {
 	Level               *string
 	Context             json.RawMessage
 	QualityFlags        int32
+	FileBlobSha256      []byte
 	DeviceID            *uuid.UUID
 	OriginID            *uuid.UUID
 	ExternalID          *string
@@ -221,6 +271,7 @@ func (q *Queries) GetActiveEvent(ctx context.Context, dedupeKey []byte) (GetActi
 		&i.Level,
 		&i.Context,
 		&i.QualityFlags,
+		&i.FileBlobSha256,
 		&i.DeviceID,
 		&i.OriginID,
 		&i.ExternalID,
@@ -402,11 +453,11 @@ func (q *Queries) GetWriteConnection(ctx context.Context, id uuid.UUID) (GetWrit
 
 const insertEvent = `-- name: InsertEvent :exec
 INSERT INTO health_events (id, user_id, code, start_at, end_at, tz_offset_min, local_date, value, level, context,
-                           quality_flags, provider_id, connection_id, device_id, origin_id, external_id, dedupe_key,
-                           raw_payload_id, normalizer_version_id)
+                           quality_flags, file_blob_sha256, provider_id, connection_id, device_id, origin_id,
+                           external_id, dedupe_key, raw_payload_id, normalizer_version_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-        $11, $12, $13, $14, $15, $16, $17,
-        $18, $19)
+        $11, $12, $13, $14, $15, $16,
+        $17, $18, $19, $20)
 `
 
 type InsertEventParams struct {
@@ -421,6 +472,7 @@ type InsertEventParams struct {
 	Level               *string
 	Context             json.RawMessage
 	QualityFlags        int32
+	FileBlobSha256      []byte
 	ProviderID          int16
 	ConnectionID        uuid.UUID
 	DeviceID            *uuid.UUID
@@ -444,6 +496,7 @@ func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) error 
 		arg.Level,
 		arg.Context,
 		arg.QualityFlags,
+		arg.FileBlobSha256,
 		arg.ProviderID,
 		arg.ConnectionID,
 		arg.DeviceID,
@@ -507,15 +560,15 @@ func (q *Queries) InsertGroup(ctx context.Context, arg InsertGroupParams) (int64
 const insertMeasurements = `-- name: InsertMeasurements :many
 INSERT INTO measurements (user_id, metric_id, kind, start_at, end_at, tz_offset_min, local_date, value,
                           source_value, source_unit_id, provider_id, connection_id, device_id, origin_id, group_id,
-                          external_id, dedupe_key, quality_flags, raw_payload_id, normalizer_version_id)
+                          external_id, dedupe_key, quality_flags, context, raw_payload_id, normalizer_version_id)
 SELECT $1::uuid, r.metric_id, r.kind, r.start_at, r.end_at, r.tz_offset_min, r.local_date, r.value,
        r.source_value, r.source_unit_id, $2::smallint, $3::uuid, r.device_id, r.origin_id,
-       r.group_id, r.external_id, decode(r.dedupe_key, 'hex'), r.quality_flags, $4::bigint,
+       r.group_id, r.external_id, decode(r.dedupe_key, 'hex'), r.quality_flags, r.context, $4::bigint,
        $5::integer
 FROM jsonb_to_recordset($6::jsonb) AS r (
   metric_id smallint, kind text, start_at timestamptz, end_at timestamptz, tz_offset_min smallint, local_date date,
   value double precision, source_value double precision, source_unit_id smallint, device_id uuid, origin_id uuid,
-  group_id bigint, external_id text, dedupe_key text, quality_flags integer)
+  group_id bigint, external_id text, dedupe_key text, quality_flags integer, context jsonb)
 RETURNING id, dedupe_key
 `
 
@@ -798,7 +851,7 @@ func (q *Queries) LinkWorkoutSuccessor(ctx context.Context, arg LinkWorkoutSucce
 
 const listActiveMeasurements = `-- name: ListActiveMeasurements :many
 SELECT id, dedupe_key, metric_id, kind, start_at, end_at, tz_offset_min, local_date, value, source_value,
-       source_unit_id, device_id, origin_id, group_id, external_id, quality_flags, normalizer_version_id, deleted_at
+       source_unit_id, device_id, origin_id, group_id, external_id, quality_flags, context, normalizer_version_id, deleted_at
 FROM measurements
 WHERE dedupe_key = ANY($1::bytea[]) AND superseded_at IS NULL
 `
@@ -820,6 +873,7 @@ type ListActiveMeasurementsRow struct {
 	GroupID             *int64
 	ExternalID          *string
 	QualityFlags        int32
+	Context             []byte
 	NormalizerVersionID int32
 	DeletedAt           *time.Time
 }
@@ -850,6 +904,7 @@ func (q *Queries) ListActiveMeasurements(ctx context.Context, keys [][]byte) ([]
 			&i.GroupID,
 			&i.ExternalID,
 			&i.QualityFlags,
+			&i.Context,
 			&i.NormalizerVersionID,
 			&i.DeletedAt,
 		); err != nil {

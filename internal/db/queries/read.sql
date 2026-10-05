@@ -6,7 +6,7 @@
 
 -- name: ReadMeasurements :many
 SELECT x.id, mc.code AS metric, x.kind, x.start_at, x.end_at, x.tz_offset_min, x.local_date, x.value,
-  u.code AS unit, x.source_value, su.code AS source_unit, x.quality_flags, x.group_id,
+  u.code AS unit, x.source_value, su.code AS source_unit, x.quality_flags, x.group_id, x.context,
   p.code AS provider, x.connection_id, x.device_id, d.device_type, o.origin_key, x.external_id, x.dedupe_key,
   x.raw_payload_id, nv.name AS normalizer_name, nv.version AS normalizer_version, x.ingested_at, x.normalized_at,
   x.superseded_at, COALESCE(x.superseded_by::text, '')::text AS superseded_by, x.deleted_at, x.deleted_by_raw_id
@@ -146,3 +146,24 @@ SELECT r.id, r.stream, r.external_key, r.version, r.fetched_at, r.batch_id, ib.s
 FROM raw_payloads r
 JOIN ingest_batches ib ON ib.id = r.batch_id
 WHERE r.user_id = @user_id AND r.id = ANY(@ids::bigint[]);
+
+-- name: GetEventFile :one
+-- The blob document of one event of the owner, any version; null file_blob_sha256 when it has none.
+SELECT code, file_blob_sha256 FROM health_events WHERE user_id = @user_id AND id = @id;
+
+-- name: GetWorkoutRouteFile :one
+-- The route of one workout of the owner (docs/adr/0024-watch-data.md#storage-no-new-tables): the
+-- active workout_route event naming the workout's external id as context.workout_uuid, else one
+-- of the same connection and origin lying inside the workout. Routes are found when read, so
+-- arrival order does not matter and the workout row is never rewritten.
+SELECT e.file_blob_sha256::bytea AS file_blob_sha256
+FROM workouts w
+JOIN health_events e ON e.user_id = w.user_id AND e.code = 'workout_route'
+  AND e.superseded_at IS NULL AND e.deleted_at IS NULL AND e.file_blob_sha256 IS NOT NULL
+  AND e.start_at >= w.start_at - interval '1 day' AND e.start_at < w.end_at + interval '1 day'
+WHERE w.user_id = @user_id AND w.id = @id
+  AND ((w.external_id IS NOT NULL AND e.context ->> 'workout_uuid' = w.external_id)
+    OR (e.context ->> 'workout_uuid' IS NULL AND e.connection_id = w.connection_id
+        AND e.origin_id IS NOT DISTINCT FROM w.origin_id AND e.start_at >= w.start_at AND e.start_at < w.end_at))
+ORDER BY (e.context ->> 'workout_uuid' IS NULL), e.start_at, e.id
+LIMIT 1;

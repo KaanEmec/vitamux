@@ -1,0 +1,47 @@
+{
+  "synthetic": true,
+  "normalizer": "apple_health.export",
+  "version": 2,
+  "output": {
+    "origins": [
+      {
+        "key": "export:Health",
+        "name": "Health"
+      }
+    ],
+    "events": [
+      {
+        "code": "menstrual_flow",
+        "start": "2026-09-10T00:00:00+02:00",
+        "end": "2026-09-11T00:00:00+02:00",
+        "level": "light",
+        "context": {
+          "HKMenstrualCycleStart": 1,
+          "HKWasUserEntered": 1
+        },
+        "flags": 1,
+        "origin": "export:Health",
+        "key": {
+          "record_type": "HKCategoryTypeIdentifierMenstrualFlow",
+          "external_id": "85BDD44FB0F1374B89A4E4D79680806B"
+        }
+      },
+      {
+        "code": "menstrual_flow",
+        "start": "2026-09-11T00:00:00+02:00",
+        "end": "2026-09-12T00:00:00+02:00",
+        "level": "medium",
+        "context": {
+          "HKMenstrualCycleStart": 0,
+          "HKWasUserEntered": 1
+        },
+        "flags": 1,
+        "origin": "export:Health",
+        "key": {
+          "record_type": "HKCategoryTypeIdentifierMenstrualFlow",
+          "external_id": "C1F0B380BF82E334721DE70ECFD1C2FB"
+        }
+      }
+    ]
+  }
+}

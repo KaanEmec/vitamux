@@ -36,6 +36,7 @@ Normalized source records with provenance (docs/architecture/data-model.md).
 | --- | --- | --- | --- |
 | `GET` | `/api/v1/inventory` | `read:health` | Everything stored, per metric, group kind, event code, sleep, workouts and lab analyte |
 | `GET` | `/api/v1/events` | `read:health` | List health events |
+| `GET` | `/api/v1/events/{id}/waveform` | `read:health` | Get the waveform of an ECG recording |
 | `GET` | `/api/v1/sources/series` | `read:health` | Per-source series of one metric |
 | `GET` | `/api/v1/measurements` | `read:health` | List normalized measurements |
 | `POST` | `/api/v1/measurements/manual` | `write:config`, CSRF | Record a manual measurement (provider manual, audited) |
@@ -45,6 +46,7 @@ Normalized source records with provenance (docs/architecture/data-model.md).
 | `GET` | `/api/v1/sleep/{id}` | `read:health` | Get one sleep session |
 | `GET` | `/api/v1/workouts` | `read:health` | List workouts |
 | `GET` | `/api/v1/workouts/{id}` | `read:health` | Get one workout |
+| `GET` | `/api/v1/workouts/{id}/route` | `read:health` | Get the route of a workout |
 | `GET` | `/api/v1/provenance/{entity}/{id}` | `read:health` | Trace a record back to its raw payload, batch and normalizer |
 
 ## resolved

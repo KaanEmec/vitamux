@@ -14,7 +14,7 @@ func defaults(t *testing.T, priority []string) map[string]Version {
 	energy, _ := LookupBuiltin("active_energy")
 	out := map[string]Version{}
 	for _, m := range catalog.Metrics() {
-		if _, ok := LookupBuiltin(m.Code); ok || RuleMetric(m.Code) != m.Code {
+		if _, ok := LookupBuiltin(m.Code); ok || m.Unresolved || RuleMetric(m.Code) != m.Code {
 			continue
 		}
 		var leader *Rule

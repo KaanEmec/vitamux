@@ -276,8 +276,8 @@ func activeSet(ctx context.Context, q *dbq.Queries, userID uuid.UUID) ([]Version
 		return nil, err
 	}
 	for _, m := range catalog.Metrics() {
-		if RuleMetric(m.Code) != m.Code || slices.ContainsFunc(out, func(v Version) bool { return v.Metric == m.Code }) {
-			continue // a family member, or a built-in
+		if m.Unresolved || RuleMetric(m.Code) != m.Code || slices.ContainsFunc(out, func(v Version) bool { return v.Metric == m.Code }) {
+			continue // a raw series without rules, a family member, or a built-in
 		}
 		if v, ok := owned[m.Code]; ok {
 			out = append(out, v)

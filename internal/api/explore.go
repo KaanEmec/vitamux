@@ -3,6 +3,7 @@ package api
 import (
 	"cmp"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"maps"
 	"math"
@@ -29,6 +30,7 @@ func (rt *router) exploreRoutes() {
 	rt.handle("GET /api/v1/inventory", read, rt.ops.GetInventory)
 	rt.handle("GET /api/v1/event-types", read, rt.ops.ListEventTypes)
 	rt.handle("GET /api/v1/events", read, rt.ops.ListEvents)
+	rt.handle("GET /api/v1/events/{id}/waveform", read, rt.ops.GetEventWaveform)
 	rt.handle("GET /api/v1/sources/series", read, rt.ops.GetSourceSeries)
 }
 
@@ -258,6 +260,10 @@ func (o *owner) ListEvents(ctx context.Context, req oapi.ListEventsRequestObject
 		out.Events[i] = oapi.HealthEvent{ID: r.ID, Code: r.Code, StartAt: r.StartAt, EndAt: r.EndAt, TzOffsetMin: intp(r.TzOffsetMin),
 			LocalDate: apiDate(r.LocalDate), Value: r.Value, Level: r.Level, Context: r.Context, QualityFlags: int(r.QualityFlags),
 			Source: s.source(), Provenance: s.provenance(raws)}
+		if r.FileBlobSha256 != nil {
+			h := hex.EncodeToString(r.FileBlobSha256)
+			out.Events[i].FileSha256 = &h
+		}
 	}
 	return out, nil
 }
@@ -312,13 +318,15 @@ func (o *owner) GetSourceSeries(ctx context.Context, req oapi.GetSourceSeriesReq
 	}
 	out := oapi.GetSourceSeries200JSONResponse{Metric: m.Code, Unit: m.Unit, Aggregation: oapi.SourceSeriesAggregation(m.Agg),
 		Grain: oapi.SourceSeriesGrain(grain), Timezone: z.name(prm.Start), Sources: []oapi.SourceSeriesSource{}}
-	v, err := o.ruleFor(ctx, m.Code)
-	if err != nil {
-		return nil, err
+	rule := &resolve.Rule{Metric: m.Code} // a raw series (rr_interval) has no rule: every source is not in one
+	if !m.Unresolved {
+		v, err := o.ruleFor(ctx, m.Code)
+		if err != nil {
+			return nil, err
+		}
+		ref := ruleRef(v, v.Rule.Strategy.Op)
+		out.Rule, rule = &ref, v.Rule
 	}
-	ref := ruleRef(v, v.Rule.Strategy.Op)
-	out.Rule = &ref
-	rule := v.Rule
 
 	// source returns the index in out.Sources of the source with these ids, adding it first.
 	idx := map[string]int{}

@@ -10,6 +10,8 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/KaanEmec/vitamux/internal/blob"
+	"github.com/KaanEmec/vitamux/internal/crypto"
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/db/dbq"
 	"github.com/KaanEmec/vitamux/internal/db/dbtest"
@@ -17,18 +19,31 @@ import (
 )
 
 type env struct {
-	t    *testing.T
-	d    *db.DB
-	run  func(sql string, args ...any) error
-	scan func(dest any, sql string, args ...any) error
-	conn uuid.UUID
-	nv   int32
+	t     *testing.T
+	d     *db.DB
+	blobs *blob.Store
+	run   func(sql string, args ...any) error
+	scan  func(dest any, sql string, args ...any) error
+	conn  uuid.UUID
+	nv    int32
 }
 
 func newEnv(t *testing.T) *env {
 	u, app := dbtest.Migrated(t)
 	owner := dbtest.Pool(t, u, db.OwnerRole)
-	e := &env{t: t, d: db.New(app), conn: uuid.New(),
+	keyPath := filepath.Join(t.TempDir(), "master.key")
+	if _, err := crypto.WriteKeyFile(keyPath); err != nil {
+		t.Fatal(err)
+	}
+	kr, err := crypto.Load(keyPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blobs, err := blob.Open(t.TempDir(), kr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := &env{t: t, d: db.New(app), blobs: blobs, conn: uuid.New(),
 		run: func(sql string, args ...any) error { _, err := owner.Exec(t.Context(), sql, args...); return err },
 		scan: func(dest any, sql string, args ...any) error {
 			return owner.QueryRow(t.Context(), sql, args...).Scan(dest)
@@ -83,7 +98,7 @@ func (e *env) write(rawID int64, body []byte) normalize.WriteStats {
 		e.t.Fatal(err)
 	}
 	var st normalize.WriteStats
-	src := normalize.Source{ConnectionID: e.conn, RawPayloadID: rawID, NormalizerVersionID: e.nv}
+	src := normalize.Source{ConnectionID: e.conn, RawPayloadID: rawID, NormalizerVersionID: e.nv, Blobs: e.blobs}
 	if err := e.d.Tx(e.t.Context(), func(q *dbq.Queries) (err error) {
 		st, err = normalize.Write(e.t.Context(), q, src, out)
 		return err
@@ -101,7 +116,8 @@ func golden(t *testing.T, name string) []byte {
 	return b
 }
 
-// TestReplayIsNoOp: every golden case writes, and replaying the same page changes nothing.
+// TestReplayIsNoOp: every golden case writes, and replaying the same page changes nothing, blob
+// documents included (one reference per event row).
 func TestReplayIsNoOp(t *testing.T) {
 	e := newEnv(t)
 	cases, _ := filepath.Glob(filepath.Join("testdata", NormalizerID, "*.raw.json"))
@@ -116,8 +132,10 @@ func TestReplayIsNoOp(t *testing.T) {
 			t.Errorf("%s: replay changed rows: first %+v, again %+v", name, first, again)
 		}
 	}
-	for table, want := range map[string]int{"measurements": 19, "measurement_groups": 3, "sleep_sessions": 3,
-		"sleep_stages": 8, "workouts": 2, "health_events": 2} {
+	// v1 cases plus the Watch cases: 8 summary values, 6 beats (later withdrawn), 1 effort score;
+	// ECG, route, State of Mind, symptom, cycle and mindful events; the multisport workout.
+	for table, want := range map[string]int{"measurements": 34, "measurement_groups": 3, "sleep_sessions": 3,
+		"sleep_stages": 8, "workouts": 3, "health_events": 8, "workout_segments": 4} {
 		if n := e.int(`SELECT count(*) FROM ` + table); n != want {
 			t.Errorf("%s: %d rows, want %d", table, n, want)
 		}

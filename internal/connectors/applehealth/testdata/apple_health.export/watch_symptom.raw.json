@@ -1,0 +1,10 @@
+{
+ "synthetic": true,
+ "type": "HKCategoryTypeIdentifierHeadache",
+ "records": [
+  {"attrs": {"type": "HKCategoryTypeIdentifierHeadache", "sourceName": "Health", "value": "HKCategoryValueSeverityModerate",
+   "startDate": "2026-09-14 09:00:00 +0200", "endDate": "2026-09-14 11:00:00 +0200"}, "metadata": {"HKWasUserEntered": "1"}},
+  {"attrs": {"type": "HKCategoryTypeIdentifierHeadache", "sourceName": "Health", "value": "HKCategoryValueSeverityNotPresent",
+   "startDate": "2026-09-15 09:00:00 +0200", "endDate": "2026-09-15 09:00:00 +0200"}, "metadata": {"HKWasUserEntered": "1"}}
+ ]
+}

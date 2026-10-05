@@ -24,8 +24,8 @@ func TestMetricsWellFormed(t *testing.T) {
 		if !(m.Min < m.Max) {
 			t.Errorf("%s: plausible range %v..%v", m.Code, m.Min, m.Max)
 		}
-		if !slices.Contains(sections, m.Section) || len(m.Windows()) == 0 || len(m.Strategies()) == 0 {
-			t.Errorf("%s: missing section, windows or strategies", m.Code)
+		if !slices.Contains(sections, m.Section) || (len(m.Windows()) == 0 || len(m.Strategies()) == 0) != m.Unresolved {
+			t.Errorf("%s: missing section, or windows and strategies that do not match Unresolved", m.Code)
 		}
 		switch m.Agg {
 		case SleepDerived:
@@ -270,6 +270,33 @@ func TestEventsWellFormed(t *testing.T) {
 	}
 	if _, ok := LookupEvent("heart_rate"); ok {
 		t.Error("a metric is not an event")
+	}
+	if len(Symptoms) != 39 {
+		t.Errorf("%d symptom categories, want the 39 of ADR-0024", len(Symptoms))
+	}
+	for code, want := range map[string]string{"symptom_mood_changes": "not_present", "symptom_appetite_changes": "decreased",
+		"symptom_headache": "severe", "menstrual_flow": "heavy", "ecg_recording": "sinus_rhythm", "state_of_mind": "daily_mood"} {
+		if e, ok := LookupEvent(code); !ok || !e.AllowsLevel(want) {
+			t.Errorf("%s: level %s", code, want)
+		}
+	}
+	for code, file := range map[string]string{"ecg_recording": FileWaveform, "workout_route": FileRoute, "handwashing": ""} {
+		if e, _ := LookupEvent(code); e.File != file {
+			t.Errorf("%s: file %q, want %q", code, e.File, file)
+		}
+	}
+}
+
+func TestUnresolvedSeries(t *testing.T) {
+	rr, ok := Lookup("rr_interval")
+	if !ok || !rr.Unresolved || rr.Unit != "s" || len(rr.Windows()) != 0 || len(rr.Strategies()) != 0 {
+		t.Fatalf("rr_interval must be an unresolved series in seconds: %+v", rr)
+	}
+	if in, ok := rr.Intraday(); !ok || in.Finest != "raw" {
+		t.Error("rr_interval is drawn like other series")
+	}
+	if mt, _ := Lookup("move_time"); !slices.Contains(mt.Kinds, DailyValue) {
+		t.Error("move_time takes the activity summary's daily value")
 	}
 }
 

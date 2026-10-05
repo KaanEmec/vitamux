@@ -1,0 +1,110 @@
+{
+  "synthetic": true,
+  "normalizer": "healthkit.samples",
+  "version": 4,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "type": "watch",
+        "manufacturer": "Apple Inc.",
+        "model": "Watch",
+        "hardware_version": "Watch7,1",
+        "software_version": "11.0"
+      }
+    ],
+    "origins": [
+      {
+        "key": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "name": "Synthetic Watch",
+        "native": true
+      }
+    ],
+    "workouts": [
+      {
+        "start": "2026-09-14T18:00:00+02:00",
+        "end": "2026-09-14T19:00:00+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "sport": "swim_bike_run",
+        "provider_sport": "swimBikeRun",
+        "distance_m": 5000,
+        "energy_kcal": 640,
+        "avg_hr_bpm": 141,
+        "max_hr_bpm": 172,
+        "device": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "key": {
+          "record_type": "HKWorkoutTypeIdentifier",
+          "external_id": "6F0D0000-0000-4000-8000-000000000131"
+        },
+        "segments": [
+          {
+            "kind": "activity",
+            "start": "2026-09-14T18:00:00+02:00",
+            "end": "2026-09-14T18:39:00+02:00",
+            "data": {
+              "duration_s": 2340,
+              "location": "outdoor",
+              "provider_sport": "cycling",
+              "sport": "cycling",
+              "stats": {
+                "HKQuantityTypeIdentifierHeartRate": {
+                  "avg": 136,
+                  "min": 96,
+                  "max": 160
+                }
+              },
+              "totals": {
+                "HKQuantityTypeIdentifierDistanceCycling": 20000
+              },
+              "uuid": "6F0D0000-0000-4000-8000-000000000132"
+            }
+          },
+          {
+            "kind": "pause",
+            "start": "2026-09-14T18:40:00+02:00",
+            "end": "2026-09-14T18:41:00+02:00",
+            "data": {
+              "type": "pause"
+            }
+          },
+          {
+            "kind": "activity",
+            "start": "2026-09-14T18:41:00+02:00",
+            "end": "2026-09-14T19:00:00+02:00",
+            "data": {
+              "duration_s": 1140,
+              "location": "outdoor",
+              "provider_sport": "running",
+              "sport": "running",
+              "stats": {
+                "HKQuantityTypeIdentifierHeartRate": {
+                  "avg": 152,
+                  "min": 131,
+                  "max": 172
+                }
+              },
+              "totals": {
+                "HKQuantityTypeIdentifierDistanceWalkingRunning": 5000
+              },
+              "uuid": "6F0D0000-0000-4000-8000-000000000133"
+            }
+          },
+          {
+            "kind": "lap",
+            "start": "2026-09-14T18:41:00+02:00",
+            "end": "2026-09-14T18:50:30+02:00",
+            "data": {
+              "activity_uuid": "6F0D0000-0000-4000-8000-000000000133",
+              "metadata": {
+                "HKLapLength": "2500 m"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

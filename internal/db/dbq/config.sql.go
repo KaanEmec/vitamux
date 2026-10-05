@@ -31,16 +31,21 @@ func (q *Queries) DeleteConnectionClients(ctx context.Context, connectionID uuid
 	return err
 }
 
-const deleteConnectionEvents = `-- name: DeleteConnectionEvents :execrows
-DELETE FROM health_events WHERE connection_id = $1
+const deleteConnectionEvents = `-- name: DeleteConnectionEvents :one
+WITH d AS (DELETE FROM health_events WHERE connection_id = $1 RETURNING file_blob_sha256), r AS (
+  UPDATE blobs b SET refcount = b.refcount - c.n
+  FROM (SELECT file_blob_sha256, count(*)::integer AS n FROM d WHERE file_blob_sha256 IS NOT NULL GROUP BY file_blob_sha256) c
+  WHERE b.sha256 = c.file_blob_sha256
+)
+SELECT count(*) FROM d
 `
 
+// Releases each row's waveform or route reference (hold blob.LockShared).
 func (q *Queries) DeleteConnectionEvents(ctx context.Context, connectionID uuid.UUID) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteConnectionEvents, connectionID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+	row := q.db.QueryRow(ctx, deleteConnectionEvents, connectionID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const deleteConnectionGroups = `-- name: DeleteConnectionGroups :execrows
@@ -111,16 +116,21 @@ func (q *Queries) DeleteConnectionSleep(ctx context.Context, connectionID uuid.U
 	return result.RowsAffected(), nil
 }
 
-const deleteConnectionWorkouts = `-- name: DeleteConnectionWorkouts :execrows
-DELETE FROM workouts WHERE connection_id = $1
+const deleteConnectionWorkouts = `-- name: DeleteConnectionWorkouts :one
+WITH d AS (DELETE FROM workouts WHERE connection_id = $1 RETURNING file_blob_sha256), r AS (
+  UPDATE blobs b SET refcount = b.refcount - c.n
+  FROM (SELECT file_blob_sha256, count(*)::integer AS n FROM d WHERE file_blob_sha256 IS NOT NULL GROUP BY file_blob_sha256) c
+  WHERE b.sha256 = c.file_blob_sha256
+)
+SELECT count(*) FROM d
 `
 
+// Releases each row's activity-file reference (hold blob.LockShared).
 func (q *Queries) DeleteConnectionWorkouts(ctx context.Context, connectionID uuid.UUID) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteConnectionWorkouts, connectionID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+	row := q.db.QueryRow(ctx, deleteConnectionWorkouts, connectionID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const deleteOwnerConnection = `-- name: DeleteOwnerConnection :execrows

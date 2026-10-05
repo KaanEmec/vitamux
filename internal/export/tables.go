@@ -408,8 +408,13 @@ var tables = []table{
 				return e.q.ExportHealthEvents(e.ctx, dbq.ExportHealthEventsParams{UserID: e.user, After: after, Lim: pageSize})
 			}, func(r dbq.ExportHealthEventsRow) (uuid.UUID, json.RawMessage) { return r.ID, r.Row })
 		},
-		patch:  func(im *importer, r row) (bool, error) { return true, im.canonical(r) },
-		insert: execrows((*dbq.Queries).ImportHealthEvents),
+		patch: func(im *importer, r row) (bool, error) { return true, errors.Join(im.takeBlob(r), im.canonical(r)) },
+		insert: func(im *importer, rows []byte) (int64, error) {
+			if err := im.flushBlobs(); err != nil {
+				return 0, err
+			}
+			return im.q.ImportHealthEvents(im.ctx, rows)
+		},
 		link: func(im *importer) error {
 			return im.linkUUID("health_events", func(ctx context.Context, ids, by []uuid.UUID) error {
 				return im.q.LinkImportedHealthEvents(ctx, dbq.LinkImportedHealthEventsParams{Ids: ids, NewIds: by})

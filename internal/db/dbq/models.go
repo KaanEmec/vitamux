@@ -299,6 +299,8 @@ type HealthEvent struct {
 	SupersededBy        *uuid.UUID
 	DeletedAt           *time.Time
 	DeletedByRawID      *int64
+	// Blob document of the event, if any: an ECG waveform (vitamux.waveform/1) or a workout route (vitamux.route/1). One blobs.refcount reference per row.
+	FileBlobSha256 []byte
 }
 
 // First successful response per (client, Idempotency-Key), replayed for the same request; another request with the key is a conflict.
@@ -552,6 +554,8 @@ type Measurement struct {
 	SupersededBy        *int64
 	DeletedAt           *time.Time
 	DeletedByRawID      *int64
+	// Source detail kept with the value, e.g. an activity-summary goal or the workout of an effort score; null when none.
+	Context []byte
 }
 
 // Readings taken together (blood pressure, weigh-ins); components are measurements with group_id.
@@ -918,8 +922,9 @@ type Workout struct {
 type WorkoutSegment struct {
 	WorkoutID uuid.UUID
 	Seq       int32
-	Kind      string
-	StartAt   time.Time
-	EndAt     *time.Time
-	Data      json.RawMessage
+	// lap, set or interval; activity (a leg of a multisport workout), pause (pause to resume) and marker (HealthKit).
+	Kind    string
+	StartAt time.Time
+	EndAt   *time.Time
+	Data    json.RawMessage
 }

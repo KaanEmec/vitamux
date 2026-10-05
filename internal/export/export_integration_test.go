@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -488,5 +489,54 @@ func boundedExport(t *testing.T, src *instance) {
 	}
 	if growth > 48<<20 {
 		t.Errorf("heap grew by %d MiB while exporting", growth>>20)
+	}
+}
+
+// TestEventDocuments (J22.17): ECG waveforms and workout routes are canonical data, so an export
+// carries their documents even without include_raw, and the import stores them and restores one
+// reference per event row.
+func TestEventDocuments(t *testing.T) {
+	src := loaded(t, "2025-03-01", 1)
+	srcBlobs := testBlobs(t)
+	doc := []byte(`{"format":"vitamux.waveform/1","start":"2025-03-01T07:00:00Z","unit":"µV","values":[0,1.5,-1.5]}`)
+	var sum []byte
+	err := src.d.Tx(t.Context(), func(q *dbq.Queries) error {
+		info, err := srcBlobs.Put(t.Context(), q, bytes.NewReader(doc), blob.Plain)
+		sum = info.SHA256
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src.exec(`UPDATE blobs SET refcount = refcount + 1 WHERE sha256 = $1`, sum)
+	src.exec(`INSERT INTO health_events (id, user_id, code, start_at, local_date, level, file_blob_sha256, provider_id, connection_id, dedupe_key, normalizer_version_id)
+		SELECT $1, c.user_id, 'ecg_recording', '2025-03-01T07:00:00Z', '2025-03-01', 'sinus_rhythm', $2, c.provider_id, c.id,
+		substr(sha256('ecg'), 1, 16), (SELECT min(id) FROM normalizer_versions)
+		FROM connections c WHERE c.user_id = $3 ORDER BY c.id LIMIT 1`, uuid.Must(uuid.NewV7()), sum, src.user)
+
+	f, err := os.Create(filepath.Join(t.TempDir(), "no-store.zip"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if _, err := export.Write(t.Context(), src.d, nil, f, export.Options{UserID: src.user, Format: export.FormatNDJSON}); err == nil {
+		t.Error("an export with waveforms needs the blob store")
+	}
+	path, m := writeExport(t, src, srcBlobs, export.Options{Format: export.FormatNDJSON})
+	if !slices.ContainsFunc(m.Files, func(f export.File) bool { return f.Name == "blob_content.ndjson" && f.Rows == 1 }) || m.RawMissing != 0 {
+		t.Fatalf("manifest: %+v", m.Files)
+	}
+
+	dst := newInstance(t)
+	dst.createOwner()
+	dstBlobs := testBlobs(t)
+	if _, err := importZip(t, dst, path, export.ImportOptions{Blobs: dstBlobs}); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := dstBlobs.Get(sum); err != nil || !bytes.Equal(got, doc) {
+		t.Errorf("waveform document: %v", err)
+	}
+	if n := dst.int(`SELECT refcount FROM blobs b JOIN health_events h ON h.file_blob_sha256 = b.sha256`); n != 1 {
+		t.Errorf("waveform refcount %d after import, want 1", n)
 	}
 }

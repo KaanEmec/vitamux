@@ -26,6 +26,7 @@ routes:
   GET /api/v1/event-types: {allow: read:health}
   GET /api/v1/inventory: {allow: read:health}
   GET /api/v1/events: {allow: read:health}
+  GET /api/v1/events/{id}/waveform: {allow: read:health}
   GET /api/v1/sources/series: {allow: read:health}
   GET /api/v1/measurements: {allow: read:health}
   POST /api/v1/measurements/manual: {allow: write:config, csrf: true}
@@ -35,6 +36,7 @@ routes:
   GET /api/v1/sleep/{id}: {allow: read:health}
   GET /api/v1/workouts: {allow: read:health}
   GET /api/v1/workouts/{id}: {allow: read:health}
+  GET /api/v1/workouts/{id}/route: {allow: read:health}
   GET /api/v1/provenance/{entity}/{id}: {allow: read:health}
   GET /api/v1/resolved/daily: {allow: read:health}
   GET /api/v1/resolved/series: {allow: read:health}

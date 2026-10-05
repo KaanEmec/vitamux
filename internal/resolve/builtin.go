@@ -77,6 +77,11 @@ var NoBuiltin = func() map[string]string {
 		m[code] = "a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone"
 	}
 	m["elevation_change"] = "added with the WHOOP mappings (J25.4); no researched ladder: uses the default rule"
+	// The Apple Watch codes of ADR-0024 (J22.17). rr_interval is never resolved, so it needs neither.
+	m["speed_xc_ski"] = "added with the Apple Watch types (J22.17); no researched ladder: uses the default rule"
+	for _, code := range []string{"apple_workout_effort", "apple_workout_effort_estimated"} {
+		m[code] = "a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone"
+	}
 	// The Garmin values of J25.5 are provider-scoped: one source each, nothing to order.
 	for _, code := range []string{"garmin_hr_zone_1_time", "garmin_hr_zone_2_time", "garmin_hr_zone_3_time", "garmin_hr_zone_4_time",
 		"garmin_hr_zone_5_time", "garmin_training_effect_aerobic", "garmin_training_effect_anaerobic", "garmin_activity_training_load",

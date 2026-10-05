@@ -138,7 +138,7 @@ func (p *Processor) attempt(ctx context.Context, id int64, vers map[string]int32
 			if out, err = n.Normalize(ctx, raw, Env{Provider: row.Provider}); err != nil {
 				return &normalizerError{err}
 			}
-			stats, err = Write(ctx, q, Source{ConnectionID: row.ConnectionID, RawPayloadID: id, NormalizerVersionID: versionID}, out)
+			stats, err = Write(ctx, q, Source{ConnectionID: row.ConnectionID, RawPayloadID: id, NormalizerVersionID: versionID, Blobs: p.Blobs}, out)
 			return err
 		})
 		var ne *normalizerError

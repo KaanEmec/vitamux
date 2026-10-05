@@ -1,0 +1,43 @@
+{
+  "synthetic": true,
+  "normalizer": "apple_health.export",
+  "version": 2,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "type": "watch",
+        "manufacturer": "Apple Inc.",
+        "model": "Watch",
+        "hardware_version": "Watch7,1",
+        "software_version": "11.0"
+      }
+    ],
+    "origins": [
+      {
+        "key": "export:Synthetic Watch",
+        "name": "Synthetic Watch"
+      }
+    ],
+    "workouts": [
+      {
+        "start": "2026-09-16T18:00:00+02:00",
+        "end": "2026-09-16T18:40:00+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "sport": "running",
+        "provider_sport": "running",
+        "distance_m": 6500,
+        "avg_hr_bpm": 148,
+        "max_hr_bpm": 171,
+        "device": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "origin": "export:Synthetic Watch",
+        "key": {
+          "record_type": "HKWorkoutTypeIdentifier",
+          "external_id": "D01B434CD7C0383B960BCE21232981E3"
+        }
+      }
+    ]
+  }
+}

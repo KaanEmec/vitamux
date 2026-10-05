@@ -1,0 +1,17 @@
+{
+ "synthetic": true,
+ "type": "HKWorkoutTypeIdentifier",
+ "records": [
+  {
+   "attrs": {"workoutActivityType": "HKWorkoutActivityTypeRunning", "duration": "40", "durationUnit": "min",
+    "sourceName": "Synthetic Watch", "sourceVersion": "11.0",
+    "device": "<<HKDevice: 0x600002a1b2c0>, name:Synthetic Watch, manufacturer:Apple Inc., model:Watch, hardware:Watch7,1, software:11.0>",
+    "creationDate": "2026-09-16 18:40:00 +0200", "startDate": "2026-09-16 18:00:00 +0200", "endDate": "2026-09-16 18:40:00 +0200"},
+   "metadata": {"HKTimeZone": "Europe/Amsterdam"},
+   "statistics": [
+    {"type": "HKQuantityTypeIdentifierHeartRate", "startDate": "2026-09-16 18:00:00 +0200", "endDate": "2026-09-16 18:40:00 +0200", "average": "148", "minimum": "101", "maximum": "171", "unit": "count/min"},
+    {"type": "HKQuantityTypeIdentifierDistanceWalkingRunning", "startDate": "2026-09-16 18:00:00 +0200", "endDate": "2026-09-16 18:40:00 +0200", "sum": "6.5", "unit": "km"}
+   ]
+  }
+ ]
+}

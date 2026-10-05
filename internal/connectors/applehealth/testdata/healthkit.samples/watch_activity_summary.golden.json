@@ -1,0 +1,192 @@
+{
+  "synthetic": true,
+  "normalizer": "healthkit.samples",
+  "version": 4,
+  "output": {
+    "origins": [
+      {
+        "key": "vitamux.activity-summary",
+        "name": "Activity summary",
+        "native": true
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "active_energy",
+        "kind": "daily_value",
+        "start": "2026-09-13T00:00:00+02:00",
+        "end": "2026-09-14T00:00:00+02:00",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 512.4,
+        "unit": "kcal",
+        "context": {
+          "goal": 600,
+          "move_mode": "active_energy",
+          "paused": false
+        },
+        "origin": "vitamux.activity-summary",
+        "key": {
+          "record_type": "HKActivitySummaryTypeIdentifier",
+          "external_id": "E5D48049-0256-55FC-9C9B-8DC92A4B2531",
+          "component": "active_energy"
+        }
+      },
+      {
+        "metric": "move_time",
+        "kind": "daily_value",
+        "start": "2026-09-13T00:00:00+02:00",
+        "end": "2026-09-14T00:00:00+02:00",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 2400,
+        "unit": "s",
+        "context": {
+          "goal": 1800,
+          "move_mode": "active_energy",
+          "paused": false
+        },
+        "origin": "vitamux.activity-summary",
+        "key": {
+          "record_type": "HKActivitySummaryTypeIdentifier",
+          "external_id": "E5D48049-0256-55FC-9C9B-8DC92A4B2531",
+          "component": "move_time"
+        }
+      },
+      {
+        "metric": "exercise_time",
+        "kind": "daily_value",
+        "start": "2026-09-13T00:00:00+02:00",
+        "end": "2026-09-14T00:00:00+02:00",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 1980,
+        "unit": "s",
+        "context": {
+          "goal": 1800,
+          "move_mode": "active_energy",
+          "paused": false
+        },
+        "origin": "vitamux.activity-summary",
+        "key": {
+          "record_type": "HKActivitySummaryTypeIdentifier",
+          "external_id": "E5D48049-0256-55FC-9C9B-8DC92A4B2531",
+          "component": "exercise_time"
+        }
+      },
+      {
+        "metric": "stand_hours",
+        "kind": "daily_value",
+        "start": "2026-09-13T00:00:00+02:00",
+        "end": "2026-09-14T00:00:00+02:00",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 10,
+        "unit": "count",
+        "context": {
+          "goal": 12,
+          "move_mode": "active_energy",
+          "paused": false
+        },
+        "origin": "vitamux.activity-summary",
+        "key": {
+          "record_type": "HKActivitySummaryTypeIdentifier",
+          "external_id": "E5D48049-0256-55FC-9C9B-8DC92A4B2531",
+          "component": "stand_hours"
+        }
+      },
+      {
+        "metric": "active_energy",
+        "kind": "daily_value",
+        "start": "2026-09-14T00:00:00+02:00",
+        "end": "2026-09-15T00:00:00+02:00",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 655,
+        "unit": "kcal",
+        "context": {
+          "goal": 600,
+          "move_mode": "active_energy",
+          "paused": false
+        },
+        "origin": "vitamux.activity-summary",
+        "key": {
+          "record_type": "HKActivitySummaryTypeIdentifier",
+          "external_id": "97A2E82F-4B27-50A6-9867-8699C9151D8F",
+          "component": "active_energy"
+        }
+      },
+      {
+        "metric": "move_time",
+        "kind": "daily_value",
+        "start": "2026-09-14T00:00:00+02:00",
+        "end": "2026-09-15T00:00:00+02:00",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 3600,
+        "unit": "s",
+        "context": {
+          "goal": 1800,
+          "move_mode": "active_energy",
+          "paused": false
+        },
+        "origin": "vitamux.activity-summary",
+        "key": {
+          "record_type": "HKActivitySummaryTypeIdentifier",
+          "external_id": "97A2E82F-4B27-50A6-9867-8699C9151D8F",
+          "component": "move_time"
+        }
+      },
+      {
+        "metric": "exercise_time",
+        "kind": "daily_value",
+        "start": "2026-09-14T00:00:00+02:00",
+        "end": "2026-09-15T00:00:00+02:00",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 3540,
+        "unit": "s",
+        "context": {
+          "goal": 1800,
+          "move_mode": "active_energy",
+          "paused": false
+        },
+        "origin": "vitamux.activity-summary",
+        "key": {
+          "record_type": "HKActivitySummaryTypeIdentifier",
+          "external_id": "97A2E82F-4B27-50A6-9867-8699C9151D8F",
+          "component": "exercise_time"
+        }
+      },
+      {
+        "metric": "stand_hours",
+        "kind": "daily_value",
+        "start": "2026-09-14T00:00:00+02:00",
+        "end": "2026-09-15T00:00:00+02:00",
+        "zone": {
+          "offset_min": 120
+        },
+        "value": 12,
+        "unit": "count",
+        "context": {
+          "goal": 12,
+          "move_mode": "active_energy",
+          "paused": false
+        },
+        "origin": "vitamux.activity-summary",
+        "key": {
+          "record_type": "HKActivitySummaryTypeIdentifier",
+          "external_id": "97A2E82F-4B27-50A6-9867-8699C9151D8F",
+          "component": "stand_hours"
+        }
+      }
+    ]
+  }
+}

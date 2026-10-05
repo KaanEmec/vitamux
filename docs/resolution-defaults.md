@@ -111,6 +111,8 @@ A catalogue code with neither a built-in nor an owner rule resolves through its 
 - No built-in for `afib_burden`: added with the mapping corrections (J25.1); no researched ladder: uses the default rule.
 - No built-in for `alcoholic_drinks`: added with the mapping corrections (J25.1); no researched ladder: uses the default rule.
 - No built-in for `apnea_hypopnea_index`: added with the mapping corrections (J25.1); no researched ladder: uses the default rule.
+- No built-in for `apple_workout_effort`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
+- No built-in for `apple_workout_effort_estimated`: a provider-scoped value with a single source, so there is nothing to order: uses the default rule, which takes that provider alone.
 - No built-in for `basal_body_temperature`: added with the Apple Health bridge (J15.2); no researched ladder: uses the default rule.
 - No built-in for `basal_energy`: added with the Apple Health bridge (J15.2); no researched ladder: uses the default rule.
 - No built-in for `blood_alcohol`: added with the mapping corrections (J25.1); no researched ladder: uses the default rule.
@@ -254,6 +256,7 @@ A catalogue code with neither a built-in nor an owner rule resolves through its 
 - No built-in for `speed_rowing`: added with the mapping corrections (J25.1); no researched ladder: uses the default rule.
 - No built-in for `speed_running`: added with the mapping corrections (J25.1); no researched ladder: uses the default rule.
 - No built-in for `speed_walking`: added with the mapping corrections (J25.1); no researched ladder: uses the default rule.
+- No built-in for `speed_xc_ski`: added with the Apple Watch types (J22.17); no researched ladder: uses the default rule.
 - No built-in for `spo2_nightly`: added with the mapping corrections (J25.1); no researched ladder: uses the default rule.
 - No built-in for `stair_ascent_speed`: added with the mapping corrections (J25.1); no researched ladder: uses the default rule.
 - No built-in for `stair_descent_speed`: added with the mapping corrections (J25.1); no researched ladder: uses the default rule.

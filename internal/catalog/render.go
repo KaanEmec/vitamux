@@ -23,6 +23,7 @@ const (
 	SeedGarminAct = 38 // the Garmin activity summary codes (J25.5)
 	SeedWithings  = 40 // the Withings urine and core body temperature codes of J25.2, J25.3
 	SeedMore      = 41 // the Garmin swim, stress and strength summary codes (J25.5) and Withings swim laps (J25.3)
+	SeedWatch     = 45 // the Apple Watch codes of ADR-0024 (J22.17)
 )
 
 var seedFiles = map[int]struct{ path, job string }{
@@ -36,6 +37,7 @@ var seedFiles = map[int]struct{ path, job string }{
 	SeedGarminAct: {"internal/db/migrations/00038_catalogue_garmin_activities.sql", "J25.5"},
 	SeedWithings:  {"internal/db/migrations/00040_catalogue_withings.sql", "J25.2, J25.3"},
 	SeedMore:      {"internal/db/migrations/00041_catalogue_garmin_withings.sql", "J25.5, J25.3"},
+	SeedWatch:     {"internal/db/migrations/00045_catalogue_watch.sql", "J22.17"},
 }
 
 func since(marker int) int {
@@ -119,7 +121,7 @@ func MetricsDoc() string {
 	b.WriteString("Units are canonical per metric; source units convert through [Units](#units).\n\n")
 	b.WriteString("Kinds: `sample`, `interval`, `daily_value` (see [data-model](architecture/data-model.md#measurements)). A kind of `-` means the value is derived from sleep sessions, or for a derived code from another metric's series (rule extension E2). ")
 	b.WriteString("Aggregation values are defined in [resolution](architecture/resolution.md#within-source-aggregation). ")
-	b.WriteString("Plausible is the range outside which a value is flagged `implausible`. Apple HK and Withings columns are informational; HK ids omit the `HKQuantityTypeIdentifier` prefix.\n")
+	b.WriteString("Plausible is the range outside which a value is flagged `implausible`. A raw series (`rr_interval`) is stored and drawn but never resolved, so it has no windows or strategies. Apple HK and Withings columns are informational; HK ids omit the `HKQuantityTypeIdentifier` prefix.\n")
 
 	for _, section := range sections {
 		b.WriteString("\n## " + section + "\n\n")
@@ -132,9 +134,14 @@ func MetricsDoc() string {
 	}
 
 	b.WriteString("\n## Events\n\nTyped events in `health_events`, never resolved like metrics ([metric-catalog](architecture/metric-catalog.md#events)). ")
-	b.WriteString("HK ids omit the `HKCategoryTypeIdentifier` prefix.\n\n| Code | Levels | Apple HK |\n| --- | --- | --- |\n")
+	b.WriteString("HK ids omit the `HKCategoryTypeIdentifier` prefix. File is the blob document a row references ([ADR-0024](adr/0024-watch-data.md#storage-no-new-tables)).\n\n")
+	b.WriteString("| Code | Levels | Apple HK | File |\n| --- | --- | --- | --- |\n")
 	for _, e := range events {
-		fmt.Fprintf(&b, "| `%s` | %s | %s |\n", e.Code, strings.Join(e.Levels, ", "), e.HK)
+		file := ""
+		if e.File != "" {
+			file = "`" + e.File + "`"
+		}
+		fmt.Fprintf(&b, "| `%s` | %s | %s | %s |\n", e.Code, strings.Join(e.Levels, ", "), e.HK, file)
 	}
 
 	b.WriteString("\n## Windows and strategies by aggregation\n\n")

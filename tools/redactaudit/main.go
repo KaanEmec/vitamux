@@ -248,6 +248,24 @@ func (a *audit) run(user, password, lab, aiModel string) (err error) {
 	idem := map[string]string{"Idempotency-Key": uuid.NewString()}
 	a.do(req{method: "POST", path: "/api/ingest/v1/batches", bearer: client, ctype: "application/json", body: batch(hr), header: idem}, 202)
 	a.do(req{method: "POST", path: "/api/ingest/v1/batches", bearer: forged, ctype: "application/json", body: batch(hr), header: idem}, 401)
+	// Apple Watch detail (J22.17, ADR-0024): an ECG voltage and a route coordinate (at sea near
+	// 0°, 0°) become blob documents, which must never reach a log either.
+	voltage, latitude := healthNumber(12), "0.00"+strings.ReplaceAll(healthNumber(1), ".", "")[:6]+"1" // ends in non-zero, so it prints as sent
+	a.health = append(a.health, voltage, latitude)
+	watch := fmt.Appendf(nil, `{"schema":"vitamux.ingest.batch/1","connection_id":%q,"client":{"kind":"device","name":"redaction-audit","version":"1.0"},
+"items":[{"stream":"healthkit.samples.v1","external_key":"audit:%s","fetched_at":"2026-09-14T09:02:11+02:00","content_type":"application/json",
+"body":{"type":"HKDataTypeIdentifierElectrocardiogram","anchor":{"before_hash":"a","after_hash":"b","query_started_at":"2026-09-14T09:02:11+02:00"},"deleted":[],
+"samples":[{"uuid":"6F0D0000-0000-4000-8000-000000000002","start":"2026-09-14T08:00:00+02:00","end":"2026-09-14T08:00:30+02:00",
+"source_revision":{"bundle_id":"com.apple.health.audit","name":"Audit Watch"},"was_user_entered":false,
+"ecg":{"classification":1,"symptoms_status":1,"sampling_frequency_hz":512,"voltage_count":2,"voltage_unit":"mcV","voltages":[%s,-1.5]}}]}},
+{"stream":"healthkit.samples.v1","external_key":"audit:%s","fetched_at":"2026-09-14T09:02:12+02:00","content_type":"application/json",
+"body":{"type":"HKWorkoutRouteTypeIdentifier","anchor":{"before_hash":"a","after_hash":"b","query_started_at":"2026-09-14T09:02:11+02:00"},"deleted":[],
+"samples":[{"uuid":"6F0D0000-0000-4000-8000-000000000003","start":"2026-09-14T08:00:00+02:00","end":"2026-09-14T08:00:01+02:00",
+"source_revision":{"bundle_id":"com.apple.health.audit","name":"Audit Watch"},"was_user_entered":false,
+"route":{"count":2,"offsets_s":[0,1],"latitude":[%s,0.0001],"longitude":[0.0001,0.0002]}}]}}]}`,
+		ingest.FormatConnectionID(connID), uuid.NewString(), voltage, uuid.NewString(), latitude)
+	a.do(req{method: "POST", path: "/api/ingest/v1/batches", bearer: client, ctype: "application/json", body: watch,
+		header: map[string]string{"Idempotency-Key": uuid.NewString()}}, 202)
 	bad := sentinel("healthbadvalue")
 	a.health = append(a.health, bad)
 	a.do(req{method: "POST", path: "/api/ingest/v1/batches", bearer: client, ctype: "application/json", header: map[string]string{"Idempotency-Key": uuid.NewString()},

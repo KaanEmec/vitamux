@@ -77,7 +77,7 @@ ON CONFLICT (user_id, metric_id, local_date) DO UPDATE SET marked_at = EXCLUDED.
 
 -- name: ListActiveMeasurements :many
 SELECT id, dedupe_key, metric_id, kind, start_at, end_at, tz_offset_min, local_date, value, source_value,
-       source_unit_id, device_id, origin_id, group_id, external_id, quality_flags, normalizer_version_id, deleted_at
+       source_unit_id, device_id, origin_id, group_id, external_id, quality_flags, context, normalizer_version_id, deleted_at
 FROM measurements
 WHERE dedupe_key = ANY(@keys::bytea[]) AND superseded_at IS NULL;
 
@@ -85,15 +85,15 @@ WHERE dedupe_key = ANY(@keys::bytea[]) AND superseded_at IS NULL;
 -- name: InsertMeasurements :many
 INSERT INTO measurements (user_id, metric_id, kind, start_at, end_at, tz_offset_min, local_date, value,
                           source_value, source_unit_id, provider_id, connection_id, device_id, origin_id, group_id,
-                          external_id, dedupe_key, quality_flags, raw_payload_id, normalizer_version_id)
+                          external_id, dedupe_key, quality_flags, context, raw_payload_id, normalizer_version_id)
 SELECT @user_id::uuid, r.metric_id, r.kind, r.start_at, r.end_at, r.tz_offset_min, r.local_date, r.value,
        r.source_value, r.source_unit_id, @provider_id::smallint, @connection_id::uuid, r.device_id, r.origin_id,
-       r.group_id, r.external_id, decode(r.dedupe_key, 'hex'), r.quality_flags, @raw_payload_id::bigint,
+       r.group_id, r.external_id, decode(r.dedupe_key, 'hex'), r.quality_flags, r.context, @raw_payload_id::bigint,
        @normalizer_version_id::integer
 FROM jsonb_to_recordset(@rows::jsonb) AS r (
   metric_id smallint, kind text, start_at timestamptz, end_at timestamptz, tz_offset_min smallint, local_date date,
   value double precision, source_value double precision, source_unit_id smallint, device_id uuid, origin_id uuid,
-  group_id bigint, external_id text, dedupe_key text, quality_flags integer)
+  group_id bigint, external_id text, dedupe_key text, quality_flags integer, context jsonb)
 RETURNING id, dedupe_key;
 
 -- name: TouchMeasurements :exec
@@ -111,6 +111,15 @@ WHERE m.id = v.old_id;
 -- name: DeleteMeasurementsByKey :many
 UPDATE measurements SET deleted_at = now(), deleted_by_raw_id = @raw_payload_id
 WHERE dedupe_key = ANY(@keys::bytea[]) AND superseded_at IS NULL AND deleted_at IS NULL
+RETURNING metric_id, local_date;
+
+-- name: DeleteMeasurementSeries :many
+-- Tombstones every active row of the named series records of one metric: a heartbeat series is
+-- stored as one row per beat with external id <uuid>#<beat index>.
+UPDATE measurements SET deleted_at = now(), deleted_by_raw_id = @raw_payload_id
+WHERE user_id = @user_id AND metric_id = @metric_id AND connection_id = @connection_id
+  AND superseded_at IS NULL AND deleted_at IS NULL
+  AND external_id LIKE '%#%' AND split_part(external_id, '#', 1) = ANY(@external_ids::text[])
 RETURNING metric_id, local_date;
 
 -- name: DeleteGroupComponents :many
@@ -215,17 +224,17 @@ UPDATE workouts SET deleted_at = now(), deleted_by_raw_id = @raw_payload_id
 WHERE dedupe_key = ANY(@keys::bytea[]) AND superseded_at IS NULL AND deleted_at IS NULL;
 
 -- name: GetActiveEvent :one
-SELECT id, code, start_at, end_at, tz_offset_min, local_date, value, level, context, quality_flags, device_id,
-       origin_id, external_id, normalizer_version_id, deleted_at
+SELECT id, code, start_at, end_at, tz_offset_min, local_date, value, level, context, quality_flags, file_blob_sha256,
+       device_id, origin_id, external_id, normalizer_version_id, deleted_at
 FROM health_events WHERE dedupe_key = @dedupe_key AND superseded_at IS NULL;
 
 -- name: InsertEvent :exec
 INSERT INTO health_events (id, user_id, code, start_at, end_at, tz_offset_min, local_date, value, level, context,
-                           quality_flags, provider_id, connection_id, device_id, origin_id, external_id, dedupe_key,
-                           raw_payload_id, normalizer_version_id)
+                           quality_flags, file_blob_sha256, provider_id, connection_id, device_id, origin_id,
+                           external_id, dedupe_key, raw_payload_id, normalizer_version_id)
 VALUES (@id, @user_id, @code, @start_at, @end_at, @tz_offset_min, @local_date, @value, @level, @context,
-        @quality_flags, @provider_id, @connection_id, @device_id, @origin_id, @external_id, @dedupe_key,
-        @raw_payload_id, @normalizer_version_id);
+        @quality_flags, @file_blob_sha256, @provider_id, @connection_id, @device_id, @origin_id,
+        @external_id, @dedupe_key, @raw_payload_id, @normalizer_version_id);
 
 -- name: TouchEvent :exec
 UPDATE health_events SET normalizer_version_id = @normalizer_version_id, normalized_at = now() WHERE id = @id;

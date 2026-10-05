@@ -1,7 +1,9 @@
 package normalize
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -50,7 +52,35 @@ type Output struct {
 	Workouts     []Workout      `json:"workouts,omitempty"`
 	Events       []Event        `json:"events,omitempty"`
 	Tombstones   []Key          `json:"tombstones,omitempty"` // upstream deletions, by stable id
-	Warnings     []Warning      `json:"warnings,omitempty"`
+	// SeriesTombstones withdraw every row of series records: measurements of Metric whose
+	// external id is ExternalID#<n> (a heartbeat series stored as one row per beat).
+	SeriesTombstones []SeriesKey `json:"series_tombstones,omitempty"`
+	// Files are the blob documents events reference by FileSHA256 (ECG waveforms, workout
+	// routes). The writer stores them; content-addressed, so a replay rewrites nothing.
+	Files    []File    `json:"files,omitempty"`
+	Warnings []Warning `json:"warnings,omitempty"`
+}
+
+// SeriesKey names a series record whose rows carry the external ids ExternalID#<n>.
+type SeriesKey struct {
+	Metric     string `json:"metric"`
+	ExternalID string `json:"external_id"`
+}
+
+// File is a JSON document for the blob store; SHA256 is the hash of Doc's bytes as given.
+type File struct {
+	SHA256 []byte          `json:"sha256"`
+	Doc    json.RawMessage `json:"doc"`
+}
+
+// NewFile marshals doc into a File.
+func NewFile(doc any) (File, error) {
+	b, err := json.Marshal(doc)
+	if err != nil {
+		return File{}, err
+	}
+	sum := sha256.Sum256(b)
+	return File{SHA256: sum[:], Doc: b}, nil
 }
 
 // Key is a record's stable upstream identity. With ExternalID set the dedupe key is built from it
@@ -103,9 +133,12 @@ type Measurement struct {
 	Value  float64      `json:"value"`
 	Unit   string       `json:"unit"`
 	Flags  Flags        `json:"flags,omitempty"`
-	Device string       `json:"device,omitempty"`
-	Origin string       `json:"origin,omitempty"`
-	Key    Key          `json:"key,omitzero"`
+	// Context is source detail kept with the value (an activity-summary goal, the workout of an
+	// effort score); nil when none.
+	Context json.RawMessage `json:"context,omitempty"`
+	Device  string          `json:"device,omitempty"`
+	Origin  string          `json:"origin,omitempty"`
+	Key     Key             `json:"key,omitzero"`
 }
 
 // Group is a reading taken together; its components are measurements of metrics in that group.
@@ -189,9 +222,11 @@ type Event struct {
 	Level   string          `json:"level,omitempty"`
 	Context json.RawMessage `json:"context,omitempty"`
 	Flags   Flags           `json:"flags,omitempty"`
-	Device  string          `json:"device,omitempty"`
-	Origin  string          `json:"origin,omitempty"`
-	Key     Key             `json:"key,omitzero"`
+	// FileSHA256 references one of Output.Files: the event's waveform or route document.
+	FileSHA256 []byte `json:"file_sha256,omitempty"`
+	Device     string `json:"device,omitempty"`
+	Origin     string `json:"origin,omitempty"`
+	Key        Key    `json:"key,omitzero"`
 }
 
 // Warning is a non-fatal finding (unknown field or type, skipped record). Detail must not carry
@@ -208,7 +243,7 @@ var ErrInvalidOutput = errors.New("normalize: invalid output")
 var (
 	groupKinds   = []string{"bp_reading", "body_composition"}
 	stageKinds   = []string{"awake", "light", "deep", "rem", "asleep_unspecified", "in_bed", "unknown", "restless", "out_of_bed"}
-	segmentKinds = []string{"lap", "set", "interval"}
+	segmentKinds = []string{"lap", "set", "interval", "activity", "pause", "marker"}
 )
 
 // Validate checks o against the catalogue and the canonical tables' constraints. The writer
@@ -239,6 +274,14 @@ func (o Output) Validate() error {
 			return invalid("%s: external id without record type", what)
 		}
 		return nil
+	}
+	files := map[string]bool{}
+	for i, f := range o.Files {
+		sum := sha256.Sum256(f.Doc)
+		if !bytes.Equal(sum[:], f.SHA256) || !json.Valid(f.Doc) {
+			return invalid("file %d: not JSON, or its hash does not match", i)
+		}
+		files[string(f.SHA256)] = true
 	}
 	for i, m := range o.Measurements {
 		if err := validMeasurement(fmt.Sprintf("measurement %d", i), m, ""); err != nil {
@@ -329,6 +372,8 @@ func (o Output) Validate() error {
 			return invalid("%s: non-finite value", what)
 		case len(e.Context) > 0 && !json.Valid(e.Context):
 			return invalid("%s: context is not JSON", what)
+		case len(e.FileSHA256) > 0 && !files[string(e.FileSHA256)]:
+			return invalid("%s: file not in Files", what)
 		}
 		if err := validZone(what, e.Zone); err != nil {
 			return err
@@ -340,6 +385,11 @@ func (o Output) Validate() error {
 	for i, k := range o.Tombstones {
 		if k.RecordType == "" || k.ExternalID == "" {
 			return invalid("tombstone %d: record type and external id are required", i)
+		}
+	}
+	for i, k := range o.SeriesTombstones {
+		if _, ok := catalog.Lookup(k.Metric); !ok || k.ExternalID == "" {
+			return invalid("series tombstone %d: a catalogue metric and an external id are required", i)
 		}
 	}
 	return nil
@@ -362,6 +412,9 @@ func validMeasurement(what string, m Measurement, group string) error {
 	}
 	if !finite(m.Value) {
 		return invalid("%s: non-finite value", what)
+	}
+	if len(m.Context) > 0 && !json.Valid(m.Context) {
+		return invalid("%s: context is not JSON", what)
 	}
 	if _, _, err := catalog.ToCanonical(m.Metric, m.Value, m.Unit); err != nil {
 		return invalid("%s: %v", what, err)

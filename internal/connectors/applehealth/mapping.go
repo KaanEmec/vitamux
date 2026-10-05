@@ -1,6 +1,7 @@
 package applehealth
 
 import (
+	"maps"
 	"strconv"
 	"strings"
 
@@ -19,6 +20,15 @@ const (
 	typeDiastolic     = hkQuantity + "BloodPressureDiastolic"
 	typeHeartRate     = hkQuantity + "HeartRate"
 	typeInsulin       = hkQuantity + "InsulinDelivery"
+
+	// Apple Watch types of the type registry v2 (ADR-0024), as HealthBridgeKit sends them.
+	// Electrocardiogram and activity summary have no identifier constant (the kit sends what
+	// HealthKit reports), and the State of Mind constant's value has no "Identifier".
+	typeHeartbeat       = "HKDataTypeIdentifierHeartbeatSeries"
+	typeECG             = "HKDataTypeIdentifierElectrocardiogram"
+	typeRoute           = "HKWorkoutRouteTypeIdentifier"
+	typeStateOfMind     = "HKDataTypeStateOfMind"
+	typeActivitySummary = "HKActivitySummaryTypeIdentifier"
 )
 
 // quantity maps one HealthKit quantity type: the catalogue code, the kind a sample becomes, the
@@ -127,6 +137,12 @@ var quantities = map[string]quantity{
 	hkQuantity + "WaterTemperature":                q("water_temperature", catalog.Sample, "degC", "°C"),
 	hkQuantity + "UnderwaterDepth":                 q("underwater_depth", catalog.Sample, "m", "m"),
 	hkQuantity + "ElectrodermalActivity":           q("electrodermal_activity", catalog.Sample, "mcS", "µS"),
+
+	// Registry v2 (ADR-0024). An effort score links its workout through context.workout_uuid.
+	hkQuantity + "HeartRateVariabilityRMSSD":   q("hrv_rmssd", catalog.Sample, "ms", "ms"),
+	hkQuantity + "CrossCountrySkiingSpeed":     q("speed_xc_ski", catalog.Sample, "m/s", "m/s"),
+	hkQuantity + "WorkoutEffortScore":          q("apple_workout_effort", catalog.Interval, "appleEffortScore", "index"),
+	hkQuantity + "EstimatedWorkoutEffortScore": q("apple_workout_effort_estimated", catalog.Interval, "appleEffortScore", "index"),
 }
 
 // insulinReasonKey is the metadata key of an insulin dose's HKInsulinDeliveryReason; insulinReasons
@@ -142,7 +158,50 @@ type event struct {
 	levels map[int]string
 }
 
-var events = map[string]event{
+var events = func() map[string]event {
+	m := map[string]event{
+		hkCategory + "IrregularHeartRhythmEvent": {code: "irregular_rhythm_alert"},
+		hkCategory + "HandwashingEvent":          {code: "handwashing"},
+		hkCategory + "MindfulSession":            {code: "mindful_session"},
+		// Cycle tracking (HKCategoryValues.h): HKCategoryValueVaginalBleeding 1 to 5 and the others below.
+		hkCategory + "MenstrualFlow":                    {code: "menstrual_flow", levels: levelsFrom(1, catalog.VaginalBleeding)},
+		hkCategory + "BleedingAfterPregnancy":           {code: "bleeding_after_pregnancy", levels: levelsFrom(1, catalog.VaginalBleeding)},
+		hkCategory + "BleedingDuringPregnancy":          {code: "bleeding_during_pregnancy", levels: levelsFrom(1, catalog.VaginalBleeding)},
+		hkCategory + "BleedingAfterMenopause":           {code: "bleeding_after_menopause", levels: levelsFrom(1, catalog.VaginalBleeding)},
+		hkCategory + "IntermenstrualBleeding":           {code: "intermenstrual_bleeding"},
+		hkCategory + "SexualActivity":                   {code: "sexual_activity"},
+		hkCategory + "Pregnancy":                        {code: "pregnancy"},
+		hkCategory + "Lactation":                        {code: "lactation"},
+		hkCategory + "CervicalMucusQuality":             {code: "cervical_mucus", levels: levelsFrom(1, []string{"dry", "sticky", "creamy", "watery", "egg_white"})},
+		hkCategory + "OvulationTestResult":              {code: "ovulation_test", levels: levelsFrom(1, []string{"negative", "lh_surge", "indeterminate", "estrogen_surge"})},
+		hkCategory + "PregnancyTestResult":              {code: "pregnancy_test", levels: levelsFrom(1, catalog.TestResults)},
+		hkCategory + "ProgesteroneTestResult":           {code: "progesterone_test", levels: levelsFrom(1, catalog.TestResults)},
+		hkCategory + "Contraceptive":                    {code: "contraceptive", levels: levelsFrom(1, []string{"unspecified", "implant", "injection", "intrauterine_device", "intravaginal_ring", "oral", "patch"})},
+		hkCategory + "MenopausalState":                  {code: "menopausal_state", levels: levelsFrom(1, []string{"menopause", "perimenopause", "none"})},
+		hkCategory + "IrregularMenstrualCycles":         {code: "irregular_cycles_alert"},
+		hkCategory + "InfrequentMenstrualCycles":        {code: "infrequent_cycles_alert"},
+		hkCategory + "ProlongedMenstrualPeriods":        {code: "prolonged_periods_alert"},
+		hkCategory + "PersistentIntermenstrualBleeding": {code: "persistent_intermenstrual_bleeding_alert"},
+	}
+	// Symptoms: HKCategoryValueSeverity, Presence and AppetiteChanges all start at 0.
+	for _, s := range catalog.Symptoms {
+		m[hkCategory+s.HK] = event{code: "symptom_" + s.Name, levels: levelsFrom(0, catalog.SymptomLevels(s.Name))}
+	}
+	maps.Copy(m, v1Events)
+	return m
+}()
+
+// levelsFrom maps consecutive raw category values from first to the level words.
+func levelsFrom(first int, words []string) map[int]string {
+	m := make(map[int]string, len(words))
+	for i, w := range words {
+		m[first+i] = w
+	}
+	return m
+}
+
+// v1Events are the categories of the type registry v1.
+var v1Events = map[string]event{
 	hkCategory + "HighHeartRateEvent":    {code: "high_heart_rate_alert"},
 	hkCategory + "LowHeartRateEvent":     {code: "low_heart_rate_alert"},
 	hkCategory + "LowCardioFitnessEvent": {code: "low_cardio_fitness_alert"},

@@ -238,7 +238,7 @@ final class WatchTests: XCTestCase {
 
     /// The ECG example's algorithm-version key. Metadata is passed through as written, and the value of the
     /// SDK constant `HKMetadataKeyAppleECGAlgorithmVersion` is the longer string asserted here (D13 checks it).
-    let exampleECGAlgorithmKey = "HKAppleECGAlgorithmVersion"
+    let exampleECGAlgorithmKey = "HKMetadataKeyAppleECGAlgorithmVersion"
 
     func testECGMatchesExample() async throws {
         XCTAssertEqual(HKMetadataKeyAppleECGAlgorithmVersion, "HKMetadataKeyAppleECGAlgorithmVersion")

@@ -327,6 +327,31 @@ paths:
         '403': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
 
+  /api/v1/events/{id}/waveform:
+    get:
+      tags: [source-data]
+      operationId: getEventWaveform
+      summary: Get the waveform of an ECG recording
+      description: >
+        The vitamux.waveform/1 document of an ecg_recording event, any version
+        (docs/adr/0024-watch-data.md#read-endpoints). The ETag is the document's SHA-256. 404 when
+        the event does not exist or has no waveform.
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: The waveform document.
+          headers:
+            ETag: {description: 'SHA-256 of the document, hex in quotes.', schema: {type: string}}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WaveformDocument'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
+
   /api/v1/sources/series:
     get:
       tags: [source-data]
@@ -599,6 +624,33 @@ paths:
         '403': {$ref: '#/components/responses/Problem'}
         '404': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
+
+  /api/v1/workouts/{id}/route:
+    get:
+      tags: [source-data]
+      operationId: getWorkoutRoute
+      summary: Get the route of a workout
+      description: >
+        The vitamux.route/1 document of the workout's route (docs/adr/0024-watch-data.md#read-endpoints):
+        the active workout_route event whose context.workout_uuid is the workout's external id,
+        else one of the same connection and origin inside the workout. Locations are CoreLocation
+        values as given (a negative accuracy, speed or course means invalid). The ETag is the
+        document's SHA-256. 404 when the workout does not exist or has no route.
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: The route document.
+          headers:
+            ETag: {description: 'SHA-256 of the document, hex in quotes.', schema: {type: string}}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RouteDocument'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
 
   /api/v1/provenance/{entity}/{id}:
     get:
@@ -3759,8 +3811,43 @@ components:
         level: {type: [string, 'null']}
         context: {type: object, description: Source metadata as given., x-go-type: json.RawMessage}
         quality_flags: {type: integer, minimum: 0}
+        file_sha256: {type: string, description: 'SHA-256 of the event''s blob document, when it has one: the waveform of an ecg_recording (GET /events/{id}/waveform) or the route of a workout_route.'}
         source: {$ref: '#/components/schemas/SourceRef'}
         provenance: {$ref: '#/components/schemas/RecordProvenance'}
+    WaveformDocument:
+      type: object
+      description: ECG waveform, vitamux.waveform/1 (ADR-0024). Values are the recorded voltages in order, as given.
+      required: [format, start, unit, values]
+      properties:
+        format: {type: string, enum: [vitamux.waveform/1]}
+        start: {type: string, format: date-time}
+        sampling_frequency_hz: {type: number, format: double}
+        unit: {type: string, description: µV.}
+        lead: {type: string, description: 'Lead word, e.g. apple_watch_similar_to_lead_i.'}
+        values: {type: array, items: {type: number, format: double}}
+        offsets_s: {type: array, items: {type: number, format: double}, description: Seconds since start per value; only when the spacing is not 1/sampling_frequency_hz.}
+    RouteDocument:
+      type: object
+      description: Workout route, vitamux.route/1 (ADR-0024). Parallel arrays of count entries; CoreLocation values as given (negative accuracy, speed or course = invalid).
+      required: [format, start, count, offsets_s, latitude, longitude]
+      properties:
+        format: {type: string, enum: [vitamux.route/1]}
+        start: {type: string, format: date-time}
+        count: {type: integer, minimum: 0}
+        offsets_s: {$ref: '#/components/schemas/Numbers'}
+        latitude: {$ref: '#/components/schemas/Numbers'}
+        longitude: {$ref: '#/components/schemas/Numbers'}
+        altitude_m: {$ref: '#/components/schemas/Numbers'}
+        ellipsoidal_altitude_m: {$ref: '#/components/schemas/Numbers'}
+        horizontal_accuracy_m: {$ref: '#/components/schemas/Numbers'}
+        vertical_accuracy_m: {$ref: '#/components/schemas/Numbers'}
+        speed_mps: {$ref: '#/components/schemas/Numbers'}
+        speed_accuracy_mps: {$ref: '#/components/schemas/Numbers'}
+        course_deg: {$ref: '#/components/schemas/Numbers'}
+        course_accuracy_deg: {$ref: '#/components/schemas/Numbers'}
+    Numbers:
+      type: array
+      items: {type: number, format: double}
     HealthEventPage:
       allOf:
         - $ref: '#/components/schemas/PageInfo'
@@ -4100,6 +4187,7 @@ components:
         provider_scoped: {type: boolean, description: A provider-namespaced score; never pooled.}
         selection_only: {type: boolean, description: Providers define it differently; rules select one source and never pool it.}
         derived_from: {type: string, description: The source metric of a derived code (rule extension E2).}
+        unresolved: {type: boolean, description: 'A raw series (rr_interval): stored and drawn, never resolved, so no windows or strategies.'}
         intraday: {$ref: '#/components/schemas/Intraday'}
     Intraday:
       type: object
@@ -4128,6 +4216,7 @@ components:
         source_unit: {type: [string, 'null']}
         quality_flags: {type: integer, minimum: 0, description: 'Bitset: 1 manual_entry, 2 motion_context, 4 implausible, 8 relayed, 16 migrated_without_raw, 32 prorated_source, 64 calibrating.'}
         group_id: {type: [string, 'null'], description: Measurement group (blood-pressure reading, weigh-in) this row is a component of.}
+        context: {type: object, description: 'Source detail kept with the value, when any: an activity-summary goal, move mode and paused flag; the workout_uuid of an effort score.', x-go-type: json.RawMessage}
         source: {$ref: '#/components/schemas/SourceRef'}
         provenance: {$ref: '#/components/schemas/RecordProvenance'}
     SourceRef:
@@ -4321,7 +4410,7 @@ components:
       required: [seq, kind, start_at, end_at, data]
       properties:
         seq: {type: integer}
-        kind: {type: string, enum: [lap, set, interval]}
+        kind: {type: string, enum: [lap, set, interval, activity, pause, marker], description: 'activity: a leg of a multisport workout; pause: pause to resume; marker: a marker or pause request (HealthKit).'}
         start_at: {type: string, format: date-time}
         end_at: {type: [string, 'null'], format: date-time}
         data: {type: object, x-go-type: json.RawMessage}

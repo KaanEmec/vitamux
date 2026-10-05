@@ -143,8 +143,14 @@ WHERE w.user_id = @user_id AND (t.workout_id, t.seq) > (@after_workout::uuid, @a
 ORDER BY t.workout_id, t.seq LIMIT @lim;
 
 -- name: ExportHealthEvents :many
-SELECT id, to_jsonb(t)::jsonb AS row FROM health_events t
-WHERE user_id = @user_id AND id > @after::uuid ORDER BY id LIMIT @lim;
+SELECT t.id, (to_jsonb(t) || jsonb_build_object('_blob', to_jsonb(b)))::jsonb AS row
+FROM health_events t LEFT JOIN blobs b ON b.sha256 = t.file_blob_sha256
+WHERE t.user_id = @user_id AND t.id > @after::uuid ORDER BY t.id LIMIT @lim;
+
+-- name: ExportEventFiles :many
+-- Waveform and route documents (canonical data, so exported with or without include_raw).
+SELECT id, file_blob_sha256 FROM health_events
+WHERE user_id = @user_id AND file_blob_sha256 IS NOT NULL AND id > @after::uuid ORDER BY id LIMIT @lim;
 
 -- name: ExportAuditEvents :many
 SELECT id, to_jsonb(t)::jsonb AS row FROM audit_events t
@@ -378,11 +384,18 @@ INSERT INTO workout_segments
 SELECT (p).* FROM jsonb_populate_recordset(NULL::workout_segments, @batch::jsonb) p
 ON CONFLICT DO NOTHING;
 
--- name: ImportHealthEvents :execrows
-INSERT INTO health_events
-SELECT (p).* FROM jsonb_populate_recordset(NULL::health_events, @batch::jsonb) p
-WHERE NOT EXISTS (SELECT 1 FROM health_events t WHERE t.dedupe_key = p.dedupe_key AND t.superseded_at IS NULL)
-ON CONFLICT DO NOTHING;
+-- name: ImportHealthEvents :one
+WITH ins AS (
+  INSERT INTO health_events
+  SELECT (p).* FROM jsonb_populate_recordset(NULL::health_events, @batch::jsonb) p
+  WHERE NOT EXISTS (SELECT 1 FROM health_events t WHERE t.dedupe_key = p.dedupe_key AND t.superseded_at IS NULL)
+  ON CONFLICT DO NOTHING RETURNING file_blob_sha256
+), refs AS (
+  UPDATE blobs b SET refcount = b.refcount + c.n
+  FROM (SELECT file_blob_sha256, count(*)::integer AS n FROM ins WHERE file_blob_sha256 IS NOT NULL GROUP BY file_blob_sha256) c
+  WHERE b.sha256 = c.file_blob_sha256
+)
+SELECT count(*) FROM ins;
 
 -- name: ImportAuditEvents :execrows
 INSERT INTO audit_events OVERRIDING SYSTEM VALUE

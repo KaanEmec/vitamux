@@ -1122,6 +1122,21 @@ func (e ResolvedValueStatus) Valid() bool {
 	}
 }
 
+// Defines values for RouteDocumentFormat.
+const (
+	VitamuxRoute1 RouteDocumentFormat = "vitamux.route/1"
+)
+
+// Valid indicates whether the value is a known member of the RouteDocumentFormat enum.
+func (e RouteDocumentFormat) Valid() bool {
+	switch e {
+	case VitamuxRoute1:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ScheduleMode.
 const (
 	Correction  ScheduleMode = "correction"
@@ -1455,6 +1470,21 @@ func (e SystemVersionProduct) Valid() bool {
 	}
 }
 
+// Defines values for WaveformDocumentFormat.
+const (
+	VitamuxWaveform1 WaveformDocumentFormat = "vitamux.waveform/1"
+)
+
+// Valid indicates whether the value is a known member of the WaveformDocumentFormat enum.
+func (e WaveformDocumentFormat) Valid() bool {
+	switch e {
+	case VitamuxWaveform1:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorkoutMemberRuleStatus.
 const (
 	WorkoutMemberRuleStatusExcluded  WorkoutMemberRuleStatus = "excluded"
@@ -1478,17 +1508,26 @@ func (e WorkoutMemberRuleStatus) Valid() bool {
 
 // Defines values for WorkoutSegmentKind.
 const (
+	WorkoutSegmentKindActivity WorkoutSegmentKind = "activity"
 	WorkoutSegmentKindInterval WorkoutSegmentKind = "interval"
 	WorkoutSegmentKindLap      WorkoutSegmentKind = "lap"
+	WorkoutSegmentKindMarker   WorkoutSegmentKind = "marker"
+	WorkoutSegmentKindPause    WorkoutSegmentKind = "pause"
 	WorkoutSegmentKindSet      WorkoutSegmentKind = "set"
 )
 
 // Valid indicates whether the value is a known member of the WorkoutSegmentKind enum.
 func (e WorkoutSegmentKind) Valid() bool {
 	switch e {
+	case WorkoutSegmentKindActivity:
+		return true
 	case WorkoutSegmentKindInterval:
 		return true
 	case WorkoutSegmentKindLap:
+		return true
+	case WorkoutSegmentKindMarker:
+		return true
+	case WorkoutSegmentKindPause:
 		return true
 	case WorkoutSegmentKindSet:
 		return true
@@ -2627,11 +2666,14 @@ type HealthEvent struct {
 	Code string `json:"code"`
 
 	// Context Source metadata as given.
-	Context   json.RawMessage    `json:"context"`
-	EndAt     *time.Time         `json:"end_at"`
-	ID        openapi_types.UUID `json:"id"`
-	Level     *string            `json:"level"`
-	LocalDate openapi_types.Date `json:"local_date"`
+	Context json.RawMessage `json:"context"`
+	EndAt   *time.Time      `json:"end_at"`
+
+	// FileSha256 SHA-256 of the event's blob document, when it has one: the waveform of an ecg_recording (GET /events/{id}/waveform) or the route of a workout_route.
+	FileSha256 *string            `json:"file_sha256,omitempty"`
+	ID         openapi_types.UUID `json:"id"`
+	Level      *string            `json:"level"`
+	LocalDate  openapi_types.Date `json:"local_date"`
 
 	// Provenance Version and provenance columns of a canonical row; GET /provenance/{entity}/{id} has the full trace.
 	Provenance   RecordProvenance `json:"provenance"`
@@ -2861,6 +2903,9 @@ type ManualMeasurementInput struct {
 
 // Measurement Normalized measurement (docs/architecture/data-model.md#measurements).
 type Measurement struct {
+	// Context Source detail kept with the value, when any: an activity-summary goal, move mode and paused flag; the workout_uuid of an effort score.
+	Context *json.RawMessage `json:"context,omitempty"`
+
 	// EndAt Exclusive; null for samples.
 	EndAt *time.Time `json:"end_at"`
 
@@ -2941,6 +2986,9 @@ type Metric struct {
 	// Unit Canonical unit code.
 	Unit string `json:"unit"`
 
+	// Unresolved A raw series (rr_interval): stored and drawn, never resolved, so no windows or strategies.
+	Unresolved *bool `json:"unresolved,omitempty"`
+
 	// Windows Window kinds a rule for this metric may use.
 	Windows []MetricWindows `json:"windows"`
 }
@@ -2974,6 +3022,9 @@ type MetricSummary struct {
 	Unit  *string       `json:"unit,omitempty"`
 	Value ResolvedValue `json:"value"`
 }
+
+// Numbers defines model for Numbers.
+type Numbers = []float64
 
 // OriginRef defines model for OriginRef.
 type OriginRef struct {
@@ -3628,6 +3679,27 @@ type RollupValues struct {
 	N    int      `json:"n"`
 }
 
+// RouteDocument Workout route, vitamux.route/1 (ADR-0024). Parallel arrays of count entries; CoreLocation values as given (negative accuracy, speed or course = invalid).
+type RouteDocument struct {
+	AltitudeM            *Numbers            `json:"altitude_m,omitempty"`
+	Count                int                 `json:"count"`
+	CourseAccuracyDeg    *Numbers            `json:"course_accuracy_deg,omitempty"`
+	CourseDeg            *Numbers            `json:"course_deg,omitempty"`
+	EllipsoidalAltitudeM *Numbers            `json:"ellipsoidal_altitude_m,omitempty"`
+	Format               RouteDocumentFormat `json:"format"`
+	HorizontalAccuracyM  *Numbers            `json:"horizontal_accuracy_m,omitempty"`
+	Latitude             Numbers             `json:"latitude"`
+	Longitude            Numbers             `json:"longitude"`
+	OffsetsS             Numbers             `json:"offsets_s"`
+	SpeedAccuracyMps     *Numbers            `json:"speed_accuracy_mps,omitempty"`
+	SpeedMps             *Numbers            `json:"speed_mps,omitempty"`
+	Start                time.Time           `json:"start"`
+	VerticalAccuracyM    *Numbers            `json:"vertical_accuracy_m,omitempty"`
+}
+
+// RouteDocumentFormat defines model for RouteDocument.Format.
+type RouteDocumentFormat string
+
 // Rule A rule version, the owner's or a built-in (docs/architecture/resolution.md#rule-specification).
 type Rule = RuleVersion
 
@@ -4182,6 +4254,26 @@ type User struct {
 	Username    string             `json:"username"`
 }
 
+// WaveformDocument ECG waveform, vitamux.waveform/1 (ADR-0024). Values are the recorded voltages in order, as given.
+type WaveformDocument struct {
+	Format WaveformDocumentFormat `json:"format"`
+
+	// Lead Lead word, e.g. apple_watch_similar_to_lead_i.
+	Lead *string `json:"lead,omitempty"`
+
+	// OffsetsS Seconds since start per value; only when the spacing is not 1/sampling_frequency_hz.
+	OffsetsS            *[]float64 `json:"offsets_s,omitempty"`
+	SamplingFrequencyHz *float64   `json:"sampling_frequency_hz,omitempty"`
+	Start               time.Time  `json:"start"`
+
+	// Unit µV.
+	Unit   string    `json:"unit"`
+	Values []float64 `json:"values"`
+}
+
+// WaveformDocumentFormat defines model for WaveformDocument.Format.
+type WaveformDocumentFormat string
+
 // Window defines model for Window.
 type Window struct {
 	End *time.Time `json:"end,omitempty"`
@@ -4258,14 +4350,16 @@ type WorkoutPage struct {
 
 // WorkoutSegment defines model for WorkoutSegment.
 type WorkoutSegment struct {
-	Data    json.RawMessage    `json:"data"`
-	EndAt   *time.Time         `json:"end_at"`
+	Data  json.RawMessage `json:"data"`
+	EndAt *time.Time      `json:"end_at"`
+
+	// Kind activity: a leg of a multisport workout; pause: pause to resume; marker: a marker or pause request (HealthKit).
 	Kind    WorkoutSegmentKind `json:"kind"`
 	Seq     int                `json:"seq"`
 	StartAt time.Time          `json:"start_at"`
 }
 
-// WorkoutSegmentKind defines model for WorkoutSegment.Kind.
+// WorkoutSegmentKind activity: a leg of a multisport workout; pause: pause to resume; marker: a marker or pause request (HealthKit).
 type WorkoutSegmentKind string
 
 // BackfillIDPath defines model for BackfillIDPath.
@@ -5382,6 +5476,9 @@ type ServerInterface interface {
 	// ListEvents List health events
 	// (GET /api/v1/events)
 	ListEvents(w http.ResponseWriter, r *http.Request, params ListEventsParams)
+	// GetEventWaveform Get the waveform of an ECG recording
+	// (GET /api/v1/events/{id}/waveform)
+	GetEventWaveform(w http.ResponseWriter, r *http.Request, id ID)
 	// CreateExport Start an export job
 	// (POST /api/v1/exports)
 	CreateExport(w http.ResponseWriter, r *http.Request, params CreateExportParams)
@@ -5577,6 +5674,9 @@ type ServerInterface interface {
 	// GetWorkout Get one workout
 	// (GET /api/v1/workouts/{id})
 	GetWorkout(w http.ResponseWriter, r *http.Request, id ID, params GetWorkoutParams)
+	// GetWorkoutRoute Get the route of a workout
+	// (GET /api/v1/workouts/{id}/route)
+	GetWorkoutRoute(w http.ResponseWriter, r *http.Request, id ID)
 	// OauthCallback OAuth redirect target; completes the authorization and redirects to the UI
 	// (GET /oauth/{provider}/callback)
 	OauthCallback(w http.ResponseWriter, r *http.Request, provider string, params OauthCallbackParams)
@@ -7067,6 +7167,32 @@ func (siw *ServerInterfaceWrapper) ListEvents(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListEvents(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetEventWaveform operation middleware
+func (siw *ServerInterfaceWrapper) GetEventWaveform(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEventWaveform(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -9685,6 +9811,32 @@ func (siw *ServerInterfaceWrapper) GetWorkout(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// GetWorkoutRoute operation middleware
+func (siw *ServerInterfaceWrapper) GetWorkoutRoute(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetWorkoutRoute(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // OauthCallback operation middleware
 func (siw *ServerInterfaceWrapper) OauthCallback(w http.ResponseWriter, r *http.Request) {
 
@@ -9959,6 +10111,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/event-types", wrapper.ListEventTypes)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/inventory", wrapper.GetInventory)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/events", wrapper.ListEvents)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/events/{id}/waveform", wrapper.GetEventWaveform)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/sources/series", wrapper.GetSourceSeries)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/measurements", wrapper.ListMeasurements)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/measurements/manual", wrapper.CreateManualMeasurement)
@@ -9968,6 +10121,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/sleep/{id}", wrapper.GetSleep)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/workouts", wrapper.ListWorkouts)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/workouts/{id}", wrapper.GetWorkout)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/workouts/{id}/route", wrapper.GetWorkoutRoute)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/provenance/{entity}/{id}", wrapper.GetProvenance)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/resolved/daily", wrapper.GetResolvedDaily)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/resolved/series", wrapper.GetResolvedSeries)
@@ -13497,6 +13651,96 @@ func (response ListEvents422ApplicationProblemPlusJSONResponse) VisitListEventsR
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEventWaveformRequestObject struct {
+	ID ID `json:"id"`
+}
+
+type GetEventWaveformResponseObject interface {
+	VisitGetEventWaveformResponse(w http.ResponseWriter) error
+}
+
+type GetEventWaveform200ResponseHeaders struct {
+	ETag *string
+}
+
+type GetEventWaveform200JSONResponse struct {
+	Body    WaveformDocument
+	Headers GetEventWaveform200ResponseHeaders
+}
+
+func (response GetEventWaveform200JSONResponse) VisitGetEventWaveformResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.ETag != nil {
+		w.Header().Set("ETag", fmt.Sprint(*response.Headers.ETag))
+	}
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEventWaveform401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response GetEventWaveform401ApplicationProblemPlusJSONResponse) VisitGetEventWaveformResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEventWaveform403ApplicationProblemPlusJSONResponse Problem
+
+func (response GetEventWaveform403ApplicationProblemPlusJSONResponse) VisitGetEventWaveformResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEventWaveform404ApplicationProblemPlusJSONResponse Problem
+
+func (response GetEventWaveform404ApplicationProblemPlusJSONResponse) VisitGetEventWaveformResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEventWaveform503ApplicationProblemPlusJSONResponse Problem
+
+func (response GetEventWaveform503ApplicationProblemPlusJSONResponse) VisitGetEventWaveformResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -18330,6 +18574,96 @@ func (response GetWorkout422ApplicationProblemPlusJSONResponse) VisitGetWorkoutR
 	return err
 }
 
+type GetWorkoutRouteRequestObject struct {
+	ID ID `json:"id"`
+}
+
+type GetWorkoutRouteResponseObject interface {
+	VisitGetWorkoutRouteResponse(w http.ResponseWriter) error
+}
+
+type GetWorkoutRoute200ResponseHeaders struct {
+	ETag *string
+}
+
+type GetWorkoutRoute200JSONResponse struct {
+	Body    RouteDocument
+	Headers GetWorkoutRoute200ResponseHeaders
+}
+
+func (response GetWorkoutRoute200JSONResponse) VisitGetWorkoutRouteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.ETag != nil {
+		w.Header().Set("ETag", fmt.Sprint(*response.Headers.ETag))
+	}
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetWorkoutRoute401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response GetWorkoutRoute401ApplicationProblemPlusJSONResponse) VisitGetWorkoutRouteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetWorkoutRoute403ApplicationProblemPlusJSONResponse Problem
+
+func (response GetWorkoutRoute403ApplicationProblemPlusJSONResponse) VisitGetWorkoutRouteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetWorkoutRoute404ApplicationProblemPlusJSONResponse Problem
+
+func (response GetWorkoutRoute404ApplicationProblemPlusJSONResponse) VisitGetWorkoutRouteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetWorkoutRoute503ApplicationProblemPlusJSONResponse Problem
+
+func (response GetWorkoutRoute503ApplicationProblemPlusJSONResponse) VisitGetWorkoutRouteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type OauthCallbackRequestObject struct {
 	Provider string `json:"provider"`
 	Params   OauthCallbackParams
@@ -18628,6 +18962,9 @@ type StrictServerInterface interface {
 	// ListEvents List health events
 	// (GET /api/v1/events)
 	ListEvents(ctx context.Context, request ListEventsRequestObject) (ListEventsResponseObject, error)
+	// GetEventWaveform Get the waveform of an ECG recording
+	// (GET /api/v1/events/{id}/waveform)
+	GetEventWaveform(ctx context.Context, request GetEventWaveformRequestObject) (GetEventWaveformResponseObject, error)
 	// CreateExport Start an export job
 	// (POST /api/v1/exports)
 	CreateExport(ctx context.Context, request CreateExportRequestObject) (CreateExportResponseObject, error)
@@ -18823,6 +19160,9 @@ type StrictServerInterface interface {
 	// GetWorkout Get one workout
 	// (GET /api/v1/workouts/{id})
 	GetWorkout(ctx context.Context, request GetWorkoutRequestObject) (GetWorkoutResponseObject, error)
+	// GetWorkoutRoute Get the route of a workout
+	// (GET /api/v1/workouts/{id}/route)
+	GetWorkoutRoute(ctx context.Context, request GetWorkoutRouteRequestObject) (GetWorkoutRouteResponseObject, error)
 	// OauthCallback OAuth redirect target; completes the authorization and redirects to the UI
 	// (GET /oauth/{provider}/callback)
 	OauthCallback(ctx context.Context, request OauthCallbackRequestObject) (OauthCallbackResponseObject, error)
@@ -20125,6 +20465,32 @@ func (sh *strictHandler) ListEvents(w http.ResponseWriter, r *http.Request, para
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListEventsResponseObject); ok {
 		if err := validResponse.VisitListEventsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetEventWaveform operation middleware
+func (sh *strictHandler) GetEventWaveform(w http.ResponseWriter, r *http.Request, id ID) {
+	var request GetEventWaveformRequestObject
+
+	request.ID = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetEventWaveform(ctx, request.(GetEventWaveformRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetEventWaveform")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetEventWaveformResponseObject); ok {
+		if err := validResponse.VisitGetEventWaveformResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -21922,6 +22288,32 @@ func (sh *strictHandler) GetWorkout(w http.ResponseWriter, r *http.Request, id I
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetWorkoutResponseObject); ok {
 		if err := validResponse.VisitGetWorkoutResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetWorkoutRoute operation middleware
+func (sh *strictHandler) GetWorkoutRoute(w http.ResponseWriter, r *http.Request, id ID) {
+	var request GetWorkoutRouteRequestObject
+
+	request.ID = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetWorkoutRoute(ctx, request.(GetWorkoutRouteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetWorkoutRoute")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetWorkoutRouteResponseObject); ok {
+		if err := validResponse.VisitGetWorkoutRouteResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
