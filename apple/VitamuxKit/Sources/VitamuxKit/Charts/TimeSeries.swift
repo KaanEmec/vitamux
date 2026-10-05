@@ -7,7 +7,9 @@ import SwiftUI
 /// "latest" metrics. Gaps stay gaps, shaded as "No data", never zero. Series with a `source`
 /// take their source colour and a dash, so colour is never the only cue. Series above about
 /// 2,000 points are reduced to min/max per pixel column. The first series drives the selection
-/// callout; the others are listed under it.
+/// callout; the others are listed under it. For a Day view, `domain` fixes the x axis, `overlays`
+/// shade spans under the marks (night, workouts, now), `window` reads or sets the zoomed window
+/// and `onSelect` hands over the first series' point under a tap.
 public struct TimeSeries: View {
     public enum Kind: Sendable { case line, step }
 
@@ -23,6 +25,10 @@ public struct TimeSeries: View {
     let withTime: Bool
     let zoomable: Bool
     let height: CGFloat
+    let domain: ClosedRange<Date>?
+    let overlays: [ChartOverlay]
+    let window: Binding<ClosedRange<Date>?>?
+    let onSelect: ((Int) -> Void)?
 
     @State private var selection: Date?
     @State private var zoom: CGFloat = 1
@@ -35,7 +41,8 @@ public struct TimeSeries: View {
     public init(
         title: String, series: [ChartSeries], unit: String = "", hue: MetricHue = .other, kind: Kind = .line,
         area: Bool = false, band: ChartBand? = nil, baseline: ChartBaseline? = nil, timeZone: TimeZone = .current,
-        withTime: Bool = true, zoomable: Bool = true, height: CGFloat = 220
+        withTime: Bool = true, zoomable: Bool = true, height: CGFloat = 220, domain: ClosedRange<Date>? = nil,
+        overlays: [ChartOverlay] = [], window: Binding<ClosedRange<Date>?>? = nil, onSelect: ((Int) -> Void)? = nil
     ) {
         self.title = title
         self.series = series
@@ -49,13 +56,21 @@ public struct TimeSeries: View {
         self.withTime = withTime
         self.zoomable = zoomable
         self.height = height
+        self.domain = domain
+        self.overlays = overlays
+        self.window = window
+        self.onSelect = onSelect
     }
 
     public var body: some View {
-        let layout = memo(Input(series: series, band: band, baseline: baseline, kind: kind, area: area, hue: hue, width: width, columns: columns)) { Layout($0) }
+        let layout = memo(Input(
+            series: series, band: band, baseline: baseline, kind: kind, area: area, hue: hue, width: width, columns: columns,
+            domain: domain, overlays: overlays
+        )) { Layout($0) }
         let selected = selection.flatMap { nearest(layout.anchors, to: $0) }
         ChartFrame(title: title, legend: legend(layout), table: table) {
             Chart {
+                OverlayMarks(overlays: layout.overlays, hue: hue)
                 ForEach(layout.holes) { hole in
                     RectangleMark(xStart: .value("From", hole.from), xEnd: .value("To", hole.to))
                         .foregroundStyle(Color.chartMuted.opacity(0.35))
@@ -109,8 +124,9 @@ public struct TimeSeries: View {
             }
             .chartXScale(domain: layout.x)
             .chartYScale(domain: layout.y)
+            .modifier(ChartTap(action: onSelect.map { select in { date in if let i = nearest(layout.anchors, to: date) { select(i) } } }))
             .chartXSelection(value: $selection)
-            .modifier(ChartZoom(domain: layout.x, zoom: $zoom, enabled: zoomable))
+            .modifier(ChartZoom(domain: layout.x, zoom: $zoom, enabled: zoomable, window: window))
             .modifier(TimeAxis(domain: layout.x, timeZone: timeZone, height: height))
             .onGeometryChange(for: CGFloat.self, of: { $0.size.width }) { width = max($0, 1) }
             .accessibilityLabel(title)
@@ -132,7 +148,7 @@ public struct TimeSeries: View {
             if let band { items.append(LegendItem(label: band.label, mark: .swatch(hue.color.opacity(0.3)))) }
             if let baseline { items.append(LegendItem(label: baseline.label, mark: baseline.value == nil ? .swatch(hue.color.opacity(0.3)) : .line(.secondary, dash: [4, 4]))) }
         }
-        return items + layout.statuses.map { LegendItem(label: $0.label, mark: .status($0)) }
+        return items + ChartOverlay.legend(layout.overlays, hue: hue) + layout.statuses.map { LegendItem(label: $0.label, mark: .status($0)) }
     }
 
     private func tip(_ i: Int, layout: Layout) -> ChartTip {
@@ -190,6 +206,8 @@ extension TimeSeries {
         var hue: MetricHue
         var width: CGFloat
         var columns: Int
+        var domain: ClosedRange<Date>?
+        var overlays: [ChartOverlay]
     }
 
     struct Hole: Identifiable {
@@ -236,11 +254,13 @@ extension TimeSeries {
         var markers: [Marker] = []
         var holes: [Hole] = []
         var statuses: [DataStatus] = []
+        var overlays: [ChartOverlay] = []
 
         init(_ input: Input) {
             let series = input.series
             let bandPoints = input.band?.points ?? []
-            x = timeDomain(series.flatMap { [$0.points.first?.x, $0.points.last?.x].compactMap(\.self) } + [bandPoints.first?.x, bandPoints.last?.x].compactMap(\.self))
+            x = input.domain ?? timeDomain(series.flatMap { [$0.points.first?.x, $0.points.last?.x].compactMap(\.self) } + [bandPoints.first?.x, bandPoints.last?.x].compactMap(\.self))
+            overlays = ChartOverlay.clipped(input.overlays, to: x)
             let values = series.lazy.flatMap { $0.points.lazy.map(\.y) }
             let extras: [Double?] = bandPoints.flatMap { [$0.low, $0.high] } + [input.baseline?.value, input.baseline?.range?.lowerBound, input.baseline?.range?.upperBound]
             y = extent(Array(values) + extras, pad: 0.08)

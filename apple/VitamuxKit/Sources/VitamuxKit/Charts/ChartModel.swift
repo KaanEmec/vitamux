@@ -83,6 +83,39 @@ public struct ChartBaseline: Hashable, Sendable {
     }
 }
 
+/// A span or an instant drawn under a time chart's marks and named in its legend: shading (a
+/// night), a tint in the metric hue (a workout) or a dashed line (now).
+public struct ChartOverlay: Hashable, Sendable, Identifiable {
+    public enum Style: Hashable, Sendable {
+        case shade, tint, line
+    }
+
+    public var label: String
+    public var start: Date
+    /// Equal to `start` for a line.
+    public var end: Date
+    public var style: Style
+    public var id: String { "\(style)-\(start.timeIntervalSinceReferenceDate)-\(label)" }
+
+    public init(label: String, start: Date, end: Date? = nil, style: Style) {
+        self.label = label
+        self.start = start
+        self.end = max(end ?? start, start)
+        self.style = style
+    }
+
+    /// The overlays inside `domain`, clipped to it.
+    static func clipped(_ overlays: [ChartOverlay], to domain: ClosedRange<Date>) -> [ChartOverlay] {
+        overlays.compactMap { o in
+            var o = o
+            if o.style == .line { return domain.contains(o.start) ? o : nil }
+            o.start = max(o.start, domain.lowerBound)
+            o.end = min(o.end, domain.upperBound)
+            return o.start < o.end ? o : nil
+        }
+    }
+}
+
 /// The accessible table behind a chart, newest first.
 public struct ChartTable: Sendable {
     public struct Row: Identifiable, Sendable {

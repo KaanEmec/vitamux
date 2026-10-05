@@ -1,14 +1,19 @@
 import SwiftUI
 
 /// Range presets of a chart. "All" plots week or month rollups (GET /resolved/trend), as the
-/// panel does; the others plot daily windows ending on the picked end date.
+/// panel does; "1D" is the Day view of a metric with `intraday` (one local day at its own
+/// resolution); the others plot daily windows ending on the picked end date.
 public enum ChartRange: String, CaseIterable, Sendable, Identifiable {
-    case week = "1W", month = "1M", quarter = "3M", year = "1Y", all = "All"
+    case day = "1D", week = "1W", month = "1M", quarter = "3M", year = "1Y", all = "All"
+
+    /// The presets of a view without a Day view.
+    public static let periods: [ChartRange] = [.week, .month, .quarter, .year, .all]
 
     public var id: String { rawValue }
 
     public var days: Int? {
         switch self {
+        case .day: 1
         case .week: 7
         case .month: 30
         case .quarter: 90
@@ -23,24 +28,26 @@ public enum ChartRange: String, CaseIterable, Sendable, Identifiable {
     }
 }
 
-/// The range presets (1W, 1M, 3M, 1Y, All) and the end date, stepped a range at a time and never
-/// past `latest`.
+/// The range presets (1W, 1M, 3M, 1Y, All, and 1D where a Day view exists) and the end date,
+/// stepped a range at a time (a day at a time for 1D) and never past `latest`.
 public struct RangePicker: View {
     @Binding var range: ChartRange
     @Binding var end: LocalDate
     let latest: LocalDate
+    let ranges: [ChartRange]
     @Environment(\.dynamicTypeSize) private var typeSize
 
-    public init(range: Binding<ChartRange>, end: Binding<LocalDate>, latest: LocalDate) {
+    public init(range: Binding<ChartRange>, end: Binding<LocalDate>, latest: LocalDate, ranges: [ChartRange] = ChartRange.periods) {
         _range = range
         _end = end
         self.latest = latest
+        self.ranges = ranges
     }
 
     public var body: some View {
         VStack(spacing: 8) {
             Picker("Range", selection: $range) {
-                ForEach(ChartRange.allCases) { Text($0.rawValue).tag($0) }
+                ForEach(ranges) { Text($0.rawValue).tag($0) }
             }
             .pickerStyle(.segmented)
             HStack {
@@ -60,9 +67,10 @@ public struct RangePicker: View {
         let day = { (d: LocalDate) in
             var style = Date.FormatStyle(date: .abbreviated, time: .omitted)
             style.timeZone = .gmt
-            return d.start(in: .gmt).formatted(style)
+            return d.start(in: .gmt).formatted(range == .day ? style.weekday(.abbreviated) : style)
         }
         guard let start = range.start(endingOn: end) else { return "Up to \(day(end))" }
+        if start == end { return day(end) }
         return "\(day(start)) – \(day(end))"
     }
 }

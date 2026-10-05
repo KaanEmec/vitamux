@@ -92,6 +92,22 @@ enum ChartSamples {
         ]
     }
 
+    /// A Day view's 30-minute buckets, nothing at night.
+    static var halfHours: (xs: [Date], values: [Double?]) {
+        let xs = (0 ..< 48).map { dayStart.addingTimeInterval(Double($0) * 1_800) }
+        return (xs, xs.indices.map { i in i < 14 ? nil : (300 + 250 * sin(Double(i) / 4)).rounded() })
+    }
+
+    /// The Day view's overlays: a night, a workout and now.
+    static var dayOverlays: [ChartOverlay] {
+        let at = { (h: Double) in dayStart.addingTimeInterval(h * 3_600) }
+        return [
+            ChartOverlay(label: "Night", start: at(-1), end: at(6.8), style: .shade),
+            ChartOverlay(label: "Running", start: at(7.2), end: at(7.9), style: .tint),
+            ChartOverlay(label: "Now", start: at(15.5), style: .line),
+        ]
+    }
+
     /// Every view of the kit, for previews and the rendering smoke tests.
     @MainActor static var gallery: [(String, AnyView)] {
         let nights = nights
@@ -107,6 +123,10 @@ enum ChartSamples {
             ("EventLanes", AnyView(EventLanes(title: "Events", lanes: lanes, from: dayStart, to: dayStart.addingTimeInterval(86_400), timeZone: timeZone))),
             ("Sparkline", AnyView(Sparkline(values: daily().map(\.y), band: 54 ... 62, mean: 58, ghost: daily().map { $0.y.map { $0 - 1 } }, label: "Resting heart rate, 30 days", hue: .heartRate))),
             ("CoverageStrip", AnyView(CoverageStrip(caption: "Coverage", rows: coverage, start: day.adding(days: -29)))),
+            ("Bars day", AnyView(Bars(
+                title: "Steps per 30 minutes", xs: halfHours.xs, values: halfHours.values, unit: "steps", hue: .steps, timeZone: timeZone,
+                binWidth: 1_800, domain: dayStart ... dayStart.addingTimeInterval(86_400), overlays: dayOverlays
+            ))),
         ]
     }
 }

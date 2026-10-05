@@ -29,10 +29,14 @@ struct MetricDetailView: View {
                 if let problem = pins.problem { ProblemView(problem: problem) }
                 MetricHeader(model: model)
                 Section {
-                    RangePicker(range: $model.range, end: $model.end, latest: model.latest)
+                    RangePicker(range: $model.range, end: $model.end, latest: model.latest, ranges: model.spec?.day == nil ? ChartRange.periods : ChartRange.allCases)
                         .accessibilityIdentifier("rangePicker")
                     SpecialisedNote(view: model.spec?.view)
-                    MetricChart(model: model)
+                    if model.range == .day, let metric = model.meta.value, let intraday = metric.intraday {
+                        DayView(detail: model, metric: metric, intraday: intraday) // J22.26
+                    } else {
+                        MetricChart(model: model) { date in open(date) }
+                    }
                     SeriesToggles(model: model)
                 }
                 MetricStatsSection(model: model)
@@ -56,12 +60,27 @@ struct MetricDetailView: View {
         .task {
             async let pinsLoaded: Void = pins.load(state.client)
             await model.loadMeta(state.client)
+            // Only metrics with `intraday` have a Day range.
+            if model.range == .day, model.spec?.day == nil { model.range = .quarter }
             await pinsLoaded
         }
         .task(id: model.key) { await model.load(state.client) }
         .task(id: model.showCoverage) { if model.showCoverage { await model.loadCoverage(state.client) } }
         .sheet(item: $selected) { day in
             PointSheet(model: model, date: day.date)
+        }
+    }
+}
+
+extension MetricDetailView {
+    /// A day tapped on the chart: the weekly and monthly charts of a metric with `intraday` drill
+    /// into its Day view; otherwise the point sheet opens.
+    private func open(_ date: LocalDate) {
+        if model.spec?.day != nil, model.range == .week || model.range == .month {
+            model.end = date
+            model.range = .day
+        } else {
+            selected = SelectedDay(date: date)
         }
     }
 }

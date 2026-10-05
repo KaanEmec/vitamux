@@ -127,7 +127,7 @@ struct ChartModelTests {
 struct ChartRenderingTests {
     @Test(arguments: [ColorScheme.light, .dark], [DynamicTypeSize.large, .accessibility5])
     func `every view renders in both schemes and at the largest type size`(scheme: ColorScheme, size: DynamicTypeSize) throws {
-        #expect(ChartSamples.gallery.count == 11)
+        #expect(ChartSamples.gallery.count == 12)
         for (name, view) in ChartSamples.gallery {
             let renderer = ImageRenderer(content: view
                 .padding()
