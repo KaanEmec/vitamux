@@ -1,9 +1,8 @@
 import SwiftUI
 
-/// Tab root; built in J22.12.
+/// Tab root (`vitamux://lab`); built in J22.12.
 struct LabView: View {
     var body: some View {
-        ContentUnavailableView("Lab", systemImage: "hammer", description: Text("Not built yet."))
-            .navigationTitle("Lab")
+        PlaceholderView(title: "Lab", detail: [], job: "J22.12")
     }
 }

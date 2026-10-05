@@ -1,51 +1,38 @@
 import SwiftUI
 
-/// The tab bar, one `NavigationStack` per tab, and the deep-link entry point.
+/// Sign-in, the lock screen or the tabs; links, theme and the app-switcher cover for all three.
 struct RootView: View {
     @Environment(AppState.self) private var state
+    @Environment(\.scenePhase) private var phase
 
     var body: some View {
-        @Bindable var state = state
-        TabView(selection: $state.tab) {
-            Tab("Dashboard", systemImage: "square.grid.2x2", value: AppTab.dashboard) {
-                TabStack(tab: .dashboard) { DashboardView() }
-            }
-            Tab("Explore", systemImage: "chart.xyaxis.line", value: AppTab.explore) {
-                TabStack(tab: .explore) { ExploreView() }
-            }
-            Tab("Sources", systemImage: "antenna.radiowaves.left.and.right", value: AppTab.sources) {
-                TabStack(tab: .sources) { SourcesView() }
-            }
-            Tab("Lab", systemImage: "doc.text", value: AppTab.lab) {
-                TabStack(tab: .lab) { LabView() }
-            }
-            Tab("More", systemImage: "ellipsis", value: AppTab.more) {
-                TabStack(tab: .more) { MoreView() }
+        Group {
+            if !state.isSignedIn {
+                SignInView()
+            } else if state.isLocked {
+                LockView()
+            } else {
+                ShellView()
             }
         }
+        // The app-switcher snapshot is taken while inactive: blur and cover it.
+        .blur(radius: phase == .active ? 0 : 24)
+        .overlay {
+            if phase != .active { PrivacyCover() }
+        }
+        .preferredColorScheme(state.theme.colorScheme)
         .onOpenURL { state.open($0) }
+        .onChange(of: phase) { _, new in state.scenePhaseChanged(to: new) }
     }
 }
 
-private struct TabStack<Root: View>: View {
-    @Environment(AppState.self) private var state
-    let tab: AppTab
-    @ViewBuilder let root: Root
-
+private struct PrivacyCover: View {
     var body: some View {
-        NavigationStack(path: Binding { state.paths[tab] ?? [] } set: { state.paths[tab] = $0 }) {
-            root.navigationDestination(for: Route.self) { RouteView(route: $0) }
+        ZStack {
+            Rectangle().fill(.regularMaterial)
+            AppMark()
         }
-    }
-}
-
-/// The screen for each `Route`. A new route adds one case here.
-private struct RouteView: View {
-    let route: Route
-
-    var body: some View {
-        switch route {
-        case .systemStatus: SystemStatusView()
-        }
+        .ignoresSafeArea()
+        .accessibilityHidden(true)
     }
 }

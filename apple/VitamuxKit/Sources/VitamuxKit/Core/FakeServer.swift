@@ -24,7 +24,19 @@ public final class FakeServer: Sendable {
         public var authorization: String?
     }
 
+    /// How the fake answers the version handshake (`GET /system/version`) the app reads before
+    /// sign-in, so the server step's errors can be tested.
+    public enum Handshake: Sendable {
+        /// The current server: anonymous handshake, then the build for a signed-in caller.
+        case current
+        /// A Vitamux server from before the handshake: the version route needs a session.
+        case beforeHandshake
+        /// Something else at the address: every path answers a plain HTML 404.
+        case notVitamux
+    }
+
     struct State {
+        var handshake = Handshake.current
         var totpEnabled = false
         /// Live app-session tokens and their device names.
         var sessions: [String: String] = [:]
@@ -41,17 +53,32 @@ public final class FakeServer: Sendable {
     let state = Mutex(State())
 
     /// `host` defaults to a fresh `*.fake.vitamux.test` name.
-    public init(host: String = "s\(UInt64.random(in: 0...UInt64.max)).fake.vitamux.test", totpEnabled: Bool = false) {
+    public init(
+        host: String = "s\(UInt64.random(in: 0...UInt64.max)).fake.vitamux.test",
+        totpEnabled: Bool = false,
+        handshake: Handshake = .current
+    ) {
         profile = try! ServerProfile("https://\(host)", allowsLocalHTTP: false)
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [FakeURLProtocol.self]
         urlSession = URLSession(configuration: configuration)
-        state.withLock { $0.totpEnabled = totpEnabled }
+        state.withLock {
+            $0.totpEnabled = totpEnabled
+            $0.handshake = handshake
+        }
         FakeURLProtocol.servers.withLock { $0[host] = self }
     }
 
     /// The server UI tests run against (`-uitest` in the launch arguments).
     public static let uiTest = FakeServer(host: "fake.vitamux.test")
+
+    /// Every address a UI test can type, registered together. Another `*.vitamux.test` host
+    /// fails as an unreachable server. All share `uiTest.urlSession`.
+    public static let uiTestServers = [
+        uiTest,
+        FakeServer(host: "old.vitamux.test", handshake: .beforeHandshake),
+        FakeServer(host: "other.vitamux.test", handshake: .notVitamux),
+    ]
 
     public static var isUITestRun: Bool {
         ProcessInfo.processInfo.arguments.contains("-uitest")
@@ -104,9 +131,10 @@ struct Reply {
 final class FakeURLProtocol: URLProtocol {
     static let servers = Mutex<[String: FakeServer]>([:])
 
+    /// Registered hosts, and any other `.vitamux.test` host, which fails as unreachable.
     override class func canInit(with request: URLRequest) -> Bool {
         guard let host = request.url?.host() else { return false }
-        return servers.withLock { $0[host] != nil }
+        return host.hasSuffix(".vitamux.test") || servers.withLock { $0[host] != nil }
     }
 
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }

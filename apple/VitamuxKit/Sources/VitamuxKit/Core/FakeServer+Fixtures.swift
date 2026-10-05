@@ -6,14 +6,20 @@ import Foundation
 // screen's UI test needs it.
 extension FakeServer {
     static func route(method: String, url: URL, authorization: String?, body: Data, state: inout State) -> Reply {
+        if state.handshake == .notVitamux {
+            return Reply(status: 404, headers: ["Content-Type": "text/html"], body: Data("<html><body>Not found</body></html>".utf8))
+        }
+        let token = authorization.flatMap { $0.hasPrefix("Bearer ") ? String($0.dropFirst(7)) : nil }
         switch (method, url.path) {
         case ("POST", "/api/v1/auth/login"):
             return login(body, state: &state)
+        case ("GET", "/api/v1/system/version") where token == nil && state.handshake == .current:
+            // Public: the app checks a server before sign-in (internal/api/system.go).
+            return json(200, handshakeBody)
         default:
             break
         }
         guard url.path.hasPrefix("/api/") else { return problem(404, "not_found", "not stubbed in the fake server") }
-        let token = authorization.flatMap { $0.hasPrefix("Bearer ") ? String($0.dropFirst(7)) : nil }
         guard let token, let device = state.sessions[token] else {
             return problem(401, "unauthenticated", token == nil ? "sign in or send a bearer token" : "invalid, revoked or expired token")
         }
@@ -26,7 +32,14 @@ extension FakeServer {
         case ("GET", "/api/v1/auth/sessions"):
             return json(200, ["sessions": [activeSession(name: device)]])
         case ("GET", "/api/v1/system/version"):
-            return json(200, ["version": "0.0.0-fake", "commit": "fake", "api_version": 1, "min_app_version": "0.4.0"])
+            guard state.handshake == .current else { return json(200, ["version": "0.3.1-fake", "commit": "fake"]) }
+            return json(200, handshakeBody.merging(["version": "0.0.0-fake", "commit": "fake"]) { $1 })
+        case ("GET", "/api/v1/metrics"):
+            return json(200, ["metrics": metrics])
+        case ("GET", "/api/v1/connections"):
+            return json(200, ["connections": connections])
+        case ("POST", _) where url.path.hasPrefix("/api/v1/devices/") && url.path.hasSuffix("/revoke"):
+            return Reply(status: 204)
         case ("GET", "/api/v1/timezone-periods"):
             return json(200, ["timezone_periods": timezonePeriods])
         case ("GET", "/api/v1/measurements"):
@@ -102,6 +115,40 @@ extension FakeServer {
             "expires_at": "2099-01-01T00:00:00Z", "current": true,
         ]
     }
+
+    static var handshakeBody: [String: Any] { ["product": "vitamux", "api_version": 1, "min_app_version": "0.4.0"] }
+
+    // MARK: - Catalogue and connections (the shell's search and sync status)
+
+    private static func metric(_ code: String, section: String, unit: String, kind: String, aggregation: String) -> [String: Any] {
+        [
+            "code": code, "section": section, "unit": unit, "kinds": [kind], "aggregation": aggregation,
+            "windows": ["bucket", "local_day"], "strategies": ["single_source", "first_available", "mean_across_sources"],
+            "plausible_range": [0, 100_000], "provider_scoped": false, "selection_only": false,
+        ]
+    }
+
+    private static var metrics: [[String: Any]] { [
+        metric("heart_rate", section: "heart", unit: "bpm", kind: "sample", aggregation: "intensive"),
+        metric("heart_rate_resting", section: "heart", unit: "bpm", kind: "daily_value", aggregation: "intensive"),
+        metric("steps", section: "activity", unit: "count", kind: "cumulative", aggregation: "additive"),
+        metric("body_mass", section: "body", unit: "kg", kind: "sample", aggregation: "latest"),
+    ] }
+
+    private static func connection(_ index: Int, _ provider: String, health: String, lastSuccess: Any) -> [String: Any] {
+        [
+            "id": "conn_" + String(format: "%032x", index), "provider": provider, "mode": "in_process",
+            "status": health == "ok" ? "active" : "needs_reauth", "official": provider == "withings",
+            "upstream": NSNull(), "health": health, "health_reason": health == "ok" ? NSNull() : "sign in again",
+            "last_success_at": lastSuccess, "last_error_class": NSNull(), "consecutive_failures": health == "ok" ? 0 : 3,
+            "created_at": "2026-01-01T08:00:00Z", "updated_at": "2026-01-02T08:00:00Z",
+        ]
+    }
+
+    private static var connections: [[String: Any]] { [
+        connection(1, "withings", health: "ok", lastSuccess: "2026-01-02T08:00:00Z"),
+        connection(2, "garmin", health: "needs_reauth", lastSuccess: "2026-01-01T08:00:00Z"),
+    ] }
 
     // MARK: - Settings
 
