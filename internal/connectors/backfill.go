@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -95,8 +96,8 @@ func (rt *Runtime) CreateBackfill(ctx context.Context, spec BackfillSpec) (uuid.
 	switch {
 	case size < minUnitSize:
 		return uuid.Nil, fmt.Errorf("%w: unit size must be at least %s", ErrInvalidBackfill, minUnitSize)
-	case spec.DailyLimit < 0:
-		return uuid.Nil, fmt.Errorf("%w: daily limit must be positive", ErrInvalidBackfill)
+	case spec.DailyLimit < 0 || spec.DailyLimit > math.MaxInt32:
+		return uuid.Nil, fmt.Errorf("%w: daily limit out of range", ErrInvalidBackfill)
 	case !to.After(from):
 		return uuid.Nil, fmt.Errorf("%w: range end must be after its start", ErrInvalidBackfill)
 	case from.Before(time.Now().Add(-s.MaxBackfill)):
@@ -114,7 +115,7 @@ func (rt *Runtime) CreateBackfill(ctx context.Context, spec BackfillSpec) (uuid.
 	}
 	id := uuid.New()
 	var limit *int32
-	if spec.DailyLimit > 0 {
+	if spec.DailyLimit > 0 && spec.DailyLimit <= math.MaxInt32 {
 		limit = new(int32(spec.DailyLimit))
 	}
 	err = rt.db.Tx(ctx, func(q *dbq.Queries) error {
