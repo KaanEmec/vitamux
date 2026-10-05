@@ -29,9 +29,9 @@ Not in scope: iPad layouts, a watchOS app, HealthKit write-back, APNs push, seve
 
 | Part | Contents |
 | --- | --- |
-| `apple/HealthBridgeKit` (existing package) | Unchanged role: Core and HealthKit sync. Gains only what in-app pairing and status need (J22.14). Still usable by a third-party app. |
+| `apple/HealthBridgeKit` (existing package) | Unchanged role: Core and HealthKit sync. J22.14 needed no additions (the app keeps the status snapshot). Still usable by a third-party app. |
 | `apple/VitamuxKit` (new package) | One library target, three folders: `API/` (client generated from `api/openapi.yaml`, one middleware), `Core/` (server profile, session store, `Problem`, `Loadable`, poller, file cache), `Charts/` (Swift Charts views and the chart grammar). One test target, run with `swift test` on macOS, no simulator needed. |
-| `apple/VitamuxApp` (xcodegen project) | One app target with a folder per feature, the widget extension and UI tests. Replaces `apple/HealthBridgeApp`, which stays until J22.14 has moved its screens. |
+| `apple/VitamuxApp` (xcodegen project) | One app target with a folder per feature, the widget extension and UI tests. Replaced `apple/HealthBridgeApp` (removed in J22.14). |
 | Backend | App sessions and the native connection-auth return ([J22.2](../plan/E22-ios-app/J22.2-app-sessions.md), [J22.3](../plan/E22-ios-app/J22.3-native-auth-return.md)). No other iOS coupling. |
 
 ## Lean architecture
@@ -130,6 +130,7 @@ The app embeds HealthBridgeKit and owns the HealthKit entitlements, purpose stri
 - **One-tap pairing:** signed in, the app creates a pairing code (`POST /devices/pairing-codes`) and redeems it itself (`POST /api/ingest/v1/devices/pair`). The device token stays separate from the app session, with its own Keychain item, so ingest keeps working after sign-out and a stolen session cannot impersonate the device. Manual QR pairing remains for a phone that only syncs. Code creation for an app caller must not need `VITAMUX_PUBLIC_URL`, since no QR is shown (J22.3).
 - **Source filter (take or ignore):** the owner chooses per app seen in Apple Health, and optionally per type, whether Vitamux takes its data or ignores it. A provider connected directly (WHOOP, Garmin) is ignored by default with the reason shown. The filter is stored with the device on the server, applied on the phone as a HealthKit source predicate so ignored data never leaves it, editable from the app and the panel, and backed by a server guard that keeps stray rows raw and unnormalized ([J22.25](../plan/E22-ios-app/J22.25-apple-health-source-filter.md)). The relayed classification and the rules' relayed exclusion stay as the second line of defence.
 - **One screen** joins local state (enabled groups, per-type anchors, last upload, queue) with the server's view of this device (`GET /devices`: last seen, possibly-denied types, resync requests).
+- **Lifecycle (J22.14):** `AppDelegate` owns `AppState`, so `ThisDevice` (Features/AppleHealth) exists at launch; `didFinishLaunching` starts it (observer queries with background delivery for the enabled types, server-requested resets, a sync), the scene's `.backgroundTask(.appRefresh)` runs the refresh task, and becoming active syncs. One run at a time per phone; each run ends with the heartbeat checkpoint. A `401` to the device token stops sync and shows "Pair again". Sign-out leaves all of this running.
 - **Upgrade in place:** the app keeps Bridge's bundle identifier (`org.vitamux.healthbridge`) and Keychain service, so an installed Bridge updates into the app with its device token, anchors and HealthKit authorizations intact. Owners who changed the bundle id keep theirs.
 
 ## Apple Watch

@@ -1,6 +1,6 @@
 # Apple Health bridge
 
-This document is for epic E15. [E22](../plan/E22-ios-app/README.md) moves the app into the Vitamux iOS app and adds every Apple Watch type ([ios-app › Apple Watch](ios-app.md#apple-watch)). Platform facts were checked in [J15.1](../plan/E15-apple-health/J15.1-platform-contract.md) on 2026-10-04 against Apple's HealthKit documentation and the Xcode 27 SDK headers (cited as [Apple docs][apple-docs] below). What only a phone can answer is listed in the [device checklist](../apple-health-device-checklist.md).
+This document is for epic E15. [E22](../plan/E22-ios-app/README.md) moved the app into the Vitamux iOS app and adds every Apple Watch type ([ios-app › Apple Watch](ios-app.md#apple-watch)). Platform facts were checked in [J15.1](../plan/E15-apple-health/J15.1-platform-contract.md) on 2026-10-04 against Apple's HealthKit documentation and the Xcode 27 SDK headers (cited as [Apple docs][apple-docs] below). What only a phone can answer is listed in the [device checklist](../apple-health-device-checklist.md).
 
 [apple-docs]: https://developer.apple.com/documentation/healthkit
 
@@ -13,7 +13,7 @@ HealthKit data lives encrypted on the iPhone (and Watch). It is readable only th
 | Part | Contents |
 | --- | --- |
 | `apple/HealthBridgeKit` (Swift package, reusable) | **Core**: payload models, batching, gzip, retry/backoff, idempotency keys, anchor store, Keychain token store. **HealthKit**: type registry, per-type authorization, `HKAnchoredObjectQuery` loop, `HKObserverQuery` + `enableBackgroundDelivery`, deletions, mapping, and the Watch detail readers (ECG voltages, heartbeat series, route locations and their workout link, activity summaries). `HealthStore` sits behind a protocol so it can be faked in tests; a store that does not implement a detail read fails that type instead of sending it without its detail. |
-| `apple/HealthBridgeApp` (minimal SwiftUI) | Pairing (QR or manual), metric-group picker, per-type status, Sync now, anchor reset, privacy text. Owns the capabilities and purpose strings. |
+| `apple/VitamuxApp` (`Features/AppleHealth`) | The iOS app embeds the kit ([ios-app](ios-app.md#apple-health)): one-tap, QR or manual pairing, metric-group picker, per-type status, Sync now, anchor reset, privacy text. Owns the capabilities and purpose strings. It replaced the Bridge app (`apple/HealthBridgeApp`, removed in J22.14). |
 | Backend | Pairing and device-token endpoints, the generic batch endpoint ([connectors.md](connectors.md#push-ingest-contract)), and the Go `healthkit.samples` normalizer. No other iOS coupling in the core. |
 
 ## Permissions

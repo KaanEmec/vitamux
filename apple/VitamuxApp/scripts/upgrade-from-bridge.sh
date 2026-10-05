@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # Installs the app over a Vitamux Bridge build on a simulator and checks that the paired device
-# token and the sync anchors survive (J22.5). Synthetic values only: Bridge's -uitest stores.
+# token and the sync anchors survive (J22.5, J22.14). Synthetic values only: Bridge's -uitest stores.
+# apple/HealthBridgeApp was removed in J22.14, so Bridge is built from git history: the parent of
+# the last commit that touched it (or BRIDGE_REF), with the HealthBridgeKit of that commit.
 #   apple/VitamuxApp/scripts/upgrade-from-bridge.sh ["iPhone 17 Pro"]
 set -euo pipefail
 
 device="${1:-iPhone 17 Pro}"
 here="$(cd "$(dirname "$0")/.." && pwd)"
 build="$(mktemp -d)"
+root="$(git -C "$here" rev-parse --show-toplevel)"
+ref="${BRIDGE_REF:-$(git -C "$root" rev-list -1 HEAD -- apple/HealthBridgeApp)^}"
 bundle=org.vitamux.healthbridge
 suite=org.vitamux.healthbridge.uitest
 anchor=anchor.HKQuantityTypeIdentifierHeartRate
@@ -15,9 +19,11 @@ destination="platform=iOS Simulator,name=$device"
 xcrun simctl boot "$device" 2>/dev/null || true
 xcrun simctl uninstall "$device" "$bundle" || true
 
-echo "== Bridge: pair (synthetic token) and keep an anchor"
-(cd "$here/../HealthBridgeApp" && xcodegen generate --quiet)
-xcodebuild -quiet -project "$here/../HealthBridgeApp/HealthBridgeApp.xcodeproj" -scheme HealthBridgeApp \
+echo "== Bridge ($(git -C "$root" rev-parse --short "$ref")): pair (synthetic token) and keep an anchor"
+mkdir -p "$build/src"
+git -C "$root" archive "$ref" apple/HealthBridgeApp apple/HealthBridgeKit | tar -x -C "$build/src"
+(cd "$build/src/apple/HealthBridgeApp" && xcodegen generate --quiet)
+xcodebuild -quiet -project "$build/src/apple/HealthBridgeApp/HealthBridgeApp.xcodeproj" -scheme HealthBridgeApp \
   -destination "$destination" -derivedDataPath "$build/bridge" build
 xcrun simctl install "$device" "$build/bridge/Build/Products/Debug-iphonesimulator/HealthBridgeApp.app"
 xcrun simctl launch "$device" "$bundle" -uitest -uitest-paired >/dev/null

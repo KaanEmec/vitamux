@@ -1,5 +1,0 @@
-*.xcodeproj/
-xcuserdata/
-DerivedData/
-Sources/Info.plist
-Sources/HealthBridgeApp.entitlements
