@@ -11,6 +11,8 @@ export default defineConfig({
 		sveltekit({
 			// SPA: one fallback shell, no SSR (see docs/adr/0010-sveltekit-static-spa.md).
 			adapter: adapter({ pages: 'build', assets: 'build', fallback: 'index.html', strict: true }),
+			// A tab opened before an upgrade notices the new build (root +layout.svelte reloads on navigation).
+			version: { pollInterval: 300_000 },
 			csp: {
 				mode: 'hash',
 				directives: {
