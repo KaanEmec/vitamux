@@ -226,10 +226,12 @@ struct StatusShape: Shape {
 }
 
 /// The marker of a status in its colour; partial and no data carry a ring.
-struct StatusGlyph: View {
+public struct StatusGlyph: View {
     let status: DataStatus
 
-    var body: some View {
+    public init(status: DataStatus) { self.status = status }
+
+    public var body: some View {
         ZStack {
             if status == .partial || status == .noData {
                 Circle().inset(by: 1.5).fill(.background).stroke(status.color, lineWidth: 1.4)

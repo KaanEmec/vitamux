@@ -23,6 +23,7 @@ extension FakeServer {
         guard let token, let device = state.sessions[token] else {
             return problem(401, "unauthenticated", token == nil ? "sign in or send a bearer token" : "invalid, revoked or expired token")
         }
+        if let reply = dashboard(method: method, url: url, body: body) { return reply } // FakeServer+Dashboard.swift
         switch (method, url.path) {
         case ("POST", "/api/v1/auth/logout"):
             state.sessions[token] = nil
@@ -35,7 +36,7 @@ extension FakeServer {
             guard state.handshake == .current else { return json(200, ["version": "0.3.1-fake", "commit": "fake"]) }
             return json(200, handshakeBody.merging(["version": "0.0.0-fake", "commit": "fake"]) { $1 })
         case ("GET", "/api/v1/metrics"):
-            return json(200, ["metrics": metrics])
+            return json(200, ["metrics": metrics + dashboardMetrics])
         case ("GET", "/api/v1/connections"):
             return json(200, ["connections": connections])
         case ("POST", _) where url.path.hasPrefix("/api/v1/devices/") && url.path.hasSuffix("/revoke"):

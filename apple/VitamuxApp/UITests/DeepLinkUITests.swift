@@ -7,7 +7,7 @@ final class DeepLinkUITests: XCTestCase {
 
     /// Link, tab, navigation title, and what the screen shows of the link's query.
     private let links: [(String, String, String, String?)] = [
-        ("vitamux://dashboard?date=2026-01-31", "Dashboard", "Dashboard", "2026-01-31"),
+        ("vitamux://dashboard?date=2026-01-31", "Dashboard", "Dashboard", nil), // the day: DashboardUITests
         ("vitamux://explore", "Explore", "Explore", nil),
         ("vitamux://explore/heart_rate_resting?range=3M", "Explore", "Heart rate resting", "heart_rate_resting · 3M"),
         ("vitamux://explore/heart_rate/day/2026-01-31", "Explore", "All sources", "heart_rate · 2026-01-31"),

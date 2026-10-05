@@ -165,7 +165,8 @@ final class FakeURLProtocol: URLProtocol {
         defer { stream.close() }
         var data = Data()
         var buffer = [UInt8](repeating: 0, count: 16 * 1024)
-        while stream.hasBytesAvailable {
+        // Read to the end: `hasBytesAvailable` can be false before a streamed body arrives.
+        while true {
             let count = stream.read(&buffer, maxLength: buffer.count)
             guard count > 0 else { break }
             data.append(buffer, count: count)
