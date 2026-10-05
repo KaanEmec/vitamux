@@ -57,9 +57,12 @@ final class MappingTests: XCTestCase {
     @available(*, deprecated, message: "HKWorkout(activityType:start:end:) is the simplest synthetic workout")
     func testWorkout() throws {
         let w = HKWorkout(activityType: .running, start: t0, end: t0 + 1800)
-        // No time zone metadata: Mapping falls back to the current zone.
+        // No time zone metadata: Mapping falls back to the current zone. HealthKit reports the single
+        // activity of a workout as one `workout.activities` entry (ADR-0024), sent as reported.
         XCTAssertEqual(try golden(Mapping.sample(w, unit: nil)), """
-            {"end":"\(rfc3339(t0 + 1800))","start":"\(rfc3339(t0))","was_user_entered":false,"workout":{"activity_type":37,"duration_s":1800}}
+            {"end":"\(rfc3339(t0 + 1800))","start":"\(rfc3339(t0))","was_user_entered":false,"workout":{"activities":[\
+            {"activity_type":37,"duration_s":1800,"end":"\(rfc3339(t0 + 1800))","location_type":3,"start":"\(rfc3339(t0))"}],\
+            "activity_type":37,"duration_s":1800}}
             """)
     }
 

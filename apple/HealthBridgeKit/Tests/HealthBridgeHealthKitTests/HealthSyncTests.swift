@@ -75,7 +75,7 @@ final class HealthSyncTests: XCTestCase {
         let sleep = Registry.v1.first { $0.id == HKCategoryTypeIdentifier.sleepAnalysis.rawValue }!
         for status in [202, 422] {
             let h = Harness(pages: [nil: AnchoredPage(samples: hrSamples(1), deleted: [], anchor: a1)], status: status)
-            try await h.sync.observe([heartRate, sleep])
+            await h.sync.observe([heartRate, sleep])
             XCTAssertEqual(h.store.observers.map { $0.0 }, [heartRate.sampleType!, sleep.sampleType!])
             XCTAssertEqual(h.store.backgroundTypes, [heartRate.sampleType!, sleep.sampleType!])
 

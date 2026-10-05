@@ -14,9 +14,21 @@ final class FakeHealthStore: HealthStore, @unchecked Sendable {
     private let earliest: Date
     private var _anchors: [Data?] = []
     private var _starts: [Date] = []
+    private var _limits: [Int] = []
     private var _authorized: [Set<HKObjectType>] = []
     private var _observers: [(HKSampleType, Callback)] = []
     private var _background: [HKSampleType] = []
+    private var _summaryRanges: [(Date, Date)] = []
+    private var _detailReads: [UUID] = []
+
+    /// Pages per type identifier, checked before `pages`.
+    var typedPages: [String: [Data?: AnchoredPage]] = [:]
+    /// Detail per sample UUID; a sample without scripted detail fails its read.
+    var ecgs: [UUID: ECG] = [:], beats: [UUID: Beats] = [:], routes: [UUID: Route] = [:], links: [UUID: UUID] = [:]
+    /// Summaries by `YYYY-MM-DD`; a read returns the days inside the range.
+    var summaries: [String: ActivitySummary] = [:]
+    /// Types whose background delivery fails.
+    var refusedBackground: Set<String> = []
 
     init(pages: [Data?: AnchoredPage] = [:], earliest: Date = .distantPast) {
         self.pages = pages
@@ -25,9 +37,12 @@ final class FakeHealthStore: HealthStore, @unchecked Sendable {
 
     var requestedAnchors: [Data?] { lock.withLock { _anchors } }
     var requestedStarts: [Date] { lock.withLock { _starts } }
+    var requestedLimits: [Int] { lock.withLock { _limits } }
     var authorized: [Set<HKObjectType>] { lock.withLock { _authorized } }
     var observers: [(HKSampleType, Callback)] { lock.withLock { _observers } }
     var backgroundTypes: [HKSampleType] { lock.withLock { _background } }
+    var summaryRanges: [(Date, Date)] { lock.withLock { _summaryRanges } }
+    var detailReads: [UUID] { lock.withLock { _detailReads } }
 
     func requestReadAuthorization(_ types: Set<HKObjectType>) async throws {
         lock.withLock { _authorized.append(types) }
@@ -39,7 +54,8 @@ final class FakeHealthStore: HealthStore, @unchecked Sendable {
         lock.withLock {
             _anchors.append(anchor)
             _starts.append(start)
-            return pages[anchor] ?? AnchoredPage(samples: [], deleted: [], anchor: anchor)
+            _limits.append(limit)
+            return typedPages[type.identifier]?[anchor] ?? pages[anchor] ?? AnchoredPage(samples: [], deleted: [], anchor: anchor)
         }
     }
 
@@ -48,8 +64,57 @@ final class FakeHealthStore: HealthStore, @unchecked Sendable {
     }
 
     func enableBackgroundDelivery(for type: HKSampleType) async throws {
-        lock.withLock { _background.append(type) }
+        try lock.withLock {
+            _background.append(type)
+            if refusedBackground.contains(type.identifier) { throw HealthStoreError.unsupported("background delivery") }
+        }
     }
+
+    func electrocardiogram(_ sample: HKSample) async throws -> ECG { try detail(ecgs, sample) }
+    func heartbeats(_ sample: HKSample) async throws -> Beats { try detail(beats, sample) }
+    func route(_ sample: HKSample) async throws -> Route { try detail(routes, sample) }
+    func workoutUUID(of sample: HKSample) async throws -> UUID? { lock.withLock { links[sample.uuid] } }
+
+    func activitySummaries(from start: Date, through end: Date, in calendar: Calendar) async throws -> [ActivitySummary] {
+        lock.withLock {
+            _summaryRanges.append((start, end))
+            return summaries.values.filter {
+                guard let day = ISO8601DateFormatter.day(calendar).date(from: $0.date) else { return false }
+                return day >= start && day <= end
+            }
+        }
+    }
+
+    private func detail<T>(_ scripted: [UUID: T], _ sample: HKSample) throws -> T {
+        try lock.withLock {
+            _detailReads.append(sample.uuid)
+            guard let value = scripted[sample.uuid] else { throw HealthStoreError.unexpectedShape("no scripted detail") }
+            return value
+        }
+    }
+}
+
+extension ISO8601DateFormatter {
+    static func day(_ calendar: Calendar) -> ISO8601DateFormatter {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withFullDate]
+        f.timeZone = calendar.timeZone
+        return f
+    }
+}
+
+/// A plain `HKSample` (no subclass), standing in for the classes tests cannot create (ECG, heartbeat
+/// series, route): HealthKit has no public initializer for them, and the readers dispatch on the
+/// registry type, not the class. Made by decoding an archived category sample as its superclass.
+func placeholderSample(start: Date, end: Date, metadata: [String: Any]? = nil, device: HKDevice? = nil) -> HKSample {
+    let seed = HKCategorySample(type: HKCategoryType(.mindfulSession), value: 0, start: start, end: end, device: device, metadata: metadata)
+    let data = try! NSKeyedArchiver.archivedData(withRootObject: seed, requiringSecureCoding: true)
+    let unarchiver = try! NSKeyedUnarchiver(forReadingFrom: data)
+    unarchiver.requiresSecureCoding = false
+    unarchiver.setClass(HKSample.self, forClassName: "HKCategorySample")
+    let sample = unarchiver.decodeObject(forKey: NSKeyedArchiveRootObjectKey) as! HKSample
+    precondition(!(sample is HKCategorySample))
+    return sample
 }
 
 /// Records gunzipped batch bodies and answers every request with `status`.
@@ -95,16 +160,25 @@ struct Harness {
     let anchors = AnchorStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
     let sync: HealthSync
 
-    init(pages: [Data?: AnchoredPage] = [:], earliest: Date = .distantPast, backfillStart: Date = .distantPast, status: Int = 202) {
+    init(pages: [Data?: AnchoredPage] = [:], earliest: Date = .distantPast, backfillStart: Date = .distantPast, status: Int = 202,
+         calendar: Calendar = amsterdam, now: Date = t0) {
         store = FakeHealthStore(pages: pages, earliest: earliest)
         server = FakeTransport(status: status)
         let credentials = Credentials(baseURL: URL(string: "https://vitamux.example.test")!, deviceID: "device-synthetic",
                                       connectionID: "conn-synthetic", token: "synthetic-token-not-secret")
         let client = IngestClient(transport: server.transport, sleep: { _ in })
         let sender = BatchSender(credentials: credentials, anchors: anchors, client: client, clientVersion: "0.0.0-test")
-        sync = HealthSync(store: store, sender: sender, anchors: anchors, backfillStart: backfillStart)
+        sync = HealthSync(store: store, sender: sender, anchors: anchors, backfillStart: backfillStart, calendar: calendar, now: { now })
     }
 }
+
+let amsterdam: Calendar = {
+    var c = Calendar(identifier: .gregorian)
+    c.timeZone = TimeZone(identifier: "Europe/Amsterdam")!
+    return c
+}()
+
+func registryType(_ id: String) -> HealthType { Registry.v2.first { $0.id == id }! }
 
 let heartRate = Registry.v1.first { $0.id == HKQuantityTypeIdentifier.heartRate.rawValue }!
 let a0 = Data("a0".utf8), a1 = Data("a1".utf8), a2 = Data("a2".utf8)
