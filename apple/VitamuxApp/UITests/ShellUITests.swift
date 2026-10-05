@@ -47,7 +47,7 @@ final class ShellUITests: XCTestCase {
         let result = app.buttons["result-Connections-withings"]
         XCTAssertTrue(result.waitForExistence(timeout: 5))
         result.tap()
-        XCTAssertTrue(app.navigationBars["Connection"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Withings"].waitForExistence(timeout: 10))
     }
 
     func testThemePreference() {

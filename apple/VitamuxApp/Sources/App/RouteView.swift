@@ -20,8 +20,7 @@ struct RouteView: View {
         case .exploreView(.workouts): WorkoutsView()
         case .events(let code): EventsView(code: code)
 
-        case .connection(let id, let tab):
-            PlaceholderView(title: "Connection", detail: [id, tab], job: "J22.11")
+        case .connection(let id, let tab): ConnectionDetailView(id: id, tab: tab)
 
         case .labDocument(let id):
             PlaceholderView(title: "Review", detail: [id], job: "J22.12")
