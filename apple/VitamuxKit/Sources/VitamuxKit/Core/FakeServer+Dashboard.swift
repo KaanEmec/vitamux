@@ -115,7 +115,7 @@ extension FakeServer {
                     return reply(422, problemBody("validation_failed", "metrics: 1 to 20 codes"), problem: true)
                 }
                 state.summaryDates.append(value("date"))
-                return summary(metrics, date: value("date").flatMap(LocalDate.init), empty: empty)
+                return summary(metrics, date: value("date").flatMap(LocalDate.init), empty: empty, compare: value("compare") == "true")
             case ("GET", "/api/v1/jobs"):
                 return reply(200, ["jobs": value("status") == "dead" && !empty ? deadJobs : [], "has_more": false])
             case ("GET", "/api/v1/system/status"):
@@ -216,11 +216,11 @@ extension FakeServer {
         LocalDate.today(in: TimeZone(identifier: dashboardTimeZone)!)
     }
 
-    private static func summary(_ metrics: [String], date: LocalDate?, empty: Bool) -> Reply {
+    private static func summary(_ metrics: [String], date: LocalDate?, empty: Bool, compare: Bool) -> Reply {
         let today = today()
         let on = date ?? today
         var out: [String: Any] = [:]
-        for code in metrics { out[code] = metricSummary(code, on: on, today: today, empty: empty) }
+        for code in metrics { out[code] = metricSummary(code, on: on, today: today, empty: empty, compare: compare) }
         return reply(200, ["date": on.description, "timezone": dashboardTimeZone, "metrics": out])
     }
 
@@ -228,7 +228,7 @@ extension FakeServer {
         !empty && (specs[code] != nil || code == "sleep" || code == "blood_pressure")
     }
 
-    private static func metricSummary(_ code: String, on date: LocalDate, today: LocalDate, empty: Bool) -> [String: Any] {
+    private static func metricSummary(_ code: String, on date: LocalDate, today: LocalDate, empty: Bool, compare: Bool) -> [String: Any] {
         let dates = (0..<30).map { date.adding(days: $0 - 29) }
         let has = hasData(code, empty: empty)
         let series = dates.map { point(code, $0) }
@@ -256,6 +256,15 @@ extension FakeServer {
             "stats": [7, 30, 90].map { rollup(code, series, days: $0, end: date, empty: !has) },
         ]
         if let spec { out["unit"] = spec.unit }
+        if compare {
+            // `compare=true` (the metric detail): each span against the one before it.
+            out["comparisons"] = [7, 30, 90, 365].map { n -> [String: Any] in
+                let days = (0..<2 * n).map { date.adding(days: $0 - 2 * n + 1) }
+                let all = days.map { point(code, $0) }
+                return ["days": n, "current": rollup(code, Array(all.suffix(n)), days: n, end: date, empty: !has),
+                        "previous": rollup(code, Array(all.prefix(n)), days: n, end: date.adding(days: -n), empty: !has)]
+            }
+        }
         return out
     }
 
@@ -277,7 +286,7 @@ extension FakeServer {
     }
 
     private static func rollup(_ code: String, _ series: [Any], days: Int, end: LocalDate, empty: Bool) -> [String: Any] {
-        let tail = Array(series.suffix(min(days, 30)))
+        let tail = Array(series.suffix(days))
         var out: [String: Any] = [
             "start_date": end.adding(days: 1 - days).description, "end_date": end.description, "days": days,
             "n": empty ? 0 : tail.count, "coverage": empty ? 0 : Double(tail.count) / Double(days),

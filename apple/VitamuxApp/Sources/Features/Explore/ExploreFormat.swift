@@ -154,39 +154,6 @@ struct StatusLabel: View {
     }
 }
 
-/// The metric's tile: its hue from `ChartPalette`, never a judgement.
-struct MetricTile: View {
-    let code: String
-    var section: String?
-    var size: CGFloat = 36
-
-    var body: some View {
-        let hue = MetricHue.of(code: code, section: section)
-        Image(systemName: Self.symbol(code: code, hue: hue))
-            .font(.system(size: size * 0.45, weight: .semibold))
-            .foregroundStyle(hue.color)
-            .frame(width: size, height: size)
-            .background(hue.color.opacity(0.16), in: .rect(cornerRadius: size * 0.28))
-            .accessibilityHidden(true)
-    }
-
-    static func symbol(code: String, hue: MetricHue) -> String {
-        switch hue {
-        case .heartRate: "heart.fill"
-        case .hrv: "waveform.path.ecg"
-        case .steps: "figure.walk"
-        case .sleep: "bed.double.fill"
-        case .bloodPressure: "drop.fill"
-        case .spo2: "lungs.fill"
-        case .weight: "scalemass.fill"
-        case .activeEnergy: "flame.fill"
-        case .vo2: "wind"
-        case .lab: "flask.fill"
-        case .other: code.contains("heart") ? "heart.fill" : code.contains("step") ? "figure.walk" : "chart.xyaxis.line"
-        }
-    }
-}
-
 /// A source chip: its stable colour dot and name.
 struct SourceDot: View {
     let provider: String

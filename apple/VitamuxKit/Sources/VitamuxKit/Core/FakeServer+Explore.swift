@@ -5,8 +5,8 @@ import Synchronization
 // Explore, metric detail, overrides and provenance (J22.8) for the fake server, mirroring
 // web/e2e/explore-fake.ts and data-fake.ts: the inventory, catalogue entries, resolved days,
 // summaries and rollups, per-source series, coverage, the all-sources drilldown with its records,
-// overrides (applied the way the engine applies them) and provenance chains, plus the dashboard
-// layout that pins write. Every value is synthetic and derived from the date, so any range works.
+// overrides (applied the way the engine applies them) and provenance chains. The dashboard layout
+// (pins) and GET /resolved/summary belong to FakeServer+Dashboard.swift. Every value is synthetic and derived from the date, so any range works.
 //
 // Scenario `heart_rate_resting`: the preferred source (whoop) has a degraded stream every day, so
 // each day falls back to garmin; excluding garmin's record falls back again to apple_watch.
@@ -33,8 +33,6 @@ extension FakeServer {
                 return fixture.inventory()
             case ("GET", "/api/v1/resolved/daily"):
                 return fixture.daily(query)
-            case ("GET", "/api/v1/resolved/summary"):
-                return fixture.summary(query)
             case ("GET", "/api/v1/resolved/trend"):
                 return fixture.trend(query)
             case ("GET", "/api/v1/sources/series"):
@@ -49,10 +47,6 @@ extension FakeServer {
                 return state.create(body)
             case ("POST", _) where parts.count == 5 && parts[2] == "overrides" && parts[4] == "revoke":
                 return state.revoke(parts[3])
-            case ("GET", "/api/v1/settings/dashboard"):
-                return ExploreFixture.json(200, state.layoutJSON)
-            case ("PUT", "/api/v1/settings/dashboard"):
-                return state.putLayout(body)
             case ("GET", _) where parts.count == 4 && parts[2] == "metrics":
                 return fixture.metric(parts[3])
             case ("GET", _) where parts.count == 5 && parts[2] == "provenance":
@@ -78,10 +72,6 @@ struct ExploreFixture {
     struct State {
         var overrides: [Override] = []
         var nextOverride = 1
-        var cards: [[String: Any]] = [["metric": "steps", "size": "M", "hidden": false]]
-        var hero: [String] = ["steps", "heart_rate_resting"]
-        var dismissed: [String] = []
-        var layoutStored = false
     }
 
     struct Override {
@@ -220,7 +210,7 @@ struct ExploreFixture {
     }
 
     static func catalogue(_ code: String) -> [String: Any]? {
-        FakeServer.metrics.first { $0["code"] as? String == code }
+        FakeServer.allMetrics.first { $0["code"] as? String == code }
     }
 
     /// Days since 1970 of a local date: the seed of every synthetic value.
@@ -415,36 +405,6 @@ struct ExploreFixture {
             if Self.spec(code)?.additive == true { out["sum"] = values.reduce(0, +) }
         }
         return out
-    }
-
-    func summary(_ query: Query) -> Reply {
-        let date = query.value("date").flatMap(LocalDate.init) ?? today
-        let compare = query.value("compare") == "true"
-        var metrics: [String: Any] = [:]
-        for code in query.list("metrics") {
-            let value = resolve(code, on: date)
-            var entry: [String: Any] = [
-                "metric": code, "value": value,
-                "sparkline": (0..<30).reversed().map { back -> [String: Any] in
-                    let day = date.adding(days: -back)
-                    let v = resolve(code, on: day)
-                    var point: [String: Any] = ["local_date": day.description, "status": v["status"]!]
-                    if let number = v["value"] { point["value"] = number }
-                    return point
-                },
-                "stats": [7, 30, 90].map { rollup(code, from: date.adding(days: 1 - $0), to: date) },
-            ]
-            if let spec = Self.spec(code) { entry["unit"] = spec.unit }
-            if let rule = value["rule"] { entry["rule"] = rule }
-            if compare {
-                entry["comparisons"] = [7, 30, 90, 365].map { n -> [String: Any] in
-                    ["days": n, "current": rollup(code, from: date.adding(days: 1 - n), to: date),
-                     "previous": rollup(code, from: date.adding(days: 1 - 2 * n), to: date.adding(days: -n))]
-                }
-            }
-            metrics[code] = entry
-        }
-        return Self.json(200, ["date": date.description, "timezone": Self.timezone, "metrics": metrics])
     }
 
     func trend(_ query: Query) -> Reply {
@@ -812,21 +772,6 @@ extension ExploreFixture.State {
         overrides[index].active = false
         overrides[index].revokedAt = "2026-01-02T08:00:00Z"
         return ExploreFixture.json(200, overrides[index].json)
-    }
-
-    var layoutJSON: [String: Any] {
-        ["version": 1, "cards": cards, "hero": hero, "dismissed": dismissed, "is_default": !layoutStored]
-    }
-
-    mutating func putLayout(_ body: Data) -> Reply {
-        guard let input = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any], input["version"] as? Int == 1,
-              let cards = input["cards"] as? [[String: Any]]
-        else { return ExploreFixture.problem(422, "validation_failed", "invalid layout", errors: [("/cards", "is required")]) }
-        self.cards = cards
-        if let hero = input["hero"] as? [String] { self.hero = hero }
-        if let dismissed = input["dismissed"] as? [String] { self.dismissed = dismissed }
-        layoutStored = true
-        return ExploreFixture.json(200, layoutJSON)
     }
 }
 #endif

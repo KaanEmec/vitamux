@@ -37,7 +37,7 @@ extension FakeServer {
             guard state.handshake == .current else { return json(200, ["version": "0.3.1-fake", "commit": "fake"]) }
             return json(200, handshakeBody.merging(["version": "0.0.0-fake", "commit": "fake"]) { $1 })
         case ("GET", "/api/v1/metrics"):
-            return json(200, ["metrics": metrics + dashboardMetrics])
+            return json(200, ["metrics": allMetrics])
         case ("GET", "/api/v1/connections"):
             return json(200, ["connections": connections])
         case ("POST", _) where url.path.hasPrefix("/api/v1/devices/") && url.path.hasSuffix("/revoke"):
@@ -136,6 +136,13 @@ extension FakeServer {
         metric("steps", section: "activity", unit: "count", kind: "cumulative", aggregation: "additive"),
         metric("body_mass", section: "body", unit: "kg", kind: "sample", aggregation: "latest"),
     ] }
+
+    /// `GET /metrics`: the shell's and Explore's entries, then the dashboard's codes not already listed.
+    static var allMetrics: [[String: Any]] {
+        let base = metrics
+        let known = Set(base.compactMap { $0["code"] as? String })
+        return base + dashboardMetrics.filter { !known.contains($0["code"] as? String ?? "") }
+    }
 
     private static func connection(_ index: Int, _ provider: String, health: String, lastSuccess: Any) -> [String: Any] {
         [

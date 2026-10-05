@@ -85,9 +85,9 @@ struct ExploreFakeTests {
         let client = try await signedIn()
         let layout = try await client.getDashboardLayout().ok.body.json
         #expect(layout.isDefault)
-        let cards = layout.cards + [.init(metric: "spo2", size: .m, hidden: false)]
+        let cards = layout.cards + [.init(metric: "body_mass", size: .m, hidden: false)]
         let saved = try await client.putDashboardLayout(body: .json(.init(version: ._1, cards: cards))).ok.body.json
-        #expect(saved.cards.map(\.metric) == ["steps", "spo2"])
+        #expect(saved.cards.map(\.metric) == layout.cards.map(\.metric) + ["body_mass"])
         #expect(!saved.isDefault)
     }
 }

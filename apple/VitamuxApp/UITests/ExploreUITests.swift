@@ -47,19 +47,19 @@ final class ExploreUITests: XCTestCase {
         let app = XCUIApplication.launch()
         app.signInToDashboard()
         app.tabBars.buttons["Explore"].tap()
-        let row = app.scrollTo(app.buttons["exploreRow-spo2"])
+        let row = app.scrollTo(app.buttons["exploreRow-body_mass"])
         XCTAssertTrue(row.waitForExistence(timeout: 10))
         row.swipeLeft()
-        let pin = app.buttons["pin-spo2"]
+        let pin = app.buttons["pin-body_mass"]
         XCTAssertTrue(pin.waitForExistence(timeout: 5))
         XCTAssertEqual(pin.label, "Pin")
         pin.tap()
         row.swipeLeft()
         XCTAssertTrue(pin.waitForExistence(timeout: 5))
-        XCTAssertEqual(pin.label, "Unpin", "spo2 is on the dashboard now")
+        XCTAssertEqual(pin.label, "Unpin", "body_mass is on the dashboard now")
         pin.tap()
         row.swipeLeft()
-        XCTAssertEqual(app.buttons["pin-spo2"].label, "Pin")
+        XCTAssertEqual(app.buttons["pin-body_mass"].label, "Pin")
     }
 
     func testSpecialisedItemsOpenTheirViews() {

@@ -15,7 +15,7 @@ struct MetricCardView: View {
         Button(action: open) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 10) {
-                    MetricTile(hue: hue, compact: compact)
+                    MetricTile(hue: hue, size: compact ? 32 : 40)
                     Text(DashboardLayout.label(card.metric))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -76,24 +76,6 @@ private struct Reading: View {
                 Text(content.unit).font(.subheadline).foregroundStyle(.secondary)
             }
         }
-    }
-}
-
-/// The metric's icon on a tint of its hue. The hue names the metric only.
-private struct MetricTile: View {
-    let hue: MetricHue
-    let compact: Bool
-    @ScaledMetric(relativeTo: .title3) private var full: CGFloat = 40
-    @ScaledMetric(relativeTo: .body) private var small: CGFloat = 32
-
-    var body: some View {
-        let side = compact ? small : full
-        Image(systemName: hue.symbol)
-            .font(compact ? .body : .title3)
-            .foregroundStyle(hue.color)
-            .frame(width: side, height: side)
-            .background(hue.color.opacity(0.16), in: .rect(cornerRadius: side * 0.28))
-            .accessibilityHidden(true)
     }
 }
 
@@ -185,21 +167,3 @@ private struct SourceChips: View {
     }
 }
 
-extension MetricHue {
-    /// The tile icon of a hue (SF Symbols, as the panel's icon per hue).
-    var symbol: String {
-        switch self {
-        case .heartRate: "heart.fill"
-        case .hrv: "waveform.path.ecg"
-        case .steps: "figure.walk"
-        case .sleep: "moon.fill"
-        case .bloodPressure: "drop.fill"
-        case .spo2: "lungs.fill"
-        case .weight: "scalemass.fill"
-        case .activeEnergy: "flame.fill"
-        case .vo2: "wind"
-        case .lab: "testtube.2"
-        case .other: "chart.xyaxis.line"
-        }
-    }
-}
