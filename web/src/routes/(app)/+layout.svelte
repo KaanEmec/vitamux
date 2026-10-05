@@ -42,7 +42,7 @@
 
 	onMount(() => {
 		api.GET('/api/v1/system/version').then(({ data }) => {
-			if (data) version = data.version;
+			if (data) version = data.version ?? '';
 		});
 		api.GET('/api/v1/connections').then(({ data }) => {
 			if (data) connections = data.connections;

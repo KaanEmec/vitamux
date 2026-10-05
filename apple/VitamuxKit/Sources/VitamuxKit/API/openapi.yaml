@@ -1071,16 +1071,19 @@ paths:
     get:
       tags: [system]
       operationId: getSystemVersion
-      summary: Build version of the running server
-      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
+      summary: Client handshake and build version of the running server
+      description: >
+        Public, so the app can check a server before sign-in. Two shapes: anyone gets
+        {"product", "api_version", "min_app_version"}; a session or an API key with read:config
+        also gets version and commit. A bearer token that does not verify is still 401.
+      security: []
       responses:
         '200':
-          description: Version.
+          description: Handshake, with the build for read:config callers.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/SystemVersion'}
         '401': {$ref: '#/components/responses/Problem'}
-        '403': {$ref: '#/components/responses/Problem'}
 
   /api/v1/jobs:
     get:
@@ -3866,10 +3869,12 @@ components:
     SystemVersion:
       type: object
       additionalProperties: false
-      required: [version, commit, api_version, min_app_version]
+      description: 'Anonymous shape {"product", "api_version", "min_app_version"}; read:config callers also get version and commit.'
+      required: [product, api_version, min_app_version]
       properties:
-        version: {type: string}
-        commit: {type: string}
+        product: {type: string, const: vitamux, description: Fixed marker that this is a Vitamux server.}
+        version: {type: string, description: Build version; read:config callers only.}
+        commit: {type: string, description: Build commit; read:config callers only.}
         api_version: {type: integer, minimum: 1, description: Raised on every change that breaks existing clients; an app refuses a server older than the one it needs.}
         min_app_version: {type: string, description: 'The oldest Vitamux iOS app version (CFBundleShortVersionString, e.g. 0.4.0) this server supports; an older app warns.'}
     SystemStatus:

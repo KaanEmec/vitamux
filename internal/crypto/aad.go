@@ -21,3 +21,7 @@ func ProviderAppAAD(provider string) []byte { return []byte("provider_app:" + pr
 
 // SidecarAAD binds a sealed sidecars.ciphertext to its sidecar (purpose Credentials).
 func SidecarAAD(name string) []byte { return []byte("sidecar:" + name) }
+
+// AuthBindingAAD binds a sealed oauth_states.binding to its pending authorization step
+// (purpose Credentials).
+func AuthBindingAAD(stateID uuid.UUID) []byte { return []byte("auth-binding:" + stateID.String()) }

@@ -6,6 +6,8 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/http/cookiejar"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
@@ -171,4 +173,83 @@ func TestPromptAuthAPI(t *testing.T) {
 	if n := e.count(`SELECT count(*) FROM oauth_states`); n != 0 {
 		t.Fatalf("%d state rows left", n)
 	}
+}
+
+// Prompt steps over an app session (J22.3): begin and continue are plain JSON with the bearer
+// token, and the binding cookie travels in the app's cookie store (here a cookie jar) only.
+func TestPromptAuthAppSession(t *testing.T) {
+	e := newAuthEnv(t, false, func(o *Options, kr *crypto.Keyring) {
+		reg, err := connectors.NewRegistry(promptFake{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		o.Connectors = connectors.New(connectors.Config{DB: o.DB, Blobs: o.Blobs, Keys: kr, Registry: reg, PublicURL: o.PublicURL})
+	})
+	e.secrets = append(e.secrets, promptPassword, promptCode, "synthetic-session")
+	if err := e.d.Q().RegisterProvider(t.Context(), dbq.RegisterProviderParams{Code: promptProvider, Name: "Fake MFA"}); err != nil {
+		t.Fatal(err)
+	}
+	token := e.appLogin()
+	srv := httptest.NewTLSServer(e.h)
+	t.Cleanup(srv.Close)
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	phone := &http.Client{Transport: srv.Client().Transport, Jar: jar}
+
+	post := func(c *http.Client, path, body string, want int) map[string]any {
+		t.Helper()
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, srv.URL+path, strings.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+		res, err := c.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		var out map[string]any
+		_ = json.NewDecoder(res.Body).Decode(&out)
+		if res.StatusCode != want {
+			t.Fatalf("POST %s: %d, want %d: %v", path, res.StatusCode, want, out)
+		}
+		return out
+	}
+	continueURL := "/api/v1/providers/" + promptProvider + "/auth/continue"
+	values := func(state string, kv ...string) string {
+		v := map[string]string{}
+		for i := 0; i+1 < len(kv); i += 2 {
+			v[kv[i]] = kv[i+1]
+		}
+		b, _ := json.Marshal(map[string]any{"state": state, "values": v})
+		return string(b)
+	}
+
+	step := post(phone, "/api/v1/providers/"+promptProvider+"/auth/begin", `{"return":"app"}`, http.StatusOK)
+	state1, _ := step["state"].(string)
+	u, _ := url.Parse(srv.URL + continueURL)
+	if state1 == "" || step["prompt"] == nil || len(jar.Cookies(u)) != 1 || jar.Cookies(u)[0].Name != oauthCookie {
+		t.Fatalf("begin: %v, cookies for continue %v", step, jar.Cookies(u))
+	}
+	if e.count(`SELECT count(*) FROM oauth_states WHERE return_to = 'app' AND ticket_hash IS NULL`) != 1 {
+		t.Fatal("a prompt step of the app needs no ticket")
+	}
+
+	// The same bearer session without the app's cookie store cannot continue.
+	other := &http.Client{Transport: srv.Client().Transport}
+	post(other, continueURL, values(state1, "username", "synthetic-user", "password", promptPassword), http.StatusUnprocessableEntity)
+
+	step = post(phone, continueURL, values(state1, "username", "synthetic-user", "password", promptPassword), http.StatusOK)
+	state2, _ := step["state"].(string)
+	if state2 == "" || step["prompt"] == nil {
+		t.Fatalf("MFA step: %v", step)
+	}
+	done := post(phone, continueURL, values(state2, "code", promptCode), http.StatusOK)
+	if id, _ := done["connection_id"].(string); !strings.HasPrefix(id, "conn_") {
+		t.Fatalf("done: %v", done)
+	}
+	post(phone, continueURL, values(state2, "code", promptCode), http.StatusUnprocessableEntity)
 }

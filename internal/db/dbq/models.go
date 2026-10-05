@@ -606,6 +606,14 @@ type OauthState struct {
 	CreatedAt    time.Time
 	// Opaque connector continuation (e.g. a PKCE verifier or a login session), sealed by internal/crypto (purpose credentials, AAD auth-session:<id>). Never sent to the browser; rows live minutes, so key rotation skips them.
 	Session []byte
+	// Where the callback sends the owner: the panel (browser) or the app (vitamux://connections).
+	ReturnTo string
+	// SHA-256 of the start ticket of an app redirect step; cleared when GET /oauth/{provider}/start uses it (single use).
+	TicketHash []byte
+	// Provider URL the start route redirects to.
+	StartUrl *string
+	// Browser binding the start route sets as cookie, sealed by internal/crypto (purpose credentials, AAD auth-binding:<id>). Rows live minutes, so key rotation skips them.
+	Binding []byte
 }
 
 // Short-lived, single-use codes a device exchanges for a client token at POST /api/ingest/v1/devices/pair. Only the code's SHA-256 is stored.

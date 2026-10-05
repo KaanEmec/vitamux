@@ -53,7 +53,7 @@ routes:
   POST /api/v1/overrides/{id}/revoke: {allow: write:config, csrf: true}
   GET /api/v1/coverage: {allow: read:health}
   GET /api/v1/system/status: {allow: read:config}
-  GET /api/v1/system/version: {allow: read:config}
+  GET /api/v1/system/version: {allow: public}
   GET /api/v1/jobs: {allow: read:config}
   GET /api/v1/connections: {allow: read:config}
   POST /api/v1/connections: {allow: write:config, csrf: true}
@@ -131,6 +131,7 @@ routes:
   POST /api/v1/timezone-periods: {allow: write:config, csrf: true}
   PATCH /api/v1/timezone-periods/{id}: {allow: write:config, csrf: true}
   DELETE /api/v1/timezone-periods/{id}: {allow: write:config, csrf: true}
+  GET /oauth/{provider}/start: {allow: public}
   GET /oauth/{provider}/callback: {allow: public}
   GET /webhooks/withings/{hook_token}: {allow: public}
   POST /webhooks/withings/{hook_token}: {allow: public}

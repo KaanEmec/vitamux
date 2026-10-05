@@ -1070,16 +1070,19 @@ paths:
     get:
       tags: [system]
       operationId: getSystemVersion
-      summary: Build version of the running server
-      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
+      summary: Client handshake and build version of the running server
+      description: >
+        Public, so the app can check a server before sign-in. Two shapes: anyone gets
+        {"product", "api_version", "min_app_version"}; a session or an API key with read:config
+        also gets version and commit. A bearer token that does not verify is still 401.
+      security: []
       responses:
         '200':
-          description: Version.
+          description: Handshake, with the build for read:config callers.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/SystemVersion'}
         '401': {$ref: '#/components/responses/Problem'}
-        '403': {$ref: '#/components/responses/Problem'}
 
   /api/v1/jobs:
     get:
@@ -1219,10 +1222,17 @@ paths:
         {"state", "prompt"} to ask the owner for values and send them to continueProviderAuth.
         Sets the short-lived browser-binding cookie that the callback and continue need
         (docs/architecture/connectors.md#oauth-connection-flow). Owner session only, since the
-        state is bound to it.
+        state is bound to it. An app session may send {"return": "app"} (403 for a browser
+        session): a redirect step then points to oauthStart on this server, and the callback
+        returns to vitamux://connections.
       security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AuthBeginInput'}
       responses:
         '200':
           description: Next step.
@@ -1233,6 +1243,7 @@ paths:
         '403': {$ref: '#/components/responses/Problem'}
         '404': {$ref: '#/components/responses/Problem'}
         '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
         '503': {$ref: '#/components/responses/Problem'}
 
   /api/v1/providers/{provider}/auth/begin:
@@ -1250,6 +1261,11 @@ paths:
           in: path
           required: true
           schema: {type: string, pattern: '^[a-z][a-z0-9_]*$'}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AuthBeginInput'}
       responses:
         '200':
           description: Next step.
@@ -1258,6 +1274,7 @@ paths:
               schema: {$ref: '#/components/schemas/AuthStep'}
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
         '503': {$ref: '#/components/responses/Problem'}
 
   /api/v1/providers/{provider}/app-credentials:
@@ -1802,7 +1819,7 @@ paths:
       tags: [devices]
       operationId: createPairingCode
       summary: Create a single-use pairing code, valid for 10 minutes
-      description: At most 5 codes per 10 minutes (429 with Retry-After). 503 without VITAMUX_PUBLIC_URL.
+      description: At most 5 codes per 10 minutes (429 with Retry-After). 503 without VITAMUX_PUBLIC_URL, except for an app session, which redeems the code itself and gets no url or qr_payload then.
       security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       responses:
         '201':
@@ -2882,6 +2899,28 @@ paths:
         '404': {$ref: '#/components/responses/Problem'}
 
   # ---------------------------------------------------------------- provider callbacks (not under /api)
+  /oauth/{provider}/start:
+    get:
+      tags: [connections]
+      operationId: oauthStart
+      summary: App redirect step; sets the binding cookie in the auth browser and redirects to the provider
+      description: >
+        The redirect_url of a step begun with {"return": "app"}. Authorized by the ticket:
+        single use, valid for 2 minutes, only its SHA-256 stored. Answers 303 to the provider
+        with the browser-binding cookie set, or, for an unknown, used or expired ticket, 303 to
+        vitamux://connections?auth_error=invalid_state|unavailable&provider=<provider>. HEAD
+        answers 200 without side effects. A provider without a connector is 404.
+      security: []
+      parameters:
+        - {name: provider, in: path, required: true, schema: {type: string}}
+        - {name: ticket, in: query, schema: {type: string}}
+      responses:
+        '200':
+          description: HEAD probe.
+        '303':
+          description: To the provider, or back to the app with the error.
+        '404': {$ref: '#/components/responses/Problem'}
+
   /oauth/{provider}/callback:
     get:
       tags: [connections]
@@ -2890,7 +2929,8 @@ paths:
       description: >
         Authorized by the signed, single-use `state` and the browser-binding cookie, not by the
         session. Always answers 303 to /connections?connected=<provider> or
-        /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable&provider=<provider>.
+        /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable&provider=<provider>;
+        for a state begun with {"return": "app"}, the same query on vitamux://connections.
         HEAD answers 200 without side effects. A provider without a connector is 404.
       security: []
       parameters:
@@ -3827,10 +3867,14 @@ components:
     SystemVersion:
       type: object
       additionalProperties: false
-      required: [version, commit]
+      description: 'Anonymous shape {"product", "api_version", "min_app_version"}; read:config callers also get version and commit.'
+      required: [product, api_version, min_app_version]
       properties:
-        version: {type: string}
-        commit: {type: string}
+        product: {type: string, const: vitamux, description: Fixed marker that this is a Vitamux server.}
+        version: {type: string, description: Build version; read:config callers only.}
+        commit: {type: string, description: Build commit; read:config callers only.}
+        api_version: {type: integer, minimum: 1, description: Raised on every change that breaks existing clients; an app refuses a server older than the one it needs.}
+        min_app_version: {type: string, description: 'The oldest Vitamux iOS app version (CFBundleShortVersionString, e.g. 0.4.0) this server supports; an older app warns.'}
     SystemStatus:
       type: object
       description: Instance diagnostics (docs/architecture/reliability.md#health-logs-metrics). Lists are bounded.
@@ -4666,6 +4710,15 @@ components:
       required: [connection_id]
       properties:
         connection_id: {$ref: '#/components/schemas/ConnectionID'}
+    AuthBeginInput:
+      type: object
+      additionalProperties: false
+      properties:
+        return:
+          type: string
+          enum: [browser, app]
+          default: browser
+          description: app (app sessions only) returns to the app through oauthStart and vitamux://connections.
     AuthContinueInput:
       type: object
       additionalProperties: false
@@ -4888,12 +4941,12 @@ components:
     PairingCode:
       type: object
       additionalProperties: false
-      required: [code, expires_at, url, qr_payload]
+      required: [code, expires_at]
       properties:
         code: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$', description: Crockford base32; single use.}
         expires_at: {type: string, format: date-time}
-        url: {type: string, format: uri, description: The public base URL (VITAMUX_PUBLIC_URL) the app pairs against.}
-        qr_payload: {type: string, description: 'Text for the QR code: the JSON object {"url", "code"} and nothing else.'}
+        url: {type: string, format: uri, description: The public base URL (VITAMUX_PUBLIC_URL) the app pairs against; omitted without one (app sessions only).}
+        qr_payload: {type: string, description: 'Text for the QR code: the JSON object {"url", "code"} and nothing else; omitted with url.'}
     DevicePairing:
       type: object
       additionalProperties: false

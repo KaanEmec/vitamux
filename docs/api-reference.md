@@ -84,7 +84,7 @@ Coverage, health, jobs and build information.
 | --- | --- | --- | --- |
 | `GET` | `/api/v1/coverage` | `read:health` | Source × day coverage matrix |
 | `GET` | `/api/v1/system/status` | `read:config` | Instance diagnostics |
-| `GET` | `/api/v1/system/version` | `read:config` | Build version of the running server |
+| `GET` | `/api/v1/system/version` | `public` | Client handshake and build version of the running server |
 | `GET` | `/api/v1/jobs` | `read:config` | List background jobs |
 
 ## connections
@@ -120,6 +120,7 @@ Provider connections, syncs, backfills and streams (docs/architecture/connectors
 | `POST` | `/api/v1/connections/{id}/streams/{stream}/reset-cursor` | `write:config`, CSRF | Reset a stream's sync cursor |
 | `GET` | `/api/v1/schedules` | `read:config` | List sync schedules |
 | `PATCH` | `/api/v1/schedules/{id}` | `write:config`, CSRF | Change a schedule's interval, lookback or enabled flag |
+| `GET` | `/oauth/{provider}/start` | `public` | App redirect step; sets the binding cookie in the auth browser and redirects to the provider |
 | `GET` | `/oauth/{provider}/callback` | `public` | OAuth redirect target; completes the authorization and redirects to the UI |
 | `GET` | `/webhooks/withings/{hook_token}` | `public` | Withings callback validation; HEAD and GET answer 200 without side effects |
 | `POST` | `/webhooks/withings/{hook_token}` | `public` | Withings notification; enqueues one deduplicated window sync |

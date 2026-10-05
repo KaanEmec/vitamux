@@ -15,7 +15,7 @@ import (
 // package oapi. Each area implements its operations as methods on *owner in its own file
 // and registers them like every other route, which keeps access deny-by-default:
 //
-//	rt.handle("GET /api/v1/system/version", scope(auth.ReadConfig), rt.ops.GetSystemVersion)
+//	rt.handle("GET /api/v1/system/status", scope(auth.ReadConfig), rt.ops.GetSystemStatus)
 //
 // The pattern must use the spec's path parameter names (TestRoutesMatchSpec checks it).
 // Hand-written routes (auth, API keys, ingest) stay plain http.HandlerFuncs.

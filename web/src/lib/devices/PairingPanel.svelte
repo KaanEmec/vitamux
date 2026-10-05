@@ -52,7 +52,8 @@
 <ProblemAlert {problem} />
 {#if code && !expired}
 	<div class="pairing">
-		<QrCode value={code.qr_payload} label="Pairing QR code for {code.url}" />
+		<!-- The panel always gets qr_payload: the server refuses browser sessions without a public URL. -->
+		{#if code.qr_payload}<QrCode value={code.qr_payload} label="Pairing QR code for {code.url}" />{/if}
 		<div class="steps">
 			<ol>
 				<li>Open the Vitamux app on the iPhone.</li>

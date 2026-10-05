@@ -3,7 +3,9 @@ package connectors
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,6 +23,9 @@ import (
 
 // StateTTL bounds how long the owner may take at the provider's consent page.
 const StateTTL = 10 * time.Minute
+
+// TicketTTL bounds the start ticket of an app redirect step: the app opens it at once.
+const TicketTTL = 2 * time.Minute
 
 var (
 	// ErrAuthUnavailable means the provider has no interactive authorization here: unknown,
@@ -121,6 +126,9 @@ type AuthRequest struct {
 	Provider          string     // provider to connect; ignored with ConnectionID
 	ConnectionID      *uuid.UUID // reauthorize this connection; nil connects (or reconnects by account)
 	Binding           string     // random per-browser value every later step must present again
+	// App returns to the app: a redirect step's URL becomes a single-use start ticket on this
+	// server (StartAuth), and the callback reports the state as app-originated.
+	App bool
 }
 
 func (rt *Runtime) interactive(provider string) (Interactive, Descriptor, error) {
@@ -139,6 +147,12 @@ func (rt *Runtime) callbackURL(provider string) string {
 	return rt.publicURL.JoinPath("oauth", provider, "callback").String()
 }
 
+func (rt *Runtime) startURL(provider, ticket string) string {
+	u := rt.publicURL.JoinPath("oauth", provider, "start")
+	u.RawQuery = url.Values{"ticket": {ticket}}.Encode()
+	return u.String()
+}
+
 func (rt *Runtime) signer() (*StateSigner, error) {
 	k, err := rt.creds.keys.PurposeKey(crypto.SessionSigning)
 	if err != nil {
@@ -147,14 +161,23 @@ func (rt *Runtime) signer() (*StateSigner, error) {
 	return NewStateSigner(k), nil
 }
 
-// pending is who a state row authorizes what for.
+// pending is who a state row authorizes what for, and where the callback returns.
 type pending struct {
 	user, session uuid.UUID
 	conn          *uuid.UUID
 	provider      string
+	app           bool
+	binding       string // sealed into an app redirect step's row for the start route
 }
 
+const (
+	returnBrowser = "browser"
+	returnApp     = "app"
+)
+
 // saveStep checks step, seals its Session into a new state row id and clears it from step.
+// An app redirect step keeps the provider URL and the sealed binding on the row and answers a
+// start URL with a single-use ticket (only its SHA-256 is stored) instead.
 func (rt *Runtime) saveStep(ctx context.Context, p pending, id uuid.UUID, step *AuthStep) error {
 	if err := step.check(); err != nil {
 		return err
@@ -167,14 +190,31 @@ func (rt *Runtime) saveStep(ctx context.Context, p pending, id uuid.UUID, step *
 		}
 		step.Session = nil
 	}
+	row := dbq.InsertOAuthStateParams{
+		ID: id, UserID: p.user, SessionID: p.session, ConnectionID: p.conn,
+		ExpiresAt: time.Now().Add(StateTTL), Session: sealed, Provider: p.provider, ReturnTo: returnBrowser,
+	}
+	if p.app {
+		row.ReturnTo = returnApp
+	}
+	if p.app && step.RedirectURL != "" {
+		var b [32]byte
+		_, _ = rand.Read(b[:])
+		ticket := base64.RawURLEncoding.EncodeToString(b[:])
+		sum := sha256.Sum256([]byte(ticket))
+		binding, err := rt.creds.keys.Seal(crypto.Credentials, []byte(p.binding), crypto.AuthBindingAAD(id))
+		if err != nil {
+			return err
+		}
+		consent := step.RedirectURL
+		row.TicketHash, row.StartUrl, row.Binding = sum[:], &consent, binding
+		step.RedirectURL = rt.startURL(p.provider, ticket)
+	}
 	q := rt.db.Q()
 	if err := q.DeleteExpiredOAuthStates(ctx); err != nil {
 		return db.MapErr(err)
 	}
-	return db.MapErr(q.InsertOAuthState(ctx, dbq.InsertOAuthStateParams{
-		ID: id, UserID: p.user, SessionID: p.session, ConnectionID: p.conn,
-		ExpiresAt: time.Now().Add(StateTTL), Session: sealed, Provider: p.provider,
-	}))
+	return db.MapErr(q.InsertOAuthState(ctx, row))
 }
 
 // BeginAuth records a pending authorization and returns its first step (a provider URL to
@@ -208,54 +248,82 @@ func (rt *Runtime) BeginAuth(ctx context.Context, in AuthRequest) (AuthStep, str
 	if err != nil {
 		return AuthStep{}, "", err
 	}
-	p := pending{user: in.UserID, session: in.SessionID, conn: in.ConnectionID, provider: in.Provider}
+	p := pending{user: in.UserID, session: in.SessionID, conn: in.ConnectionID, provider: in.Provider, app: in.App, binding: in.Binding}
 	if err := rt.saveStep(ctx, p, id, &step); err != nil {
 		return AuthStep{}, "", err
 	}
 	return step, state, nil
 }
 
+// StartAuth uses the start ticket of an app redirect step (single use, TicketTTL). It returns
+// the provider URL to send the auth browser to and the binding to set there as cookie; any
+// unknown, used, expired or foreign ticket is ErrAuthState.
+func (rt *Runtime) StartAuth(ctx context.Context, provider, ticket string) (redirectURL, binding string, err error) {
+	if _, _, err := rt.interactive(provider); err != nil {
+		return "", "", err
+	}
+	if ticket == "" {
+		return "", "", ErrAuthState
+	}
+	sum := sha256.Sum256([]byte(ticket))
+	row, err := rt.db.Q().UseOAuthTicket(ctx, dbq.UseOAuthTicketParams{TicketHash: sum[:], Provider: provider, IssuedAfter: time.Now().Add(-TicketTTL)})
+	if err = db.MapErr(err); errors.Is(err, db.ErrNotFound) {
+		return "", "", ErrAuthState
+	} else if err != nil {
+		return "", "", err
+	}
+	b, err := rt.creds.keys.Open(crypto.Credentials, row.Binding, crypto.AuthBindingAAD(row.ID))
+	if err != nil {
+		return "", "", ErrAuthState // e.g. the master key changed: start over
+	}
+	return row.StartUrl, string(b), nil
+}
+
 // ContinueAuth answers the prompt the state names with the owner's values. It returns the next
 // step and its state, or, when the authorization is complete, the connection (as CompleteAuth).
 func (rt *Runtime) ContinueAuth(ctx context.Context, provider, state, binding string, values map[string]string) (AuthStep, string, uuid.UUID, error) {
-	return rt.advance(ctx, provider, state, binding, AuthInput{Values: values}, true)
+	step, next, id, _, err := rt.advance(ctx, provider, state, binding, AuthInput{Values: values}, true)
+	return step, next, id, err
 }
 
 // CompleteAuth finishes the authorization the callback's state names. A new account gets a
 // connection; a known account (reconnect) or the reauthorized connection gets fresh
 // credentials and becomes active again, so one account never has two connections. The
 // connection's default schedules are ensured and a first sync is queued, except for a new
-// connection of an unofficial connector: it starts paused until the owner resumes it.
-func (rt *Runtime) CompleteAuth(ctx context.Context, provider, state, binding string, callback url.Values) (uuid.UUID, error) {
-	_, _, id, err := rt.advance(ctx, provider, state, binding, AuthInput{Callback: callback}, false)
-	return id, err
+// connection of an unofficial connector: it starts paused until the owner resumes it. app
+// reports a state begun with AuthRequest.App, also with an error once the state was found.
+func (rt *Runtime) CompleteAuth(ctx context.Context, provider, state, binding string, callback url.Values) (id uuid.UUID, app bool, err error) {
+	_, _, id, app, err = rt.advance(ctx, provider, state, binding, AuthInput{Callback: callback}, false)
+	return id, app, err
 }
 
 // advance runs one Continue: the state is consumed first (single use, whatever happens next)
 // and its sealed session handed back to the connector. A further step gets a new state row;
 // allowNext false (the provider callback, which can only redirect to the UI) refuses one.
-func (rt *Runtime) advance(ctx context.Context, provider, state, binding string, in AuthInput, allowNext bool) (AuthStep, string, uuid.UUID, error) {
+// app is the consumed row's return target (false until a row is found).
+func (rt *Runtime) advance(ctx context.Context, provider, state, binding string, in AuthInput, allowNext bool) (AuthStep, string, uuid.UUID, bool, error) {
 	ia, d, err := rt.interactive(provider)
 	if err != nil {
-		return AuthStep{}, "", uuid.Nil, err
+		return AuthStep{}, "", uuid.Nil, false, err
 	}
 	s, err := rt.signer()
 	if err != nil {
-		return AuthStep{}, "", uuid.Nil, err
+		return AuthStep{}, "", uuid.Nil, false, err
 	}
 	sid, err := s.Verify(state, binding)
 	if err != nil {
-		return AuthStep{}, "", uuid.Nil, err
+		return AuthStep{}, "", uuid.Nil, false, err
 	}
 	st, err := rt.db.Q().ConsumeOAuthState(ctx, dbq.ConsumeOAuthStateParams{ID: sid, Provider: provider})
 	if err = db.MapErr(err); errors.Is(err, db.ErrNotFound) {
-		return AuthStep{}, "", uuid.Nil, ErrAuthState
+		return AuthStep{}, "", uuid.Nil, false, ErrAuthState
 	} else if err != nil {
-		return AuthStep{}, "", uuid.Nil, err
+		return AuthStep{}, "", uuid.Nil, false, err
 	}
+	app := st.ReturnTo == returnApp
 	if st.Session != nil {
 		if in.Session, err = rt.creds.keys.Open(crypto.Credentials, st.Session, crypto.AuthSessionAAD(sid)); err != nil {
-			return AuthStep{}, "", uuid.Nil, ErrAuthState // e.g. the master key changed: start over
+			return AuthStep{}, "", uuid.Nil, app, ErrAuthState // e.g. the master key changed: start over
 		}
 	}
 	conn := Conn{UserID: st.UserID, Provider: provider, HTTP: rt.clients.get(d)}
@@ -267,18 +335,18 @@ func (rt *Runtime) advance(ctx context.Context, provider, state, binding string,
 	res, err := ia.Continue(ctx, conn, in)
 	switch {
 	case err != nil:
-		return AuthStep{}, "", uuid.Nil, err
+		return AuthStep{}, "", uuid.Nil, app, err
 	case res.Next != nil && !allowNext:
-		return AuthStep{}, "", uuid.Nil, fmt.Errorf("%w: another step after the provider callback", ErrPermanent)
+		return AuthStep{}, "", uuid.Nil, app, fmt.Errorf("%w: another step after the provider callback", ErrPermanent)
 	case res.Next != nil:
-		p := pending{user: st.UserID, session: st.SessionID, conn: st.ConnectionID, provider: provider}
+		p := pending{user: st.UserID, session: st.SessionID, conn: st.ConnectionID, provider: provider, app: app, binding: binding}
 		if err := rt.saveStep(ctx, p, next, res.Next); err != nil {
-			return AuthStep{}, "", uuid.Nil, err
+			return AuthStep{}, "", uuid.Nil, app, err
 		}
-		return *res.Next, in.State, uuid.Nil, nil
+		return *res.Next, in.State, uuid.Nil, app, nil
 	}
 	id, err := rt.finalize(ctx, d, conn, st.ConnectionID != nil, res)
-	return AuthStep{}, "", id, err
+	return AuthStep{}, "", id, app, err
 }
 
 // finalize stores a completed authorization: see CompleteAuth.

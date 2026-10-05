@@ -12,7 +12,7 @@
 	import { bytes, when } from '#lib/settings/format.ts';
 	import { asNumber, facts, isObj, lastBackup, list, loadStatus, pick, type Obj } from '#lib/settings/status.ts';
 
-	let version = $state<{ version: string; commit: string } | null>(null);
+	let version = $state<{ version?: string; commit?: string } | null>(null);
 	let status = $state<Obj | null>(null);
 	let statusProblem = $state<Problem | null>(null);
 	let versionProblem = $state<Problem | null>(null);

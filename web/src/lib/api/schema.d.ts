@@ -711,7 +711,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Build version of the running server */
+        /**
+         * Client handshake and build version of the running server
+         * @description Public, so the app can check a server before sign-in. Two shapes: anyone gets {"product", "api_version", "min_app_version"}; a session or an API key with read:config also gets version and commit. A bearer token that does not verify is still 401.
+         */
         get: operations["getSystemVersion"];
         put?: never;
         post?: never;
@@ -786,7 +789,7 @@ export interface paths {
         put?: never;
         /**
          * Reauthorize a connection (OAuth redirect or credential prompt)
-         * @description Answers the first step: {"redirect_url"} to send the browser to the provider, or {"state", "prompt"} to ask the owner for values and send them to continueProviderAuth. Sets the short-lived browser-binding cookie that the callback and continue need (docs/architecture/connectors.md#oauth-connection-flow). Owner session only, since the state is bound to it.
+         * @description Answers the first step: {"redirect_url"} to send the browser to the provider, or {"state", "prompt"} to ask the owner for values and send them to continueProviderAuth. Sets the short-lived browser-binding cookie that the callback and continue need (docs/architecture/connectors.md#oauth-connection-flow). Owner session only, since the state is bound to it. An app session may send {"return": "app"} (403 for a browser session): a redirect step then points to oauthStart on this server, and the callback returns to vitamux://connections.
          */
         post: operations["beginConnectionAuth"];
         delete?: never;
@@ -1165,7 +1168,7 @@ export interface paths {
         put?: never;
         /**
          * Create a single-use pairing code, valid for 10 minutes
-         * @description At most 5 codes per 10 minutes (429 with Retry-After). 503 without VITAMUX_PUBLIC_URL.
+         * @description At most 5 codes per 10 minutes (429 with Retry-After). 503 without VITAMUX_PUBLIC_URL, except for an app session, which redeems the code itself and gets no url or qr_payload then.
          */
         post: operations["createPairingCode"];
         delete?: never;
@@ -1886,6 +1889,26 @@ export interface paths {
         patch: operations["updateTimezonePeriod"];
         trace?: never;
     };
+    "/oauth/{provider}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * App redirect step; sets the binding cookie in the auth browser and redirects to the provider
+         * @description The redirect_url of a step begun with {"return": "app"}. Authorized by the ticket: single use, valid for 2 minutes, only its SHA-256 stored. Answers 303 to the provider with the browser-binding cookie set, or, for an unknown, used or expired ticket, 303 to vitamux://connections?auth_error=invalid_state|unavailable&provider=<provider>. HEAD answers 200 without side effects. A provider without a connector is 404.
+         */
+        get: operations["oauthStart"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/oauth/{provider}/callback": {
         parameters: {
             query?: never;
@@ -1895,7 +1918,7 @@ export interface paths {
         };
         /**
          * OAuth redirect target; completes the authorization and redirects to the UI
-         * @description Authorized by the signed, single-use `state` and the browser-binding cookie, not by the session. Always answers 303 to /connections?connected=<provider> or /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable&provider=<provider>. HEAD answers 200 without side effects. A provider without a connector is 404.
+         * @description Authorized by the signed, single-use `state` and the browser-binding cookie, not by the session. Always answers 303 to /connections?connected=<provider> or /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable&provider=<provider>; for a state begun with {"return": "app"}, the same query on vitamux://connections. HEAD answers 200 without side effects. A provider without a connector is 404.
          */
         get: operations["oauthCallback"];
         put?: never;
@@ -2618,9 +2641,21 @@ export interface components {
             /** @description No layout is stored; this is the curated default. */
             is_default: boolean;
         };
+        /** @description Anonymous shape {"product", "api_version", "min_app_version"}; read:config callers also get version and commit. */
         SystemVersion: {
-            version: string;
-            commit: string;
+            /**
+             * @description Fixed marker that this is a Vitamux server.
+             * @constant
+             */
+            product: "vitamux";
+            /** @description Build version; read:config callers only. */
+            version?: string;
+            /** @description Build commit; read:config callers only. */
+            commit?: string;
+            /** @description Raised on every change that breaks existing clients; an app refuses a server older than the one it needs. */
+            api_version: number;
+            /** @description The oldest Vitamux iOS app version (CFBundleShortVersionString, e.g. 0.4.0) this server supports; an older app warns. */
+            min_app_version: string;
         };
         /** @description Instance diagnostics (docs/architecture/reliability.md#health-logs-metrics). Lists are bounded. */
         SystemStatus: {
@@ -3450,6 +3485,14 @@ export interface components {
         AuthDone: {
             connection_id: components["schemas"]["ConnectionID"];
         };
+        AuthBeginInput: {
+            /**
+             * @description app (app sessions only) returns to the app through oauthStart and vitamux://connections.
+             * @default browser
+             * @enum {string}
+             */
+            return: "browser" | "app";
+        };
         AuthContinueInput: {
             state: string;
             /** @description The prompt's field values by name; never stored or logged. */
@@ -3681,11 +3724,11 @@ export interface components {
             expires_at: string;
             /**
              * Format: uri
-             * @description The public base URL (VITAMUX_PUBLIC_URL) the app pairs against.
+             * @description The public base URL (VITAMUX_PUBLIC_URL) the app pairs against; omitted without one (app sessions only).
              */
-            url: string;
-            /** @description Text for the QR code: the JSON object {"url", "code"} and nothing else. */
-            qr_payload: string;
+            url?: string;
+            /** @description Text for the QR code: the JSON object {"url", "code"} and nothing else; omitted with url. */
+            qr_payload?: string;
         };
         DevicePairing: {
             /** Format: uuid */
@@ -5411,7 +5454,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Version. */
+            /** @description Handshake, with the build for read:config callers. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -5421,7 +5464,6 @@ export interface operations {
                 };
             };
             401: components["responses"]["Problem"];
-            403: components["responses"]["Problem"];
         };
     };
     listJobs: {
@@ -5599,7 +5641,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AuthBeginInput"];
+            };
+        };
         responses: {
             /** @description Next step. */
             200: {
@@ -5614,6 +5660,7 @@ export interface operations {
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
         };
     };
@@ -5626,7 +5673,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AuthBeginInput"];
+            };
+        };
         responses: {
             /** @description Next step. */
             200: {
@@ -5639,6 +5690,7 @@ export interface operations {
             };
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
         };
     };
@@ -7553,6 +7605,36 @@ export interface operations {
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+        };
+    };
+    oauthStart: {
+        parameters: {
+            query?: {
+                ticket?: string;
+            };
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description HEAD probe. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description To the provider, or back to the app with the error. */
+            303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["Problem"];
         };
     };
     oauthCallback: {

@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"math"
 	"net/http"
 	"strconv"
@@ -281,9 +282,21 @@ func (rt *router) revokeAPIKey(w http.ResponseWriter, r *http.Request) {
 
 // readJSON decodes one JSON object into v, answering the problem itself when it cannot.
 func readJSON(w http.ResponseWriter, r *http.Request, v any) bool {
+	return decodeJSON(w, r, v, false)
+}
+
+// readOptionalJSON is readJSON for an optional body: an empty one leaves v as it is.
+func readOptionalJSON(w http.ResponseWriter, r *http.Request, v any) bool {
+	return decodeJSON(w, r, v, true)
+}
+
+func decodeJSON(w http.ResponseWriter, r *http.Request, v any, optional bool) bool {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(v); err != nil {
+		if optional && errors.Is(err, io.EOF) {
+			return true
+		}
 		if tooLarge := (*http.MaxBytesError)(nil); errors.As(err, &tooLarge) || errors.Is(err, errJSONTooDeep) {
 			writeBodyError(w, r, err)
 		} else {

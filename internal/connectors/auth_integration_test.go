@@ -257,7 +257,7 @@ func TestRedirectStepSessionReachesCallback(t *testing.T) {
 	if step.Prompt != nil || step.RedirectURL == "" {
 		t.Fatalf("redirect step: %+v", step)
 	}
-	id, err := a.rt.CompleteAuth(t.Context(), mfaProvider, state, testBinding, url.Values{"state": {state}, "code": {"synthetic-code"}})
+	id, _, err := a.rt.CompleteAuth(t.Context(), mfaProvider, state, testBinding, url.Values{"state": {state}, "code": {"synthetic-code"}})
 	if err != nil || id == uuid.Nil {
 		t.Fatalf("callback: %v", err)
 	}

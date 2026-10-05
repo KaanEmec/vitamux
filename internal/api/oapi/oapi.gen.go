@@ -78,6 +78,24 @@ func (e AppCredentialsVerificationResult) Valid() bool {
 	}
 }
 
+// Defines values for AuthBeginInputReturn.
+const (
+	AuthBeginInputReturnApp     AuthBeginInputReturn = "app"
+	AuthBeginInputReturnBrowser AuthBeginInputReturn = "browser"
+)
+
+// Valid indicates whether the value is a known member of the AuthBeginInputReturn enum.
+func (e AuthBeginInputReturn) Valid() bool {
+	switch e {
+	case AuthBeginInputReturnApp:
+		return true
+	case AuthBeginInputReturnBrowser:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AuthPromptStepPromptFieldsKind.
 const (
 	Code     AuthPromptStepPromptFieldsKind = "code"
@@ -1422,6 +1440,21 @@ func (e SummaryPointStatus) Valid() bool {
 	}
 }
 
+// Defines values for SystemVersionProduct.
+const (
+	Vitamux SystemVersionProduct = "vitamux"
+)
+
+// Valid indicates whether the value is a known member of the SystemVersionProduct enum.
+func (e SystemVersionProduct) Valid() bool {
+	switch e {
+	case Vitamux:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorkoutMemberRuleStatus.
 const (
 	WorkoutMemberRuleStatusExcluded  WorkoutMemberRuleStatus = "excluded"
@@ -1958,6 +1991,15 @@ type AppSession struct {
 	Token string `json:"token"`
 	User  User   `json:"user"`
 }
+
+// AuthBeginInput defines model for AuthBeginInput.
+type AuthBeginInput struct {
+	// Return app (app sessions only) returns to the app through oauthStart and vitamux://connections.
+	Return *AuthBeginInputReturn `json:"return,omitempty"`
+}
+
+// AuthBeginInputReturn app (app sessions only) returns to the app through oauthStart and vitamux://connections.
+type AuthBeginInputReturn string
 
 // AuthContinueInput defines model for AuthContinueInput.
 type AuthContinueInput struct {
@@ -3047,11 +3089,11 @@ type PairingCode struct {
 	Code      string    `json:"code"`
 	ExpiresAt time.Time `json:"expires_at"`
 
-	// QrPayload Text for the QR code: the JSON object {"url", "code"} and nothing else.
-	QrPayload string `json:"qr_payload"`
+	// QrPayload Text for the QR code: the JSON object {"url", "code"} and nothing else; omitted with url.
+	QrPayload *string `json:"qr_payload,omitempty"`
 
-	// URL The public base URL (VITAMUX_PUBLIC_URL) the app pairs against.
-	URL string `json:"url"`
+	// URL The public base URL (VITAMUX_PUBLIC_URL) the app pairs against; omitted without one (app sessions only).
+	URL *string `json:"url,omitempty"`
 }
 
 // PeriodComparison A period and the one before it, for a neutral delta. Both are plain rollups; compare mean, or for a family each component's mean.
@@ -4080,11 +4122,26 @@ type SystemStatus struct {
 	Versions     StatusVersions `json:"versions"`
 }
 
-// SystemVersion defines model for SystemVersion.
+// SystemVersion Anonymous shape {"product", "api_version", "min_app_version"}; read:config callers also get version and commit.
 type SystemVersion struct {
-	Commit  string `json:"commit"`
-	Version string `json:"version"`
+	// APIVersion Raised on every change that breaks existing clients; an app refuses a server older than the one it needs.
+	APIVersion int `json:"api_version"`
+
+	// Commit Build commit; read:config callers only.
+	Commit *string `json:"commit,omitempty"`
+
+	// MinAppVersion The oldest Vitamux iOS app version (CFBundleShortVersionString, e.g. 0.4.0) this server supports; an older app warns.
+	MinAppVersion string `json:"min_app_version"`
+
+	// Product Fixed marker that this is a Vitamux server.
+	Product SystemVersionProduct `json:"product"`
+
+	// Version Build version; read:config callers only.
+	Version *string `json:"version,omitempty"`
 }
+
+// SystemVersionProduct Fixed marker that this is a Vitamux server.
+type SystemVersionProduct string
 
 // TOTPEnrollment defines model for TOTPEnrollment.
 type TOTPEnrollment struct {
@@ -4861,6 +4918,11 @@ type OauthCallbackParams struct {
 	Code  *string `form:"code,omitempty" json:"code,omitempty"`
 }
 
+// OauthStartParams defines parameters for OauthStart.
+type OauthStartParams struct {
+	Ticket *string `form:"ticket,omitempty" json:"ticket,omitempty"`
+}
+
 // WithingsNotifyFormdataBody defines parameters for WithingsNotify.
 type WithingsNotifyFormdataBody struct {
 	Appli     *int    `form:"appli,omitempty" json:"appli,omitempty"`
@@ -4892,6 +4954,9 @@ type CreateConnectionJSONRequestBody = ConnectionInput
 
 // UpdateConnectionJSONRequestBody defines body for UpdateConnection for application/json ContentType.
 type UpdateConnectionJSONRequestBody = ConnectionPatch
+
+// BeginConnectionAuthJSONRequestBody defines body for BeginConnectionAuth for application/json ContentType.
+type BeginConnectionAuthJSONRequestBody = AuthBeginInput
 
 // CreateBackfillJSONRequestBody defines body for CreateBackfill for application/json ContentType.
 type CreateBackfillJSONRequestBody = BackfillInput
@@ -4925,6 +4990,9 @@ type CreateOverrideJSONRequestBody = OverrideInput
 
 // PutProviderAppCredentialsJSONRequestBody defines body for PutProviderAppCredentials for application/json ContentType.
 type PutProviderAppCredentialsJSONRequestBody = AppCredentialsInput
+
+// BeginProviderAuthJSONRequestBody defines body for BeginProviderAuth for application/json ContentType.
+type BeginProviderAuthJSONRequestBody = AuthBeginInput
 
 // ContinueProviderAuthJSONRequestBody defines body for ContinueProviderAuth for application/json ContentType.
 type ContinueProviderAuthJSONRequestBody = AuthContinueInput
@@ -5488,7 +5556,7 @@ type ServerInterface interface {
 	// GetSystemStatus Instance diagnostics
 	// (GET /api/v1/system/status)
 	GetSystemStatus(w http.ResponseWriter, r *http.Request)
-	// GetSystemVersion Build version of the running server
+	// GetSystemVersion Client handshake and build version of the running server
 	// (GET /api/v1/system/version)
 	GetSystemVersion(w http.ResponseWriter, r *http.Request)
 	// ListTimezonePeriods List timezone periods
@@ -5512,6 +5580,9 @@ type ServerInterface interface {
 	// OauthCallback OAuth redirect target; completes the authorization and redirects to the UI
 	// (GET /oauth/{provider}/callback)
 	OauthCallback(w http.ResponseWriter, r *http.Request, provider string, params OauthCallbackParams)
+	// OauthStart App redirect step; sets the binding cookie in the auth browser and redirects to the provider
+	// (GET /oauth/{provider}/start)
+	OauthStart(w http.ResponseWriter, r *http.Request, provider string, params OauthStartParams)
 	// WithingsNotifyProbe Withings callback validation; HEAD and GET answer 200 without side effects
 	// (GET /webhooks/withings/{hook_token})
 	WithingsNotifyProbe(w http.ResponseWriter, r *http.Request, hookToken string)
@@ -9669,6 +9740,48 @@ func (siw *ServerInterfaceWrapper) OauthCallback(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// OauthStart operation middleware
+func (siw *ServerInterfaceWrapper) OauthStart(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", r.PathValue("provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params OauthStartParams
+
+	// ------------- Optional query parameter "ticket" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "ticket", r.URL.Query(), &params.Ticket, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "ticket"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "ticket", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.OauthStart(w, r, provider, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // WithingsNotifyProbe operation middleware
 func (siw *ServerInterfaceWrapper) WithingsNotifyProbe(w http.ResponseWriter, r *http.Request) {
 
@@ -9951,6 +10064,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/timezone-periods", wrapper.CreateTimezonePeriod)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/timezone-periods/{id}", wrapper.DeleteTimezonePeriod)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/timezone-periods/{id}", wrapper.UpdateTimezonePeriod)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/oauth/{provider}/start", wrapper.OauthStart)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/oauth/{provider}/callback", wrapper.OauthCallback)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/webhooks/withings/{hook_token}", wrapper.WithingsNotifyProbe)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/webhooks/withings/{hook_token}", wrapper.WithingsNotify)
@@ -11394,7 +11508,8 @@ func (response UpdateConnection422ApplicationProblemPlusJSONResponse) VisitUpdat
 }
 
 type BeginConnectionAuthRequestObject struct {
-	ID ConnectionIDPath `json:"id"`
+	ID   ConnectionIDPath `json:"id"`
+	Body *BeginConnectionAuthJSONRequestBody
 }
 
 type BeginConnectionAuthResponseObject interface {
@@ -11477,6 +11592,20 @@ func (response BeginConnectionAuth409ApplicationProblemPlusJSONResponse) VisitBe
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginConnectionAuth422ApplicationProblemPlusJSONResponse Problem
+
+func (response BeginConnectionAuth422ApplicationProblemPlusJSONResponse) VisitBeginConnectionAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -15374,6 +15503,7 @@ func (response VerifyProviderAppCredentials503ApplicationProblemPlusJSONResponse
 
 type BeginProviderAuthRequestObject struct {
 	Provider string `json:"provider"`
+	Body     *BeginProviderAuthJSONRequestBody
 }
 
 type BeginProviderAuthResponseObject interface {
@@ -15428,6 +15558,20 @@ func (response BeginProviderAuth403ApplicationProblemPlusJSONResponse) VisitBegi
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderAuth422ApplicationProblemPlusJSONResponse Problem
+
+func (response BeginProviderAuth422ApplicationProblemPlusJSONResponse) VisitBeginProviderAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -17751,20 +17895,6 @@ func (response GetSystemVersion401ApplicationProblemPlusJSONResponse) VisitGetSy
 	return err
 }
 
-type GetSystemVersion403ApplicationProblemPlusJSONResponse Problem
-
-func (response GetSystemVersion403ApplicationProblemPlusJSONResponse) VisitGetSystemVersionResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/problem+json")
-	w.WriteHeader(403)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
 type ListTimezonePeriodsRequestObject struct {
 }
 
@@ -18241,6 +18371,47 @@ func (response OauthCallback404ApplicationProblemPlusJSONResponse) VisitOauthCal
 	return err
 }
 
+type OauthStartRequestObject struct {
+	Provider string `json:"provider"`
+	Params   OauthStartParams
+}
+
+type OauthStartResponseObject interface {
+	VisitOauthStartResponse(w http.ResponseWriter) error
+}
+
+type OauthStart200Response struct {
+}
+
+func (response OauthStart200Response) VisitOauthStartResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type OauthStart303Response struct {
+}
+
+func (response OauthStart303Response) VisitOauthStartResponse(w http.ResponseWriter) error {
+	w.WriteHeader(303)
+	return nil
+}
+
+type OauthStart404ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response OauthStart404ApplicationProblemPlusJSONResponse) VisitOauthStartResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type WithingsNotifyProbeRequestObject struct {
 	HookToken string `json:"hook_token"`
 }
@@ -18631,7 +18802,7 @@ type StrictServerInterface interface {
 	// GetSystemStatus Instance diagnostics
 	// (GET /api/v1/system/status)
 	GetSystemStatus(ctx context.Context, request GetSystemStatusRequestObject) (GetSystemStatusResponseObject, error)
-	// GetSystemVersion Build version of the running server
+	// GetSystemVersion Client handshake and build version of the running server
 	// (GET /api/v1/system/version)
 	GetSystemVersion(ctx context.Context, request GetSystemVersionRequestObject) (GetSystemVersionResponseObject, error)
 	// ListTimezonePeriods List timezone periods
@@ -18655,6 +18826,9 @@ type StrictServerInterface interface {
 	// OauthCallback OAuth redirect target; completes the authorization and redirects to the UI
 	// (GET /oauth/{provider}/callback)
 	OauthCallback(ctx context.Context, request OauthCallbackRequestObject) (OauthCallbackResponseObject, error)
+	// OauthStart App redirect step; sets the binding cookie in the auth browser and redirects to the provider
+	// (GET /oauth/{provider}/start)
+	OauthStart(ctx context.Context, request OauthStartRequestObject) (OauthStartResponseObject, error)
 	// WithingsNotifyProbe Withings callback validation; HEAD and GET answer 200 without side effects
 	// (GET /webhooks/withings/{hook_token})
 	WithingsNotifyProbe(ctx context.Context, request WithingsNotifyProbeRequestObject) (WithingsNotifyProbeResponseObject, error)
@@ -19282,6 +19456,16 @@ func (sh *strictHandler) BeginConnectionAuth(w http.ResponseWriter, r *http.Requ
 	var request BeginConnectionAuthRequestObject
 
 	request.ID = id
+
+	var body BeginConnectionAuthJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.BeginConnectionAuth(ctx, request.(BeginConnectionAuthRequestObject))
@@ -20688,6 +20872,16 @@ func (sh *strictHandler) BeginProviderAuth(w http.ResponseWriter, r *http.Reques
 
 	request.Provider = provider
 
+	var body BeginProviderAuthJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
+
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.BeginProviderAuth(ctx, request.(BeginProviderAuthRequestObject))
 	}
@@ -21755,6 +21949,33 @@ func (sh *strictHandler) OauthCallback(w http.ResponseWriter, r *http.Request, p
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(OauthCallbackResponseObject); ok {
 		if err := validResponse.VisitOauthCallbackResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// OauthStart operation middleware
+func (sh *strictHandler) OauthStart(w http.ResponseWriter, r *http.Request, provider string, params OauthStartParams) {
+	var request OauthStartRequestObject
+
+	request.Provider = provider
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.OauthStart(ctx, request.(OauthStartRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "OauthStart")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(OauthStartResponseObject); ok {
+		if err := validResponse.VisitOauthStartResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

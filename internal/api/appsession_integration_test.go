@@ -13,6 +13,7 @@ import (
 	"github.com/pquerna/otp/totp"
 
 	"github.com/KaanEmec/vitamux/internal/auth"
+	"github.com/KaanEmec/vitamux/internal/crypto"
 )
 
 const appDevice = "Synthetic iPhone"
@@ -257,4 +258,54 @@ func TestPasswordChangeEndsAppSessions(t *testing.T) {
 	e.expect(res, body, http.StatusUnauthorized, CodeUnauthenticated)
 	res, body = e.do(http.MethodGet, "/api/v1/auth/session", "", app)
 	e.expect(res, body, http.StatusOK, "")
+}
+
+// One-tap pairing (J22.3): without VITAMUX_PUBLIC_URL an app session still gets a pairing code,
+// without url and qr_payload, and redeems it itself; the panel still needs the public URL.
+func TestAppPairingWithoutPublicURL(t *testing.T) {
+	e := newAuthEnv(t, false, func(o *Options, _ *crypto.Keyring) { o.PublicURL = nil })
+	browser, csrf := e.login()
+	const pattern = "POST /api/v1/devices/pairing-codes"
+
+	res, body := e.do(http.MethodPost, "/api/v1/devices/pairing-codes", "", call{cookie: browser, csrf: csrf})
+	e.expect(res, body, http.StatusServiceUnavailable, CodeUnavailable)
+
+	res, body = e.do(http.MethodPost, "/api/v1/devices/pairing-codes", "", call{bearer: e.appLogin()})
+	e.expect(res, body, http.StatusCreated, "")
+	raw, _ := json.Marshal(body)
+	checkBody(t, pattern, res.StatusCode, res.Header.Get("Content-Type"), raw)
+	code, _ := body["code"].(string)
+	if _, ok := body["url"]; ok || body["qr_payload"] != nil || code == "" {
+		t.Fatalf("app pairing code: %s", raw)
+	}
+	e.secrets = append(e.secrets, code)
+
+	res, body = e.do(http.MethodPost, "/api/ingest/v1/devices/pair", `{"code":"`+code+`","name":"`+appDevice+`"}`, call{})
+	e.expect(res, body, http.StatusCreated, "")
+	if tok, _ := body["token"].(string); !strings.HasPrefix(tok, "vmx_cli_") {
+		t.Fatalf("pair: %v", body)
+	} else {
+		e.secrets = append(e.secrets, tok)
+	}
+}
+
+// The version handshake is public (J22.3): before sign-in the app gets only the handshake, a
+// signed-in app also the build, and a bearer token that does not verify is still 401.
+func TestSystemVersionHandshake(t *testing.T) {
+	e := newAuthEnv(t, false)
+	const path = "/api/v1/system/version"
+	res, body := e.do(http.MethodGet, path, "", call{})
+	e.expect(res, body, http.StatusOK, "")
+	raw, _ := json.Marshal(body)
+	checkBody(t, "GET "+path, res.StatusCode, res.Header.Get("Content-Type"), raw)
+	if len(body) != 3 || body["product"] != "vitamux" || body["api_version"] == nil || body["min_app_version"] == nil {
+		t.Fatalf("anonymous: %s", raw)
+	}
+	res, body = e.do(http.MethodGet, path, "", call{bearer: e.appLogin()})
+	e.expect(res, body, http.StatusOK, "")
+	if body["version"] == nil || body["commit"] == nil || body["product"] != "vitamux" {
+		t.Fatalf("app session: %v", body)
+	}
+	res, body = e.do(http.MethodGet, path, "", call{bearer: auth.SessionPrefix + "0192f0a000007000800000000000000_synthetic"})
+	e.expect(res, body, http.StatusUnauthorized, CodeUnauthenticated)
 }
