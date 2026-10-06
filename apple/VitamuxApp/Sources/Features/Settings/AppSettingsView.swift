@@ -7,6 +7,7 @@ import WidgetKit
 /// server with sign-out. Local to this iPhone; nothing here goes to the server.
 struct AppSettingsView: View {
     @Environment(AppState.self) private var state
+    @Environment(Notifier.self) private var notifier
     @State private var problem: Problem?
     @State private var cacheBytes: Int64 = 0
     @State private var widgetsAsOf: Date?
@@ -44,12 +45,18 @@ struct AppSettingsView: View {
                 Section { ProblemView(problem: problem) }
             }
             Section {
+                NotificationPermissionRow()
                 ForEach(AppPreferences.Notification.allCases, id: \.self) { NotificationToggle(category: $0) }
+                LabeledContent("Background checks", value: backgroundChecks)
+                    .accessibilityIdentifier("backgroundChecks")
             } header: {
                 Text("Notifications")
             } footer: {
-                Text("Local notifications from this iPhone, sent when something changes. They never contain health values.")
+                Text("Local notifications from this iPhone, sent when something changes, once per change. They name the source, document or job and never contain health values. iOS decides how often the background check runs.")
             }
+            #if DEBUG
+            if state.isUITest { NotificationTestSection() }
+            #endif
             Section {
                 Toggle("Hide values while locked", isOn: $redactWidgets)
                     .accessibilityIdentifier("redactWidgets")
@@ -95,10 +102,18 @@ struct AppSettingsView: View {
             widgetsAsOf = WidgetSnapshotWriter.asOf
         }
         .sheet(isPresented: $isSigningOut) { SignOutSheet() }
+        .task { await notifier.refreshPermission() }
+    }
+
+    private var backgroundChecks: String {
+        guard let last = notifier.lastBackgroundRun else { return "None yet" }
+        return "\(notifier.backgroundRuns), last \(last.formatted(.relative(presentation: .named)))"
     }
 }
 
+/// A category's toggle; turning one on asks for the permission the first time.
 private struct NotificationToggle: View {
+    @Environment(Notifier.self) private var notifier
     let category: AppPreferences.Notification
     @AppStorage private var isOn: Bool
 
@@ -110,5 +125,15 @@ private struct NotificationToggle: View {
     var body: some View {
         Toggle(category.title, isOn: $isOn)
             .accessibilityIdentifier(category.rawValue)
+            .onChange(of: isOn) { _, on in
+                Task {
+                    if on, notifier.permission == .notAsked {
+                        await notifier.requestPermission()
+                    } else {
+                        // Withdraws a category turned off; one turned on notifies what is current.
+                        await notifier.check()
+                    }
+                }
+            }
     }
 }
