@@ -153,6 +153,22 @@ devicesTest('Settings › Devices: pairing code, devices, origins, resync dialog
 	await scan(page, '/settings/devices (resync dialog)');
 });
 
+devicesTest('Settings › Devices › Sources: the source filter and the types dialog', async ({ page }) => {
+	await page.goto('/settings/devices/00000000-0000-4000-8000-0000000000d1/sources');
+	await expect(page.getByRole('article', { name: 'Synthetic Band' })).toBeVisible();
+	await scan(page, '/settings/devices/[id]/sources');
+	await page.getByRole('button', { name: 'Choose types from Synthetic Watch' }).click();
+	await expect(page.getByRole('dialog')).toBeVisible();
+	await scan(page, '/settings/devices/[id]/sources (types dialog)');
+});
+
+dataTest('Explore with ignored sources shown', async ({ page }) => {
+	await page.goto('/explore?origin=com.example.synthetic.band');
+	await page.getByRole('switch', { name: 'Ignored sources' }).check();
+	await expect(page.getByRole('region', { name: 'Ignored sources' }).getByRole('row')).toHaveCount(3);
+	await scan(page, '/explore (ignored sources)');
+});
+
 viewsTest('Specialised views: sleep, blood pressure, body composition, workouts, events, lab analyte', async ({ page }) => {
 	viewsTest.slow(); // many full-page scans in two themes and two widths
 	for (const path of ['/explore/sleep', '/explore/blood-pressure', '/explore/body-composition', '/explore/workouts', '/explore/events', '/lab/analytes/glucose']) {

@@ -13,6 +13,27 @@ public final class AnchorStore: @unchecked Sendable {
     /// Next sync of `type` is a full pull; the server dedupes re-sent samples by UUID.
     public func reset(_ type: String) { defaults.removeObject(forKey: "anchor." + type) }
 
+    /// The source filter last read from the server (J22.25), nil before the first read or from a
+    /// server without one. Kept under `anchor.` so forgetting the pairing clears it with the anchors.
+    public var sourceFilter: SourceFilter? {
+        get { defaults.data(forKey: "anchor.filter").flatMap { try? JSONDecoder().decode(SourceFilter.self, from: $0) } }
+        set { defaults.set(newValue.flatMap { try? JSONEncoder().encode($0) }, forKey: "anchor.filter") }
+    }
+
+    /// The bundle ids the last read of `type` excluded, so a filter change that takes one of them
+    /// again resets the type's anchor.
+    public func excluded(for type: String) -> Set<String> {
+        Set(defaults.stringArray(forKey: "anchor.excluded." + type) ?? [])
+    }
+
+    public func setExcluded(_ bundleIDs: Set<String>, for type: String) {
+        if bundleIDs.isEmpty {
+            defaults.removeObject(forKey: "anchor.excluded." + type)
+        } else {
+            defaults.set(bundleIDs.sorted(), forKey: "anchor.excluded." + type)
+        }
+    }
+
     /// Short stable hash of an anchor for the payload, `none` before the first pull.
     public static func hash(_ anchor: Data?) -> String {
         anchor.map { hex(SHA256.hash(data: $0).prefix(8)) } ?? "none"

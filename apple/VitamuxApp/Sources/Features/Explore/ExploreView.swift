@@ -5,8 +5,15 @@ import VitamuxKit
 /// source, device and origin filters, catalogue metrics without data, and pins.
 struct ExploreView: View {
     @Environment(AppState.self) private var state
-    @State private var model = ExploreModel()
+    /// The link's origin app (`vitamux://explore?origin=`); `onChange` follows later links.
+    let origin: String?
+    @State private var model: ExploreModel
     @State private var pins = Pins()
+
+    init(origin: String? = nil) {
+        self.origin = origin
+        _model = State(initialValue: ExploreModel(origin: origin))
+    }
 
     var body: some View {
         List {
@@ -17,6 +24,7 @@ struct ExploreView: View {
                 ProblemView(problem: problem)
             case .loaded(let inventory):
                 ExploreHeader(model: model, pending: inventory.aggregatesPending, pinProblem: pins.problem)
+                IgnoredSection(model: model)
                 ExploreSections(model: model, pins: pins, isEmpty: inventory.items.isEmpty)
             }
         }
@@ -30,6 +38,8 @@ struct ExploreView: View {
             await pinsLoaded
         }
         .task(id: model.showEmpty) { await model.loadCatalogue(state.client) }
+        .task(id: model.showIgnored) { await model.loadIgnored(state.client) }
+        .onChange(of: origin) { _, new in model.filter.origin = new ?? "" }
     }
 }
 
@@ -61,15 +71,21 @@ private struct ExploreHeader: View {
                 }
                 .accessibilityIdentifier("deviceFilter")
             }
-            if model.origins.count > 1 {
+            if model.origins.count > 1 || !model.filter.origin.isEmpty {
                 Picker("Origin app", selection: $model.filter.origin) {
                     Text("All origin apps").tag("")
                     ForEach(model.origins, id: \.key) { Text($0.label).tag($0.key ?? "") }
+                    // A linked origin without stored items (an ignored app) still shows as chosen.
+                    if !model.filter.origin.isEmpty, !model.origins.contains(where: { $0.key == model.filter.origin }) {
+                        Text(model.filter.origin).tag(model.filter.origin)
+                    }
                 }
                 .accessibilityIdentifier("originFilter")
             }
             Toggle("Show metrics without data", isOn: $model.showEmpty)
                 .accessibilityIdentifier("showEmptyToggle")
+            Toggle("Show ignored sources", isOn: $model.showIgnored)
+                .accessibilityIdentifier("showIgnoredToggle")
         }
     }
 }
@@ -152,5 +168,40 @@ private struct ExploreSections: View {
             }
         }
         if model.isLoadingCatalogue { ProgressView("Loading the catalogue").frame(maxWidth: .infinity) }
+    }
+}
+
+/// With "Show ignored sources": records an Apple Health source filter held raw, per item and
+/// origin app. Counts only; nothing was normalized from them (J22.25).
+private struct IgnoredSection: View {
+    let model: ExploreModel
+
+    var body: some View {
+        if model.showIgnored {
+            Section {
+                switch model.ignored {
+                case .loading:
+                    ProgressView()
+                case .failed(let problem):
+                    ProblemView(problem: problem)
+                case .loaded(let items) where items.isEmpty:
+                    Text("No records are held back by a source filter.").foregroundStyle(.secondary)
+                case .loaded(let items):
+                    ForEach(items, id: \.self) { item in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(metricLabel(item.code))
+                            Text(item.origin.label).font(.subheadline).foregroundStyle(.secondary)
+                            Text("\(item.records) records held raw, not used").font(.caption).foregroundStyle(.secondary)
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("ignored-\(item.code)-\(item.origin.key ?? "")")
+                    }
+                }
+            } header: {
+                Text("Ignored sources")
+            } footer: {
+                Text("Apps a source filter ignores. Their records are kept raw on the server and are not used in any value.")
+            }
+        }
     }
 }

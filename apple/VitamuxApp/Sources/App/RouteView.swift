@@ -7,7 +7,7 @@ struct RouteView: View {
     var body: some View {
         switch route {
         case .dashboard(let date): DashboardView(date: date)
-        case .explore: ExploreView()
+        case .explore(let origin): ExploreView(origin: origin)
         case .connections(let back): SourcesView(back: back)
         case .lab: LabView()
         case .more: MoreView()
@@ -40,6 +40,7 @@ struct RouteView: View {
         case .settings(let page):
             PlaceholderView(title: page.title, detail: [], job: "J22.13")
         case .appleHealth: AppleHealthView()
+        case .appleHealthSources: AppleHealthSourcesView()
         }
     }
 }

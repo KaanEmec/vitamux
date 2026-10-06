@@ -16,6 +16,7 @@ Raw uploads from clients, devices and importers (docs/architecture/connectors.md
 | `POST` | `/api/ingest/v1/heartbeat` | `client` | Report client checkpoint and health |
 | `POST` | `/api/ingest/v1/devices/pair` | `public` | Exchange a pairing code for a device token |
 | `GET` | `/api/ingest/v1/devices/self` | `client` | The calling device's configuration, including pending anchor resets |
+| `PUT` | `/api/ingest/v1/devices/self/sources` | `client` | Report the apps the device found in Apple Health |
 | `POST` | `/api/ingest/v1/devices/self/rotate-token` | `client` | Replace the calling device's token; the old one stops working at once |
 
 ## catalogue
@@ -136,6 +137,8 @@ Paired devices such as the Apple Health bridge (docs/architecture/apple-health.m
 | `GET` | `/api/v1/devices` | `read:config` | List paired devices, newest first, including revoked ones |
 | `POST` | `/api/v1/devices/pairing-codes` | `write:config`, CSRF | Create a single-use pairing code, valid for 10 minutes |
 | `POST` | `/api/v1/devices/{id}/request-anchor-reset` | `write:config`, CSRF | Ask the device to resync types from scratch on its next contact |
+| `GET` | `/api/v1/devices/{id}/source-filter` | `read:config` | Which apps' Apple Health data the device takes, per app |
+| `PUT` | `/api/v1/devices/{id}/source-filter` | `write:config`, CSRF | Replace the owner's take or ignore choices for a device |
 | `POST` | `/api/v1/devices/{id}/revoke` | `write:config`, CSRF | Revoke a device's token; its next request is 401 |
 | `GET` | `/api/v1/origins` | `read:config` | List the apps (origins) data was recorded by, with their native or relayed state |
 | `PATCH` | `/api/v1/origins/{id}` | `write:config`, CSRF | Set or clear the vendor an origin relays |

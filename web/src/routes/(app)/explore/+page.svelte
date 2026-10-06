@@ -3,14 +3,17 @@
 	metric tile, a 30-day sparkline in the metric hue (GET /resolved/summary, metrics only), the
 	latest value, its sources, days with data and the last record, and opens its view
 	(lib/explore/links.ts). Filters: text,
-	provider, device and origin; catalogue metrics without data can be listed too (GET /metrics).
+	provider, device and origin (?origin= sets it, e.g. from a device's sources); catalogue metrics
+	without data can be listed too (GET /metrics). "Ignored sources" (off by default) lists the records
+	an Apple Health source filter left raw (include_ignored, J22.25) in a section of their own.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 	import { api, type Problem, type Schemas } from '#lib/api/client.ts';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import { providerLabel } from '#lib/connections/connections.ts';
-	import { deviceKey, deviceLabel, itemName, lastSeen, latestValue, matches, originLabel, sectionOf, type Item } from '#lib/explore/inventory.ts';
+	import { codeName, deviceKey, deviceLabel, itemName, lastSeen, latestValue, matches, originLabel, sectionOf, type Item } from '#lib/explore/inventory.ts';
 	import { exploreHref, pinKey } from '#lib/explore/links.ts';
 	import { Pins } from '#lib/explore/pins.svelte.ts';
 	import Button from '#lib/ui/Button.svelte';
@@ -22,6 +25,7 @@
 	import MetricTile from '#lib/ui/MetricTile.svelte';
 	import { sourceClass } from '#lib/ui/source.ts';
 	import Skeleton from '#lib/ui/Skeleton.svelte';
+	import Switch from '#lib/ui/Switch.svelte';
 
 	const sparkline = import('#lib/charts/Sparkline.svelte');
 	const summaryBatch = 20; // GET /resolved/summary takes at most 20 metrics
@@ -36,8 +40,11 @@
 	let text = $state('');
 	let provider = $state('');
 	let device = $state('');
-	let origin = $state('');
+	let origin = $state(page.url.searchParams.get('origin') ?? '');
 	let showEmpty = $state(false);
+	let showIgnored = $state(false);
+	let ignored = $state<Schemas['IgnoredItem'][] | null>(null);
+	let ignoredProblem = $state<Problem | null>(null);
 	let collapsed = $state<Record<string, boolean>>({});
 
 	onMount(async () => {
@@ -64,6 +71,25 @@
 		}
 	});
 
+	// Records held raw by a source filter: listed on their own, never mixed into the items.
+	$effect(() => {
+		if (showIgnored && ignored === null) {
+			void api.GET('/api/v1/inventory', { params: { query: { include_ignored: true } } }).then((res) => {
+				ignoredProblem = res.error ?? null;
+				if (res.data) ignored = res.data.ignored ?? [];
+			});
+		}
+	});
+	const ignoredRows = $derived.by(() => {
+		const q = text.trim().toLowerCase();
+		return (ignored ?? []).filter((i) => {
+			if (origin && i.origin.key !== origin) return false;
+			if (!q) return true;
+			return [codeName(i.kind, i.code), i.code, i.origin.key, i.origin.name].some((s) => s?.toLowerCase().includes(q));
+		});
+	});
+	const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
 	/** Catalogue metrics with no data, as empty items. */
 	const empty = $derived.by((): Item[] => {
 		if (!showEmpty || !items) return [];
@@ -77,7 +103,12 @@
 	const byMetric = $derived(new Map(all.filter((i) => i.kind === 'metric').map((i) => [i.code, i])));
 	const providers = $derived([...new Set(all.flatMap((i) => i.providers))].sort());
 	const devices = $derived([...new Map(all.flatMap((i) => i.devices).map((d) => [deviceKey(d), d])).values()]);
-	const origins = $derived([...new Map(all.flatMap((i) => i.origins).map((o) => [o.key, o])).values()]);
+	const origins = $derived.by(() => {
+		const known = [...new Map(all.flatMap((i) => i.origins).map((o) => [o.key, o])).values()];
+		// An origin from the URL stays selectable even when nothing stored names it.
+		if (!origin || known.some((o) => o.key === origin)) return known;
+		return [...known, { key: origin, name: ignored?.find((i) => i.origin.key === origin)?.origin.name }];
+	});
 
 	const sections = $derived.by(() => {
 		const out: Record<string, Item[]> = {};
@@ -141,7 +172,7 @@
 			</select>
 		</label>
 	{/if}
-	{#if origins.length > 1}
+	{#if origins.length > 1 || origin}
 		<label class="select">
 			<span class="visually-hidden">Origin app</span>
 			<select bind:value={origin}>
@@ -151,6 +182,7 @@
 		</label>
 	{/if}
 	<label class="check"><input type="checkbox" bind:checked={showEmpty} />Show catalogue items with no data</label>
+	<Switch label="Ignored sources" bind:checked={showIgnored} />
 </div>
 
 {#if !items && !problem}
@@ -243,6 +275,47 @@
 		{/if}
 	</section>
 {/each}
+
+{#if showIgnored}
+	<section class="section card" aria-labelledby="ignored-h">
+		<div class="section-head">
+			<h2 id="ignored-h">Ignored sources</h2>
+			<span class="muted">Records a device’s source filter left raw. They are kept, not used.</span>
+		</div>
+		<ProblemAlert problem={ignoredProblem} />
+		{#if ignored === null && !ignoredProblem}
+			<p class="pad muted" role="status">Loading ignored sources…</p>
+		{:else if ignored && !ignoredRows.length}
+			<p class="pad muted">{ignored.length ? 'No ignored records match these filters.' : 'No records are held raw by a source filter.'}</p>
+		{:else if ignored}
+			<div class="table-wrap">
+				<table>
+					<thead>
+						<tr>
+							<th scope="col">Name</th>
+							<th scope="col">Origin app</th>
+							<th scope="col" class="num">Records held raw</th>
+							<th scope="col" class="num">First and last record</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each ignoredRows as i (i.kind + i.code + i.origin.key)}
+							<tr>
+								<td>
+									<div class="name">{codeName(i.kind, i.code)}</div>
+									<div class="code">{i.code}</div>
+								</td>
+								<td>{originLabel(i.origin)}{#if i.origin.name}<div class="code">{i.origin.key}</div>{/if}</td>
+								<td class="num">{i.records.toLocaleString()}</td>
+								<td class="num muted">{day(i.first_at)} – {day(i.last_at)}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
+	</section>
+{/if}
 
 {#if showEmpty && !catalogue.length}<p class="muted">Loading the catalogue…</p>{/if}
 <p class="visually-hidden" aria-live="polite">{filtered ? `${sections.reduce((n, [, r]) => n + r.length, 0)} items match` : ''}</p>
@@ -401,6 +474,10 @@
 	}
 	.unit {
 		font-size: var(--text-xs);
+	}
+	.pad {
+		margin: 0;
+		padding: var(--space-3) var(--space-4);
 	}
 	.sources {
 		display: flex;

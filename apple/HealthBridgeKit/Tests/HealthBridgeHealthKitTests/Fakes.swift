@@ -20,6 +20,8 @@ final class FakeHealthStore: HealthStore, @unchecked Sendable {
     private var _background: [HKSampleType] = []
     private var _summaryRanges: [(Date, Date)] = []
     private var _detailReads: [UUID] = []
+    private var _excluded: [[String]] = []
+    private var _sourceReads: [String] = []
 
     /// Pages per type identifier, checked before `pages`.
     var typedPages: [String: [Data?: AnchoredPage]] = [:]
@@ -27,6 +29,9 @@ final class FakeHealthStore: HealthStore, @unchecked Sendable {
     var ecgs: [UUID: ECG] = [:], beats: [UUID: Beats] = [:], routes: [UUID: Route] = [:], links: [UUID: UUID] = [:]
     /// Summaries by `YYYY-MM-DD`; a read returns the days inside the range.
     var summaries: [String: ActivitySummary] = [:]
+    /// Sources per type identifier, and the newest sample end per bundle id and type identifier.
+    var sources: [String: [HealthSource]] = [:]
+    var lastSamples: [String: [String: Date]] = [:]
     /// Types whose background delivery fails.
     var refusedBackground: Set<String> = []
 
@@ -43,6 +48,10 @@ final class FakeHealthStore: HealthStore, @unchecked Sendable {
     var backgroundTypes: [HKSampleType] { lock.withLock { _background } }
     var summaryRanges: [(Date, Date)] { lock.withLock { _summaryRanges } }
     var detailReads: [UUID] { lock.withLock { _detailReads } }
+    /// The bundle ids each anchored read excluded.
+    var requestedExclusions: [[String]] { lock.withLock { _excluded } }
+    /// The types whose sources were read.
+    var sourceReads: [String] { lock.withLock { _sourceReads } }
 
     func requestReadAuthorization(_ types: Set<HKObjectType>) async throws {
         lock.withLock { _authorized.append(types) }
@@ -50,13 +59,26 @@ final class FakeHealthStore: HealthStore, @unchecked Sendable {
 
     func earliestPermittedSampleDate() -> Date { earliest }
 
-    func anchoredPage(of type: HKSampleType, from start: Date, anchor: Data?, limit: Int) async throws -> AnchoredPage {
+    func anchoredPage(of type: HKSampleType, from start: Date, anchor: Data?, limit: Int,
+                      excluding: [HealthSource]) async throws -> AnchoredPage {
         lock.withLock {
+            _excluded.append(excluding.map(\.bundleID))
             _anchors.append(anchor)
             _starts.append(start)
             _limits.append(limit)
             return typedPages[type.identifier]?[anchor] ?? pages[anchor] ?? AnchoredPage(samples: [], deleted: [], anchor: anchor)
         }
+    }
+
+    func sources(for type: HKSampleType) async throws -> [HealthSource] {
+        lock.withLock {
+            _sourceReads.append(type.identifier)
+            return sources[type.identifier] ?? []
+        }
+    }
+
+    func lastSampleDate(of type: HKSampleType, from source: HealthSource) async throws -> Date? {
+        lock.withLock { lastSamples[source.bundleID]?[type.identifier] }
     }
 
     func observe(_ type: HKSampleType, onUpdate: @escaping Callback) {

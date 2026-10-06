@@ -110,6 +110,7 @@ func newRouter(log *slog.Logger, ui fs.FS, opts Options) (*router, error) {
 	rt.systemRoutes()
 	rt.ingestRoutes()
 	rt.deviceRoutes()
+	rt.sourceFilterRoutes()
 	rt.oauthRoutes()
 	rt.sourceRoutes()
 	rt.webhookRoutes()

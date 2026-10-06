@@ -117,6 +117,14 @@ type Client struct {
 	RevokedAt    *time.Time
 	// Device anchor resets the owner requested: HealthKit type identifier (or * for every type) to the latest request time. The device applies those newer than the last it applied.
 	AnchorResets json.RawMessage
+	// Device source filter: the owner's explicit choices {"origins": [{"bundle_id", "name", "mode": take|ignore|per_type, "types"}]}; per_type takes only the listed HealthKit types.
+	SourceFilter json.RawMessage
+	// Incremented on every change of source_filter; the device and PUT preconditions read it.
+	SourceFilterVersion int32
+	// The apps the device last found in Apple Health: [{"bundle_id", "name", "types": [{"type", "last_sample_at"}]}]. No health values.
+	HealthSources json.RawMessage
+	// When the device last reported health_sources.
+	HealthSourcesAt *time.Time
 }
 
 type Connection struct {
@@ -314,6 +322,20 @@ type IdempotencyKey struct {
 	// Batch or blob receipt: ids, external keys and outcomes; never payload bodies.
 	ResponseBody []byte
 	CreatedAt    time.Time
+}
+
+// Records of a raw payload that were not normalized because the device's source filter ignores their origin (ignored_by_filter). The raw payload keeps them; normalizing it again after a take rewrites these rows.
+type IgnoredRecord struct {
+	RawPayloadID int64
+	OriginID     uuid.UUID
+	UserID       uuid.UUID
+	// What the records would have been, as in the inventory: metric, group, event, sleep or workouts; item_code is the metric, group kind or event code.
+	ItemKind string
+	ItemCode string
+	Reason   string
+	Records  int32
+	FirstAt  time.Time
+	LastAt   time.Time
 }
 
 // Items already imported, so re-running an importer skips them.

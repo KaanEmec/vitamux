@@ -27,7 +27,7 @@ final class SearchModel {
 
     static let sections: [Item] = [
         Item(group: "Go to", label: "Dashboard", route: .dashboard()),
-        Item(group: "Go to", label: "Explore", route: .explore),
+        Item(group: "Go to", label: "Explore", route: .explore()),
         Item(group: "Go to", label: "Sources", route: .connections()),
         Item(group: "Go to", label: "Lab results", route: .lab),
         Item(group: "Go to", label: "Rules", route: .rules),

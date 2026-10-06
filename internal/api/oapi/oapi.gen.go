@@ -591,6 +591,33 @@ func (e Health) Valid() bool {
 	}
 }
 
+// Defines values for IgnoredItemKind.
+const (
+	IgnoredItemKindEvent    IgnoredItemKind = "event"
+	IgnoredItemKindGroup    IgnoredItemKind = "group"
+	IgnoredItemKindMetric   IgnoredItemKind = "metric"
+	IgnoredItemKindSleep    IgnoredItemKind = "sleep"
+	IgnoredItemKindWorkouts IgnoredItemKind = "workouts"
+)
+
+// Valid indicates whether the value is a known member of the IgnoredItemKind enum.
+func (e IgnoredItemKind) Valid() bool {
+	switch e {
+	case IgnoredItemKindEvent:
+		return true
+	case IgnoredItemKindGroup:
+		return true
+	case IgnoredItemKindMetric:
+		return true
+	case IgnoredItemKindSleep:
+		return true
+	case IgnoredItemKindWorkouts:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for IntradayDefault.
 const (
 	IntradayDefaultN1M  IntradayDefault = "1m"
@@ -980,25 +1007,25 @@ func (e ProvenanceEntity) Valid() bool {
 
 // Defines values for ProviderAuthKind.
 const (
-	DevicePairing  ProviderAuthKind = "device_pairing"
-	InteractiveMfa ProviderAuthKind = "interactive_mfa"
-	LessThanNil    ProviderAuthKind = "<nil>"
-	None           ProviderAuthKind = "none"
-	Oauth2         ProviderAuthKind = "oauth2"
+	ProviderAuthKindDevicePairing  ProviderAuthKind = "device_pairing"
+	ProviderAuthKindInteractiveMfa ProviderAuthKind = "interactive_mfa"
+	ProviderAuthKindLessThanNil    ProviderAuthKind = "<nil>"
+	ProviderAuthKindNone           ProviderAuthKind = "none"
+	ProviderAuthKindOauth2         ProviderAuthKind = "oauth2"
 )
 
 // Valid indicates whether the value is a known member of the ProviderAuthKind enum.
 func (e ProviderAuthKind) Valid() bool {
 	switch e {
-	case DevicePairing:
+	case ProviderAuthKindDevicePairing:
 		return true
-	case InteractiveMfa:
+	case ProviderAuthKindInteractiveMfa:
 		return true
-	case LessThanNil:
+	case ProviderAuthKindLessThanNil:
 		return true
-	case None:
+	case ProviderAuthKindNone:
 		return true
-	case Oauth2:
+	case ProviderAuthKindOauth2:
 		return true
 	default:
 		return false
@@ -1323,6 +1350,87 @@ func (e SleepStageStage) Valid() bool {
 	case Restless:
 		return true
 	case Unknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SourceFilterMode.
+const (
+	SourceFilterModeIgnore  SourceFilterMode = "ignore"
+	SourceFilterModePerType SourceFilterMode = "per_type"
+	SourceFilterModeTake    SourceFilterMode = "take"
+)
+
+// Valid indicates whether the value is a known member of the SourceFilterMode enum.
+func (e SourceFilterMode) Valid() bool {
+	switch e {
+	case SourceFilterModeIgnore:
+		return true
+	case SourceFilterModePerType:
+		return true
+	case SourceFilterModeTake:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SourceFilterOriginClassification.
+const (
+	SourceFilterOriginClassificationDirect  SourceFilterOriginClassification = "direct"
+	SourceFilterOriginClassificationNative  SourceFilterOriginClassification = "native"
+	SourceFilterOriginClassificationRelayed SourceFilterOriginClassification = "relayed"
+)
+
+// Valid indicates whether the value is a known member of the SourceFilterOriginClassification enum.
+func (e SourceFilterOriginClassification) Valid() bool {
+	switch e {
+	case SourceFilterOriginClassificationDirect:
+		return true
+	case SourceFilterOriginClassificationNative:
+		return true
+	case SourceFilterOriginClassificationRelayed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SourceFilterOriginDefaultMode.
+const (
+	SourceFilterOriginDefaultModeIgnore SourceFilterOriginDefaultMode = "ignore"
+	SourceFilterOriginDefaultModeTake   SourceFilterOriginDefaultMode = "take"
+)
+
+// Valid indicates whether the value is a known member of the SourceFilterOriginDefaultMode enum.
+func (e SourceFilterOriginDefaultMode) Valid() bool {
+	switch e {
+	case SourceFilterOriginDefaultModeIgnore:
+		return true
+	case SourceFilterOriginDefaultModeTake:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SourceFilterOriginDefaultReason.
+const (
+	SourceFilterOriginDefaultReasonDirectConnection SourceFilterOriginDefaultReason = "direct_connection"
+	SourceFilterOriginDefaultReasonLessThanNil      SourceFilterOriginDefaultReason = "<nil>"
+	SourceFilterOriginDefaultReasonNative           SourceFilterOriginDefaultReason = "native"
+)
+
+// Valid indicates whether the value is a known member of the SourceFilterOriginDefaultReason enum.
+func (e SourceFilterOriginDefaultReason) Valid() bool {
+	switch e {
+	case SourceFilterOriginDefaultReasonDirectConnection:
+		return true
+	case SourceFilterOriginDefaultReasonLessThanNil:
+		return true
+	case SourceFilterOriginDefaultReasonNative:
 		return true
 	default:
 		return false
@@ -2703,6 +2811,30 @@ type HourPick struct {
 	Value  *float64  `json:"value,omitempty"`
 }
 
+// IgnoredItem defines model for IgnoredItem.
+type IgnoredItem struct {
+	// Code Metric code, group kind, event code, sleep or workouts.
+	Code    string          `json:"code"`
+	FirstAt time.Time       `json:"first_at"`
+	Kind    IgnoredItemKind `json:"kind"`
+	LastAt  time.Time       `json:"last_at"`
+	Origin  OriginRef       `json:"origin"`
+	Records int64           `json:"records"`
+}
+
+// IgnoredItemKind defines model for IgnoredItem.Kind.
+type IgnoredItemKind string
+
+// IgnoredSource defines model for IgnoredSource.
+type IgnoredSource struct {
+	FirstAt time.Time `json:"first_at"`
+	LastAt  time.Time `json:"last_at"`
+	Origin  OriginRef `json:"origin"`
+
+	// Records Records of the metric overlapping the range
+	Records int64 `json:"records"`
+}
+
 // Intraday A metric's day-view bucket ladder (resolution.md#windows); absent for metrics measured once a day or night.
 type Intraday struct {
 	// Default Bucket for a 24-hour span.
@@ -2721,8 +2853,11 @@ type IntradayFinest string
 // Inventory defines model for Inventory.
 type Inventory struct {
 	// AggregatesPending Days wait for the rebuild job, so metric counts, days and sources may lag.
-	AggregatesPending bool            `json:"aggregates_pending"`
-	Items             []InventoryItem `json:"items"`
+	AggregatesPending bool `json:"aggregates_pending"`
+
+	// Ignored With include_ignored: records held raw because a source filter ignores their origin, per item and origin.
+	Ignored *[]IgnoredItem  `json:"ignored,omitempty"`
+	Items   []InventoryItem `json:"items"`
 }
 
 // InventoryItem defines model for InventoryItem.
@@ -4008,6 +4143,94 @@ type SourceDevice struct {
 // SourceDevicePatch Merge patch of a device; null clears a field.
 type SourceDevicePatch = json.RawMessage
 
+// SourceFilterChoice The owner's explicit choice for one app in Apple Health.
+type SourceFilterChoice struct {
+	// BundleID The HealthKit source's bundle id (the origin_key).
+	BundleID string           `json:"bundle_id"`
+	Mode     SourceFilterMode `json:"mode"`
+
+	// Name The app's name as Apple Health shows it.
+	Name *string `json:"name,omitempty"`
+
+	// Types per_type: the HealthKit types taken (the others are ignored). Dropped for take and ignore.
+	Types *[]string `json:"types,omitempty"`
+}
+
+// SourceFilterDefault Origins ignored by default because the provider they relay is connected directly.
+type SourceFilterDefault struct {
+	// OriginPattern A SQL LIKE pattern over bundle ids (% any run, _ one character, backslash escapes).
+	OriginPattern string `json:"origin_pattern"`
+
+	// Provider The directly connected provider's code
+	Provider     string `json:"provider"`
+	ProviderName string `json:"provider_name"`
+}
+
+// SourceFilterMode defines model for SourceFilterMode.
+type SourceFilterMode string
+
+// SourceFilterOrigin One app in Apple Health and what the device takes from it.
+type SourceFilterOrigin struct {
+	BundleID string `json:"bundle_id"`
+
+	// Classification The origin's classification (Settings › Devices).
+	Classification SourceFilterOriginClassification `json:"classification"`
+	DefaultMode    SourceFilterOriginDefaultMode    `json:"default_mode"`
+
+	// DefaultReason native: Apple's own source; direct_connection: the provider it relays is connected directly, so its copy would count twice.
+	DefaultReason *SourceFilterOriginDefaultReason `json:"default_reason"`
+
+	// Explicit The owner chose the mode; defaults never change it.
+	Explicit bool `json:"explicit"`
+
+	// IgnoredRecords Records from the app held raw on the server because a filter ignored them.
+	IgnoredRecords int64            `json:"ignored_records"`
+	Mode           SourceFilterMode `json:"mode"`
+	Name           *string          `json:"name"`
+
+	// OriginID The data origin once the server has seen data from the app.
+	OriginID *openapi_types.UUID `json:"origin_id"`
+
+	// ReasonProvider direct_connection: the provider code.
+	ReasonProvider     *string `json:"reason_provider"`
+	ReasonProviderName *string `json:"reason_provider_name"`
+	RelayedProvider    *string `json:"relayed_provider"`
+
+	// Types per_type: the types taken.
+	Types []string `json:"types"`
+
+	// Writes The types the device found the app writing, with the newest sample's end; empty when not reported.
+	Writes []SourceType `json:"writes"`
+}
+
+// SourceFilterOriginClassification The origin's classification (Settings › Devices).
+type SourceFilterOriginClassification string
+
+// SourceFilterOriginDefaultMode defines model for SourceFilterOrigin.DefaultMode.
+type SourceFilterOriginDefaultMode string
+
+// SourceFilterOriginDefaultReason native: Apple's own source; direct_connection: the provider it relays is connected directly, so its copy would count twice.
+type SourceFilterOriginDefaultReason string
+
+// SourceFilterUpdate defines model for SourceFilterUpdate.
+type SourceFilterUpdate struct {
+	Origins []SourceFilterChoice `json:"origins"`
+
+	// Version Apply only when the device's filter is still at this version.
+	Version *int `json:"version,omitempty"`
+}
+
+// SourceFilterView defines model for SourceFilterView.
+type SourceFilterView struct {
+	DefaultIgnore []SourceFilterDefault `json:"default_ignore"`
+	DeviceID      openapi_types.UUID    `json:"device_id"`
+	Origins       []SourceFilterOrigin  `json:"origins"`
+
+	// SourcesReportedAt When the device last reported the apps it found in Apple Health.
+	SourcesReportedAt *time.Time `json:"sources_reported_at"`
+	Version           int        `json:"version"`
+}
+
 // SourcePoint One source's values in a bucket, local hour or day: additive metrics the intervals pro-rated to it (sum), the others the mean of its bucket means (5 minutes, or the bucket when shorter) with min and max. A raw point is one row with its value (n 1).
 type SourcePoint struct {
 	// DailyValue The value the source reported for the whole day (day grain).
@@ -4055,7 +4278,10 @@ type SourceSeries struct {
 	Grain  SourceSeriesGrain `json:"grain"`
 
 	// HasMore raw: more rows follow next_cursor.
-	HasMore    *bool                `json:"has_more,omitempty"`
+	HasMore *bool `json:"has_more,omitempty"`
+
+	// Ignored With include_ignored: origins whose records of the metric in the range are held raw because a source filter ignores them; they have no values.
+	Ignored    *[]IgnoredSource     `json:"ignored,omitempty"`
 	Metric     string               `json:"metric"`
 	NextCursor *string              `json:"next_cursor,omitempty"`
 	Rule       *RuleRef             `json:"rule,omitempty"`
@@ -4088,6 +4314,12 @@ type SourceSeriesSource struct {
 
 // SourceSeriesSourceRuleStatus defines model for SourceSeriesSource.RuleStatus.
 type SourceSeriesSourceRuleStatus string
+
+// SourceType defines model for SourceType.
+type SourceType struct {
+	LastSampleAt *time.Time `json:"last_sample_at,omitempty"`
+	Type         string     `json:"type"`
+}
 
 // SourcesDrilldown defines model for SourcesDrilldown.
 type SourcesDrilldown struct {
@@ -4395,6 +4627,9 @@ type IdempotencyKeyOptional = string
 // Include defines model for Include.
 type Include = []string
 
+// IncludeIgnored defines model for IncludeIgnored.
+type IncludeIgnored = bool
+
 // KindFilter defines model for KindFilter.
 type KindFilter = []string
 
@@ -4669,6 +4904,12 @@ type ListGroupsParamsKind string
 
 // ListGroupsParamsInclude defines parameters for ListGroups.
 type ListGroupsParamsInclude string
+
+// GetInventoryParams defines parameters for GetInventory.
+type GetInventoryParams struct {
+	// IncludeIgnored Also list the records an Apple Health source filter left raw (ignored_by_filter), per origin. They are never values: nothing was normalized from them.
+	IncludeIgnored *IncludeIgnored `form:"include_ignored,omitempty" json:"include_ignored,omitempty"`
+}
 
 // ListJobsParams defines parameters for ListJobs.
 type ListJobsParams struct {
@@ -4948,6 +5189,9 @@ type GetSourceSeriesParams struct {
 	End    time.Time                   `form:"end" json:"end"`
 	Grain  *GetSourceSeriesParamsGrain `form:"grain,omitempty" json:"grain,omitempty"`
 
+	// IncludeIgnored Also list the records an Apple Health source filter left raw (ignored_by_filter), per origin. They are never values: nothing was normalized from them.
+	IncludeIgnored *IncludeIgnored `form:"include_ignored,omitempty" json:"include_ignored,omitempty"`
+
 	// Limit Page size. Endpoints may cap it lower than 10,000.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
@@ -5060,6 +5304,9 @@ type RetryBackfillJSONRequestBody = BackfillRetryInput
 
 // RequestDeviceAnchorResetJSONRequestBody defines body for RequestDeviceAnchorReset for application/json ContentType.
 type RequestDeviceAnchorResetJSONRequestBody RequestDeviceAnchorResetJSONBody
+
+// SetDeviceSourceFilterJSONRequestBody defines body for SetDeviceSourceFilter for application/json ContentType.
+type SetDeviceSourceFilterJSONRequestBody = SourceFilterUpdate
 
 // UploadDocumentMultipartRequestBody defines body for UploadDocument for multipart/form-data ContentType.
 type UploadDocumentMultipartRequestBody UploadDocumentMultipartBody
@@ -5449,6 +5696,12 @@ type ServerInterface interface {
 	// RevokeDevice Revoke a device's token; its next request is 401
 	// (POST /api/v1/devices/{id}/revoke)
 	RevokeDevice(w http.ResponseWriter, r *http.Request, id ID)
+	// GetDeviceSourceFilter Which apps' Apple Health data the device takes, per app
+	// (GET /api/v1/devices/{id}/source-filter)
+	GetDeviceSourceFilter(w http.ResponseWriter, r *http.Request, id ID)
+	// SetDeviceSourceFilter Replace the owner's take or ignore choices for a device
+	// (PUT /api/v1/devices/{id}/source-filter)
+	SetDeviceSourceFilter(w http.ResponseWriter, r *http.Request, id ID)
 	// ListDocuments List documents
 	// (GET /api/v1/documents)
 	ListDocuments(w http.ResponseWriter, r *http.Request, params ListDocumentsParams)
@@ -5508,7 +5761,7 @@ type ServerInterface interface {
 	ListGroups(w http.ResponseWriter, r *http.Request, params ListGroupsParams)
 	// GetInventory Everything stored, per metric, group kind, event code, sleep, workouts and lab analyte
 	// (GET /api/v1/inventory)
-	GetInventory(w http.ResponseWriter, r *http.Request)
+	GetInventory(w http.ResponseWriter, r *http.Request, params GetInventoryParams)
 	// ListJobs List background jobs
 	// (GET /api/v1/jobs)
 	ListJobs(w http.ResponseWriter, r *http.Request, params ListJobsParams)
@@ -6756,6 +7009,58 @@ func (siw *ServerInterfaceWrapper) RevokeDevice(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// GetDeviceSourceFilter operation middleware
+func (siw *ServerInterfaceWrapper) GetDeviceSourceFilter(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDeviceSourceFilter(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetDeviceSourceFilter operation middleware
+func (siw *ServerInterfaceWrapper) SetDeviceSourceFilter(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetDeviceSourceFilter(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListDocuments operation middleware
 func (siw *ServerInterfaceWrapper) ListDocuments(w http.ResponseWriter, r *http.Request) {
 
@@ -7617,8 +7922,27 @@ func (siw *ServerInterfaceWrapper) ListGroups(w http.ResponseWriter, r *http.Req
 // GetInventory operation middleware
 func (siw *ServerInterfaceWrapper) GetInventory(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetInventoryParams
+
+	// ------------- Optional query parameter "include_ignored" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_ignored", r.URL.Query(), &params.IncludeIgnored, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_ignored"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_ignored", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetInventory(w, r)
+		siw.Handler.GetInventory(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -9461,6 +9785,19 @@ func (siw *ServerInterfaceWrapper) GetSourceSeries(w http.ResponseWriter, r *htt
 		return
 	}
 
+	// ------------- Optional query parameter "include_ignored" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_ignored", r.URL.Query(), &params.IncludeIgnored, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_ignored"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_ignored", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "limit" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
@@ -10172,6 +10509,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/devices", wrapper.ListDevices)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/devices/pairing-codes", wrapper.CreatePairingCode)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/devices/{id}/request-anchor-reset", wrapper.RequestDeviceAnchorReset)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/devices/{id}/source-filter", wrapper.GetDeviceSourceFilter)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/devices/{id}/source-filter", wrapper.SetDeviceSourceFilter)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/devices/{id}/revoke", wrapper.RevokeDevice)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/origins", wrapper.ListOrigins)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/origins/{id}", wrapper.ClassifyOrigin)
@@ -12900,6 +13239,167 @@ func (response RevokeDevice404ApplicationProblemPlusJSONResponse) VisitRevokeDev
 	return err
 }
 
+type GetDeviceSourceFilterRequestObject struct {
+	ID ID `json:"id"`
+}
+
+type GetDeviceSourceFilterResponseObject interface {
+	VisitGetDeviceSourceFilterResponse(w http.ResponseWriter) error
+}
+
+type GetDeviceSourceFilter200JSONResponse SourceFilterView
+
+func (response GetDeviceSourceFilter200JSONResponse) VisitGetDeviceSourceFilterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDeviceSourceFilter401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response GetDeviceSourceFilter401ApplicationProblemPlusJSONResponse) VisitGetDeviceSourceFilterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDeviceSourceFilter403ApplicationProblemPlusJSONResponse Problem
+
+func (response GetDeviceSourceFilter403ApplicationProblemPlusJSONResponse) VisitGetDeviceSourceFilterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDeviceSourceFilter404ApplicationProblemPlusJSONResponse Problem
+
+func (response GetDeviceSourceFilter404ApplicationProblemPlusJSONResponse) VisitGetDeviceSourceFilterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetDeviceSourceFilterRequestObject struct {
+	ID   ID `json:"id"`
+	Body *SetDeviceSourceFilterJSONRequestBody
+}
+
+type SetDeviceSourceFilterResponseObject interface {
+	VisitSetDeviceSourceFilterResponse(w http.ResponseWriter) error
+}
+
+type SetDeviceSourceFilter200JSONResponse SourceFilterView
+
+func (response SetDeviceSourceFilter200JSONResponse) VisitSetDeviceSourceFilterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetDeviceSourceFilter401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response SetDeviceSourceFilter401ApplicationProblemPlusJSONResponse) VisitSetDeviceSourceFilterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetDeviceSourceFilter403ApplicationProblemPlusJSONResponse Problem
+
+func (response SetDeviceSourceFilter403ApplicationProblemPlusJSONResponse) VisitSetDeviceSourceFilterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetDeviceSourceFilter404ApplicationProblemPlusJSONResponse Problem
+
+func (response SetDeviceSourceFilter404ApplicationProblemPlusJSONResponse) VisitSetDeviceSourceFilterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetDeviceSourceFilter409ApplicationProblemPlusJSONResponse Problem
+
+func (response SetDeviceSourceFilter409ApplicationProblemPlusJSONResponse) VisitSetDeviceSourceFilterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetDeviceSourceFilter422ApplicationProblemPlusJSONResponse Problem
+
+func (response SetDeviceSourceFilter422ApplicationProblemPlusJSONResponse) VisitSetDeviceSourceFilterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListDocumentsRequestObject struct {
 	Params ListDocumentsParams
 }
@@ -14435,6 +14935,7 @@ func (response ListGroups422ApplicationProblemPlusJSONResponse) VisitListGroupsR
 }
 
 type GetInventoryRequestObject struct {
+	Params GetInventoryParams
 }
 
 type GetInventoryResponseObject interface {
@@ -18935,6 +19436,12 @@ type StrictServerInterface interface {
 	// RevokeDevice Revoke a device's token; its next request is 401
 	// (POST /api/v1/devices/{id}/revoke)
 	RevokeDevice(ctx context.Context, request RevokeDeviceRequestObject) (RevokeDeviceResponseObject, error)
+	// GetDeviceSourceFilter Which apps' Apple Health data the device takes, per app
+	// (GET /api/v1/devices/{id}/source-filter)
+	GetDeviceSourceFilter(ctx context.Context, request GetDeviceSourceFilterRequestObject) (GetDeviceSourceFilterResponseObject, error)
+	// SetDeviceSourceFilter Replace the owner's take or ignore choices for a device
+	// (PUT /api/v1/devices/{id}/source-filter)
+	SetDeviceSourceFilter(ctx context.Context, request SetDeviceSourceFilterRequestObject) (SetDeviceSourceFilterResponseObject, error)
 	// ListDocuments List documents
 	// (GET /api/v1/documents)
 	ListDocuments(ctx context.Context, request ListDocumentsRequestObject) (ListDocumentsResponseObject, error)
@@ -20221,6 +20728,65 @@ func (sh *strictHandler) RevokeDevice(w http.ResponseWriter, r *http.Request, id
 	}
 }
 
+// GetDeviceSourceFilter operation middleware
+func (sh *strictHandler) GetDeviceSourceFilter(w http.ResponseWriter, r *http.Request, id ID) {
+	var request GetDeviceSourceFilterRequestObject
+
+	request.ID = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetDeviceSourceFilter(ctx, request.(GetDeviceSourceFilterRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetDeviceSourceFilter")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetDeviceSourceFilterResponseObject); ok {
+		if err := validResponse.VisitGetDeviceSourceFilterResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetDeviceSourceFilter operation middleware
+func (sh *strictHandler) SetDeviceSourceFilter(w http.ResponseWriter, r *http.Request, id ID) {
+	var request SetDeviceSourceFilterRequestObject
+
+	request.ID = id
+
+	var body SetDeviceSourceFilterJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetDeviceSourceFilter(ctx, request.(SetDeviceSourceFilterRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetDeviceSourceFilter")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetDeviceSourceFilterResponseObject); ok {
+		if err := validResponse.VisitSetDeviceSourceFilterResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListDocuments operation middleware
 func (sh *strictHandler) ListDocuments(w http.ResponseWriter, r *http.Request, params ListDocumentsParams) {
 	var request ListDocumentsRequestObject
@@ -20747,8 +21313,10 @@ func (sh *strictHandler) ListGroups(w http.ResponseWriter, r *http.Request, para
 }
 
 // GetInventory operation middleware
-func (sh *strictHandler) GetInventory(w http.ResponseWriter, r *http.Request) {
+func (sh *strictHandler) GetInventory(w http.ResponseWriter, r *http.Request, params GetInventoryParams) {
 	var request GetInventoryRequestObject
+
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.GetInventory(ctx, request.(GetInventoryRequestObject))

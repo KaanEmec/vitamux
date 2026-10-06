@@ -280,7 +280,7 @@ func (rt *router) pairDevice(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// deviceSelf answers the calling device's configuration.
+// deviceSelf answers the calling device's configuration: anchor resets and the source filter.
 func (rt *router) deviceSelf(w http.ResponseWriter, r *http.Request) {
 	if rt.opts.DB == nil {
 		writeProblem(w, r, CodeUnavailable, "ingest is unavailable")
@@ -296,8 +296,13 @@ func (rt *router) deviceSelf(w http.ResponseWriter, r *http.Request) {
 		rt.internal(w, r, "device self", err)
 		return
 	}
+	filter, err := deviceSourceFilter(r.Context(), rt.opts.DB.Q(), c)
+	if err != nil {
+		rt.internal(w, r, "device self", err)
+		return
+	}
 	writeJSON(rt.log, w, http.StatusOK, map[string]any{"device_id": c.ID, "connection_id": ingest.FormatConnectionID(c.ConnectionID),
-		"name": c.Name, "anchor_resets": resets})
+		"name": c.Name, "anchor_resets": resets, "source_filter": filter})
 }
 
 // rotateDeviceToken replaces the caller's token; the old one is invalid from now on.

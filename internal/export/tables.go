@@ -569,6 +569,8 @@ var withoutFile = map[string]string{ //nolint:unused,nolintlint // read by TestE
 	"sidecars":                 "secrets: sidecars added in the panel, added again on the target",
 	// Rebuildable resolution state (J09.9).
 	"resolved_cache": "derived: recomputed on read", "source_hourly_aggregates": "derived: rebuilt from resolution_dirty",
+	// Source filter guard (J22.25): the raw payloads keep the records; reprocessing marks them again.
+	"ignored_records": "derived: rewritten when the raw payloads are normalized again",
 }
 
 const zeroHash = "0000000000000000000000000000000000000000000000000000000000000000"

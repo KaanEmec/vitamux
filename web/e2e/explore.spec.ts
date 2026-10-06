@@ -61,6 +61,53 @@ test('filters: text, source, device, origin and catalogue items without data', a
 	await expect(page.getByRole('link', { name: 'Bp systolic' })).toBeVisible();
 });
 
+test('?origin= sets the origin filter; ignored sources are hidden until toggled and listed on their own', async ({ page, explore }) => {
+	await page.goto('/explore?origin=com.example.health');
+	const names = page.locator('a.name');
+	await expect(names).toHaveText(['Steps', 'Irregular rhythm']);
+	await expect(page.getByLabel('Origin app')).toHaveValue('com.example.health');
+	const ignored = page.getByRole('region', { name: 'Ignored sources' });
+	await expect(ignored).toHaveCount(0);
+	expect(explore.inventoryQueries).toEqual(['']);
+
+	await page.getByRole('switch', { name: 'Ignored sources' }).check();
+	await expect(ignored.getByText('No ignored records match these filters.')).toBeVisible();
+	expect(explore.inventoryQueries).toEqual(['', 'include_ignored=true']);
+	await page.getByLabel('Origin app').selectOption('');
+	const rows = ignored.getByRole('row');
+	await expect(rows).toHaveCount(3);
+	await expect(rows.nth(1)).toContainText('Heart rate');
+	await expect(rows.nth(1)).toContainText('Synthetic Band');
+	await expect(rows.nth(1).getByRole('cell', { name: '1,440' })).toBeVisible();
+	await expect(rows.nth(2)).toContainText('Sleep');
+	// Nothing held raw mixes into the stored items.
+	await expect(names).toHaveCount(9);
+
+	// An origin only the ignored records name (a link from a device's sources).
+	await page.goto('/explore?origin=com.example.synthetic.band');
+	await expect(page.getByText('Nothing matches these filters')).toBeVisible();
+	await expect(page.getByLabel('Origin app')).toHaveValue('com.example.synthetic.band');
+	await page.getByRole('switch', { name: 'Ignored sources' }).check();
+	await expect(page.getByRole('region', { name: 'Ignored sources' }).getByRole('row')).toHaveCount(3);
+	await expect(names).toHaveCount(0);
+});
+
+test('metric detail: the ignored sources toggle lists origins held raw under the chart', async ({ page, explore }) => {
+	await page.goto(detail);
+	const toggle = page.getByRole('group', { name: 'Series' }).getByRole('button', { name: 'Ignored sources' });
+	await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+	await expect(page.getByRole('region', { name: 'Ignored sources' })).toHaveCount(0);
+	expect(explore.seriesQueries.some((q) => q.includes('include_ignored'))).toBe(false);
+	await toggle.click();
+	await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+	await expect(page.getByRole('region', { name: 'Ignored sources' })).toContainText('Synthetic Band: 96 records held raw, ignored by the device’s source filter');
+	expect(explore.seriesQueries.at(-1)).toContain('include_ignored=true');
+	// The chart's source toggles are unchanged: no ignored origin is plotted.
+	await expect(page.getByRole('group', { name: 'Series' }).getByRole('button', { name: /Synthetic Band/ })).toHaveCount(0);
+	await toggle.click();
+	await expect(page.getByRole('region', { name: 'Ignored sources' })).toHaveCount(0);
+});
+
 test('pin a metric to the dashboard', async ({ page, explore }) => {
 	await page.goto('/explore');
 	const pin = page.getByRole('button', { name: 'Pin Resting heart rate to the dashboard' });
