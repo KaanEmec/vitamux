@@ -215,6 +215,11 @@ final class SettingsUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Saved."].waitForExistence(timeout: 10))
 
         app.scrollTo(app.buttons["editCredentials-withings"]).tap()
+        // The Sources fake starts Withings without app credentials, so the id is typed too.
+        let clientID = app.textFields["clientID"]
+        XCTAssertTrue(clientID.waitForExistence(timeout: 5))
+        clientID.tap()
+        clientID.typeText("synthetic-client-id")
         let secret = app.secureTextFields["clientSecret"]
         XCTAssertTrue(secret.waitForExistence(timeout: 5))
         secret.tap()

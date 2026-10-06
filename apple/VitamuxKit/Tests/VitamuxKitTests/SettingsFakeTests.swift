@@ -74,12 +74,12 @@ struct SettingsFakeTests {
         let client = try await signedIn()
         let code = try await client.createPairingCode().created.body.json
         #expect(code.code.wholeMatch(of: /[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}/) != nil)
-        #expect(code.qrPayload?.contains(code.code) == true)
+        #expect(code.code.hasPrefix("SYN") && code.url == nil && code.qrPayload == nil, "an app session gets the code; the app draws its own QR")
         #expect(code.expiresAt > .now)
 
         let devices = try await client.listDevices().ok.body.json.devices
         let phone = try #require(devices.first)
-        #expect(phone.possiblyDenied == ["HKCategoryTypeIdentifierSleepAnalysis"])
+        #expect(phone.possiblyDenied == [FakeServer.AppleHealth.possiblyDenied])
         _ = try await client.requestDeviceAnchorReset(path: .init(id: phone.id), body: .json(.init(types: ["HKQuantityTypeIdentifierHeartRate"]))).noContent
         _ = try await client.revokeDevice(path: .init(id: phone.id)).noContent
         let after = try #require(try await client.listDevices().ok.body.json.devices.first)
@@ -142,12 +142,15 @@ struct SettingsFakeTests {
 
     @Test func `app credentials and sidecars need a second confirmation while in use`() async throws {
         let client = try await signedIn()
+        let before = try #require(try await client.listProviders().ok.body.json.providers.first { $0.code == "withings" })
+        #expect(before.appCredentials?.set == false)
+        _ = try await client.putProviderAppCredentials(path: .init(provider: "withings"), body: .json(.init(clientId: "synthetic-id-1", clientSecret: "synthetic-secret"))).ok
         let withings = try #require(try await client.listProviders().ok.body.json.providers.first { $0.code == "withings" })
         #expect(withings.appCredentials?.set == true)
         let inUse = await failure { try await client.deleteProviderAppCredentials(path: .init(provider: "withings")) }
         #expect(inUse?.status == 409)
         _ = try await client.deleteProviderAppCredentials(path: .init(provider: "withings"), query: .init(confirm: true)).noContent
-        let put = try await client.putProviderAppCredentials(path: .init(provider: "withings"), body: .json(.init(clientId: "synthetic-id-2", clientSecret: "synthetic-secret"))).ok.body.json
+        let put = try await client.putProviderAppCredentials(path: .init(provider: "withings"), body: .json(.init(clientId: "synthetic-id-2", clientSecret: SourcesFixture.appSecret))).ok.body.json
         #expect(put.appCredentials?.clientId == "synthetic-id-2")
         #expect(try await client.verifyProviderAppCredentials(path: .init(provider: "withings")).ok.body.json.result == .valid)
 

@@ -5,9 +5,10 @@ import Synchronization
 // Rules, the rule lens and the builder (J22.10) for the fake server, mirroring
 // web/e2e/rules-fake.ts and rule-lens-fake.ts and the server's handlers (internal/api/rules.go):
 // built-in and default rules, owner versions (the first save of a metric with a built-in copies
-// it as version 1), activation, the draft preview, and the origins, devices and providers the
-// builder's one-click selectors come from. A sum without its acknowledgement is 409
-// rule_warning_unacknowledged, a bad group id or a min_coverage above 0.9 is 422 with a field
+// it as version 1), activation and the draft preview. The builder's one-click selectors read
+// /origins (FakeServer+Settings.swift), /source-devices and /providers (FakeServer+Sources.swift),
+// so the rule, Settings and Sources screens see the same data. A sum without its acknowledgement
+// is 409 rule_warning_unacknowledged, a bad group id or a min_coverage above 0.9 is 422 with a field
 // pointer. GET /metrics/{code} and GET /coverage are Explore's (FakeServer+Explore.swift).
 // Every value is synthetic.
 extension FakeServer {
@@ -23,12 +24,6 @@ extension FakeServer {
                 return RulesFixture.json(200, ["rules": state.activeSet.map(\.json)])
             case ("POST", "/api/v1/resolution/preview"):
                 return state.preview(body)
-            case ("GET", "/api/v1/origins"):
-                return RulesFixture.json(200, ["origins": RulesFixture.origins, "relay_targets": [["code": "garmin", "name": "Garmin"]]])
-            case ("GET", "/api/v1/source-devices"):
-                return RulesFixture.json(200, ["devices": RulesFixture.devices, "device_types": RulesFixture.deviceTypes])
-            case ("GET", "/api/v1/providers"):
-                return RulesFixture.json(200, ["providers": RulesFixture.providers])
             case ("GET", _) where parts.count == 5 && parts[2] == "rules" && parts[4] == "versions":
                 return state.versions(parts[3])
             case ("POST", _) where parts.count == 5 && parts[2] == "rules" && parts[4] == "versions":
@@ -250,41 +245,6 @@ struct RulesFixture {
 
     static func label(_ group: String) -> String {
         ["apple_watch": "Apple Watch", "garmin": "Garmin", "whoop": "WHOOP", "withings": "Withings"][group] ?? group
-    }
-
-    // MARK: Where data came from (the builder's one-click selectors)
-
-    static var origins: [[String: Any]] { [
-        ["id": "00000000-0000-4000-8000-0000000000a1", "provider": "apple_health", "origin_key": "com.example.health", "name": "Example Health",
-         "is_native": true, "relayed_provider": NSNull(), "created_at": "2026-01-01T08:00:00Z"],
-        ["id": "00000000-0000-4000-8000-0000000000a2", "provider": "apple_health", "origin_key": "com.example.relay", "name": "Example Relay",
-         "is_native": false, "relayed_provider": "garmin", "created_at": "2026-01-01T08:00:00Z"],
-    ] }
-
-    static var devices: [[String: Any]] { [
-        device("a", provider: "apple_health", fingerprint: "watch-1", type: "watch", manufacturer: "Apple Inc.", model: "Watch"),
-        device("b", provider: "apple_health", fingerprint: "phone-1", type: "phone", manufacturer: "Apple Inc.", model: "iPhone"),
-        device("c", provider: "garmin", fingerprint: "garmin-1", type: "watch", manufacturer: "Garmin", model: "Synthetic Runner", name: "Training watch"),
-        device("d", provider: "whoop", fingerprint: "band-1", type: "band", manufacturer: "WHOOP", model: "Synthetic Band"),
-    ] }
-
-    static let deviceTypes = ["watch", "phone", "band", "ring", "scale", "bp_monitor", "chest_strap"]
-
-    static func device(_ letter: Character, provider: String, fingerprint: String, type: String, manufacturer: String, model: String, name: String? = nil) -> [String: Any] {
-        [
-            "id": "dev_" + String(repeating: letter, count: 32), "provider": provider, "fingerprint": fingerprint, "name": name ?? NSNull(),
-            "device_type": type, "manufacturer": manufacturer, "model": model, "merged_into": NSNull(),
-        ]
-    }
-
-    static var providers: [[String: Any]] {
-        [("garmin", "Garmin Connect", "interactive_mfa"), ("whoop", "WHOOP", "interactive_mfa"), ("withings", "Withings", "oauth2")].map { code, name, auth in
-            [
-                "code": code, "name": name, "official": code == "withings", "auth_kind": auth, "remote": code != "withings",
-                "available": true, "setup_state": "connected", "callback_url": NSNull(), "problems": [Any](),
-                "app_credentials": NSNull(), "sidecar": NSNull(), "connections": 1,
-            ]
-        }
     }
 
     static func json(_ status: Int, _ object: [String: Any]) -> Reply {

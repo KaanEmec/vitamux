@@ -340,7 +340,7 @@ struct RulesFakeTests {
         let providers = try await client.listProviders().ok.body.json.providers
         let chips = RuleChoice.chips(origins: origins, devices: devices).map(\.label)
         #expect(chips.prefix(2) == ["provider apple_health, not relayed", "provider apple_health, relayed"])
-        #expect(chips.contains("provider apple_health, origin app id com.example.relay"))
+        #expect(chips.contains("provider apple_health, origin app id com.example.connect"))
         let choices = RuleChoice.sources(devices: devices, providers: providers).map(\.label)
         #expect(choices.contains("Apple Watch") && choices.contains("iPhone") && choices.contains("Garmin (any device)"))
         #expect(choices.contains("Training watch"))

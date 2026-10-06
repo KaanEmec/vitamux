@@ -338,8 +338,15 @@ struct SourcesFixture {
                        connection: withingsID, records: ["groups": 4]),
                 Device(id: device(3), provider: "withings", fingerprint: "synthetic-cuff", type: "bp_monitor", manufacturer: "Withings",
                        model: "Synthetic Cuff", connection: withingsID, records: ["groups": 30]),
-                Device(id: device(4), provider: "garmin", fingerprint: "synthetic-watch", type: "watch", manufacturer: "Garmin",
+                Device(id: device(4), provider: "garmin", fingerprint: "synthetic-watch", name: "Training watch", type: "watch", manufacturer: "Garmin",
                        model: "Synthetic Watch", connection: garminID, records: ["measurements": 1440, "sleep_sessions": 7]),
+                // Devices of sources without a connection here (Apple Health, WHOOP): the rule builder's selectors.
+                Device(id: device(5), provider: "apple_health", fingerprint: "synthetic-apple-watch", type: "watch", manufacturer: "Apple Inc.",
+                       model: "Watch", connection: FakeServer.AppleHealth.connectionID, records: [:]),
+                Device(id: device(6), provider: "apple_health", fingerprint: "synthetic-iphone", type: "phone", manufacturer: "Apple Inc.",
+                       model: "iPhone", connection: FakeServer.AppleHealth.connectionID, records: [:]),
+                Device(id: device(7), provider: "whoop", fingerprint: "synthetic-band", type: "band", manufacturer: "WHOOP",
+                       model: "Synthetic Band", connection: "conn_" + String(repeating: "0", count: 31) + "2", records: [:]),
             ]
             let environment = FakeServer.isUITestRun && ProcessInfo.processInfo.arguments.contains("-uitest-withings-env")
             let enable: [[String: String]] = [
@@ -382,7 +389,7 @@ struct SourcesFixture {
                 guard let index = providers.firstIndex(where: { $0.code == parts[1] }) else {
                     return problem(404, "not_found", "no such provider")
                 }
-                return provider(index, method: method, sub: parts.dropFirst(2).joined(separator: "/"), body: body)
+                return provider(index, method: method, sub: parts.dropFirst(2).joined(separator: "/"), body: body, confirmed: value("confirm") == "true")
             case ("GET", 1, "schedules"):
                 let only = value("connection")
                 return json(200, ["schedules": schedules.filter { only == nil || $0.connection == only }.map(\.json)])
@@ -610,7 +617,7 @@ struct SourcesFixture {
             return out
         }
 
-        private mutating func provider(_ index: Int, method: String, sub: String, body: [String: Any]) -> Reply {
+        private mutating func provider(_ index: Int, method: String, sub: String, body: [String: Any], confirmed: Bool) -> Reply {
             let p = providers[index]
             switch (method, sub) {
             case ("PUT", "app-credentials"):
@@ -624,6 +631,14 @@ struct SourcesFixture {
                 providers[index].app = (true, false, id)
                 appSecret = secret
                 return json(200, providerJSON(providers[index]))
+            case ("DELETE", "app-credentials"):
+                guard let app = p.app, app.set else { return problem(404, "not_found", "no app credentials are set") }
+                guard !app.environment else { return problem(409, "conflict", "set by the environment") }
+                let using = connections.filter { $0.provider == p.code && $0.status != "disabled" }.count
+                if using > 0, !confirmed { return problem(409, "conflict", "\(using) connection uses these app credentials") }
+                providers[index].app = (false, false, nil)
+                appSecret = ""
+                return Reply(status: 204)
             case ("POST", "app-credentials/verify"):
                 guard p.app?.set == true else { return problem(404, "not_found", "no app credentials are set") }
                 if p.app?.environment == true || appSecret == SourcesFixture.appSecret {

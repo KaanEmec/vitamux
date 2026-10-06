@@ -5,10 +5,11 @@ import Synchronization
 // The Settings pages (J22.13) for the fake server, mirroring web/e2e/settings-fake.ts and the
 // server's handlers (internal/api/auth.go, settings.go, devices.go, origins.go, exports.go,
 // setup.go): timezone periods, the settings map (a merge patch; retention.raw_days merges per
-// provider), paired devices and pairing codes, origins, API keys, password, TOTP and sessions,
-// provider app credentials, sidecars and exports. GET /system/status belongs to
-// FakeServer+Dashboard.swift. Every value and secret is synthetic, and the state is kept per fake
-// host so parallel unit tests never share it.
+// provider), origins (also the rule builder's), API keys, password, TOTP and sessions, sidecars and
+// exports. Not here, one owner each: /devices and pairing codes are FakeServer+AppleHealth.swift,
+// /providers (with app credentials) and /source-devices are FakeServer+Sources.swift, and GET
+// /system/status is FakeServer+Dashboard.swift. Every value and secret is synthetic, and the state
+// is kept per fake host so parallel unit tests never share it.
 extension FakeServer {
     /// Answers a Settings endpoint, or nil for a request this file does not handle. `core` is the
     /// fake's sign-in state: TOTP and the live app sessions.
@@ -46,8 +47,6 @@ struct SettingsFixture {
         }
     }
 
-    /// The UI-test iPhone's pairing (`ThisDevice.uiTest`), listed first as this iPhone.
-    static let thisDeviceID = "00000000-0000-4000-8000-000000000020"
     /// The secret TOTP enrolment answers; synthetic base32.
     static let totpSecret = "JBSWY3DPEHPK3PXP"
     static let recoveryCodes = ["synthetic-recovery-a", "synthetic-recovery-b", "synthetic-recovery-c"]
@@ -64,27 +63,6 @@ struct SettingsFixture {
         var to: String?
 
         var json: [String: Any] { ["id": id, "tz": tz, "valid_from": from, "valid_to": to ?? NSNull()] }
-    }
-
-    struct Device {
-        var id: String
-        var name: String
-        var created: String
-        var lastSeen: String?
-        var lastSync: String?
-        var revoked: String?
-        var types: [String]
-        var denied: [String]
-        var resets: [(type: String, at: String)] = []
-
-        var json: [String: Any] {
-            [
-                "id": id, "name": name, "connection_id": "conn_" + String(repeating: "0", count: 31) + "1",
-                "created_at": created, "last_seen_at": lastSeen ?? NSNull(), "last_sync_at": lastSync ?? NSNull(),
-                "revoked_at": revoked ?? NSNull(), "types": types, "possibly_denied": revoked == nil ? denied : [],
-                "anchor_resets": resets.map { ["type": $0.type, "requested_at": $0.at] },
-            ]
-        }
     }
 
     struct Origin {
@@ -149,20 +127,6 @@ struct SettingsFixture {
         }
     }
 
-    struct AppCredentials {
-        var clientID: String?
-        var updated: String?
-        var environment = false
-        var connections = 0
-
-        var json: [String: Any] {
-            [
-                "set": clientID != nil || environment, "managed_by_environment": environment,
-                "client_id": clientID ?? NSNull(), "updated_at": updated ?? NSNull(),
-            ]
-        }
-    }
-
     struct State {
         var periods = [
             Period(id: "00000000-0000-4000-8000-000000000010", tz: "America/New_York", from: "2024-01-01T00:00:00Z", to: "2026-03-01T05:00:00Z"),
@@ -176,14 +140,6 @@ struct SettingsFixture {
         var supersededDays = 0
         var idempotencyDays = 30
         var priority = ["whoop"]
-        var devices = [
-            Device(id: thisDeviceID, name: "Synthetic iPhone", created: "2026-01-01T08:00:00Z", lastSeen: "2026-01-02T08:00:00Z",
-                   lastSync: "2026-01-02T07:55:00Z", types: ["HKQuantityTypeIdentifierHeartRate", "HKQuantityTypeIdentifierStepCount", "HKCategoryTypeIdentifierSleepAnalysis"],
-                   denied: ["HKCategoryTypeIdentifierSleepAnalysis"]),
-            Device(id: "00000000-0000-4000-8000-000000000021", name: "Synthetic old iPhone", created: "2025-06-01T08:00:00Z",
-                   lastSeen: "2025-12-01T08:00:00Z", lastSync: "2025-12-01T08:00:00Z", types: ["HKQuantityTypeIdentifierHeartRate"], denied: []),
-        ]
-        var pairingCodes = 0
         var origins = [
             Origin(id: "00000000-0000-4000-8000-000000000030", key: "com.apple.health", name: "Health", native: true),
             Origin(id: "00000000-0000-4000-8000-000000000031", key: "com.example.connect", name: "Example Connect", native: false, relays: "garmin"),
@@ -198,9 +154,6 @@ struct SettingsFixture {
             OtherSession(id: "00000000-0000-4000-8000-000000000051", kind: "app", name: "Synthetic iPad", created: "2025-12-30T08:00:00Z", lastSeen: "2026-01-01T09:00:00Z"),
         ]
         var totpPending = false
-        var credentials = [
-            "withings": AppCredentials(clientID: "synthetic-client-id", updated: "2026-01-01T08:00:00Z", connections: 1),
-        ]
         var sidecars = [
             Sidecar(name: "garmin", url: "http://garmin-sidecar:8080", source: "environment", bundled: true, available: true, inUse: true),
             Sidecar(name: "synthetic_ring", url: "http://ring-sidecar:8080", source: "panel", bundled: false, available: false,
@@ -227,11 +180,9 @@ extension SettingsFixture.State {
         switch (request.method, path.first ?? "", path.count) {
         case (_, "timezone-periods", _): return periods(request)
         case (_, "settings", 1): return settings(request)
-        case (_, "devices", _): return devices(request)
         case (_, "origins", _): return origins(request)
         case (_, "api-keys", _): return apiKeys(request)
         case (_, "auth", 2...): return auth(request, token: token, core: &core)
-        case (_, "providers", _): return providers(request)
         case (_, "sidecars", _): return sidecars(request)
         case (_, "exports", _): return exports(request)
         default: return nil
@@ -356,46 +307,7 @@ extension SettingsFixture.State {
         }
     }
 
-    // MARK: Devices and origins (internal/api/devices.go, origins.go)
-
-    private mutating func devices(_ request: F.Request) -> Reply? {
-        let path = request.path
-        switch (request.method, path.count) {
-        case ("GET", 1):
-            return F.json(200, ["devices": devices.map(\.json)])
-        case ("POST", 2) where path[1] == "pairing-codes":
-            pairingCodes += 1
-            guard pairingCodes <= 5 else {
-                var reply = F.problem(429, "rate_limited", "at most 5 pairing codes per 10 minutes")
-                reply.headers["Retry-After"] = "600"
-                return reply
-            }
-            let code = String(format: "SYN%01d-7QZK", pairingCodes % 10)
-            let expires = Date.now.addingTimeInterval(600).formatted(.iso8601)
-            let url = "https://fake.vitamux.test"
-            let payload = String(data: try! JSONSerialization.data(withJSONObject: ["url": url, "code": code], options: [.sortedKeys]), encoding: .utf8)!
-            return F.json(201, ["code": code, "expires_at": expires, "url": url, "qr_payload": payload])
-        case ("POST", 3) where path[2] == "request-anchor-reset":
-            guard let index = devices.firstIndex(where: { $0.id == path[1] && $0.revoked == nil }) else {
-                return F.problem(404, "not_found", "no active device with this id")
-            }
-            let types = (request.object?["types"] as? [String]) ?? []
-            let now = Date.now.formatted(.iso8601)
-            for type in types.isEmpty ? ["*"] : types {
-                devices[index].resets.removeAll { $0.type == type }
-                devices[index].resets.append((type, now))
-            }
-            return Reply(status: 204)
-        case ("POST", 3) where path[2] == "revoke":
-            guard let index = devices.firstIndex(where: { $0.id == path[1] && $0.revoked == nil }) else {
-                return F.problem(404, "not_found", "no active device with this id")
-            }
-            devices[index].revoked = Date.now.formatted(.iso8601)
-            return Reply(status: 204)
-        default:
-            return nil
-        }
-    }
+    // MARK: Origins (internal/api/origins.go)
 
     private static let relayTargets = [["code": "garmin", "name": "Garmin"], ["code": "whoop", "name": "WHOOP"], ["code": "withings", "name": "Withings"]]
 
@@ -510,71 +422,7 @@ extension SettingsFixture.State {
         }
     }
 
-    // MARK: Provider apps and sidecars (internal/api/setup.go)
-
-    private static let providerNames = ["withings": "Withings", "garmin": "Garmin Connect", "synthetic_ring": "Synthetic Ring"]
-
-    private func provider(_ code: String) -> [String: Any] {
-        let sidecar = sidecars.first { $0.name == code }
-        let app = credentials[code]
-        var problems: [[String: Any]] = []
-        if let sidecar, !sidecar.available {
-            problems.append(["code": "sidecar_unreachable", "message": "The sidecar does not answer at \(sidecar.url)."])
-        }
-        let state = sidecar.map { $0.available ? "ready" : "needs_sidecar" } ?? (app?.clientID == nil ? "needs_app_credentials" : "connected")
-        return [
-            "code": code, "name": Self.providerNames[code] ?? code, "official": code == "withings",
-            "auth_kind": sidecar == nil ? "oauth2" as Any : (sidecar!.available ? "interactive_mfa" as Any : NSNull()),
-            "remote": sidecar != nil, "available": sidecar?.available ?? true, "setup_state": state,
-            "callback_url": code == "withings" ? "https://fake.vitamux.test/oauth/withings/callback" : NSNull(),
-            "problems": problems, "app_credentials": app?.json ?? NSNull(),
-            "sidecar": sidecar.map { ["source": $0.source, "bundled": $0.bundled, "enable": []] } ?? NSNull(),
-            "connections": app?.connections ?? (sidecar?.inUse == true ? 1 : 0),
-        ]
-    }
-
-    private mutating func providers(_ request: F.Request) -> Reply? {
-        let path = request.path
-        switch (request.method, path.count) {
-        case ("GET", 1):
-            let codes = ["withings"] + sidecars.map(\.name)
-            return F.json(200, ["providers": codes.map(provider)])
-        case (_, 3...) where path[2] == "app-credentials":
-            let code = path[1]
-            guard credentials[code] != nil || code == "withings" else { return F.problem(404, "not_found", "no such provider") }
-            var app = credentials[code] ?? F.AppCredentials()
-            switch (request.method, path.count) {
-            case ("PUT", 3):
-                let input = request.object ?? [:]
-                let id = ((input["client_id"] as? String) ?? "").trimmingCharacters(in: .whitespaces)
-                let secret = (input["client_secret"] as? String) ?? ""
-                var errors: [(String, String)] = []
-                if id.isEmpty { errors.append(("/client_id", "is required")) }
-                if secret.isEmpty { errors.append(("/client_secret", "is required")) }
-                guard errors.isEmpty else { return F.problem(422, "validation_failed", "invalid app credentials", errors: errors) }
-                guard !app.environment else { return F.problem(409, "conflict", "set by the environment") }
-                app.clientID = id
-                app.updated = Date.now.formatted(.iso8601)
-                credentials[code] = app
-                return F.json(200, provider(code))
-            case ("POST", 4) where path[3] == "verify":
-                return F.json(200, ["result": "valid", "message": "The provider accepted the client id and secret."])
-            case ("DELETE", 3):
-                guard app.clientID != nil else { return F.problem(404, "not_found", "no app credentials are set") }
-                if app.connections > 0, request.value("confirm") != "true" {
-                    return F.problem(409, "conflict", "\(app.connections) connection uses these app credentials")
-                }
-                app.clientID = nil
-                app.updated = nil
-                credentials[code] = app
-                return Reply(status: 204)
-            default:
-                return nil
-            }
-        default:
-            return nil
-        }
-    }
+    // MARK: Sidecars (internal/api/setup.go)
 
     private mutating func sidecars(_ request: F.Request) -> Reply? {
         switch (request.method, request.path.count) {

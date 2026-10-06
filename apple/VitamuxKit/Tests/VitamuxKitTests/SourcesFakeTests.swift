@@ -58,7 +58,7 @@ struct SourcesFakeTests {
         #expect(changed.intervalSeconds == 21_600 && !changed.enabled)
 
         let devices = try await client.listSourceDevices(query: .init(include: [.records])).ok.body.json
-        #expect(devices.devices.count == 4 && devices.deviceTypes.contains("scale"))
+        #expect(devices.devices.count == 7 && devices.deviceTypes.contains("scale"))
         #expect(devices.devices[0].connections?.first?.records.groups == 120)
     }
 

@@ -9,6 +9,9 @@ import Synchronization
 // heartbeat). The ingest routes take the device token, not an app session, so the fixture router
 // asks this file before its session check. Every value is synthetic.
 //
+// This file owns every /devices route, Settings › Devices included (it lists an older, idle
+// iPhone beside the paired one).
+//
 // Scenario: one iPhone is already paired (`AppleHealth.deviceID`, the device `-uitest-paired`
 // starts with) and the server lists `AppleHealth.possiblyDenied` as possibly denied for it.
 extension FakeServer {
@@ -133,7 +136,7 @@ struct AppleHealthFixture {
         var devices: [String: Device]
         var codes: Set<String> = []
         var batches = 0
-        var nextDevice = 0x21
+        var nextDevice = 0x100
 
         init() {
             let paired = Device(
@@ -141,7 +144,13 @@ struct AppleHealthFixture {
                 token: FakeServer.AppleHealth.deviceToken, createdAt: Date(timeIntervalSince1970: 1_767_254_400),
                 possiblyDenied: [FakeServer.AppleHealth.possiblyDenied]
             )
-            devices = [paired.id: paired]
+            // Settings › Devices lists an older, idle iPhone beside this one (it is the one to revoke).
+            let old = Device(
+                id: "00000000-0000-4000-8000-000000000021", name: "Synthetic old iPhone", token: "synthetic-old-device-token",
+                createdAt: Date(timeIntervalSince1970: 1_748_764_800), lastSeenAt: Date(timeIntervalSince1970: 1_764_576_000),
+                lastSyncAt: Date(timeIntervalSince1970: 1_764_576_000), types: ["HKQuantityTypeIdentifierHeartRate"]
+            )
+            devices = [paired.id: paired, old.id: old]
         }
 
         /// The device a live token belongs to; 401 for a missing, unknown or revoked one.
@@ -154,8 +163,9 @@ struct AppleHealthFixture {
         }
 
         /// `POST /devices/pairing-codes` for an app session: the code without `url` or `qr_payload`.
+        /// Codes start with SYN so screens and tests can tell them from the manual code.
         mutating func createCode() -> Reply {
-            let symbols = (0..<8).map { _ in String(AppleHealthFixture.alphabet.randomElement()!) }.joined()
+            let symbols = "SYN" + (0..<5).map { _ in String(AppleHealthFixture.alphabet.randomElement()!) }.joined()
             let code = symbols.prefix(4) + "-" + symbols.suffix(4)
             codes.insert(String(symbols))
             return AppleHealthFixture.json(201, ["code": code, "expires_at": AppleHealthFixture.iso(Date().addingTimeInterval(600))])
