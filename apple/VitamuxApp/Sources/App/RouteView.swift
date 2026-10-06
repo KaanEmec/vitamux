@@ -30,10 +30,7 @@ struct RouteView: View {
         case .rules: RulesView()
         case .rule(let metric, let saved): RuleView(metric: metric, saved: saved)
         case .ruleNew(let metric, let from, let blank): RuleBuilderView(metric: metric, from: from, blank: blank)
-        case .settings(.system): SystemStatusView()
-        case .settings(.app): AppSettingsView()
-        case .settings(let page):
-            PlaceholderView(title: page.title, detail: [], job: "J22.13")
+        case .settings(let page): SettingsPageView(page: page)
         case .appleHealth: AppleHealthView()
         }
     }

@@ -9,7 +9,7 @@ typealias DeviceRecords = Components.Schemas.DeviceRecords
 /// wins over the provider's. Merge moves every record of one device onto another of the same
 /// provider, for one physical device reported twice; it cannot be undone.
 @Observable
-final class DevicesModel {
+final class ConnectionDevicesModel {
     private(set) var devices: Loadable<[SourceDevice]> = .loading
     private(set) var types: [String] = []
     private(set) var problem: Problem?
@@ -57,7 +57,7 @@ final class DevicesModel {
     }
 
     func setType(_ d: SourceDevice, _ type: String, client: Client?) async {
-        await patch(d, .init(deviceType: type), done: "\(DevicesModel.label(d)) is a \(type.replacingOccurrences(of: "_", with: " ")). Resolved values are being recomputed.", client: client)
+        await patch(d, .init(deviceType: type), done: "\(ConnectionDevicesModel.label(d)) is a \(type.replacingOccurrences(of: "_", with: " ")). Resolved values are being recomputed.", client: client)
     }
 
     func setName(_ d: SourceDevice, _ value: String, client: Client?) async {
@@ -113,7 +113,7 @@ final class DevicesModel {
 
 struct DevicesTab: View {
     @Environment(AppState.self) private var state
-    @State private var model = DevicesModel()
+    @State private var model = ConnectionDevicesModel()
     let connection: Connection
 
     var body: some View {
@@ -146,7 +146,7 @@ struct DevicesTab: View {
         if !merged.isEmpty {
             Section("Merged devices") {
                 ForEach(merged, id: \.id) { d in
-                    let into = listed.first { $0.id == d.mergedInto }.map(DevicesModel.label) ?? "another device"
+                    let into = listed.first { $0.id == d.mergedInto }.map(ConnectionDevicesModel.label) ?? "another device"
                     Text("\(d.fingerprint) was merged into \(into); its new records are stored there.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -160,7 +160,7 @@ struct DevicesTab: View {
 private struct DeviceSection: View {
     @Environment(AppState.self) private var state
     let device: SourceDevice
-    let model: DevicesModel
+    let model: ConnectionDevicesModel
     let connection: Connection
     let targets: [SourceDevice]
     @State private var name = ""
@@ -169,11 +169,11 @@ private struct DeviceSection: View {
     var body: some View {
         Section {
             VStack(alignment: .leading, spacing: 2) {
-                Text(DevicesModel.label(device)).font(.headline)
+                Text(ConnectionDevicesModel.label(device)).font(.headline)
                 Text(([device.fingerprint] + [device.manufacturer].compactMap(\.self)).joined(separator: " · "))
                     .font(.caption.monospaced())
                     .foregroundStyle(.secondary)
-                Text(DevicesModel.recordText(model.own(device, connection))).font(.footnote).foregroundStyle(.secondary)
+                Text(ConnectionDevicesModel.recordText(model.own(device, connection))).font(.footnote).foregroundStyle(.secondary)
             }
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("device-\(device.fingerprint)")
@@ -194,7 +194,7 @@ private struct DeviceSection: View {
             if !targets.isEmpty {
                 Button("Merge into…") { merging = true }
                     .disabled(model.busy)
-                    .accessibilityLabel("Merge \(DevicesModel.label(device)) into another device")
+                    .accessibilityLabel("Merge \(ConnectionDevicesModel.label(device)) into another device")
                     .accessibilityIdentifier("merge-\(device.fingerprint)")
                     // On the row, not on the Section, so the list presents it once.
                     .sheet(isPresented: $merging) {
@@ -218,7 +218,7 @@ private struct MergeSheet: View {
     @Environment(\.dismiss) private var dismiss
     let device: SourceDevice
     let targets: [SourceDevice]
-    let model: DevicesModel
+    let model: ConnectionDevicesModel
     @State private var target = ""
     @State private var confirmed = false
 
@@ -226,11 +226,11 @@ private struct MergeSheet: View {
         NavigationStack {
             Form {
                 Picker("Merge into", selection: $target) {
-                    ForEach(targets, id: \.id) { Text("\(DevicesModel.label($0)) (\($0.fingerprint))").tag($0.id) }
+                    ForEach(targets, id: \.id) { Text("\(ConnectionDevicesModel.label($0)) (\($0.fingerprint))").tag($0.id) }
                 }
                 .accessibilityIdentifier("mergeTarget")
                 Section {
-                    Text("All records of \(DevicesModel.label(device)) (\(DevicesModel.recordText(model.total(device)).lowercased()), older versions included) move to \(chosen.map(DevicesModel.label) ?? "the device you pick"), and records it reports later are stored there too. Its own type and name no longer apply. Rules that name \(DevicesModel.label(device)) by its id stop matching it.")
+                    Text("All records of \(ConnectionDevicesModel.label(device)) (\(ConnectionDevicesModel.recordText(model.total(device)).lowercased()), older versions included) move to \(chosen.map(ConnectionDevicesModel.label) ?? "the device you pick"), and records it reports later are stored there too. Its own type and name no longer apply. Rules that name \(ConnectionDevicesModel.label(device)) by its id stop matching it.")
                         .font(.subheadline)
                     Toggle("I understand that a merge cannot be undone here.", isOn: $confirmed)
                         .accessibilityIdentifier("confirmMerge")
@@ -247,7 +247,7 @@ private struct MergeSheet: View {
                     .accessibilityIdentifier("mergeDevices")
                 }
             }
-            .navigationTitle("Merge \(DevicesModel.label(device))")
+            .navigationTitle("Merge \(ConnectionDevicesModel.label(device))")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
             .onAppear { if target.isEmpty { target = targets.first?.id ?? "" } }
