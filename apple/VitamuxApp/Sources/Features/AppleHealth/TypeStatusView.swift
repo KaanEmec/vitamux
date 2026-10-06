@@ -45,11 +45,11 @@ private struct TypeRow: View {
                 if possiblyDenied {
                     Text("Possibly denied: nothing arrived for 7 days")
                         .font(.caption)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Color.feedbackWarn)
                         .accessibilityIdentifier("possiblyDenied-\(type.id)")
                 }
                 if let error = status?.lastError {
-                    Text(error).font(.caption).foregroundStyle(.red)
+                    Text(error).font(.caption).foregroundStyle(Color.feedbackError)
                 }
             }
             Spacer()

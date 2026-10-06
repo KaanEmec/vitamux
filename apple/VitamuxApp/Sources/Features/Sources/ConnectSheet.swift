@@ -108,6 +108,7 @@ struct ConnectSheet: View {
                     ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 }
         }
+        .sheetBackground()
         .task { await model.load(state.client, start: start) }
     }
 

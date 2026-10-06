@@ -140,8 +140,8 @@ private struct KeyRow: View {
                 Text(key.name).font(.headline)
                 Spacer()
                 switch APIKeysModel.state(of: key) {
-                case .active: Label("Active", systemImage: "checkmark.circle").foregroundStyle(.green)
-                case .expired: Label("Expired", systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+                case .active: Label("Active", systemImage: "checkmark.circle").foregroundStyle(Color.feedbackOK)
+                case .expired: Label("Expired", systemImage: "exclamationmark.triangle").foregroundStyle(Color.feedbackWarn)
                 case .revoked: Label("Revoked", systemImage: "nosign").foregroundStyle(.secondary)
                 }
             }
@@ -192,6 +192,7 @@ private struct NewKeySheet: View {
             .toolbar { toolbar }
             .interactiveDismissDisabled(secret != nil)
         }
+        .sheetBackground()
     }
 
     @ViewBuilder private var form: some View {

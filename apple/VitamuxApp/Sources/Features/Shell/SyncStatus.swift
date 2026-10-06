@@ -39,7 +39,7 @@ struct SyncStatusButton: View {
                 // An HStack, not a Label: toolbars show a Label's icon only.
                 HStack(spacing: 6) {
                     Image(systemName: model.attention > 0 ? "exclamationmark.triangle.fill" : "circle.fill")
-                        .foregroundStyle(model.attention > 0 ? .orange : .green)
+                        .foregroundStyle(model.attention > 0 ? Color.feedbackWarn : Color.feedbackOK)
                         .imageScale(.small)
                     Text(text).font(.footnote)
                 }

@@ -37,6 +37,7 @@ struct PointSheet: View {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.accessibilityIdentifier("closePoint") }
             }
         }
+        .sheetBackground()
         .presentationDetents([.medium, .large])
         .sheet(item: $override) { request in
             OverrideSheet(request: request, metric: model.code, date: date, value: value) { model.changed() }
@@ -85,7 +86,7 @@ struct ResolvedSection: View {
                 if !warnings.isEmpty {
                     Label("Warnings: \(warnings.joined(separator: ", "))", systemImage: "exclamationmark.triangle")
                         .font(.footnote)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Color.feedbackWarn)
                 }
             } else {
                 Text("No resolved value for this window.").foregroundStyle(.secondary)

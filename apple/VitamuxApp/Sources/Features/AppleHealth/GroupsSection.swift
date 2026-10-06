@@ -114,6 +114,7 @@ private struct OptInSheet: View {
                 }
             }
         }
+        .sheetBackground()
         .presentationDetents([.medium, .large])
     }
 }

@@ -1,6 +1,6 @@
 # iOS app screens and deep links
 
-Wireframe-level map for [E22](../plan/E22-ios-app/README.md): which screens, sheets and links each tab has, and the panel route each mirrors. No visual design ([J22.24](../plan/E22-ios-app/J22.24-design-pass.md)). Decisions: [ios-app](ios-app.md#navigation), [ADR-0023](../adr/0023-ios-app.md).
+Wireframe-level map for [E22](../plan/E22-ios-app/README.md): which screens, sheets and links each tab has, and the panel route each mirrors. Visual design: [ios-design](ios-design.md). Decisions: [ios-app](ios-app.md#navigation), [ADR-0023](../adr/0023-ios-app.md).
 
 ## Rules
 

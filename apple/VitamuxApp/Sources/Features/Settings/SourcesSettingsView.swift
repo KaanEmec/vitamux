@@ -348,7 +348,7 @@ private struct CredentialsRow: View {
                 if app?.managedByEnvironment == true {
                     Label("Managed by the environment", systemImage: "info.circle").foregroundStyle(.secondary)
                 } else if app?.set == true {
-                    Label("Set", systemImage: "checkmark.circle").foregroundStyle(.green)
+                    Label("Set", systemImage: "checkmark.circle").foregroundStyle(Color.feedbackOK)
                 } else {
                     Label("Not set", systemImage: "circle.dashed").foregroundStyle(.secondary)
                 }
@@ -386,7 +386,7 @@ private struct SidecarRow: View {
                 Text(sidecar.url).font(.caption.monospaced()).foregroundStyle(.secondary)
                 Label(sidecar.available ? "Answering" : "Not answering", systemImage: sidecar.available ? "checkmark.circle" : "circle.slash")
                     .font(.caption)
-                    .foregroundStyle(sidecar.available ? .green : .secondary)
+                    .foregroundStyle(sidecar.available ? Color.feedbackOK : .secondary)
                 Text(sidecar.source == .panel ? sidecar.createdAt.map { "Added \(SettingsFormat.when($0))" } ?? "Added here" : sidecar.bundled ? "Bundled" : "Environment")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -464,6 +464,7 @@ private struct AppCredentialsSheet: View {
                 }
             }
         }
+        .sheetBackground()
     }
 }
 
@@ -536,5 +537,6 @@ private struct AddSidecarSheet: View {
                 }
             }
         }
+        .sheetBackground()
     }
 }

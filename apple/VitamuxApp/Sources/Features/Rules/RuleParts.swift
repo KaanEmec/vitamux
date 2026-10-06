@@ -31,7 +31,7 @@ struct RuleBadge: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .foregroundStyle(custom ? Color.accentColor : .secondary)
-            .background(custom ? Color.accentColor.opacity(0.15) : Color(.tertiarySystemFill), in: .capsule)
+            .background(custom ? Color.accentColor.opacity(0.15) : Color.raised, in: .capsule)
     }
 
     private var custom: Bool { rule.map { !$0.builtin } ?? false }
@@ -53,8 +53,8 @@ struct DraftBadge: View {
             .font(.caption.weight(.semibold))
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .foregroundStyle(.purple)
-            .background(Color.purple.opacity(0.15), in: .capsule)
+            .foregroundStyle(Color.draft)
+            .background(Color.draftSoft, in: .capsule)
     }
 }
 
@@ -107,7 +107,7 @@ struct ProblemBanner: View {
         VStack(alignment: .leading, spacing: 4) {
             Label(problem.title, systemImage: "exclamationmark.triangle.fill")
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.red)
+                .foregroundStyle(Color.feedbackError)
             if let detail = problem.detail { Text(detail).font(.footnote) }
             ForEach(problem.fieldErrors.filter { !hidden($0.pointer) }, id: \.pointer) { error in
                 Text("\(error.pointer): \(error.detail)").font(.footnote.monospaced())
@@ -131,7 +131,7 @@ struct InlineError: View {
                 Image(systemName: "exclamationmark.circle.fill").accessibilityHidden(true)
             }
             .font(.footnote)
-            .foregroundStyle(.red)
+            .foregroundStyle(Color.feedbackError)
         }
     }
 }

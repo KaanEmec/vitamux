@@ -43,15 +43,15 @@ struct MoreView: View {
         @Bindable var state = state
         List {
             Section {
-                NavigationLink(value: Route.rules) { Label("Rules", systemImage: "slider.horizontal.3") }
+                NavigationLink(value: Route.rules) { Row(title: "Rules", systemImage: "slider.horizontal.3", tile: .hue(.hrv), value: nil) }
                 NavigationLink(value: Route.appleHealth) {
-                    Row(title: "Apple Health", systemImage: "heart.fill", value: "iPhone and Watch")
+                    Row(title: "Apple Health", systemImage: "heart.fill", tile: .source("apple_health"), value: "iPhone and Watch")
                 }
             }
             Section("Server settings") {
                 ForEach(Self.serverPages, id: \.page) { item in
                     NavigationLink(value: Route.settings(item.page)) {
-                        Row(title: item.title, systemImage: item.systemImage, value: value(for: item.page))
+                        Row(title: item.title, systemImage: item.systemImage, tile: item.tile, value: value(for: item.page))
                     }
                     .accessibilityIdentifier("more-\(item.page.rawValue)")
                 }
@@ -60,27 +60,27 @@ struct MoreView: View {
                 Picker(selection: $state.theme) {
                     ForEach(Theme.allCases, id: \.self) { Text($0.label).tag($0) }
                 } label: {
-                    Label("Appearance", systemImage: "circle.lefthalf.filled")
+                    Label { Text("Appearance") } icon: { RowTile(systemImage: "circle.lefthalf.filled", tile: .hue(.sleep)) }
                 }
                 .accessibilityIdentifier("themePicker")
                 NavigationLink(value: Route.settings(.app)) {
-                    Row(title: "App lock", systemImage: "faceid", value: state.appLock ? state.lockMethod : "Off")
+                    Row(title: "App lock", systemImage: "faceid", tile: .hue(.steps), value: state.appLock ? state.lockMethod : "Off")
                 }
                 .accessibilityIdentifier("appLockRow")
                 NavigationLink(value: Route.settings(.app)) {
-                    Row(title: "Notifications", systemImage: "bell",
+                    Row(title: "Notifications", systemImage: "bell.fill", tile: .hue(.activeEnergy),
                         value: "\(notificationsOn) of \(AppPreferences.Notification.allCases.count) on")
                 }
                 .accessibilityIdentifier("notificationsRow")
                 NavigationLink(value: Route.settings(.app)) {
-                    Row(title: "Offline cache", systemImage: "internaldrive", value: SettingsFormat.bytes(cacheBytes))
+                    Row(title: "Offline cache", systemImage: "internaldrive.fill", tile: .hue(.other), value: SettingsFormat.bytes(cacheBytes))
                 }
             }
             Section {
                 LabeledContent {
                     Text(state.profile?.baseURL.host() ?? "").accessibilityIdentifier("signedInServer")
                 } label: {
-                    Label("Signed in to", systemImage: "server.rack")
+                    Label { Text("Signed in to") } icon: { RowTile(systemImage: "server.rack", tile: .hue(.vo2)) }
                 }
                 Button("Sign out…", role: .destructive) { isSigningOut = true }
                     .accessibilityIdentifier("signOutButton")
@@ -106,34 +106,53 @@ struct MoreView: View {
         }
     }
 
-    /// The artboard's order and copy; each opens `vitamux://settings/{page}`.
-    static let serverPages: [(page: Route.SettingsPage, title: String, systemImage: String)] = [
-        (.profile, "Profile and timezone", "person.crop.circle"),
-        (.sources, "Sources", "point.3.connected.trianglepath.dotted"),
-        (.devices, "Devices and origins", "iphone"),
-        (.security, "Security", "lock.shield"),
-        (.apiKeys, "API keys", "key"),
-        (.ai, "AI providers", "sparkles"),
-        (.retention, "Retention", "clock.arrow.circlepath"),
-        (.backups, "Backups and export", "externaldrive"),
-        (.system, "System status", "waveform.path.ecg"),
+    /// The artboard's order, copy and tile colours; each opens `vitamux://settings/{page}`.
+    static let serverPages: [(page: Route.SettingsPage, title: String, systemImage: String, tile: RowTile.Colours)] = [
+        (.profile, "Profile and timezone", "person.crop.circle.fill", .hue(.vo2)),
+        (.sources, "Sources", "point.3.connected.trianglepath.dotted", .hue(.lab)),
+        (.devices, "Devices and origins", "iphone", .hue(.spo2)),
+        (.security, "Security", "lock.shield.fill", .hue(.steps)),
+        (.apiKeys, "API keys", "key.fill", .hue(.weight)),
+        (.ai, "AI providers", "sparkles", .hue(.bloodPressure)),
+        (.retention, "Retention", "clock.arrow.circlepath", .hue(.other)),
+        (.backups, "Backups and export", "externaldrive.fill", .info),
+        (.system, "System status", "waveform.path.ecg", .hue(.vo2)),
     ]
 }
 
+/// A More row: its tile and title, and the page's value on the trailing side.
 private struct Row: View {
     let title: String
     let systemImage: String
+    let tile: RowTile.Colours
     let value: String?
 
     var body: some View {
-        if let value {
-            LabeledContent {
-                Text(value)
-            } label: {
-                Label(title, systemImage: systemImage)
-            }
-        } else {
-            Label(title, systemImage: systemImage)
+        LabeledContent {
+            if let value { Text(value) }
+        } label: {
+            Label { Text(title) } icon: { RowTile(systemImage: systemImage, tile: tile) }
+        }
+    }
+}
+
+/// The 40-point tile of a settings row, in the metric palette, a source's colour or info blue.
+struct RowTile: View {
+    enum Colours {
+        case hue(MetricHue)
+        case source(String)
+        case info
+    }
+
+    let systemImage: String
+    let tile: Colours
+
+    var body: some View {
+        switch tile {
+        case .hue(let hue): IconTile(symbol: systemImage, color: hue.color, tint: hue.tint, size: TileSize.settings)
+        case .source(let provider):
+            IconTile(symbol: systemImage, color: SourceStyle.color(provider), tint: SourceStyle.color(provider).opacity(0.16), size: TileSize.settings)
+        case .info: IconTile(symbol: systemImage, color: .feedbackInfo, tint: .feedbackInfoSoft, size: TileSize.settings)
         }
     }
 }

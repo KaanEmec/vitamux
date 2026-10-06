@@ -67,6 +67,7 @@ struct RuleLensSheet: View {
                 }
             }
         }
+        .sheetBackground()
         .presentationDetents([.medium, .large])
         .task { await model.load(state.client) }
         .task(id: model.draftKey) { await model.previewAfterPause(state.client) }
@@ -341,7 +342,7 @@ private struct LensSumAck: View {
     var body: some View {
         Section {
             Label("Adding sources can count the same activity twice.", systemImage: "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
+                .foregroundStyle(Color.feedbackWarn)
             Toggle("I understand the duplicate risk", isOn: Binding { model.form?.isSumAcknowledged ?? false } set: { model.setAcknowledged($0) })
                 .accessibilityIdentifier("ackToggle")
             InlineError(text: model.ackError.isEmpty ? model.error("/spec/acknowledged_warnings") : model.ackError, id: "ackError")
@@ -390,7 +391,7 @@ private struct LensMessage: View {
                 Label {
                     Text(model.message).accessibilityIdentifier("lensMessage")
                 } icon: {
-                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).accessibilityHidden(true)
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.feedbackOK).accessibilityHidden(true)
                 }
                 if let back = model.revertTo {
                     Button("Revert to version \(back)") {

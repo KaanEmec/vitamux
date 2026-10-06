@@ -140,25 +140,3 @@ extension DataStatus {
     }
 }
 
-/// The status glyph and word of a resolved value.
-struct StatusLabel: View {
-    let status: DataStatus
-
-    var body: some View {
-        Label {
-            Text(status.label)
-        } icon: {
-            Image(systemName: status.symbol).foregroundStyle(status.color).imageScale(.small)
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// A source chip: its stable colour dot and name.
-struct SourceDot: View {
-    let provider: String
-
-    var body: some View {
-        Circle().fill(SourceStyle.color(provider)).frame(width: 8, height: 8).accessibilityHidden(true)
-    }
-}

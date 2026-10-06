@@ -205,7 +205,7 @@ struct RetentionView: View {
         Section {
             Label("Pruned raw payloads can no longer be reprocessed: normalization fixes and new rules cannot be re-run on them. The server still keeps raw that reprocessing needs.", systemImage: "exclamationmark.triangle")
                 .font(.footnote)
-                .foregroundStyle(.orange)
+                .foregroundStyle(Color.feedbackWarn)
             ForEach($model.rawRows) { $row in
                 VStack(alignment: .leading) {
                     HStack {

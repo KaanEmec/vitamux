@@ -179,6 +179,7 @@ private struct DeleteSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
         }
+        .sheetBackground()
     }
 
     private func choice(_ value: Operations.DeleteConnection.Input.Query.DataPayload, _ title: String) -> some View {

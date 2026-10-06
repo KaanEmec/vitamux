@@ -73,9 +73,9 @@ private struct StepBar: View {
                                 .font(.subheadline.weight(.semibold).monospacedDigit())
                                 .frame(width: 34, height: 34)
                                 .foregroundStyle(i == model.step ? Color.white : .primary)
-                                .background(i == model.step ? Color.accentColor : Color(.tertiarySystemFill), in: .circle)
+                                .background(i == model.step ? Color.accentColor : Color.raised, in: .circle)
                             if model.stepHasErrors(i) {
-                                Image(systemName: "exclamationmark.circle.fill").font(.caption).foregroundStyle(.red)
+                                Image(systemName: "exclamationmark.circle.fill").font(.caption).foregroundStyle(Color.feedbackError)
                             }
                         }
                     }
@@ -123,6 +123,7 @@ private struct StepButtons: View {
                     Task { await model.go(model.step + 1, client: state.client) }
                 }
                 .buttonStyle(.borderedProminent)
+                .foregroundStyle(Color.onAccent)
                 .disabled(model.step == 0 && model.metric.isEmpty)
                 .accessibilityIdentifier("nextStep")
             } else {
@@ -130,6 +131,7 @@ private struct StepButtons: View {
                     Task { if let v = await model.save(state.client) { saved(v) } }
                 }
                 .buttonStyle(.borderedProminent)
+                .foregroundStyle(Color.onAccent)
                 .disabled(model.saving)
                 .accessibilityIdentifier("saveRule")
             }

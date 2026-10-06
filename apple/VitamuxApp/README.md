@@ -2,6 +2,21 @@
 
 The native iPhone client of a self-hosted Vitamux server ([E22](../../docs/plan/E22-ios-app/README.md), [design](../../docs/architecture/ios-app.md), [ADR-0023](../../docs/adr/0023-ios-app.md)). It replaced the Vitamux Bridge app (`apple/HealthBridgeApp`, removed in J22.14) and syncs Apple Health through [HealthBridgeKit](../HealthBridgeKit). J22.5 built the project, the server step and sign-in, the shell (tabs, search, sync status, theme, sign-out), the `vitamux://` router and app lock; screens later jobs build show a placeholder.
 
+## Screens
+
+<p>
+<img src="../../docs/images/ios/dashboard.png" width="195" alt="Dashboard: today's alerts and metric cards">
+<img src="../../docs/images/ios/explore.png" width="195" alt="Explore: source filters and metrics by section">
+<img src="../../docs/images/ios/metric.png" width="195" alt="Metric detail: the latest value and the chart with a fallback source">
+<img src="../../docs/images/ios/sleep.png" width="195" alt="Sleep: stats and nightly stages">
+<img src="../../docs/images/ios/sources.png" width="195" alt="Sources: Apple Health and connection cards with run strips">
+<img src="../../docs/images/ios/more.png" width="195" alt="More: rules, Apple Health and server settings">
+<img src="../../docs/images/ios/sign-in.png" width="195" alt="Sign in to your own server">
+<img src="../../docs/images/ios/customize-light.png" width="195" alt="Customize the dashboard in the light theme">
+</p>
+
+Synthetic data from the fake server; the look is [ios-design](../../docs/architecture/ios-design.md). `scripts/screenshots.sh ["<simulator name>"]` refreshes them.
+
 ## Build from source
 
 ```sh
@@ -41,7 +56,7 @@ Metric (small, medium, lock-screen rectangular, circular and inline), Sleep (wit
 
 ## UI tests
 
-UI tests launch the app with `-uitest`: the kit's fake server (`FakeServer.uiTestServers`: `fake.vitamux.test`, plus `old.vitamux.test` from before the version handshake, `other.vitamux.test` that is not Vitamux, and any other `*.vitamux.test` unreachable), an in-memory session, cleared preferences and a fake HealthStore (no HealthKit prompts); app lock opens on the button. More arguments: `-uitest-totp` (two-factor on), `-uitest-paired` (a paired iPhone), `-uitest-revoked` and `-uitest-anchor-reset` (the server revoked that iPhone, or asks it to pull again), `-uitest-keep-device` (keep what a Bridge build left), `-uitest-empty-install` and `-uitest-panel-layout` (the dashboard's start: no data, or a layout saved in the panel). The link `vitamux://uitest/expire-sessions` ends the fake's sessions, for expiry mid-use. Open links in the running app with `openLink` (`UITestSupport.swift`); `XCUIApplication.open` relaunches it. More arguments: `-uitest-totp` (two-factor on), `-uitest-paired` (a paired iPhone), `-uitest-keep-device` (keep what a Bridge build left), `-uitest-empty-install` and `-uitest-panel-layout` (the dashboard's start: no data, or a layout saved in the panel), `-uitest-withings-env` (Withings app credentials set by the environment).
+UI tests launch the app with `-uitest`: the kit's fake server (`FakeServer.uiTestServers`: `fake.vitamux.test`, plus `old.vitamux.test` from before the version handshake, `other.vitamux.test` that is not Vitamux, and any other `*.vitamux.test` unreachable), an in-memory session, cleared preferences and a fake HealthStore (no HealthKit prompts); app lock opens on the button. More arguments: `-uitest-totp` (two-factor on), `-uitest-paired` (a paired iPhone), `-uitest-revoked` and `-uitest-anchor-reset` (the server revoked that iPhone, or asks it to pull again), `-uitest-keep-device` (keep what a Bridge build left), `-uitest-empty-install` and `-uitest-panel-layout` (the dashboard's start: no data, or a layout saved in the panel). The link `vitamux://uitest/expire-sessions` ends the fake's sessions, for expiry mid-use. Open links in the running app with `openLink` (`UITestSupport.swift`); `XCUIApplication.open` relaunches it. More arguments: `-uitest-totp` (two-factor on), `-uitest-paired` (a paired iPhone), `-uitest-keep-device` (keep what a Bridge build left), `-uitest-empty-install` and `-uitest-panel-layout` (the dashboard's start: no data, or a layout saved in the panel), `-uitest-withings-env` (Withings app credentials set by the environment). `ScreenshotUITests` skips unless the runner has `SCREENSHOT_DIR` ([screens](#screens)).
 
 ## Layout
 
@@ -49,7 +64,8 @@ UI tests launch the app with `-uitest`: the kit's fake server (`FakeServer.uiTes
 | --- | --- |
 | `Sources/App/` | `VitamuxApp` (entry), `AppState` (the one shared object: server, session, client, router, theme, app lock), `Route` (every linkable screen, `vitamux://` parsing), `RootView` (sign-in, lock or shell; app-switcher blur), `ShellView` (tabs and stacks), `RouteView` (the screen per route) |
 | `Sources/Features/<Feature>/` | A feature's views and, where a screen loads or changes data, its `@Observable` model (`SignIn`, `Shell` for search and sync status, `Lock`, `More`, `Settings`, `AppleHealth`, …) |
-| `Sources/Shared/` | Components used by more than one feature (`ProblemView`, `PlaceholderView`, `AppMark`) |
+| `Sources/Shared/` | Components used by more than one feature (`ProblemView`, `PlaceholderView`, `AppMark`), the design tokens (`Tokens.swift`, `Tokens.xcassets`) and the shared styles (`Card`: card surface, ground, section header, `ValueText`; `MetricTile`; `StatusChips`: status and source cues), per [ios-design](../../docs/architecture/ios-design.md) |
+| `Sources/Assets.xcassets` | The app icon and the global accent colour |
 | `Widgets/` | The widget extension (see [Widgets](#widgets)); `Shared/` is compiled into the app too, `Tests/` is `VitamuxWidgetsTests` |
 | `UITests/` | UI tests, one file per screen |
 | [`../VitamuxKit`](../VitamuxKit) | API client (J22.4), `Core` (`Loadable`, `Problem`), charts (J22.6) |

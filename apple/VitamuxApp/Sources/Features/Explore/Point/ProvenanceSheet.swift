@@ -45,6 +45,7 @@ struct ProvenanceSheet: View {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.accessibilityIdentifier("closeProvenance") }
             }
         }
+        .sheetBackground()
         .task { await model.load(request, client: state.client) }
     }
 }

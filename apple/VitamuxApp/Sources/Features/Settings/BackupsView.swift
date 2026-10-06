@@ -103,7 +103,7 @@ struct BackupsView: View {
                         .accessibilityIdentifier("lastBackup")
                 case .loaded(nil):
                     Label("No backup is recorded.", systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Color.feedbackWarn)
                         .accessibilityIdentifier("lastBackup")
                 case .failed(let problem):
                     ProblemRow(problem: problem)
@@ -180,7 +180,7 @@ private struct JobSection: View {
                 .accessibilityIdentifier("exportStatus")
             case .failed:
                 Label("The export failed. Check the server log, then try again.", systemImage: "xmark.octagon")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(Color.feedbackError)
                     .accessibilityIdentifier("exportStatus")
             case .done:
                 Label("Export ready\(job.sizeBytes.map { " (\(SettingsFormat.bytes(Int64($0))))" } ?? "").", systemImage: "checkmark.circle")

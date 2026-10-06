@@ -141,28 +141,28 @@ extension LabStatus {
     init(_ status: LabDocument.StatusPayload) {
         switch status {
         case .uploaded: self.init(label: "Uploaded", symbol: "arrow.up.doc")
-        case .extracting: self.init(label: "Extracting", symbol: "hourglass", tint: .blue)
-        case .needsReview: self.init(label: "Needs review", symbol: "exclamationmark.circle", tint: .orange)
-        case .confirmed: self.init(label: "Confirmed", symbol: "checkmark.circle.fill", tint: .green)
+        case .extracting: self.init(label: "Extracting", symbol: "hourglass", tint: .feedbackInfo)
+        case .needsReview: self.init(label: "Needs review", symbol: "exclamationmark.circle", tint: .feedbackWarn)
+        case .confirmed: self.init(label: "Confirmed", symbol: "checkmark.circle.fill", tint: .feedbackOK)
         case .deleted: self.init(label: "Deleted", symbol: "trash", tint: .secondary)
         }
     }
 
     init(_ status: Extraction.StatusPayload) {
         switch status {
-        case .queued: self.init(label: "Queued", symbol: "hourglass", tint: .blue)
-        case .running: self.init(label: "Running", symbol: "hourglass", tint: .blue)
-        case .succeeded: self.init(label: "Ready for review", symbol: "exclamationmark.circle", tint: .orange)
-        case .failed: self.init(label: "Failed", symbol: "xmark.octagon", tint: .red)
-        case .confirmed: self.init(label: "Confirmed", symbol: "checkmark.circle.fill", tint: .green)
+        case .queued: self.init(label: "Queued", symbol: "hourglass", tint: .feedbackInfo)
+        case .running: self.init(label: "Running", symbol: "hourglass", tint: .feedbackInfo)
+        case .succeeded: self.init(label: "Ready for review", symbol: "exclamationmark.circle", tint: .feedbackWarn)
+        case .failed: self.init(label: "Failed", symbol: "xmark.octagon", tint: .feedbackError)
+        case .confirmed: self.init(label: "Confirmed", symbol: "checkmark.circle.fill", tint: .feedbackOK)
         }
     }
 
     init(_ status: ExtractionRow.ReviewStatusPayload) {
         switch status {
-        case .pending: self.init(label: "Not reviewed", symbol: "circle.dashed", tint: .orange)
-        case .accepted: self.init(label: "Accepted", symbol: "checkmark.circle.fill", tint: .green)
-        case .edited: self.init(label: "Edited", symbol: "pencil.circle.fill", tint: .green)
+        case .pending: self.init(label: "Not reviewed", symbol: "circle.dashed", tint: .feedbackWarn)
+        case .accepted: self.init(label: "Accepted", symbol: "checkmark.circle.fill", tint: .feedbackOK)
+        case .edited: self.init(label: "Edited", symbol: "pencil.circle.fill", tint: .feedbackOK)
         case .rejected: self.init(label: "Rejected", symbol: "xmark.circle", tint: .secondary)
         }
     }
@@ -174,7 +174,7 @@ struct LabNotice: View {
 
     var body: some View {
         Label(text, systemImage: "checkmark.circle.fill")
-            .foregroundStyle(.green)
+            .foregroundStyle(Color.feedbackOK)
             .font(.subheadline)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(text)
@@ -188,7 +188,7 @@ struct LabFieldError: View {
 
     var body: some View {
         if let text {
-            Text(text).font(.footnote).foregroundStyle(.red)
+            Text(text).font(.footnote).foregroundStyle(Color.feedbackError)
         }
     }
 }

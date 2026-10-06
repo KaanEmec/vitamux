@@ -298,5 +298,6 @@ private struct PeriodSheet: View {
                 Text("The previous period extends over it and the local dates it covered are recomputed.")
             }
         }
+        .sheetBackground()
     }
 }

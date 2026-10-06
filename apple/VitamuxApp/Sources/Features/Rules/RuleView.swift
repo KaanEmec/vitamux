@@ -66,7 +66,7 @@ private struct Notice: View {
         Label {
             Text(text).accessibilityIdentifier("ruleNotice")
         } icon: {
-            Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).accessibilityHidden(true)
+            Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.feedbackOK).accessibilityHidden(true)
         }
     }
 }

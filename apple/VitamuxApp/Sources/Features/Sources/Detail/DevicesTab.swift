@@ -252,6 +252,7 @@ private struct MergeSheet: View {
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
             .onAppear { if target.isEmpty { target = targets.first?.id ?? "" } }
         }
+        .sheetBackground()
     }
 
     private var chosen: SourceDevice? { targets.first { $0.id == target } }

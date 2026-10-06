@@ -123,6 +123,7 @@ struct ExtractSheet: View {
             }
             .task { await model.load(state.client) }
         }
+        .sheetBackground()
     }
 }
 

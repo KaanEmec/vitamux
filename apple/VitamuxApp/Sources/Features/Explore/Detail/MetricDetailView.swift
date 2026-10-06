@@ -99,17 +99,17 @@ private struct MetricHeader: View {
     var body: some View {
         Section {
             HStack(spacing: 12) {
-                MetricTile(code: model.code, section: model.meta.value?.section, size: 44)
+                MetricTile(code: model.code, section: model.meta.value?.section, size: TileSize.header)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(subtitle).font(.footnote).foregroundStyle(.secondary)
-                    if let latest = model.latestPoint { Text(Format.day(latest.date)).font(.subheadline) }
+                    Text(subtitle).font(.footnote).foregroundStyle(Color.inkFaint)
+                    if let latest = model.latestPoint { Text(Format.day(latest.date)).font(.subheadline).foregroundStyle(Color.inkMuted) }
                 }
             }
             if let latest = model.latestPoint {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(Format.value(latest.value, unit: model.unit))
-                        .font(.system(.largeTitle, design: .rounded, weight: .semibold))
-                        .monospacedDigit()
+                    ValueText(Format.value(latest.value, unit: model.unit), size: .detail)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
                         .accessibilityIdentifier("latestValue")
                     if let value = model.summary?.value, value.status != .noData {
                         HStack(spacing: 6) {
@@ -122,7 +122,7 @@ private struct MetricHeader: View {
                     if let mean = model.mean(days: 30) {
                         Text("\(Format.signed(latest.value - mean)) vs 30-day mean of \(Format.number(mean))")
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.inkMuted)
                     }
                 }
             } else if model.summary != nil {
