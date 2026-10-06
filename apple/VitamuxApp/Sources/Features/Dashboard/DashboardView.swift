@@ -37,7 +37,7 @@ struct DashboardView: View {
                     .accessibilityIdentifier("customizeButton")
             }
         }
-        .refreshable { await load() }
+        .refreshable { await ResponseCache.refreshing { await load() } }
         .task {
             if case .loading = model.layout { await load() }
         }

@@ -1,11 +1,13 @@
 import SwiftUI
 import VitamuxKit
 
-/// Settings › This app (`vitamux://settings/app`): appearance and app lock. J22.13 adds
-/// notifications, the offline cache and widget redaction.
+/// Settings › This app (`vitamux://settings/app`): appearance, app lock and the offline cache.
+/// J22.13 adds notifications and widget redaction.
 struct AppSettingsView: View {
     @Environment(AppState.self) private var state
     @State private var problem: Problem?
+    /// Bytes in the offline cache; nil until read.
+    @State private var cacheSize: Int?
 
     var body: some View {
         @Bindable var state = state
@@ -33,10 +35,29 @@ struct AppSettingsView: View {
             } footer: {
                 Text("Asks when the app opens and after it has been away. The app-switcher preview is always blurred.")
             }
+            Section {
+                LabeledContent("Stored", value: cacheSize.map(Self.sizeText) ?? "…")
+                    .accessibilityIdentifier("cacheSize")
+                Button("Clear cache", role: .destructive) {
+                    state.cache.clear()
+                    cacheSize = state.cache.size
+                }
+                .disabled(cacheSize == 0)
+                .accessibilityIdentifier("clearCacheButton")
+            } header: {
+                Text("Offline cache")
+            } footer: {
+                Text("What the app last showed, up to 100 MB on this iPhone, for when the server can't be reached. Never sign-in details, keys or lab PDFs. Cleared on sign-out.")
+            }
             if let problem {
                 Section { ProblemView(problem: problem) }
             }
         }
         .navigationTitle("This app")
+        .task { cacheSize = state.cache.size }
+    }
+
+    private static func sizeText(_ bytes: Int) -> String {
+        bytes == 0 ? "Empty" : Int64(bytes).formatted(.byteCount(style: .file))
     }
 }
