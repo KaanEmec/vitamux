@@ -13,6 +13,8 @@
 	through the bucket ladder; a day on the longer ranges drills into it.
 	"Ignored sources" (off by default) lists the origins whose records a device's source filter left
 	raw in the range (lib/explore/IgnoredSources.svelte, J22.25); they never reach the chart.
+	Activity-summary codes link to the activity rings, HRV codes and rr_interval to the beat-to-beat
+	view (J22.18).
 	Query: ?range=1D|1W|1M|3M|1Y|All&end=YYYY-MM-DD (shareable).
 -->
 <script lang="ts">
@@ -44,6 +46,7 @@
 	import { sourceClass } from '#lib/ui/source.ts';
 	import { displayStatus } from '#lib/ui/status.ts';
 	import { dayLabel, dayMs, mean as meanOf } from '#lib/views/format.ts';
+	import { beatCode, ringCodes } from '#lib/watch/watch.ts';
 
 	type Resolved = Schemas['ResolvedValue'];
 	type Days = Record<string, Resolved | undefined>;
@@ -385,6 +388,10 @@
 		<p class="muted">Readings are paired with their other values in the <a href="/explore/blood-pressure">blood pressure view</a>.</p>
 	{:else if view === 'sleep'}
 		<p class="muted">Stages and nights side by side are in the <a href="/explore/sleep">sleep view</a>.</p>
+	{:else if ringCodes.includes(metric)}
+		<p class="muted">Each day against Apple’s goal is in the <a href="/explore/activity-rings">activity rings view</a>.</p>
+	{:else if beatCode(metric)}
+		<p class="muted">The beat-to-beat intervals behind HRV readings are in the <a href="/explore/beats?date={end}">beat-to-beat view</a>.</p>
 	{/if}
 
 	<div class={['layout', lensOpen && 'with-lens']} style:--metric={look.color}>
