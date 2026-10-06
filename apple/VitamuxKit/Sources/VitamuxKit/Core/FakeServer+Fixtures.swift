@@ -133,7 +133,7 @@ extension FakeServer {
     static var allMetrics: [[String: Any]] {
         let base = metrics
         let known = Set(base.compactMap { $0["code"] as? String })
-        return base + dashboardMetrics.filter { !known.contains($0["code"] as? String ?? "") }
+        return base + (dashboardMetrics + WatchFixture.metrics).filter { !known.contains($0["code"] as? String ?? "") }
     }
 
     // MARK: - Source data: five synthetic heart-rate samples, paged by an opaque cursor

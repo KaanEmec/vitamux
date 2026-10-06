@@ -30,8 +30,6 @@ extension FakeServer {
         switch url.path {
         case "/api/v1/inventory":
             return fixture.inventory(base: explore(method: method, url: url, body: Data()))
-        case "/api/v1/metrics":
-            return SpecialisedFixture.json(200, ["metrics": allMetrics + WatchFixture.metrics])
         case "/api/v1/events":
             let codes = query.list("code")
             guard !codes.isEmpty, codes.allSatisfy(WatchFixture.eventCodes.contains) else { return nil }
