@@ -37,7 +37,7 @@ enum SettingsFormat {
     }
 
     static func bytes(_ count: Int64) -> String {
-        count.formatted(.byteCount(style: .file))
+        count == 0 ? "Empty" : count.formatted(.byteCount(style: .file))
     }
 
     /// "HKQuantityTypeIdentifierHeartRate" as "Heart rate"; anything else unchanged.

@@ -67,7 +67,10 @@ final class OfflineCacheUITests: XCTestCase {
         XCTAssertTrue(app.scrollTo(size).waitForExistence(timeout: 10))
         XCTAssertFalse(size.text.contains("Empty"), "the dashboard was stored: \(size.text)")
         app.scrollTo(app.buttons["clearCache"]).tap()
-        app.buttons["confirmClearCache"].tap()
+        let confirm = app.dialogButton("Clear the cache")
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        confirm.tap()
+        XCTAssertTrue(confirm.waitForNonExistence(timeout: 5))
         XCTAssertTrue(size.text.contains("Empty"), size.text)
         XCTAssertFalse(app.buttons["clearCache"].isEnabled)
 
