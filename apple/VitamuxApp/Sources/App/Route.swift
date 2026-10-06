@@ -24,6 +24,8 @@ enum Route: Hashable {
     case labDocument(id: String)
     case labResults
     case analyte(code: String)
+    /// A PDF another app opened in Vitamux (a `file://` URL, not a link).
+    case labImport(file: URL)
 
     // More
     case rules
@@ -52,6 +54,10 @@ enum Route: Hashable {
     }
 
     init?(url: URL) {
+        if url.isFileURL {
+            self = .labImport(file: url)
+            return
+        }
         guard let segments = Self.segments(of: url) else { return nil }
         let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
         let value = { (name: String) in query.first { $0.name == name }?.value.flatMap { $0.isEmpty ? nil : $0 } }
@@ -92,7 +98,7 @@ enum Route: Hashable {
         case .dashboard: .dashboard
         case .explore, .metric, .metricDay, .exploreView, .events: .explore
         case .connections, .connection: .sources
-        case .lab, .labDocument, .labResults, .analyte: .lab
+        case .lab, .labDocument, .labResults, .analyte, .labImport: .lab
         case .more, .rules, .rule, .ruleNew, .settings, .appleHealth: .more
         }
     }

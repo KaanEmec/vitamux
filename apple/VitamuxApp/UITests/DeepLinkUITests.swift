@@ -19,8 +19,8 @@ final class DeepLinkUITests: XCTestCase {
         ("vitamux://connections?connected=withings", "Sources", "Sources", nil), // the banner: SourcesUITests
         ("vitamux://connections/conn_00000000000000000000000000000001?tab=backfills", "Sources", "Withings", nil),
         ("vitamux://lab", "Lab", "Lab", nil),
-        ("vitamux://lab/documents/doc-synthetic", "Lab", "Review", "doc-synthetic"),
-        ("vitamux://lab/results", "Lab", "Results", nil),
+        ("vitamux://lab/documents/doc_00000000000000000000000000000001", "Lab", "Review", nil), // the review: LabUITests
+        ("vitamux://lab/results", "Lab", "Results", nil), // the results: LabUITests
         ("vitamux://lab/analytes/ldl", "Lab", "Analyte history", nil), // the view: SpecialisedUITests
         ("vitamux://rules", "More", "Rules", nil),
         ("vitamux://rules/heart_rate", "More", "heart_rate", nil), // the page: RulesUITests
