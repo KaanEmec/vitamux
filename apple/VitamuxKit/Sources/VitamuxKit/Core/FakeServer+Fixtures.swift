@@ -26,6 +26,7 @@ extension FakeServer {
         if let reply = dashboard(method: method, url: url, body: body) { return reply } // FakeServer+Dashboard.swift
         if let reply = explore(method: method, url: url, body: body) { return reply } // FakeServer+Explore.swift
         if let reply = specialised(method: method, url: url) { return reply } // FakeServer+Specialised.swift
+        if let reply = lab(method: method, url: url, body: body) { return reply } // FakeServer+Lab.swift
         switch (method, url.path) {
         case ("POST", "/api/v1/auth/logout"):
             state.sessions[token] = nil

@@ -23,11 +23,10 @@ struct RouteView: View {
         case .connection(let id, let tab):
             PlaceholderView(title: "Connection", detail: [id, tab], job: "J22.11")
 
-        case .labDocument(let id):
-            PlaceholderView(title: "Review", detail: [id], job: "J22.12")
-        case .labResults:
-            PlaceholderView(title: "Results", detail: [], job: "J22.12")
+        case .labDocument(let id): ReviewView(id: id)
+        case .labResults: ResultsView()
         case .analyte(let code): LabAnalyteView(code: code)
+        case .labImport(let file): LabImportView(file: file)
 
         case .rules:
             PlaceholderView(title: "Rules", detail: [], job: "J22.10")

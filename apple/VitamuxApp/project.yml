@@ -58,7 +58,17 @@ targets:
         NSHealthShareUsageDescription: >-
           Vitamux reads the health data types you enable and uploads them to your own Vitamux server.
           It only reads: it never writes to Apple Health and sends data nowhere else.
-        NSCameraUsageDescription: Used only to scan the pairing QR code shown by your Vitamux server.
+        NSCameraUsageDescription: >-
+          Used only to scan the pairing QR code shown by your Vitamux server, and lab reports you choose to scan,
+          which are sent only to your own Vitamux server.
+        # "Open in Vitamux" for PDFs from another app's share sheet (lab documents, J22.12). iOS copies the
+        # file into the app's Inbox; the app deletes that copy after uploading it.
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: PDF document
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [com.adobe.pdf]
+        LSSupportsOpeningDocumentsInPlace: false
         NSFaceIDUsageDescription: Used only to unlock Vitamux when you turn on app lock.
         UIBackgroundModes: [fetch]
         BGTaskSchedulerPermittedIdentifiers: [org.vitamux.healthbridge.refresh]
