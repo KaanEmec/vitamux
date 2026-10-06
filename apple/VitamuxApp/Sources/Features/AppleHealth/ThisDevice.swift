@@ -47,15 +47,18 @@ final class ThisDevice {
     var isPaired: Bool { credentials != nil }
     var isSyncing: Bool { progress != nil }
     var healthAvailable: Bool { !isLive || HKHealthStore.isHealthDataAvailable() }
-    /// Enabled types this OS knows; an identifier it does not know is skipped by the kit too.
-    var enabledTypes: [HealthType] { Registry.types(in: enabled).filter { $0.sampleType != nil } }
+    /// Enabled types this OS knows, and the daily activity summary (read by date, not a sample type);
+    /// an identifier this OS does not know is skipped by the kit too.
+    var enabledTypes: [HealthType] { Registry.types(in: enabled).filter(Self.isReadable) }
     var lastUpload: Date? { status.values.compactMap(\.lastSync).max() }
     /// Enabled types whose last run failed; their pages are re-sent on the next run.
     var waiting: [HealthType] { enabledTypes.filter { status[$0.id]?.lastError != nil } }
     /// Enabled types without an anchor yet: their history is still to be pulled.
     var historyPending: [HealthType] { enabledTypes.filter { (anchorHashes[$0.id] ?? "none") == "none" } }
 
-    func types(in group: MetricGroup) -> [HealthType] { Registry.types(in: [group]).filter { $0.sampleType != nil } }
+    func types(in group: MetricGroup) -> [HealthType] { Registry.types(in: [group]).filter(Self.isReadable) }
+
+    private static func isReadable(_ type: HealthType) -> Bool { type.sampleType != nil || type.isActivitySummary }
 
     @ObservationIgnored let tokens: TokenStore
     @ObservationIgnored let defaults: UserDefaults
@@ -140,7 +143,7 @@ final class ThisDevice {
             // The same connection keeps its anchors (the server dedupes by UUID); another server
             // or connection gets a full pull.
             if let old = credentials, old.baseURL != paired.baseURL || old.connectionID != paired.connectionID {
-                for type in Registry.v1 { anchors.reset(type.id) }
+                for type in Registry.v2 { anchors.reset(type.id) }
                 refreshAnchors()
             }
             replaceEngine()
@@ -252,7 +255,7 @@ final class ThisDevice {
             let applied = lastAppliedReset ?? .distantPast
             let fresh = me.anchorResets.filter { $0.requestedAt > applied }
             for reset in fresh {
-                for type in Registry.v1 where reset.type == "*" || reset.type == type.id { await engine.resetAnchor(type) }
+                for type in Registry.v2 where reset.type == "*" || reset.type == type.id { await engine.resetAnchor(type) }
             }
             if let newest = fresh.map(\.requestedAt).max() {
                 lastAppliedReset = newest
@@ -324,10 +327,9 @@ final class ThisDevice {
     private func observe(_ types: [HealthType]) async {
         guard let sync else { return }
         let fresh = types.filter { observed.insert($0.id).inserted }
-        do {
-            try await sync.observe(fresh)
-        } catch {
-            problem = Problem(title: "Background delivery could not be enabled", detail: Self.describe(error))
+        // A type iOS refuses background delivery for keeps its observer and does not stop the others.
+        if let (id, error) = await sync.observe(fresh).first {
+            problem = Problem(title: "Background delivery could not be enabled", detail: "\(id): \(Self.describe(error))")
         }
     }
 
@@ -385,7 +387,7 @@ final class ThisDevice {
     }
 
     private func refreshAnchors() {
-        anchorHashes = Dictionary(uniqueKeysWithValues: Registry.v1.map { ($0.id, AnchorStore.hash(anchors.anchor(for: $0.id))) })
+        anchorHashes = Dictionary(uniqueKeysWithValues: Registry.v2.map { ($0.id, AnchorStore.hash(anchors.anchor(for: $0.id))) })
     }
 
     private func persist() {
@@ -467,6 +469,15 @@ nonisolated struct GatedStore: HealthStore {
         }
     }
     func enableBackgroundDelivery(for type: HKSampleType) async throws { try await base.enableBackgroundDelivery(for: type) }
+
+    // Registry v2 detail reads (ADR-0024): forwarded, or the protocol's defaults would refuse them.
+    func electrocardiogram(_ sample: HKSample) async throws -> ECG { try await base.electrocardiogram(sample) }
+    func heartbeats(_ sample: HKSample) async throws -> Beats { try await base.heartbeats(sample) }
+    func route(_ sample: HKSample) async throws -> HealthBridgeCore.Route { try await base.route(sample) }
+    func workoutUUID(of sample: HKSample) async throws -> UUID? { try await base.workoutUUID(of: sample) }
+    func activitySummaries(from start: Date, through end: Date, in calendar: Calendar) async throws -> [ActivitySummary] {
+        try await base.activitySummaries(from: start, through: end, in: calendar)
+    }
 }
 
 #if DEBUG
@@ -530,5 +541,6 @@ nonisolated struct FakeHealthStore: HealthStore {
     }
     func observe(_ type: HKSampleType, onUpdate: @escaping @Sendable (@escaping @Sendable () -> Void) -> Void) {}
     func enableBackgroundDelivery(for type: HKSampleType) async throws {}
+    func activitySummaries(from start: Date, through end: Date, in calendar: Calendar) async throws -> [ActivitySummary] { [] }
 }
 #endif

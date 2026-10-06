@@ -19,6 +19,7 @@ struct PointSheet: View {
             List {
                 ResolvedSection(code: model.code, value: value)
                 InputsSection(code: model.code, value: value, override: $override, provenance: $provenance)
+                BeatsPointLink(code: model.code, date: date)
                 Section("Override") {
                     OverrideButtons(value: value, override: $override)
                     Button {

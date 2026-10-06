@@ -41,6 +41,26 @@
       "note": "derived intensive night code: a band line without intraday",
       "metric": {"aggregation": "intensive", "code": "spo2_night_min", "derived_from": "spo2", "kinds": [], "plausible_range": [50, 100], "provider_scoped": false, "section": "Derived", "selection_only": false, "strategies": ["single_source", "first_available", "mean_across_sources", "minimum_across_sources", "maximum_across_sources", "latest", "earliest"], "unit": "%", "windows": ["local_night", "sleep_episode"]},
       "expect": {"view": "line-band", "day": null}
+    },
+    {
+      "note": "Watch: a raw series (unresolved, no windows) still draws as a band line with a day view",
+      "metric": {"aggregation": "intensive", "code": "rr_interval", "intraday": {"default": "5m", "finest": "raw"}, "kinds": ["sample"], "plausible_range": [0.2, 3], "provider_scoped": false, "section": "Heart and circulation", "selection_only": false, "strategies": [], "unit": "s", "unresolved": true, "windows": []},
+      "expect": {"view": "line-band", "day": {"default": "5m", "finest": "raw"}}
+    },
+    {
+      "note": "Watch: a workout speed is intensive like any other",
+      "metric": {"aggregation": "intensive", "code": "speed_xc_ski", "intraday": {"default": "1m", "finest": "raw"}, "kinds": ["sample"], "plausible_range": [0, 20], "provider_scoped": false, "section": "Activity", "selection_only": false, "strategies": ["single_source", "first_available", "mean_across_sources", "minimum_across_sources", "maximum_across_sources", "latest", "earliest"], "unit": "m/s", "windows": ["bucket", "hour", "local_day", "local_night", "sleep_episode", "latest"]},
+      "expect": {"view": "line-band", "day": {"default": "1m", "finest": "raw"}}
+    },
+    {
+      "note": "Watch: a provider-scoped effort score is a latest step without a day view",
+      "metric": {"aggregation": "latest", "code": "apple_workout_effort", "kinds": ["interval"], "plausible_range": [1, 10], "provider_scoped": true, "section": "Activity", "selection_only": false, "strategies": ["single_source", "first_available", "latest", "earliest"], "unit": "index", "windows": ["local_day", "latest"]},
+      "expect": {"view": "step", "day": null}
+    },
+    {
+      "note": "Watch: an activity-summary daily value (stand hours) is additive bars",
+      "metric": {"aggregation": "additive", "code": "stand_hours", "intraday": {"default": "30m", "finest": "1m"}, "kinds": ["interval", "daily_value"], "plausible_range": [0, 24], "provider_scoped": false, "section": "Activity", "selection_only": false, "strategies": ["single_source", "first_available", "mean_across_sources", "minimum_across_sources", "maximum_across_sources", "sum_across_sources", "latest", "earliest"], "unit": "count", "windows": ["bucket", "hour", "local_day"]},
+      "expect": {"view": "bars", "day": {"default": "30m", "finest": "1m"}}
     }
   ]
 }

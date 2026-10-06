@@ -19,6 +19,13 @@ struct RouteView: View {
         case .exploreView(.bodyComposition): BodyCompositionView()
         case .exploreView(.workouts): WorkoutsView()
         case .events(let code): EventsView(code: code)
+        case .exploreView(.ecg): ECGListView()
+        case .exploreView(.activityRings): ActivityRingsView()
+        case .exploreView(.stateOfMind): StateOfMindView()
+        // Keyed by the link's value, so a new link at the same place in the stack gets a new model.
+        case .ecgRecording(let id): ECGRecordingView(id: id).id(id)
+        case .beats(let date): BeatsView(date: date).id(date)
+        case .workout(let id): WorkoutDetailView(id: id).id(id)
 
         case .connection(let id, let tab): ConnectionDetailView(id: id, tab: tab)
 
@@ -44,6 +51,9 @@ extension Route.ExploreKind {
         case .bloodPressure: "Blood pressure"
         case .bodyComposition: "Body composition"
         case .workouts: "Workouts"
+        case .ecg: "ECG"
+        case .activityRings: "Activity rings"
+        case .stateOfMind: "State of Mind"
         }
     }
 }

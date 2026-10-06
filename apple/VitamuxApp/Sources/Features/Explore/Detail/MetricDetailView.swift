@@ -32,6 +32,7 @@ struct MetricDetailView: View {
                     RangePicker(range: $model.range, end: $model.end, latest: model.latest, ranges: model.spec?.day == nil ? ChartRange.periods : ChartRange.allCases)
                         .accessibilityIdentifier("rangePicker")
                     SpecialisedNote(view: model.spec?.view)
+                    WatchMetricNote(code: model.code)
                     if model.range == .day, let metric = model.meta.value, let intraday = metric.intraday {
                         DayView(detail: model, metric: metric, intraday: intraday) // J22.26
                     } else {
