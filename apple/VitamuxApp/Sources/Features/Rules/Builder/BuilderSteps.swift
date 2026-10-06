@@ -282,7 +282,7 @@ struct StrategyStep: View {
         }
         if form?.needsSumAck == true {
             Section {
-                Label("Adding sources can count the same activity twice.", systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                Label("Adding sources can count the same activity twice.", systemImage: "exclamationmark.triangle.fill").foregroundStyle(Color.feedbackWarn)
                 Text("If two devices recorded the same steps, a sum doubles them. Every result will carry this warning.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -429,7 +429,7 @@ struct ReviewStep: View {
                                 Spacer()
                                 Label(changed ? "Changed" : "Same", systemImage: changed ? "arrow.triangle.swap" : "equal")
                                     .font(.caption)
-                                    .foregroundStyle(changed ? .orange : .secondary)
+                                    .foregroundStyle(changed ? Color.feedbackWarn : .secondary)
                             }
                             Text("Active: \(previewText(d.active))").font(.footnote)
                             Text("Draft: \(previewText(d.draft))").font(.footnote)

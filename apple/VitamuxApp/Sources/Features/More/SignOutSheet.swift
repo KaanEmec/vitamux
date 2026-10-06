@@ -48,6 +48,7 @@ struct SignOutSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             }
         }
+        .sheetBackground()
         .presentationDetents([.medium, .large])
         .onAppear { isPaired = state.device.credentials != nil }
     }

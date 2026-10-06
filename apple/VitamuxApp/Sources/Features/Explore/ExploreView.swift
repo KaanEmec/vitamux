@@ -106,7 +106,8 @@ private struct SourceChips: View {
             }
             .padding(.vertical, 2)
         }
-        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+        .listRowBackground(Color.clear)
     }
 }
 
@@ -118,14 +119,15 @@ private struct Chip: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 if let provider { SourceDot(provider: provider) }
-                Text(title).font(.subheadline.weight(.semibold))
+                Text(title).font(.subheadline.weight(isOn ? .semibold : .regular))
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .foregroundStyle(isOn ? Color(.systemBackground) : .primary)
-            .background(isOn ? Color.primary : Color(.tertiarySystemFill), in: .capsule)
+            .frame(minHeight: 36)
+            .foregroundStyle(isOn ? Color.ground : Color.ink)
+            .background(isOn ? Color.ink : Color.raised, in: .capsule)
+            .overlay(Capsule().strokeBorder(isOn ? Color.clear : Color.cardBorder))
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isOn ? .isSelected : [])

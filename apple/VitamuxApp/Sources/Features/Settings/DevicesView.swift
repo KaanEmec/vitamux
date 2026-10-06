@@ -335,7 +335,7 @@ private struct TypeRow: View {
             if denied {
                 Label("possibly denied", systemImage: "exclamationmark.triangle")
                     .font(.footnote)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Color.feedbackWarn)
             }
         }
         .accessibilityElement(children: .combine)
@@ -395,6 +395,7 @@ private struct ResyncSheet: View {
                 }
             }
         }
+        .sheetBackground()
     }
 }
 

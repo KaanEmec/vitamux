@@ -176,8 +176,8 @@ private struct SourceRow: View {
     /// Used, excluded or not in rule: a shape, a colour and a word.
     private var status: (label: String, symbol: String, color: Color) {
         switch source.ruleStatus {
-        case .used: ("Used", "checkmark.circle.fill", .green)
-        case .excluded: ("Excluded", "xmark.circle.fill", .red)
+        case .used: ("Used", "checkmark.circle.fill", .feedbackOK)
+        case .excluded: ("Excluded", "xmark.circle.fill", .feedbackError)
         case .notInRule: ("Not in rule", "minus.circle", .secondary)
         }
     }

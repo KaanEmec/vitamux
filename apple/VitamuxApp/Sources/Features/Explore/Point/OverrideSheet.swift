@@ -126,6 +126,7 @@ struct OverrideSheet: View {
                 }
             }
         }
+        .sheetBackground()
     }
 
     @ViewBuilder private var fields: some View {
@@ -187,6 +188,6 @@ private struct FieldError: View {
     let text: String?
 
     var body: some View {
-        if let text { Text(text).font(.footnote).foregroundStyle(.red) }
+        if let text { Text(text).font(.footnote).foregroundStyle(Color.feedbackError) }
     }
 }

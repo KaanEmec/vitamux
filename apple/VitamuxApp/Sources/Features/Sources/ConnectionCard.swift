@@ -126,5 +126,6 @@ struct PromptSheetView: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel", action: onClose) }
             }
         }
+        .sheetBackground()
     }
 }

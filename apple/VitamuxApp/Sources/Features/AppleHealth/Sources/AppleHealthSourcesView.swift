@@ -151,7 +151,7 @@ private struct OriginHeader: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            IconTile(origin: origin)
+            OriginTile(origin: origin)
             VStack(alignment: .leading, spacing: 2) {
                 Text(origin.title).font(.headline)
                 Text(origin.writesText)
@@ -170,7 +170,7 @@ private struct OriginHeader: View {
 }
 
 /// The first letter of the name on a tinted rounded square; Apple's own sources get the heart.
-private struct IconTile: View {
+private struct OriginTile: View {
     let origin: AppleHealthSourcesModel.Origin
 
     var body: some View {
@@ -263,6 +263,7 @@ private struct TypesSheet: View {
                 }
             }
         }
+        .sheetBackground()
     }
 }
 

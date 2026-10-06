@@ -15,10 +15,10 @@ struct MetricCardView: View {
         Button(action: open) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 10) {
-                    MetricTile(hue: hue, size: compact ? 32 : 40)
+                    MetricTile(hue: hue, size: compact ? TileSize.settings : TileSize.row)
                     Text(DashboardLayout.label(card.metric))
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.inkMuted)
                         .lineLimit(2)
                         .minimumScaleFactor(0.85)
                         .layoutPriority(1)
@@ -27,7 +27,7 @@ struct MetricCardView: View {
                 }
                 Reading(content: content, large: card.size == .l)
                 if !content.sub.isEmpty {
-                    Text(content.sub).font(.subheadline).foregroundStyle(.secondary)
+                    Text(content.sub).font(.subheadline).foregroundStyle(Color.inkMuted)
                 }
                 if let stages = content.stages {
                     StageBar(stages: stages, showsLegend: !compact)
@@ -36,16 +36,16 @@ struct MetricCardView: View {
                     Sparkline(values: content.values, bars: content.bars, band: content.band, mean: content.mean, hue: hue)
                 }
                 if !footnote.isEmpty {
-                    Text(footnote).font(.footnote).foregroundStyle(.secondary).monospacedDigit()
+                    Text(footnote).font(.footnote).foregroundStyle(Color.inkMuted).monospacedDigit()
                 }
                 if !content.chips.isEmpty {
                     SourceChips(chips: content.chips, limit: compact ? 1 : 3)
                 }
             }
-            .padding(14)
+            .padding(Space.card)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 18))
-            .contentShape(.rect(cornerRadius: 18))
+            .background(CardBackground())
+            .contentShape(.rect(cornerRadius: Radius.card))
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("card-\(card.metric)")
@@ -67,13 +67,11 @@ private struct Reading: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Text(content.value)
-                .font(large ? .largeTitle.bold() : .title.bold())
-                .monospacedDigit()
+            ValueText(content.value, size: large ? .hero : .card)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             if !content.unit.isEmpty {
-                Text(content.unit).font(.subheadline).foregroundStyle(.secondary)
+                Text(content.unit).font(.subheadline).foregroundStyle(Color.inkMuted)
             }
         }
     }
@@ -88,7 +86,7 @@ private struct StatusMark: View {
         HStack(spacing: 5) {
             StatusGlyph(status: status).frame(width: 12, height: 12)
             if showsWord {
-                Text(status.label).font(.footnote).foregroundStyle(.secondary)
+                Text(status.label).font(.subheadline).foregroundStyle(Color.inkMuted)
             }
         }
         .accessibilityElement(children: .ignore)
@@ -119,8 +117,8 @@ private struct StageBar: View {
                     HStack(spacing: 12) { legend }
                     VStack(alignment: .leading, spacing: 4) { legend }
                 }
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(.footnote)
+                .foregroundStyle(Color.inkMuted)
             }
         }
         .accessibilityElement(children: .ignore)
@@ -151,17 +149,11 @@ private struct SourceChips: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            ForEach(chips.prefix(limit), id: \.label) { chip in
-                HStack(spacing: 6) {
-                    Circle().fill(chip.provider.map(SourceStyle.color) ?? .secondary).frame(width: 8, height: 8)
-                    Text(chip.label).font(.caption.weight(.semibold)).lineLimit(1)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Color(.tertiarySystemFill), in: .capsule)
+            ForEach(Array(chips.prefix(limit).enumerated()), id: \.element.label) { index, chip in
+                SourcePill(provider: chip.provider, label: chip.label, emphasised: index == 0)
             }
             if chips.count > limit {
-                Text("+\(chips.count - limit)").font(.caption).foregroundStyle(.secondary)
+                Text("+\(chips.count - limit)").font(.footnote).foregroundStyle(Color.inkMuted)
             }
         }
     }

@@ -327,6 +327,7 @@ private struct ConfirmBar: View {
                         .accessibilityIdentifier("unconfirm")
                     Button("Confirm again") { act { await model.confirm(state.client) } }
                         .buttonStyle(.borderedProminent)
+                        .foregroundStyle(Color.onAccent)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .accessibilityIdentifier("confirmAgain")
                 }
@@ -336,6 +337,7 @@ private struct ConfirmBar: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .foregroundStyle(Color.onAccent)
                 .controlSize(.large)
                 .accessibilityIdentifier("confirmResults")
             }

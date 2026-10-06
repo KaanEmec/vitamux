@@ -13,7 +13,7 @@ struct DashboardEditView: View {
             List {
                 if let problem = model.saveProblem {
                     Section {
-                        Label(problem.title, systemImage: "exclamationmark.triangle").foregroundStyle(.red)
+                        Label(problem.title, systemImage: "exclamationmark.triangle").foregroundStyle(Color.feedbackError)
                         if let detail = problem.detail { Text(detail).font(.footnote) }
                     }
                 }
@@ -71,6 +71,7 @@ struct DashboardEditView: View {
                 AddMetricView(model: model)
             }
         }
+        .sheetBackground()
         .interactiveDismissDisabled(model.draft != model.layout.value?.cards)
     }
 
@@ -166,6 +167,7 @@ private struct AddMetricView: View {
                 }
             }
         }
+        .sheetBackground()
     }
 
     private func row(_ entry: Entry) -> some View {

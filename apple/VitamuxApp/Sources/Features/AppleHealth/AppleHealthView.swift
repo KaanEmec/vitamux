@@ -43,7 +43,7 @@ private struct PairedSections: View {
         Section {
             Label(device.isRevoked ? "This iPhone is no longer paired" : "This iPhone is paired",
                   systemImage: device.isRevoked ? "xmark.seal" : "checkmark.seal.fill")
-                .foregroundStyle(device.isRevoked ? .red : .green)
+                .foregroundStyle(device.isRevoked ? Color.feedbackError : Color.feedbackOK)
                 .accessibilityIdentifier(device.isRevoked ? "revokedState" : "pairedState")
             LabeledContent("Server") {
                 Text(device.credentials?.baseURL.host() ?? "").accessibilityIdentifier("pairedServer")

@@ -3,7 +3,8 @@ import VitamuxKit
 import WidgetKit
 
 /// The entry view of every Vitamux widget: signed out, nothing to show, or the cards for the
-/// family. Stock WidgetKit views with the chart kit's colours; values are marked private.
+/// family. Stock WidgetKit views on the app's card surface with the chart kit's colours
+/// (docs/architecture/ios-design.md#widgets); values are marked private.
 struct VitamuxWidgetView: View {
     enum Layout {
         /// One card: small, medium or a lock-screen value.
@@ -22,7 +23,10 @@ struct VitamuxWidgetView: View {
 
     var body: some View {
         content
-            .containerBackground(.background, for: .widget)
+            .foregroundStyle(Color.ink)
+            .containerBackground(for: .widget) {
+                LinearGradient(colors: [.cardTop, .cardBottom], startPoint: .top, endPoint: .bottom)
+            }
     }
 
     @ViewBuilder private var content: some View {
@@ -135,9 +139,9 @@ private struct SmallCard: View {
         VStack(alignment: .leading, spacing: 4) {
             CardHeader(card: card, showsWord: false)
             Group {
-                Reading(card: card, font: .title2.bold())
+                Reading(card: card, size: .widget)
                 if !card.sub.isEmpty {
-                    Text(card.sub).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    Text(card.sub).font(.caption).foregroundStyle(Color.inkMuted).lineLimit(1)
                 }
             }
             .privateValue(entry.redacts)
@@ -167,12 +171,12 @@ private struct MediumCard: View {
             CardHeader(card: card, showsWord: true)
             HStack(alignment: .top, spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Reading(card: card, font: .title.bold())
+                    Reading(card: card, size: .widget)
                     if !card.sub.isEmpty {
-                        Text(card.sub).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        Text(card.sub).font(.caption).foregroundStyle(Color.inkMuted).lineLimit(1)
                     }
                     if !card.delta.isEmpty {
-                        Text(card.delta).font(.caption).foregroundStyle(.secondary).lineLimit(2).monospacedDigit()
+                        Text(card.delta).font(.caption).foregroundStyle(Color.inkMuted).lineLimit(2).monospacedDigit()
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -206,7 +210,7 @@ private struct RowView: View {
                     Link(destination: card.link) {
                         RowColumn(card: card, redacts: entry.redacts)
                     }
-                    .foregroundStyle(.primary) // a link would tint the column
+                    .foregroundStyle(Color.ink) // a link would tint the column
                 }
                 ForEach(cards.count..<3, id: \.self) { _ in
                     Color.clear.frame(maxWidth: .infinity)
@@ -227,13 +231,13 @@ private struct RowColumn: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                MetricTile(hue: card.metricHue, size: 22)
+                MetricTile(hue: card.metricHue, size: 28)
                 Spacer(minLength: 0)
                 StatusGlyph(status: card.dataStatus).frame(width: 10, height: 10)
             }
             Text(card.label)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.inkMuted)
                 .lineLimit(2, reservesSpace: true)
                 .multilineTextAlignment(.leading)
             VStack(alignment: .leading, spacing: 0) {
@@ -244,7 +248,7 @@ private struct RowColumn: View {
                     .minimumScaleFactor(0.6)
                 Text(card.unit.isEmpty ? " " : card.unit)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.inkMuted)
                     .lineLimit(1)
             }
             .privateValue(redacts)
@@ -325,17 +329,17 @@ private struct CardHeader: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            MetricTile(hue: card.metricHue, size: 22)
+            MetricTile(hue: card.metricHue, size: 28)
             Text(card.label)
                 .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.inkMuted)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Spacer(minLength: 2)
             HStack(spacing: 4) {
                 StatusGlyph(status: card.dataStatus).frame(width: 10, height: 10)
                 if showsWord {
-                    Text(card.dataStatus.label).font(.caption2).foregroundStyle(.secondary)
+                    Text(card.dataStatus.label).font(.caption2).foregroundStyle(Color.inkMuted)
                 }
             }
             .accessibilityElement(children: .ignore)
@@ -346,17 +350,15 @@ private struct CardHeader: View {
 
 private struct Reading: View {
     let card: WidgetSnapshot.Card
-    let font: Font
+    let size: ValueText.Size
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Text(card.value)
-                .font(font)
-                .monospacedDigit()
+            ValueText(card.value, size: size)
                 .lineLimit(1)
-                .minimumScaleFactor(0.6)
+                .minimumScaleFactor(0.5)
             if !card.unit.isEmpty {
-                Text(card.unit).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                Text(card.unit).font(.caption).foregroundStyle(Color.inkMuted).lineLimit(1)
             }
         }
     }

@@ -67,7 +67,8 @@ final class OfflineCacheUITests: XCTestCase {
         XCTAssertTrue(app.scrollTo(size).waitForExistence(timeout: 10))
         XCTAssertFalse(size.text.contains("Empty"), "the dashboard was stored: \(size.text)")
         app.scrollTo(app.buttons["clearCache"]).tap()
-        app.buttons["confirmClearCache"].tap()
+        // iOS 26 nests the dialog's button in one with the same identifier, as for the other dialogs.
+        app.buttons["confirmClearCache"].firstMatch.tap()
         XCTAssertTrue(size.text.contains("Empty"), size.text)
         XCTAssertFalse(app.buttons["clearCache"].isEnabled)
 

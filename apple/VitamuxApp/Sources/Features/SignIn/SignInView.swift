@@ -21,6 +21,7 @@ struct SignInView: View {
             }
         }
         .scrollDismissesKeyboard(.interactively)
+        .background(Color.ground)
         .onAppear {
             // Seeded once from the last server and username, so "session expired" keeps them.
             if model == nil { model = SignInModel(profile: state.profile, username: state.username) }
@@ -33,7 +34,7 @@ private struct Header: View {
         VStack(spacing: 12) {
             AppMark()
             Text("Vitamux").font(.largeTitle.bold())
-            Text("Sign in to your own server").font(.body).foregroundStyle(.secondary)
+            Text("Sign in to your own server").font(.body).foregroundStyle(Color.inkMuted)
         }
         .padding(.bottom, 8)
     }
@@ -49,8 +50,7 @@ private struct ReasonBanner: View {
         )
         .font(.subheadline)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(.fill.tertiary, in: .rect(cornerRadius: 12))
+        .card(padding: 12, radius: Radius.control)
         .accessibilityIdentifier(reason == .expired ? "sessionExpired" : "signedOut")
     }
 }
@@ -78,7 +78,7 @@ private struct CredentialsForm: View {
                         .labelStyle(.iconOnly)
                         .font(.title2)
                         .frame(width: 50, height: 50)
-                        .background(.fill.tertiary, in: .rect(cornerRadius: 12))
+                        .background(CardBackground(radius: Radius.control))
                 }
                 if let problem = model.serverProblem { ProblemText(problem: problem, id: "serverProblem") }
             }
@@ -104,7 +104,7 @@ private struct CredentialsForm: View {
                 SubmitButton(model: model, title: "Sign in")
                 Text("If two-factor is on, the app asks for your code next.")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.inkMuted)
                     .multilineTextAlignment(.center)
             }
         }
@@ -159,17 +159,19 @@ private struct SubmitButton: View {
                     Task { await model.submit(to: state) }
                 } label: {
                     Group {
-                        if model.isBusy { ProgressView() } else { Text(title) }
+                        if model.isBusy { ProgressView() } else { Text(title).fontWeight(.semibold) }
                     }
-                    .frame(maxWidth: .infinity, minHeight: 34)
+                    .foregroundStyle(Color.onAccent)
+                    .frame(maxWidth: .infinity, minHeight: 36)
                 }
                 .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.roundedRectangle(radius: Radius.control))
                 .disabled(!model.canSubmit || wait > 0)
                 .accessibilityIdentifier("signInButton")
                 if wait > 0 {
                     Text("Too many attempts. Try again in \(Duration.seconds(wait).formatted(.time(pattern: .minuteSecond))).")
                         .font(.subheadline)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Color.feedbackError)
                         .accessibilityIdentifier("rateLimit")
                 } else if let problem = model.problem {
                     ProblemText(problem: problem, id: "signInProblem")
@@ -195,7 +197,7 @@ private struct Field<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(label).font(.subheadline).foregroundStyle(.secondary)
+            Text(label).font(.subheadline).foregroundStyle(Color.inkMuted)
             FieldBox(systemImage: systemImage) { content }
         }
     }
@@ -213,7 +215,7 @@ private struct FieldBox<Content: View>: View {
         }
         .padding(.horizontal, 12)
         .frame(minHeight: 50)
-        .background(.fill.tertiary, in: .rect(cornerRadius: 12))
+        .background(CardBackground(radius: Radius.control))
     }
 }
 
@@ -226,7 +228,7 @@ private struct ProblemText: View {
             Text(problem.title).font(.subheadline.weight(.semibold))
             if let detail = problem.detail { Text(detail).font(.subheadline) }
         }
-        .foregroundStyle(.red)
+        .foregroundStyle(Color.feedbackError)
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier(id)
@@ -235,12 +237,15 @@ private struct ProblemText: View {
 
 private struct PrivacyNote: View {
     var body: some View {
-        Label("Your data stays on the server you name above. Vitamux sends nothing anywhere else.", systemImage: "checkmark.shield.fill")
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(14)
-            .background(.fill.tertiary, in: .rect(cornerRadius: 14))
-            .padding(.top, 24)
+        Label {
+            Text("Your data stays on the server you name above. Vitamux sends nothing anywhere else.")
+                .foregroundStyle(Color.inkMuted)
+        } icon: {
+            Image(systemName: "checkmark.shield.fill").foregroundStyle(Color.feedbackOK)
+        }
+        .font(.subheadline)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .card(radius: Radius.tile)
+        .padding(.top, 24)
     }
 }

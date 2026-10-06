@@ -1,26 +1,45 @@
 import SwiftUI
 
-// Flat colour lookups for the chart kit (docs/architecture/ios-app.md#charts): a hue per metric,
-// a colour per sleep stage and per source, and the six data states. A hue names the metric only;
-// it never says whether a value is good.
+// Flat colour lookups for the chart kit (docs/architecture/ios-app.md#charts): a hue and a tile
+// tint per metric, a colour per sleep stage and per source, and the six data states, each a
+// light/dark pair (docs/architecture/ios-design.md#tokens). A hue names the metric only; it never
+// says whether a value is good.
 
 /// The hue of a metric's marks.
 public enum MetricHue: String, Sendable, CaseIterable {
     case heartRate, hrv, steps, sleep, bloodPressure, spo2, weight, activeEnergy, vo2, lab, other
 
+    /// The marks' colour: the darker shade in the light theme (docs/architecture/ios-design.md#tokens).
     public var color: Color {
         switch self {
-        case .heartRate: Color(hex: 0xFB7185)
-        case .hrv: Color(hex: 0xA78BFA)
-        case .steps: Color(hex: 0x34D399)
-        case .sleep: Color(hex: 0x818CF8)
-        case .bloodPressure: Color(hex: 0xF472B6)
-        case .spo2: Color(hex: 0x22D3EE)
-        case .weight: Color(hex: 0xFBBF24)
-        case .activeEnergy: Color(hex: 0xFB923C)
-        case .vo2: Color(hex: 0x2DD4BF)
-        case .lab: Color(hex: 0xA3E635)
-        case .other: Color(hex: 0x94A3B8)
+        case .heartRate: Color(light: 0xBE123C, dark: 0xFB7185)
+        case .hrv: Color(light: 0x6D28D9, dark: 0xA78BFA)
+        case .steps: Color(light: 0x047857, dark: 0x34D399)
+        case .sleep: Color(light: 0x4338CA, dark: 0x818CF8)
+        case .bloodPressure: Color(light: 0xBE185D, dark: 0xF472B6)
+        case .spo2: Color(light: 0x0E7490, dark: 0x22D3EE)
+        case .weight: Color(light: 0xB45309, dark: 0xFBBF24)
+        case .activeEnergy: Color(light: 0xC2410C, dark: 0xFB923C)
+        case .vo2: Color(light: 0x0F766E, dark: 0x2DD4BF)
+        case .lab: Color(light: 0x4D7C0F, dark: 0xA3E635)
+        case .other: Color(light: 0x4F5861, dark: 0x94A3B8)
+        }
+    }
+
+    /// The fill of the metric's icon tile behind `color` (the panel's `--metric-<hue>-tint`).
+    public var tint: Color {
+        switch self {
+        case .heartRate: Color(light: 0xFFE4E6, dark: 0x2E151B)
+        case .hrv: Color(light: 0xEDE9FE, dark: 0x211A33)
+        case .steps: Color(light: 0xD1FAE5, dark: 0x0F2A20)
+        case .sleep: Color(light: 0xE0E7FF, dark: 0x1B1D36)
+        case .bloodPressure: Color(light: 0xFCE7F3, dark: 0x2E1526)
+        case .spo2: Color(light: 0xCFFAFE, dark: 0x0F2A30)
+        case .weight: Color(light: 0xFEF3C7, dark: 0x2B2210)
+        case .activeEnergy: Color(light: 0xFFEDD5, dark: 0x2E1C10)
+        case .vo2: Color(light: 0xE0F2EF, dark: 0x0F2321)
+        case .lab: Color(light: 0xECFCCB, dark: 0x1F2A10)
+        case .other: Color(light: 0xE7EEEE, dark: 0x1B1F23)
         }
     }
 
@@ -74,11 +93,11 @@ public enum SleepStageKind: String, Sendable, CaseIterable {
 
     public var color: Color {
         switch self {
-        case .deep: Color(hex: 0x6366F1)
-        case .light: Color(hex: 0x38BDF8)
-        case .rem: Color(hex: 0xC084FC)
+        case .deep: Color(light: 0x4F46E5, dark: 0x6366F1)
+        case .light: Color(light: 0x0284C7, dark: 0x38BDF8)
+        case .rem: Color(light: 0x9333EA, dark: 0xC084FC)
         case .awake: Color(hex: 0x71717A)
-        default: Color(hex: 0x94A3B8)
+        default: Color(light: 0x5F6873, dark: 0x94A3B8)
         }
     }
 }
@@ -88,15 +107,16 @@ public enum SleepStageKind: String, Sendable, CaseIterable {
 public enum SourceStyle {
     public static func color(_ provider: String) -> Color {
         switch provider {
-        case "apple_health": return Color(hex: 0xFF8FB3)
-        case "whoop": return Color(hex: 0xFFA463)
-        case "withings": return Color(hex: 0xA3E635)
-        case "garmin": return Color(hex: 0x8C9EFF)
-        case "manual", "push", "file_import": return Color(hex: 0xA1A9B1)
+        case "apple_health": return Color(light: 0xDB2777, dark: 0xFF8FB3)
+        case "whoop": return Color(light: 0xC2410C, dark: 0xFFA463)
+        case "withings": return Color(light: 0x4D7C0F, dark: 0xA3E635)
+        case "garmin": return Color(light: 0x4F46E5, dark: 0x8C9EFF)
+        case "manual", "push", "file_import": return Color(light: 0x4F5861, dark: 0xA1A9B1)
         default:
-            let extra: [UInt32] = [0x67E8F9, 0xFDBA74, 0xF0ABFC]
+            let extra: [(UInt32, UInt32)] = [(0x0E7490, 0x67E8F9), (0xC2410C, 0xFDBA74), (0x86198F, 0xF0ABFC)]
             let hash = provider.unicodeScalars.reduce(UInt32(0)) { $0 &* 31 &+ $1.value }
-            return Color(hex: extra[Int(hash % 3)])
+            let pick = extra[Int(hash % 3)]
+            return Color(light: pick.0, dark: pick.1)
         }
     }
 
@@ -151,7 +171,7 @@ public enum DataStatus: String, Sendable, CaseIterable {
 
     public var color: Color {
         switch self {
-        case .direct: .primary
+        case .direct: Color(light: 0x0F766E, dark: 0x2DD4BF)
         case .fallback: Color(light: 0xB45309, dark: 0xF2B54A)
         case .calculated: Color(light: 0x2563EB, dark: 0x7CB4FF)
         case .overridden: Color(light: 0x7C3AED, dark: 0xB99CFF)

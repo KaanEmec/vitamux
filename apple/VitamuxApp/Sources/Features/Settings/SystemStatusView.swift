@@ -109,7 +109,7 @@ private struct FailingSection: View {
             }
             ForEach(jobs, id: \.id) { job in
                 VStack(alignment: .leading, spacing: 2) {
-                    Label(job.kind, systemImage: "xmark.octagon").foregroundStyle(.red)
+                    Label(job.kind, systemImage: "xmark.octagon").foregroundStyle(Color.feedbackError)
                     Text(["\(job.attempts) attempts", job.errorClass, job.finishedAt.map(SettingsFormat.when)].compactMap(\.self).joined(separator: " · "))
                         .font(.caption)
                         .foregroundStyle(.secondary)

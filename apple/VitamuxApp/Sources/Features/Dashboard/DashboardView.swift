@@ -18,16 +18,16 @@ struct DashboardView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Space.stack) {
                 DayHeader(model: model) { choose($0) }
                 AlertList(model: model)
                 CardsSection(model: model)
                 SourcesSection(connections: model.connections)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, Space.gutter)
             .padding(.bottom, 24)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.ground)
         .navigationTitle("Dashboard")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -81,7 +81,7 @@ private struct DayHeader: View {
                     .accessibilityIdentifier("dayTitle")
                 Text(subtitle)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.inkMuted)
                     .accessibilityIdentifier("dayLabel")
                     .accessibilityValue(model.day.description)
             }
@@ -146,9 +146,12 @@ private struct AlertList: View {
                 }
             }
         } else if case .loaded = model.connections {
-            Label("Nothing needs your attention.", systemImage: "checkmark.circle")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            Label {
+                Text("Nothing needs your attention.").foregroundStyle(Color.inkMuted)
+            } icon: {
+                StatusIcon(kind: .ok)
+            }
+            .font(.footnote)
         }
     }
 }
@@ -165,6 +168,7 @@ private struct AlertRow: View {
                 .accessibilityHidden(true)
             Text(alert.text)
                 .font(.subheadline)
+                .foregroundStyle(color)
                 .frame(maxWidth: .infinity, alignment: .leading)
             if let action = alert.action, let route = alert.route {
                 Button(action) { open(route) }
@@ -175,12 +179,13 @@ private struct AlertRow: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .frame(minHeight: 52)
-        .background(color.opacity(0.12), in: .rect(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(color.opacity(0.3)))
+        .background(fill, in: .rect(cornerRadius: Radius.tile, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Radius.tile, style: .continuous).strokeBorder(color.opacity(0.3)))
         .accessibilityElement(children: .contain)
     }
 
-    private var color: Color { alert.level == .error ? .red : .orange }
+    private var color: Color { alert.level == .error ? .feedbackError : .feedbackWarn }
+    private var fill: Color { alert.level == .error ? .feedbackErrorSoft : .feedbackWarnSoft }
 }
 
 // MARK: - Cards
@@ -227,6 +232,7 @@ private struct EmptyCards: View {
         } actions: {
             Button(action, action: perform)
                 .buttonStyle(.borderedProminent)
+                .foregroundStyle(Color.onAccent)
                 .accessibilityIdentifier("emptyCardsAction")
         }
     }
@@ -238,9 +244,9 @@ private struct CardGrid: View {
     let model: DashboardModel
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Space.grid) {
             ForEach(DashboardLayout.rows(model.shown)) { row in
-                HStack(alignment: .top, spacing: 12) {
+                HStack(alignment: .top, spacing: Space.grid) {
                     ForEach(row.cards, id: \.metric) { card in
                         if let content = model.contents[card.metric] {
                             MetricCardView(card: card, content: content, section: model.section(of: card.metric)) {
@@ -275,14 +281,14 @@ private struct SourcesSection: View {
         case .failed(let problem):
             VStack(alignment: .leading, spacing: 8) {
                 header
-                Label(problem.title, systemImage: "exclamationmark.triangle").foregroundStyle(.secondary)
+                Label(problem.title, systemImage: "exclamationmark.triangle").foregroundStyle(Color.inkMuted)
             }
         case .loaded(let list):
             VStack(alignment: .leading, spacing: 8) {
                 header
                 if list.isEmpty {
                     HStack {
-                        Text("No sources yet.").foregroundStyle(.secondary)
+                        Text("No sources yet.").foregroundStyle(Color.inkMuted)
                         Spacer()
                         Button("Connect a source") { state.open(.connections()) }
                             .buttonStyle(.bordered)
@@ -299,7 +305,7 @@ private struct SourcesSection: View {
     }
 
     private var header: some View {
-        Text("Sources").font(.title3.bold()).accessibilityAddTraits(.isHeader)
+        SectionHeader("Sources")
     }
 }
 
@@ -314,71 +320,23 @@ private struct SourceRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(providerLabel(connection.provider)).font(.headline)
-                        if connection.official == false {
-                            Text("Unofficial")
-                                .font(.caption2.weight(.semibold))
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .overlay(Capsule().strokeBorder(.secondary))
-                        }
+                        if connection.official == false { UnofficialBadge() }
                     }
                     Text("Last success " + (connection.lastSuccessAt.map(DashboardAlert.ago) ?? "never"))
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.inkMuted)
                     if let reason = connection.healthReason {
-                        Text(reason).font(.footnote).foregroundStyle(.secondary)
+                        Text(reason).font(.footnote).foregroundStyle(Color.inkMuted)
                     }
                 }
                 Spacer(minLength: 8)
-                HealthLabel(health: connection.health)
+                HealthBadge(health: connection.health)
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(Color.inkMuted)
             }
-            .padding(14)
-            .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 14))
-            .contentShape(.rect)
+            .card()
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("source-\(connection.provider)")
-    }
-}
-
-/// A connection's health as an icon and a word (the panel's `HealthBadge`).
-private struct HealthLabel: View {
-    let health: Components.Schemas.Health
-
-    var body: some View {
-        Label(text, systemImage: symbol)
-            .font(.footnote.weight(.medium))
-            .foregroundStyle(color)
-    }
-
-    private var text: String {
-        switch health {
-        case .ok: "Healthy"
-        case .degraded: "Degraded"
-        case .failing: "Failing"
-        case .needsReauth: "Needs reauthorization"
-        case .paused: "Paused"
-        case .disabled: "Disabled"
-        case .stale: "Stale"
-        }
-    }
-
-    private var symbol: String {
-        switch health {
-        case .ok: "checkmark.circle.fill"
-        case .degraded, .stale: "exclamationmark.triangle.fill"
-        case .failing, .needsReauth: "xmark.octagon.fill"
-        case .paused: "pause.circle.fill"
-        case .disabled: "minus.circle"
-        }
-    }
-
-    private var color: Color {
-        switch health {
-        case .ok: .green
-        case .degraded, .stale: .orange
-        case .failing, .needsReauth: .red
-        case .paused, .disabled: .secondary
-        }
     }
 }

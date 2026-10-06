@@ -35,7 +35,7 @@ struct DayPointSheet: View {
                     if let warnings = point.warnings, !warnings.isEmpty {
                         Label("Warnings: \(warnings.joined(separator: ", "))", systemImage: "exclamationmark.triangle")
                             .font(.footnote)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Color.feedbackWarn)
                     }
                 } header: {
                     Text("\(span) · \(layer.bucket.singular)").accessibilityIdentifier("bucketSpan")
@@ -81,6 +81,7 @@ struct DayPointSheet: View {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.accessibilityIdentifier("closeBucket") }
             }
         }
+        .sheetBackground()
         .presentationDetents([.medium, .large])
     }
 

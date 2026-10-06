@@ -145,6 +145,7 @@ private struct DocumentRow: View {
         case .uploaded:
             Button("Extract") { extracting = DocumentAction(document: document) }
                 .buttonStyle(.borderedProminent)
+                .foregroundStyle(Color.onAccent)
                 .accessibilityIdentifier("extract-\(document.id)")
         case .needsReview, .confirmed, .extracting:
             Button(document.status == .needsReview ? "Review" : "Open") {

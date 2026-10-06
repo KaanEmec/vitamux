@@ -78,8 +78,8 @@ struct AppWizardView: View {
                     .submitLabel(.done)
                     .onSubmit { if canSave { Task { await save() } } }
                     .accessibilityIdentifier("clientSecretField")
-                if let error = saveProblem?.detail(for: "/client_id") { Text(error).font(.footnote).foregroundStyle(.red) }
-                if let error = saveProblem?.detail(for: "/client_secret") { Text(error).font(.footnote).foregroundStyle(.red) }
+                if let error = saveProblem?.detail(for: "/client_id") { Text(error).font(.footnote).foregroundStyle(Color.feedbackError) }
+                if let error = saveProblem?.detail(for: "/client_secret") { Text(error).font(.footnote).foregroundStyle(Color.feedbackError) }
             } header: {
                 Text("Copy them from the application you just created.").textCase(nil)
             } footer: {

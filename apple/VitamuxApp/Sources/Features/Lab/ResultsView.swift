@@ -202,6 +202,7 @@ struct HistorySheet: View {
                 revisions = await Loadable { try await client.getLabResultHistory(path: .init(id: result.id)).ok.body.json.revisions }
             }
         }
+        .sheetBackground()
         .accessibilityIdentifier("historySheet")
     }
 

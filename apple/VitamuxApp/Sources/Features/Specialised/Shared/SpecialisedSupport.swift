@@ -126,20 +126,6 @@ struct ViewIntro: View {
     }
 }
 
-/// A source's colour dot and name.
-struct SourceChip: View {
-    let provider: String
-    let name: String
-
-    var body: some View {
-        HStack(spacing: 6) {
-            SourceDot(provider: provider)
-            Text(name)
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
 /// Where a source stands under the rule: a shape and a word, so the pick never rests on colour.
 struct RuleTagLabel: View {
     let selected: Bool
@@ -162,13 +148,14 @@ struct StatTile: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(label).font(.caption).foregroundStyle(.secondary)
+            Text(label).font(.footnote).foregroundStyle(Color.inkFaint)
             HStack(alignment: .firstTextBaseline, spacing: 3) {
-                Text(value).font(.title3.weight(.semibold)).monospacedDigit()
-                if let unit, !unit.isEmpty { Text(unit).font(.caption).foregroundStyle(.secondary) }
+                ValueText(value, size: .stat).lineLimit(1).minimumScaleFactor(0.7)
+                if let unit, !unit.isEmpty { Text(unit).font(.caption).foregroundStyle(Color.inkMuted) }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .card(padding: 12, radius: Radius.tile)
         .accessibilityElement(children: .combine)
     }
 }

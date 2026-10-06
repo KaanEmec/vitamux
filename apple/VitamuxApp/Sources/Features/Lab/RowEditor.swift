@@ -210,6 +210,7 @@ struct RowEditor: View {
                 }
             }
         }
+        .sheetBackground()
         .onChange(of: row) {
             // Another row, or this one saved: start from what the server holds now.
             form = RowForm(row)

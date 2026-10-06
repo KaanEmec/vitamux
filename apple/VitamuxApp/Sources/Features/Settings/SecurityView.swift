@@ -357,6 +357,7 @@ private struct TOTPSheet: View {
                 }
             }
         }
+        .sheetBackground()
     }
 }
 
@@ -408,5 +409,6 @@ private struct DisableTOTPSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             }
         }
+        .sheetBackground()
     }
 }

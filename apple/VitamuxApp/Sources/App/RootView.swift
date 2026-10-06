@@ -20,6 +20,7 @@ struct RootView: View {
         .overlay {
             if phase != .active { PrivacyCover() }
         }
+        .tint(Color.accent)
         .preferredColorScheme(state.theme.colorScheme)
         .onOpenURL { state.open($0) }
         .onChange(of: phase) { _, new in state.scenePhaseChanged(to: new) }

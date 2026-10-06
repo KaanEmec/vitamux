@@ -63,7 +63,7 @@ struct FieldMessage: View {
 
     var body: some View {
         if let text {
-            Text(text).font(.footnote).foregroundStyle(.red)
+            Text(text).font(.footnote).foregroundStyle(Color.feedbackError)
         }
     }
 }

@@ -27,6 +27,8 @@ struct ShellView: View {
                 TabStack(tab: .more, sync: sync)
             }
         }
+        // The selected tab in ink, as the artboards' tab bar; each stack tints its content teal.
+        .tint(Color.ink)
         .sheet(isPresented: $state.isSearching) {
             SearchView(connections: sync.connections)
         }
@@ -56,6 +58,7 @@ private struct TabStack: View {
                 }
                 .navigationDestination(for: Route.self) { RouteView(route: $0) }
         }
+        .tint(Color.accent)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             OfflineBanner(status: state.cacheStatus)
         }

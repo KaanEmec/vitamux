@@ -109,8 +109,8 @@ private struct TabChips: View {
                             .font(.subheadline.weight(.semibold))
                             .padding(.horizontal, 14)
                             .padding(.vertical, 8)
-                            .foregroundStyle(tab == item ? Color(.systemBackground) : .primary)
-                            .background(tab == item ? Color.primary : Color(.tertiarySystemFill), in: .capsule)
+                            .foregroundStyle(tab == item ? Color.ground : Color.ink)
+                            .background(tab == item ? Color.ink : Color.raised, in: .capsule)
                     }
                     .buttonStyle(.plain)
                     .accessibilityAddTraits(tab == item ? .isSelected : [])

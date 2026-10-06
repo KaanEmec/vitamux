@@ -47,6 +47,7 @@ Precedence when documents disagree: `CLAUDE.md` (product brief) > ADRs in `docs/
 | [apple-health.md](architecture/apple-health.md) | HealthKit bridge: package, app, sync, payload, origins, pairing | E15 |
 | [ios-app.md](architecture/ios-app.md) | iOS app: lean architecture, app sessions, native OAuth return, parity matrix, charts, Apple Health and Apple Watch data, cache, widgets, notifications | E22 |
 | [ios-app-screens.md](architecture/ios-app-screens.md) | iOS app screen map per tab, sheets, `vitamux://` deep links and the panel route each mirrors | E22 screens |
+| [ios-design.md](architecture/ios-design.md) | iOS visual spec: colour tokens (light and dark), type scale, tiles, surfaces, status and source cues, charts, app icon, widgets, screenshots | E22 design pass |
 | [lab-documents.md](architecture/lab-documents.md) | PDF storage, extraction providers, review, privacy | E12 |
 | [frontend.md](architecture/frontend.md) | UI stack, navigation, rule builder | E11 |
 | [project.md](architecture/project.md) | License, testing, releases, resource budget, deferred features, risks, assumptions, open questions | Release, CI, planning |

@@ -10,13 +10,16 @@ struct LockView: View {
             AppMark()
             Text("Vitamux is locked").font(.title2.bold())
             Text("Unlock with \(state.lockMethod) to see your data.")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.inkMuted)
                 .multilineTextAlignment(.center)
             Button("Unlock") { Task { await state.unlock() } }
                 .buttonStyle(.borderedProminent)
+                .foregroundStyle(Color.onAccent)
                 .accessibilityIdentifier("unlockButton")
         }
         .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.ground)
         .task {
             // UI tests tap the button themselves.
             if !state.isUITest { await state.unlock() }

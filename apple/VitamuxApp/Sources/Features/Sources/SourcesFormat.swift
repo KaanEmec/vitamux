@@ -4,52 +4,6 @@ import VitamuxKit
 typealias Connection = Components.Schemas.Connection
 typealias Provider = Components.Schemas.Provider
 
-/// The panel's status icons (web/src/lib/components/StatusIcon.svelte): a shape and a colour, and
-/// always a word beside them, so a state never depends on colour alone.
-enum StatusKind {
-    case ok, warn, error, pending, off, info
-
-    var symbol: String {
-        switch self {
-        case .ok: "checkmark.circle.fill"
-        case .warn: "exclamationmark.triangle.fill"
-        case .error: "xmark.octagon.fill"
-        case .pending: "clock.fill"
-        case .off: "minus.circle"
-        case .info: "info.circle.fill"
-        }
-    }
-
-    var color: Color {
-        switch self {
-        case .ok: .green
-        case .warn: .orange
-        case .error: .red
-        case .pending, .info: .blue
-        case .off: .secondary
-        }
-    }
-
-    /// Run outcomes recorded by internal/jobs/runner.go.
-    init(outcome: String?) {
-        switch outcome {
-        case nil: self = .pending
-        case "succeeded": self = .ok
-        case "failed": self = .error
-        case "lease_expired": self = .warn
-        default: self = .info
-        }
-    }
-}
-
-struct StatusIcon: View {
-    let kind: StatusKind
-
-    var body: some View {
-        Image(systemName: kind.symbol).foregroundStyle(kind.color).imageScale(.small).accessibilityHidden(true)
-    }
-}
-
 extension Components.Schemas.Health {
     /// The panel's health labels (HealthBadge.svelte).
     var label: String {
@@ -77,44 +31,17 @@ extension Components.Schemas.Health {
     var needsAttention: Bool { SyncStatusModel.alerting.contains(self) }
 }
 
-/// A connection's health: its icon and label.
-struct HealthBadge: View {
-    let health: Components.Schemas.Health
-
-    var body: some View {
-        Label {
-            Text(health.label)
-        } icon: {
-            StatusIcon(kind: health.kind)
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// "Unofficial": the API can change without notice.
-struct UnofficialBadge: View {
-    var body: some View {
-        Text("Unofficial")
-            .font(.caption2.weight(.semibold))
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .foregroundStyle(.orange)
-            .overlay(Capsule().strokeBorder(.orange.opacity(0.6)))
-            .accessibilityLabel("Unofficial API")
-    }
-}
-
 /// The provider's colour, as on every chart, in a rounded square with its initial.
 struct SourceMonogram: View {
     let provider: String
-    var size: CGFloat = 40
+    var size: CGFloat = TileSize.row
 
     var body: some View {
         Text(providerLabel(provider).prefix(1))
             .font(.system(size: size * 0.45, weight: .bold, design: .rounded))
             .foregroundStyle(SourceStyle.color(provider))
             .frame(width: size, height: size)
-            .background(SourceStyle.color(provider).opacity(0.16), in: .rect(cornerRadius: size * 0.28))
+            .background(SourceStyle.color(provider).opacity(0.16), in: .rect(cornerRadius: size * 0.28, style: .continuous))
             .accessibilityHidden(true)
     }
 }

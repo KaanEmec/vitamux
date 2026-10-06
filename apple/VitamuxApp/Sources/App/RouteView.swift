@@ -1,7 +1,15 @@
 import SwiftUI
 
-/// The screen for each `Route`. A screen a later job builds shows a `PlaceholderView` until then.
+/// The screen for each `Route`, on the ground (docs/architecture/ios-design.md#surfaces).
 struct RouteView: View {
+    let route: Route
+
+    var body: some View {
+        RouteScreen(route: route).screenBackground()
+    }
+}
+
+private struct RouteScreen: View {
     let route: Route
 
     var body: some View {

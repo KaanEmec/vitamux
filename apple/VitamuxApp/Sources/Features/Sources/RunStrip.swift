@@ -105,15 +105,15 @@ struct RunStrip: View {
             RoundedRectangle(cornerRadius: 2)
                 .fill(fill)
                 .overlay {
-                    if day.failed > 0 { Hatch().stroke(.orange, lineWidth: 1.5).clipShape(.rect(cornerRadius: 2)) }
+                    if day.failed > 0 { Hatch().stroke(Color.feedbackWarn, lineWidth: 1.5).clipShape(.rect(cornerRadius: 2)) }
                 }
                 .frame(height: large ? 22 : 12)
                 .frame(maxWidth: .infinity)
         }
 
         private var fill: Color {
-            if day.failed > 0 { return .orange.opacity(0.3) }
-            return day.succeeded > 0 ? .green.opacity(0.75) : Color(.tertiarySystemFill)
+            if day.failed > 0 { return Color.feedbackWarn.opacity(0.3) }
+            return day.succeeded > 0 ? Color.feedbackOK.opacity(0.85) : Color.raised
         }
     }
 

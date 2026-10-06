@@ -237,7 +237,7 @@ private struct BackfillSheet: View {
                     ForEach(streams, id: \.self) { Text($0).tag($0) }
                 }
                 .accessibilityIdentifier("backfillStream")
-                if let error = problem?.detail(for: "/stream") { Text(error).font(.footnote).foregroundStyle(.red) }
+                if let error = problem?.detail(for: "/stream") { Text(error).font(.footnote).foregroundStyle(Color.feedbackError) }
                 Section {
                     DatePicker("From", selection: $start, in: ...Date.now, displayedComponents: .date)
                         .accessibilityIdentifier("backfillFrom")
@@ -265,6 +265,7 @@ private struct BackfillSheet: View {
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
             .onAppear { if stream.isEmpty { stream = streams.first ?? "" } }
         }
+        .sheetBackground()
     }
 
     private var calendar: Calendar { .current }

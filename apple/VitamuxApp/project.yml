@@ -14,6 +14,8 @@ settings:
     CODE_SIGN_STYLE: Automatic
     MARKETING_VERSION: "0.4.0"
     CURRENT_PROJECT_VERSION: "1"
+    # Colour tokens are named once, in Sources/Shared/Tokens.swift; no generated asset symbols.
+    ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS: NO
 packages:
   VitamuxKit:
     path: ../VitamuxKit
@@ -44,6 +46,9 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
         SWIFT_APPROACHABLE_CONCURRENCY: YES
+        # Sources/Assets.xcassets (docs/architecture/ios-design.md#app-icon).
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
     info:
       path: Sources/Info.plist
       properties:
@@ -92,8 +97,11 @@ targets:
     sources:
       - path: Widgets
         excludes: [Tests]
-      # The card's metric tile, shared with the app.
+      # The card's metric tile, card surface and design tokens, shared with the app.
       - Sources/Shared/MetricTile.swift
+      - Sources/Shared/Card.swift
+      - Sources/Shared/Tokens.swift
+      - Sources/Shared/Tokens.xcassets
     dependencies:
       # The chart kit's colours, sparkline and status glyphs, and the session's Keychain item;
       # no client: the widgets read the app's snapshot and never fetch (J22.20).
@@ -129,6 +137,9 @@ targets:
       - path: Widgets
         excludes: [VitamuxWidgetsBundle.swift, PrivacyInfo.xcprivacy, Info.plist, VitamuxWidgets.entitlements]
       - Sources/Shared/MetricTile.swift
+      - Sources/Shared/Card.swift
+      - Sources/Shared/Tokens.swift
+      - Sources/Shared/Tokens.xcassets
     dependencies:
       - package: VitamuxKit
       - sdk: WidgetKit.framework
