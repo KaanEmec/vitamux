@@ -121,6 +121,7 @@ final class AppState {
         try sessions.save(session, for: profile)
         // A new session (or server) never reads an old one's answers.
         cache.clear()
+        WidgetSnapshotWriter.clear()
         defaults.set(try JSONEncoder().encode(profile), forKey: Key.server)
         defaults.set(session.user.username, forKey: Key.username)
         self.profile = profile
@@ -154,6 +155,7 @@ final class AppState {
     private func endSession(_ reason: SignInReason) {
         try? sessions.clear()
         cache.clear()
+        WidgetSnapshotWriter.clear()
         client = nil
         signInReason = reason
         isLocked = false
@@ -319,6 +321,7 @@ extension AppState {
         let device = ThisDevice.uiTest(arguments: arguments)
         let cache = ResponseCache(directory: URL.temporaryDirectory.appending(path: "uitest-cache", directoryHint: .isDirectory))
         cache.clear()
+        WidgetSnapshotWriter.clear()
         return AppState(
             sessions: .inMemory(), cache: cache, urlSession: servers[0].urlSession, defaults: defaults, device: device,
             isUITest: true

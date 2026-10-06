@@ -23,7 +23,10 @@ targets:
   Vitamux:
     type: application
     platform: iOS
-    sources: [Sources]
+    sources:
+      - Sources
+      # The widgets' snapshot type, written by the dashboard (J22.20).
+      - Widgets/Shared
     dependencies:
       - package: VitamuxKit
       - package: HealthBridgeKit
@@ -86,10 +89,18 @@ targets:
   VitamuxWidgets:
     type: app-extension
     platform: iOS
-    sources: [Widgets]
+    sources:
+      - path: Widgets
+        excludes: [Tests]
+      # The card's metric tile, shared with the app.
+      - Sources/Shared/MetricTile.swift
     dependencies:
+      # The chart kit's colours, sparkline and status glyphs, and the session's Keychain item;
+      # no client: the widgets read the app's snapshot and never fetch (J22.20).
+      - package: VitamuxKit
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
+      - sdk: AppIntents.framework
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.vitamux.healthbridge.widgets
@@ -109,6 +120,25 @@ targets:
       properties:
         com.apple.security.application-groups: [group.org.vitamux.healthbridge]
         keychain-access-groups: [$(AppIdentifierPrefix)org.vitamux.healthbridge]
+  # The widgets' timeline, states and previews, rendered for every family without the extension
+  # host (a WidgetKit extension cannot host tests).
+  VitamuxWidgetsTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Widgets
+        excludes: [VitamuxWidgetsBundle.swift, PrivacyInfo.xcprivacy, Info.plist, VitamuxWidgets.entitlements]
+      - Sources/Shared/MetricTile.swift
+    dependencies:
+      - package: VitamuxKit
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+      - sdk: AppIntents.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.vitamux.healthbridge.widgetstests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
   VitamuxUITests:
     type: bundle.ui-testing
     platform: iOS
@@ -128,4 +158,4 @@ schemes:
       config: Debug
     test:
       config: Debug
-      targets: [VitamuxUITests]
+      targets: [VitamuxUITests, VitamuxWidgetsTests]

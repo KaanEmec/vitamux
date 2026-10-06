@@ -1,45 +1,49 @@
 import SwiftUI
 import WidgetKit
 
-// The widget extension stub. Metric widgets read the app group's cache and redact while locked
-// (docs/architecture/ios-app.md#offline-cache-widgets-and-notifications); until then one widget
-// opens the app.
+// Home-screen and lock-screen widgets (docs/architecture/ios-app.md#offline-cache-widgets-and-notifications):
+// the dashboard's cards from the snapshot the app writes after each dashboard load, private while
+// locked unless the owner turns that off, "Open Vitamux to sign in" once the session has ended,
+// and a tap into the metric's Explore screen. The bundle (`@main`) is in VitamuxWidgetsBundle.swift.
 
-@main
-struct VitamuxWidgets: WidgetBundle {
-    var body: some Widget {
-        OpenAppWidget()
-    }
-}
+/// One metric: a card on the home screen, a value on the lock screen.
+struct MetricWidget: Widget {
+    static let kind = "org.vitamux.metric"
 
-struct OpenAppWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "org.vitamux.open", provider: Provider()) { _ in
-            VStack(spacing: 6) {
-                Image(systemName: "waveform.path.ecg").font(.title)
-                Text("Vitamux").font(.headline)
-            }
-            .containerBackground(.fill.tertiary, for: .widget)
-            .widgetURL(URL(string: "vitamux://dashboard"))
+        AppIntentConfiguration(kind: Self.kind, intent: SelectMetricIntent.self, provider: MetricProvider()) { entry in
+            VitamuxWidgetView(entry: entry, layout: .card)
         }
-        .configurationDisplayName("Vitamux")
-        .description("Opens the dashboard.")
-        .supportedFamilies([.systemSmall])
+        .configurationDisplayName("Metric")
+        .description("A metric from your dashboard, with its trend.")
+        .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular, .accessoryCircular, .accessoryInline])
     }
 }
 
-struct Provider: TimelineProvider {
-    struct Entry: TimelineEntry {
-        let date: Date
+/// Last night's sleep with its stages.
+struct SleepWidget: Widget {
+    static let kind = "org.vitamux.sleep"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: Self.kind, provider: SleepProvider()) { entry in
+            VitamuxWidgetView(entry: entry, layout: .card)
+        }
+        .configurationDisplayName("Sleep")
+        .description("Time asleep and in each stage.")
+        .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular])
     }
+}
 
-    func placeholder(in context: Context) -> Entry { Entry(date: .now) }
+/// Three metrics side by side.
+struct MetricsWidget: Widget {
+    static let kind = "org.vitamux.metrics"
 
-    func getSnapshot(in context: Context, completion: @escaping (Entry) -> Void) {
-        completion(Entry(date: .now))
-    }
-
-    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
-        completion(Timeline(entries: [Entry(date: .now)], policy: .never))
+    var body: some WidgetConfiguration {
+        AppIntentConfiguration(kind: Self.kind, intent: SelectMetricsIntent.self, provider: MetricsProvider()) { entry in
+            VitamuxWidgetView(entry: entry, layout: .row)
+        }
+        .configurationDisplayName("Metrics")
+        .description("Up to three metrics from your dashboard.")
+        .supportedFamilies([.systemMedium])
     }
 }

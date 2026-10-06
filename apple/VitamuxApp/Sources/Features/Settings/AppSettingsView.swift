@@ -1,5 +1,6 @@
 import SwiftUI
 import VitamuxKit
+import WidgetKit
 
 /// Settings › This app (`vitamux://settings/app`): appearance, app lock and its timeout,
 /// notification categories (J22.21), widget redaction (J22.20), the offline cache (J22.19), and the
@@ -8,6 +9,7 @@ struct AppSettingsView: View {
     @Environment(AppState.self) private var state
     @State private var problem: Problem?
     @State private var cacheBytes: Int64 = 0
+    @State private var widgetsAsOf: Date?
     @State private var isClearing = false
     @State private var isSigningOut = false
     @AppStorage(AppPreferences.redactWidgets, store: AppPreferences.store) private var redactWidgets = true
@@ -51,10 +53,13 @@ struct AppSettingsView: View {
             Section {
                 Toggle("Hide values while locked", isOn: $redactWidgets)
                     .accessibilityIdentifier("redactWidgets")
+                    .onChange(of: redactWidgets) { WidgetCenter.shared.reloadAllTimelines() }
+                LabeledContent("Values from", value: widgetsAsOf?.formatted(date: .abbreviated, time: .shortened) ?? "Not yet")
+                    .accessibilityIdentifier("widgetsAsOf")
             } header: {
                 Text("Widgets")
             } footer: {
-                Text("Widgets on the lock screen and home screen show placeholders until the iPhone is unlocked.")
+                Text("Widgets show the dashboard as this app last loaded it. With this on, the lock screen and home screen show placeholders until the iPhone is unlocked.")
             }
             Section {
                 LabeledContent("Stored on this iPhone", value: SettingsFormat.bytes(cacheBytes))
@@ -85,7 +90,10 @@ struct AppSettingsView: View {
         } message: {
             Text("Screens load from the server again the next time you open them.")
         }
-        .task { cacheBytes = Int64(state.cache.size) }
+        .task {
+            cacheBytes = Int64(state.cache.size)
+            widgetsAsOf = WidgetSnapshotWriter.asOf
+        }
         .sheet(isPresented: $isSigningOut) { SignOutSheet() }
     }
 }
