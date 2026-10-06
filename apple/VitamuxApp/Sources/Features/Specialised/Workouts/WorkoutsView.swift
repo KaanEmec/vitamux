@@ -108,7 +108,11 @@ private struct MemberRow: View {
                 .monospacedDigit()
             }
             .accessibilityElement(children: .combine)
-            ProvenanceButton(entity: .workout, id: member.id, request: $provenance)
+            HStack(spacing: 16) {
+                ProvenanceButton(entity: .workout, id: member.id, request: $provenance)
+                PushButton(title: "Route and laps", systemImage: "map", route: .workout(id: member.id))
+                    .accessibilityIdentifier("workoutDetail-\(member.id)")
+            }
         }
         .padding(.vertical, 2)
         .listRowBackground(member.selected ? Color.accentColor.opacity(0.08) : nil)

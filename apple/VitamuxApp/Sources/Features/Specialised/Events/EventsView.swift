@@ -24,12 +24,22 @@ struct EventsView: View {
                     .accessibilityIdentifier("rangePicker")
                 Picker("Event type", selection: $model.code) {
                     Text("All types").tag(String?.none)
-                    ForEach(model.options) { type in
-                        Text(type.count > 0 ? "\(metricLabel(type.code)) (\(type.count))" : metricLabel(type.code)).tag(Optional(type.code))
+                    let options = model.options
+                    ForEach(EventFamily.allCases.filter { family in options.contains { EventFamily(code: $0.code) == family } }, id: \.self) { family in
+                        Section(family.title) {
+                            ForEach(options.filter { EventFamily(code: $0.code) == family }) { type in
+                                Text(type.count > 0 ? "\(metricLabel(type.code)) (\(type.count))" : metricLabel(type.code)).tag(Optional(type.code))
+                            }
+                        }
                     }
                 }
                 .pickerStyle(.menu)
                 .accessibilityIdentifier("eventType")
+                if let code = model.code, let route = watchRoute(forEvent: code) {
+                    NavigationLink("This type has its own view with every detail.", value: route)
+                        .font(.footnote)
+                        .accessibilityIdentifier("eventTypeView")
+                }
             }
             switch model.events {
             case .loading:

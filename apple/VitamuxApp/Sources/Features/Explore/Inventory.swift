@@ -83,7 +83,7 @@ extension InventoryItem {
         switch kind {
         case .sleep: .exploreView(.sleep)
         case .workouts: .exploreView(.workouts)
-        case .event: .events(code: code)
+        case .event: watchRoute(forEvent: code) ?? .events(code: code)
         case .analyte: .analyte(code: code)
         case .group:
             switch code {
@@ -95,6 +95,7 @@ extension InventoryItem {
             switch code {
             case "sleep": .exploreView(.sleep)
             case "blood_pressure": .exploreView(.bloodPressure)
+            case "rr_interval": .beats(date: lastDate)
             default: .metric(code: code)
             }
         }

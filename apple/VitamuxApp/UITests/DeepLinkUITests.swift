@@ -16,6 +16,13 @@ final class DeepLinkUITests: XCTestCase {
         ("vitamux://explore/body-composition", "Explore", "Body composition", nil),
         ("vitamux://explore/workouts", "Explore", "Workouts", nil),
         ("vitamux://explore/events?code=sleep_session", "Explore", "Events", nil), // the filter: SpecialisedUITests
+        // Apple Watch views: WatchUITests
+        ("vitamux://explore/ecg", "Explore", "ECG", nil),
+        ("vitamux://explore/ecg/00000000-0000-4000-8000-000000000103", "Explore", "ECG recording", nil),
+        ("vitamux://explore/beats?date=2026-01-31", "Explore", "Beat-to-beat", nil),
+        ("vitamux://explore/activity-rings", "Explore", "Activity rings", nil),
+        ("vitamux://explore/state-of-mind", "Explore", "State of Mind", nil),
+        ("vitamux://explore/workouts/unknown-workout", "Explore", "Workout", nil),
         ("vitamux://connections?connected=withings", "Sources", "Sources", "connected withings"),
         ("vitamux://connections/conn_00000000000000000000000000000001?tab=backfills", "Sources", "Connection",
          "conn_00000000000000000000000000000001 · backfills"),

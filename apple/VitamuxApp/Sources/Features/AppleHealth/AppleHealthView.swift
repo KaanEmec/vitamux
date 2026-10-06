@@ -79,7 +79,8 @@ private struct PairedSections: View {
         if !device.healthAvailable {
             Section { Text("Health data is not available on this device.").foregroundStyle(.secondary) }
         }
-        GroupsSection(device: device)
+        GroupsSection(device: device) // GroupsSection.swift
+        WatchCard(device: device) // WatchCard.swift
         if !device.enabledTypes.isEmpty {
             Section("Per type") {
                 ForEach(MetricGroup.allCases.filter(device.enabled.contains), id: \.self) { group in
@@ -208,37 +209,6 @@ private struct RevokedSection: View {
     }
 }
 
-/// One toggle per metric group: "Requested" when on (iOS never says whether a read was granted).
-private struct GroupsSection: View {
-    let device: ThisDevice
-
-    var body: some View {
-        Section {
-            ForEach(MetricGroup.allCases, id: \.self) { group in
-                VStack(alignment: .leading, spacing: 4) {
-                    Toggle(group.title, isOn: Binding {
-                        device.enabled.contains(group)
-                    } set: { on in
-                        Task { await device.setGroup(group, enabled: on) }
-                    })
-                    .disabled(device.isRevoked)
-                    .accessibilityIdentifier("group-\(group.rawValue)")
-                    if device.enabled.contains(group) {
-                        Text("Requested")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .accessibilityIdentifier("requested-\(group.rawValue)")
-                    }
-                }
-            }
-        } header: {
-            Text("Data groups")
-        } footer: {
-            Text("Turning a group on asks iOS for read access to its types and pulls their full history. iOS never says whether you allowed or denied a type, so Vitamux shows \"Requested\", not \"Granted\". Change access in Settings › Health › Data Access & Devices.")
-        }
-    }
-}
-
 /// What the server knows about this iPhone.
 private struct ServerSection: View {
     let model: AppleHealthModel
@@ -277,8 +247,4 @@ private struct ServerSection: View {
     private func relative(_ date: Date) -> String {
         date.formatted(.relative(presentation: .named))
     }
-}
-
-extension MetricGroup {
-    var title: String { rawValue.capitalized }
 }

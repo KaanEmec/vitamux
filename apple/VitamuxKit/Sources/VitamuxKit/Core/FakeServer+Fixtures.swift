@@ -24,6 +24,7 @@ extension FakeServer {
         guard let token, let device = state.sessions[token] else {
             return problem(401, "unauthenticated", token == nil ? "sign in or send a bearer token" : "invalid, revoked or expired token")
         }
+        if let reply = watch(method: method, url: url) { return reply } // FakeServer+Watch.swift, before Explore: it extends the inventory
         if let reply = dashboard(method: method, url: url, body: body) { return reply } // FakeServer+Dashboard.swift
         if let reply = explore(method: method, url: url, body: body) { return reply } // FakeServer+Explore.swift
         if let reply = specialised(method: method, url: url) { return reply } // FakeServer+Specialised.swift

@@ -31,7 +31,7 @@ Wireframe-level map for [E22](../plan/E22-ios-app/README.md): which screens, she
 | | All-sources day: inputs, overrides list, revoke | `/explore/{metric}/day/{date}` | `vitamux://explore/heart_rate/day/2026-01-31` | J22.8 |
 | | Sleep, Blood pressure, Body composition, Workouts | `/explore/sleep` and siblings | `vitamux://explore/sleep` | J22.9 |
 | | Events | `/explore/events?code=` | `vitamux://explore/events?code=…` | J22.9 |
-| | Apple Watch views: ECG strip, RR plot, rings, route | new in both clients | from their event or workout | J22.18 |
+| | Apple Watch views: ECG list and strip, RR plot, rings, State of Mind, workout route and segments | new in both clients | `vitamux://explore/ecg`, `…/ecg/{id}`, `…/beats?date=`, `…/activity-rings`, `…/state-of-mind`, `…/workouts/{id}` | J22.18 |
 | Sources | Sources: "This iPhone" card, connections, run strips, banners | `/connections?connected=&auth_error=&provider=&removed=` | `vitamux://connections?connected=withings` (OAuth return) | J22.11 |
 | | *Connect a source*: setup states, Withings app wizard, sidecar card, prompt steps, OAuth in `ASWebAuthenticationSession` | dialog | | J22.11 |
 | | Connection detail: overview, streams, devices, backfills, history, settings | `/connections/{id}?tab=` | `vitamux://connections/{id}?tab=backfills` | J22.11 |

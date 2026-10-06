@@ -50,10 +50,11 @@ final class EventsModel {
         return types + [EventType(code: code, count: 0)]
     }
 
-    /// One lane per type, by name; each event labelled with its level or value as given.
+    /// One lane per type, by family (heart rhythm, mind, cycle tracking, symptoms, alerts) and
+    /// name; each event labelled with its level or value as given.
     var lanes: [EventLanes.Lane] {
         Dictionary(grouping: events.value ?? [], by: \.code)
-            .sorted { $0.key < $1.key }
+            .sorted { (EventFamily(code: $0.key), $0.key) < (EventFamily(code: $1.key), $1.key) }
             .map { code, list in
                 EventLanes.Lane(label: metricLabel(code), events: list.map { event in
                     let label = event.level.map(metricLabel) ?? event.value.map(Format.number) ?? metricLabel(code)

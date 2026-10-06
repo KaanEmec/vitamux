@@ -1,4 +1,5 @@
 import HealthBridgeHealthKit
+import HealthKit
 import SwiftUI
 
 /// One metric group's types: anchor, last sync, the last error, the server's possibly-denied
@@ -67,6 +68,15 @@ private struct TypeRow: View {
 extension HealthType {
     /// "HKQuantityTypeIdentifierHeartRateVariabilitySDNN" → "Heart Rate Variability SDNN".
     var displayName: String {
+        switch id {
+        case HKWorkoutTypeIdentifier: return "Workouts"
+        case HKWorkoutRouteTypeIdentifier: return "Workout routes"
+        case HKDataTypeIdentifierHeartbeatSeries: return "Heartbeat series"
+        case Registry.electrocardiogramID: return "Electrocardiograms"
+        case Registry.activitySummaryID: return "Activity summaries"
+        case Registry.stateOfMindID: return "State of Mind"
+        default: break
+        }
         var name = id
         for prefix in ["HKQuantityTypeIdentifier", "HKCategoryTypeIdentifier", "HKCorrelationTypeIdentifier", "HKWorkoutType"]
         where name.hasPrefix(prefix) {

@@ -32,6 +32,7 @@ struct MetricDetailView: View {
                     RangePicker(range: $model.range, end: $model.end, latest: model.latest)
                         .accessibilityIdentifier("rangePicker")
                     SpecialisedNote(view: model.spec?.view)
+                    WatchMetricNote(code: model.code)
                     MetricChart(model: model)
                     SeriesToggles(model: model)
                 }

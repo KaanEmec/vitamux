@@ -16,6 +16,10 @@ enum Route: Hashable {
     case metricDay(code: String, date: String)
     case exploreView(ExploreKind)
     case events(code: String? = nil)
+    // Apple Watch (J22.18): an ECG recording, a day's beat-to-beat series, a workout's route and segments.
+    case ecgRecording(id: String)
+    case beats(date: String? = nil)
+    case workout(id: String)
 
     // Sources
     case connection(id: String, tab: String? = nil)
@@ -35,6 +39,8 @@ enum Route: Hashable {
     /// The specialised Explore views (`/explore/sleep` and siblings).
     enum ExploreKind: String, CaseIterable {
         case sleep, bloodPressure = "blood-pressure", bodyComposition = "body-composition", workouts
+        // Apple Watch (J22.18)
+        case ecg, activityRings = "activity-rings", stateOfMind = "state-of-mind"
     }
 
     /// The query the OAuth return and the panel's links put on `/connections`.
@@ -60,6 +66,9 @@ enum Route: Hashable {
         case ("dashboard", nil, nil, nil): self = .dashboard(date: value("date"))
         case ("explore", nil, nil, nil): self = .explore
         case ("explore", "events", nil, nil): self = .events(code: value("code"))
+        case ("explore", "beats", nil, nil): self = .beats(date: value("date"))
+        case ("explore", "ecg", let id?, nil): self = .ecgRecording(id: id)
+        case ("explore", "workouts", let id?, nil): self = .workout(id: id)
         case ("explore", let name?, nil, nil) where ExploreKind(rawValue: name) != nil:
             self = .exploreView(ExploreKind(rawValue: name)!)
         case ("explore", let code?, nil, nil): self = .metric(code: code, range: value("range"), end: value("end"))
@@ -88,7 +97,7 @@ enum Route: Hashable {
     var tab: AppTab {
         switch self {
         case .dashboard: .dashboard
-        case .explore, .metric, .metricDay, .exploreView, .events: .explore
+        case .explore, .metric, .metricDay, .exploreView, .events, .ecgRecording, .beats, .workout: .explore
         case .connections, .connection: .sources
         case .lab, .labDocument, .labResults, .analyte: .lab
         case .more, .rules, .rule, .ruleNew, .settings, .appleHealth: .more
