@@ -96,7 +96,7 @@ struct IntradayFakeTests {
         #expect(try await client.getMetric(path: .init(code: "steps")).ok.body.json.intraday == .init(_default: ._30m, finest: ._1m))
         #expect(try await client.getMetric(path: .init(code: "heart_rate_resting")).ok.body.json.intraday == nil)
         let listed = try await client.listMetrics().ok.body.json.metrics
-        #expect(listed.filter { $0.intraday != nil }.map(\.code).sorted() == ["heart_rate", "spo2", "steps"])
+        #expect(listed.filter { $0.intraday != nil }.map(\.code).sorted() == ["heart_rate", "rr_interval", "spo2", "stand_hours", "steps"])
     }
 
     @Test func `a heart-rate day has 14,400 raw rows from the watch, paged`() async throws {
