@@ -35,10 +35,7 @@ struct RouteView: View {
             PlaceholderView(title: "Rule", detail: [metric], job: "J22.10")
         case .ruleNew:
             PlaceholderView(title: "New rule", detail: [], job: "J22.10")
-        case .settings(.system): SystemStatusView()
-        case .settings(.app): AppSettingsView()
-        case .settings(let page):
-            PlaceholderView(title: page.title, detail: [], job: "J22.13")
+        case .settings(let page): SettingsPageView(page: page)
         case .appleHealth:
             PlaceholderView(title: "Apple Health", detail: [], job: "J22.14")
         }

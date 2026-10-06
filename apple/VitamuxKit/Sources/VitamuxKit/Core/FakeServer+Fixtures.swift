@@ -20,20 +20,19 @@ extension FakeServer {
             break
         }
         guard url.path.hasPrefix("/api/") else { return problem(404, "not_found", "not stubbed in the fake server") }
-        guard let token, let device = state.sessions[token] else {
+        guard let token, state.sessions[token] != nil else {
             return problem(401, "unauthenticated", token == nil ? "sign in or send a bearer token" : "invalid, revoked or expired token")
         }
         if let reply = dashboard(method: method, url: url, body: body) { return reply } // FakeServer+Dashboard.swift
         if let reply = explore(method: method, url: url, body: body) { return reply } // FakeServer+Explore.swift
         if let reply = specialised(method: method, url: url) { return reply } // FakeServer+Specialised.swift
+        if let reply = settings(method: method, url: url, body: body, token: token, core: &state) { return reply } // FakeServer+Settings.swift
         switch (method, url.path) {
         case ("POST", "/api/v1/auth/logout"):
             state.sessions[token] = nil
             return Reply(status: 204)
         case ("GET", "/api/v1/auth/session"):
             return json(200, ["user": user(state), "csrf_token": ""])
-        case ("GET", "/api/v1/auth/sessions"):
-            return json(200, ["sessions": [activeSession(name: device)]])
         case ("GET", "/api/v1/system/version"):
             guard state.handshake == .current else { return json(200, ["version": "0.3.1-fake", "commit": "fake"]) }
             return json(200, handshakeBody.merging(["version": "0.0.0-fake", "commit": "fake"]) { $1 })
@@ -41,10 +40,6 @@ extension FakeServer {
             return json(200, ["metrics": allMetrics])
         case ("GET", "/api/v1/connections"):
             return json(200, ["connections": connections])
-        case ("POST", _) where url.path.hasPrefix("/api/v1/devices/") && url.path.hasSuffix("/revoke"):
-            return Reply(status: 204)
-        case ("GET", "/api/v1/timezone-periods"):
-            return json(200, ["timezone_periods": timezonePeriods])
         case ("GET", "/api/v1/measurements"):
             return measurements(url)
         default:
@@ -111,14 +106,6 @@ extension FakeServer {
         ["id": "00000000-0000-4000-8000-000000000001", "username": Owner.username, "totp_enabled": state.totpEnabled]
     }
 
-    private static func activeSession(name: String) -> [String: Any] {
-        [
-            "id": "00000000-0000-4000-8000-000000000002", "kind": "app", "name": name,
-            "created_at": "2026-01-01T08:00:00Z", "last_seen_at": "2026-01-02T08:00:00.25Z",
-            "expires_at": "2099-01-01T00:00:00Z", "current": true,
-        ]
-    }
-
     static var handshakeBody: [String: Any] { ["product": "vitamux", "api_version": 1, "min_app_version": "0.4.0"] }
 
     // MARK: - Catalogue and connections (the shell's search and sync status)
@@ -158,15 +145,6 @@ extension FakeServer {
     private static var connections: [[String: Any]] { [
         connection(1, "withings", health: "ok", lastSuccess: "2026-01-02T08:00:00Z"),
         connection(2, "garmin", health: "needs_reauth", lastSuccess: "2026-01-01T08:00:00Z"),
-    ] }
-
-    // MARK: - Settings
-
-    private static var timezonePeriods: [[String: Any]] { [
-        ["id": "00000000-0000-4000-8000-000000000010", "tz": "America/New_York",
-         "valid_from": "2024-01-01T00:00:00Z", "valid_to": "2026-03-01T05:00:00Z"],
-        ["id": "00000000-0000-4000-8000-000000000011", "tz": "Europe/Berlin",
-         "valid_from": "2026-03-01T05:00:00Z", "valid_to": NSNull()],
     ] }
 
     // MARK: - Source data: five synthetic heart-rate samples, paged by an opaque cursor
