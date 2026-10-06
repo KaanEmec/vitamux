@@ -470,14 +470,6 @@ nonisolated struct GatedStore: HealthStore {
     }
     func enableBackgroundDelivery(for type: HKSampleType) async throws { try await base.enableBackgroundDelivery(for: type) }
 
-    // Registry v2 detail reads (ADR-0024): forwarded, or the protocol's defaults would refuse them.
-    func electrocardiogram(_ sample: HKSample) async throws -> ECG { try await base.electrocardiogram(sample) }
-    func heartbeats(_ sample: HKSample) async throws -> Beats { try await base.heartbeats(sample) }
-    func route(_ sample: HKSample) async throws -> HealthBridgeCore.Route { try await base.route(sample) }
-    func workoutUUID(of sample: HKSample) async throws -> UUID? { try await base.workoutUUID(of: sample) }
-    func activitySummaries(from start: Date, through end: Date, in calendar: Calendar) async throws -> [ActivitySummary] {
-        try await base.activitySummaries(from: start, through: end, in: calendar)
-    }
 }
 
 #if DEBUG
