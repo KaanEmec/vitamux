@@ -12,8 +12,9 @@ enum AppPreferences {
         return UserDefaults(suiteName: "group.org.vitamux.healthbridge") ?? .standard
     }
 
-    /// Widgets hide values while the iPhone is locked (on by default).
-    static let redactWidgets = "widgets.redactWhileLocked"
+    /// Widgets hide values while the iPhone is locked (on by default); the extension reads the
+    /// same key from the app group (`WidgetStore`).
+    static let redactWidgets = WidgetSnapshot.redactKey
 
     /// The local notification categories (docs/architecture/ios-app.md#offline-cache-widgets-and-notifications),
     /// each on unless turned off. Notifications never contain health values.

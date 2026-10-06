@@ -12,7 +12,7 @@ xcodebuild -project Vitamux.xcodeproj -scheme Vitamux -skipPackagePluginValidati
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build test
 ```
 
-`project.yml` is the source of truth; `Vitamux.xcodeproj`, the `Info.plist`s and the entitlements are generated and not committed. Targets: the app `Vitamux`, the widget extension stub `VitamuxWidgets` and `VitamuxUITests`. Set `DEVELOPMENT_TEAM` for a device build. The bundle id and Keychain service stay Bridge's (`org.vitamux.healthbridge`), and the app's Keychain access group is its own identifier (shared with the widget), so an installed Bridge upgrades in place with its device token and anchors: `scripts/upgrade-from-bridge.sh` checks that on a simulator.
+`project.yml` is the source of truth; `Vitamux.xcodeproj`, the `Info.plist`s and the entitlements are generated and not committed. Targets: the app `Vitamux`, the widget extension `VitamuxWidgets`, its tests `VitamuxWidgetsTests` and `VitamuxUITests`. Set `DEVELOPMENT_TEAM` for a device build. The bundle id and Keychain service stay Bridge's (`org.vitamux.healthbridge`), and the app's Keychain access group is its own identifier (shared with the widget), so an installed Bridge upgrades in place with its device token and anchors: `scripts/upgrade-from-bridge.sh` checks that on a simulator.
 
 For a device build you need Xcode, an iPhone on iOS 18 or newer and an Apple Developer Program team. A paid membership is the supported path ([why](../../docs/architecture/apple-health.md#distribution)); a free account's profile expires after 7 days. Set `DEVELOPMENT_TEAM` in `project.yml` (and a bundle id you own if your team cannot register `org.vitamux.healthbridge`), regenerate and run. Automatic signing enables what `project.yml` declares: HealthKit with Background Delivery, Background fetch (the refresh task `org.vitamux.healthbridge.refresh`), the app group and Keychain group, and the purpose strings (`NSHealthShareUsageDescription`, read only; camera for QR scans; Face ID for app lock). Trust the developer certificate on first launch if iOS asks.
 
@@ -29,6 +29,16 @@ More › Apple Health (`vitamux://apple-health`, `Features/AppleHealth`):
 
 **Upgrading from Bridge:** install this app over Vitamux Bridge with the same bundle id; the pairing, enabled groups, anchors and HealthKit access carry over, with no re-pairing and no full re-pull. `scripts/upgrade-from-bridge.sh ["<simulator name>"]` checks it on a simulator against the last Bridge in git history.
 
+## Widgets
+
+Metric (small, medium, lock-screen rectangular, circular and inline), Sleep (with stages) and Metrics (three side by side), configured from the dashboard's cards (`Widgets/`, J22.20):
+
+- **Data.** After each load of today the dashboard writes `WidgetSnapshot` (one small JSON file in the app group: the shown cards as formatted, and when they were fetched; answers from the offline cache keep their stored time). Sign-out, an ended session and a new sign-in remove it. The extension only reads it, the redaction preference and whether the session's Keychain item still exists; it has no client and never fetches, so the values are as fresh as the app's last dashboard load (Settings › This app shows when).
+- **States.** "As of" time, with the weekday and a clock after 6 hours; "Open Vitamux to sign in" without values once the session is gone or idle for 30 days.
+- **Privacy.** Values are `privacySensitive` and drawn as a blurred placeholder while locked, unless "Hide values while locked" is off.
+- **Links.** A card opens `vitamux://explore/<metric>` (`/explore/sleep` and `/explore/blood-pressure` for the two families).
+- **Tests.** `VitamuxWidgetsTests` (no host: a widget extension cannot host tests) covers the file, the session and stale rules, the timeline and links, and renders every family fresh, stale, signed out, locked and unlocked; set `TEST_RUNNER_WIDGET_RENDER_DIR` to keep the PNGs. `#Preview`s in `WidgetPreviews.swift`. The lock screen and refreshes over a day need a device (J22.23).
+
 ## UI tests
 
 UI tests launch the app with `-uitest`: the kit's fake server (`FakeServer.uiTestServers`: `fake.vitamux.test`, plus `old.vitamux.test` from before the version handshake, `other.vitamux.test` that is not Vitamux, and any other `*.vitamux.test` unreachable), an in-memory session, cleared preferences and a fake HealthStore (no HealthKit prompts); app lock opens on the button. More arguments: `-uitest-totp` (two-factor on), `-uitest-paired` (a paired iPhone), `-uitest-revoked` and `-uitest-anchor-reset` (the server revoked that iPhone, or asks it to pull again), `-uitest-keep-device` (keep what a Bridge build left), `-uitest-empty-install` and `-uitest-panel-layout` (the dashboard's start: no data, or a layout saved in the panel). The link `vitamux://uitest/expire-sessions` ends the fake's sessions, for expiry mid-use. Open links in the running app with `openLink` (`UITestSupport.swift`); `XCUIApplication.open` relaunches it. More arguments: `-uitest-totp` (two-factor on), `-uitest-paired` (a paired iPhone), `-uitest-keep-device` (keep what a Bridge build left), `-uitest-empty-install` and `-uitest-panel-layout` (the dashboard's start: no data, or a layout saved in the panel), `-uitest-withings-env` (Withings app credentials set by the environment).
@@ -40,7 +50,7 @@ UI tests launch the app with `-uitest`: the kit's fake server (`FakeServer.uiTes
 | `Sources/App/` | `VitamuxApp` (entry), `AppState` (the one shared object: server, session, client, router, theme, app lock), `Route` (every linkable screen, `vitamux://` parsing), `RootView` (sign-in, lock or shell; app-switcher blur), `ShellView` (tabs and stacks), `RouteView` (the screen per route) |
 | `Sources/Features/<Feature>/` | A feature's views and, where a screen loads or changes data, its `@Observable` model (`SignIn`, `Shell` for search and sync status, `Lock`, `More`, `Settings`, `AppleHealth`, …) |
 | `Sources/Shared/` | Components used by more than one feature (`ProblemView`, `PlaceholderView`, `AppMark`) |
-| `Widgets/` | The widget extension (a stub until the widget job) |
+| `Widgets/` | The widget extension (see [Widgets](#widgets)); `Shared/` is compiled into the app too, `Tests/` is `VitamuxWidgetsTests` |
 | `UITests/` | UI tests, one file per screen |
 | [`../VitamuxKit`](../VitamuxKit) | API client (J22.4), `Core` (`Loadable`, `Problem`), charts (J22.6) |
 

@@ -42,6 +42,8 @@ struct DashboardView: View {
             if case .loading = model.layout { await load() }
         }
         .onChange(of: date) { _, new in choose(new.flatMap(LocalDate.init)) }
+        // Today's cards for the widgets, after a load, another day back to today, or an edit.
+        .onChange(of: model.contents) { publishToWidgets() }
         .sheet(isPresented: Binding { model.draft != nil } set: { if !$0 { model.cancelEditing() } }) {
             DashboardEditView(model: model)
         }
@@ -50,6 +52,11 @@ struct DashboardView: View {
     private func load() async {
         guard let client = state.client else { return }
         await model.load(client)
+        publishToWidgets()
+    }
+
+    private func publishToWidgets() {
+        WidgetSnapshotWriter.write(model, status: state.cache.status)
     }
 
     private func choose(_ day: LocalDate?) {
