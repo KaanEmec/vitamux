@@ -73,7 +73,9 @@ final class DayModel {
     private(set) var overlays: [ChartOverlay] = []
     /// The night the view is centred on, when it is.
     private(set) var night: ClosedRange<Date>?
-    private(set) var layer: Layer?
+    private(set) var layer: Layer? {
+        didSet { if let layer { Signposts.chartWillRender(points: layer.series.reduce(layer.resolved.points.count) { $0 + $1.points.count }) } }
+    }
     private(set) var step: IntradayStep
     private(set) var loading = false
     private(set) var problem: Problem?

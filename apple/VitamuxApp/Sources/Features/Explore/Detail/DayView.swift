@@ -141,6 +141,8 @@ private struct DayChart: View {
             }
         }
         .accessibilityIdentifier("dayChart")
+        .onAppear { Signposts.chartDidRender() }
+        .onChange(of: layer.id) { Signposts.chartDidRender() }
     }
 }
 

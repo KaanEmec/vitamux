@@ -72,8 +72,16 @@ jobs:
         run: go test -count=1 ./deploy/compose/
       - run: CGO_ENABLED=0 go build -tags webui -trimpath -o bin/vitamux ./cmd/vitamux && ./bin/vitamux version
 
+  # The iOS app and its kits (J22.22). macos-26 (arm64) carries Xcode 26.0.1-26.6 and the iOS 26.2,
+  # 26.4 and 26.5 simulator runtimes (actions/runner-images, macos-26-arm64); macos-15 has no
+  # iOS 26 runtime. Pinned: Xcode 26.6 and an iPhone 17 Pro on iOS 26.5, created per run.
   swift:
-    runs-on: macos-15
+    runs-on: macos-26
+    timeout-minutes: 120
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      SIM_DEVICE: iPhone 17 Pro
+      SIM_RUNTIME: com.apple.CoreSimulator.SimRuntime.iOS-26-5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: swift test --package-path apple/HealthBridgeKit
@@ -96,6 +104,57 @@ jobs:
           yams https://github.com/jpsim/Yams
           EOF
       - run: swift test --package-path apple/VitamuxKit
+      - run: brew install xcodegen
+      # Builds the app and the widget for the simulator (and checks the app resolves no package
+      # beyond VitamuxKit's), validates both privacy manifests, runs the UI suite on the fake
+      # server with an accessibility audit per screen and the widget tests, scans the app's
+      # unified log for the fake's secrets and `vmx_` tokens, and checks the signpost budgets.
+      - name: App gates (apple/VitamuxApp/scripts/ui-gates.sh)
+        run: apple/VitamuxApp/scripts/ui-gates.sh
+        env:
+          RESULT_BUNDLE: ${{ runner.temp }}/ios/ui-tests.xcresult
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: ios-ui-tests
+          path: ${{ runner.temp }}/ios
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # The app against a real `vitamux serve` on a throwaway database (scripts/ios-stack.sh, as
+  # `make test-ios-stack`). PostgreSQL 18 from Homebrew: macOS runners have no service containers.
+  ios-stack:
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      SIM_DEVICE: iPhone 17 Pro
+      SIM_RUNTIME: com.apple.CoreSimulator.SimRuntime.iOS-26-5
+      VITAMUX_DATABASE_URL: postgres://vitamux@127.0.0.1:5432/vitamux?sslmode=disable
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: PostgreSQL 18 (throwaway cluster, trust auth on loopback)
+        run: |
+          brew install postgresql@18 xcodegen
+          pg=$(brew --prefix postgresql@18)/bin
+          echo "$pg" >> "$GITHUB_PATH"
+          "$pg/initdb" -D "$RUNNER_TEMP/pg" -U vitamux --auth=trust >/dev/null
+          "$pg/pg_ctl" -D "$RUNNER_TEMP/pg" -l "$RUNNER_TEMP/pg.log" -o "-c listen_addresses=127.0.0.1" -w start
+          "$pg/createdb" -h 127.0.0.1 -U vitamux vitamux
+      - name: iOS stack smoke
+        run: scripts/ios-stack.sh
+        env:
+          RESULT_BUNDLE: ${{ runner.temp }}/ios-stack-smoke.xcresult
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: ios-stack-smoke.xcresult
+          path: ${{ runner.temp }}/ios-stack-smoke.xcresult
+          retention-days: 7
+          if-no-files-found: ignore
 
   integration:
     runs-on: ubuntu-latest

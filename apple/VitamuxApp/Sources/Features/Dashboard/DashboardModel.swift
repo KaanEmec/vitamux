@@ -85,6 +85,8 @@ final class DashboardModel {
 
     /// Loads everything; pull to refresh calls it again.
     func load(_ client: Client) async {
+        let ready = Signposts.signposter.beginInterval("dashboardReady")
+        defer { Signposts.signposter.endInterval("dashboardReady", ready) }
         async let layout = Loadable { try await client.getDashboardLayout().ok.body.json }
         async let catalogue = try? client.listMetrics().ok.body.json.metrics
         async let connections = Loadable { try await client.listConnections().ok.body.json.connections }
