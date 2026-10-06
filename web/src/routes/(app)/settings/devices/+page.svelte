@@ -1,7 +1,7 @@
 <!--
 	Devices (J15.6): pair the Apple Health app with a QR code, see paired devices (last contact,
-	requested types, "possibly denied" hints), ask one to resync, revoke it, and classify the apps
-	(origins) data came from as native, relayed or direct.
+	requested types, "possibly denied" hints), open a device's source filter (J22.25, ./[id]/sources),
+	ask one to resync, revoke it, and classify the apps (origins) data came from as native, relayed or direct.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
@@ -122,6 +122,7 @@
 										</div>
 									{:else}
 										<div class="actions">
+											<a class="btn sm" href="/settings/devices/{d.id}/sources" aria-label="Sources of {d.name}">Sources</a>
 											<button class="btn sm" type="button" onclick={() => (resetting = d)} aria-label="Resync {d.name}">Resync…</button>
 											<button class="btn sm destructive" type="button" onclick={() => (revoking = d.id)} aria-label="Revoke {d.name}">Revoke</button>
 										</div>

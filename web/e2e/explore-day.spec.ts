@@ -104,3 +104,14 @@ test('the all-sources day view reuses the Day chart', async ({ page }) => {
 	await expect(page.getByRole('group', { name: /^Heart rate on .*Sep 14, 2026, 1-minute buckets/ })).toBeVisible();
 	await expect(page.getByRole('heading', { name: 'Sources' })).toBeVisible();
 });
+
+test('the all-sources day view lists ignored sources only when asked', async ({ page, explore }) => {
+	await page.goto('/explore/heart_rate/day/2026-09-14');
+	await expect(page.getByRole('heading', { name: 'Sources' })).toBeVisible();
+	await expect(page.getByRole('region', { name: 'Ignored sources' })).toHaveCount(0);
+	await page.getByRole('switch', { name: 'Ignored sources' }).check();
+	await expect(page.getByRole('region', { name: 'Ignored sources' })).toContainText('Synthetic Band: 96 records held raw, ignored by the device’s source filter');
+	const q = new URLSearchParams(explore.seriesQueries.at(-1));
+	expect(q.get('include_ignored')).toBe('true');
+	expect(q.get('grain')).toBe('day');
+});

@@ -163,9 +163,12 @@ final class WatchTests: XCTestCase {
         struct OldStore: HealthStore { // a store written before registry v2
             func requestReadAuthorization(_ types: Set<HKObjectType>) async throws {}
             func earliestPermittedSampleDate() -> Date { .distantPast }
-            func anchoredPage(of type: HKSampleType, from start: Date, anchor: Data?, limit: Int) async throws -> AnchoredPage {
+            func anchoredPage(of type: HKSampleType, from start: Date, anchor: Data?, limit: Int,
+                              excluding: [HealthSource]) async throws -> AnchoredPage {
                 AnchoredPage(samples: [], deleted: [], anchor: anchor)
             }
+            func sources(for type: HKSampleType) async throws -> [HealthSource] { [] }
+            func lastSampleDate(of type: HKSampleType, from source: HealthSource) async throws -> Date? { nil }
             func observe(_ type: HKSampleType, onUpdate: @escaping @Sendable (@escaping @Sendable () -> Void) -> Void) {}
             func enableBackgroundDelivery(for type: HKSampleType) async throws {}
         }

@@ -2,7 +2,9 @@
 // series, coverage and dashboard layout endpoints. Resolved days come from DataApi (with its
 // override scenario on 2026-09-14), plus synthetic steps. The Day view (J26.3) reads intraday
 // buckets and raw rows (heart rate: WHOOP every 6 s, Garmin every 2 min; steps: Apple Health per
-// minute, Garmin per 15 min), one night and one workout. All values are synthetic.
+// minute, Garmin per 15 min), one night and one workout. With include_ignored, the inventory and the
+// per-source series add the records a device's source filter left raw (J22.25): a band app relayed
+// through Apple Health. All values are synthetic.
 import type { Page, Route } from '@playwright/test';
 import { expect, fallbackDay, test as dataTest, type DataApi } from './data-fake';
 
@@ -46,6 +48,13 @@ const inventory = [
 	item('analyte', 'ldl_c', { analyte: { code: 'ldl_c', name: 'LDL cholesterol', canonical_unit: 'mmol/L' }, days: 3, latest: { local_date: '2026-08-01', value: 2.9, unit: 'mmol/L', text: '2.9 mmol/L' } })
 ];
 
+const bandApp = { key: 'com.example.synthetic.band', name: 'Synthetic Band' };
+/** Records held raw because a source filter ignores their origin (GET /inventory?include_ignored=true). */
+export const ignoredItems = [
+	{ kind: 'metric', code: 'heart_rate', origin: bandApp, records: 1440, first_at: '2026-09-10T00:00:00Z', last_at: '2026-09-16T06:00:00Z' },
+	{ kind: 'sleep', code: 'sleep', origin: bandApp, records: 6, first_at: '2026-09-10T22:00:00Z', last_at: '2026-09-16T05:30:00Z' }
+];
+
 /** Synthetic steps per day, by date. */
 const steps = (date: string) => 6000 + (Number(date.slice(-2)) % 7) * 900;
 
@@ -55,6 +64,9 @@ export class ExploreApi {
 	saved: Json[] = [];
 	/** GET /sources/series answers no sources. */
 	noSources = false;
+	/** Query strings of GET /inventory and of day-grain GET /sources/series, in order. */
+	inventoryQueries: string[] = [];
+	seriesQueries: string[] = [];
 	/** Day view reads, in order: `resolved <window>` and `sources <grain>`. */
 	intraday: string[] = [];
 
@@ -77,7 +89,10 @@ export class ExploreApi {
 		const path = url.pathname.replace('/api/v1', '');
 		const q = url.searchParams;
 		let m: RegExpMatchArray | null;
-		if (path === '/inventory') return json(r, 200, { items: inventory, aggregates_pending: false });
+		if (path === '/inventory') {
+			this.inventoryQueries.push(q.toString());
+			return json(r, 200, { items: inventory, aggregates_pending: false, ...(q.get('include_ignored') === 'true' ? { ignored: ignoredItems } : {}) });
+		}
 		if (path === '/metrics') return json(r, 200, { metrics: catalogue });
 		if ((m = path.match(/^\/metrics\/([^/]+)$/))) {
 			const found = meta(m[1]);
@@ -136,6 +151,7 @@ export class ExploreApi {
 	}
 
 	private sources(r: Route, q: URLSearchParams) {
+		this.seriesQueries.push(q.toString());
 		const [start, end] = [q.get('start')!.slice(0, 10), q.get('end')!.slice(0, 10)];
 		const source = (provider: string, base: number) => {
 			const points = [];
@@ -144,7 +160,8 @@ export class ExploreApi {
 		};
 		return json(r, 200, {
 			metric: q.get('metric'), unit: 'bpm', aggregation: 'daily_summary', grain: 'day', timezone: 'Europe/Amsterdam', behind: false,
-			sources: this.noSources ? [] : [source('garmin', 52), source('apple_health', 54)]
+			sources: this.noSources ? [] : [source('garmin', 52), source('apple_health', 54)],
+			...(q.get('include_ignored') === 'true' ? { ignored: [{ origin: bandApp, records: 96, first_at: `${start}T00:00:00Z`, last_at: `${end}T00:00:00Z` }] } : {})
 		});
 	}
 

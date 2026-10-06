@@ -46,12 +46,19 @@ extension FakeServer {
     /// routes answer only with a live session, so without one the router's 401 answers.
     static func appleHealth(method: String, url: URL, token: String?, signedIn: Bool, body: Data) -> Reply? {
         let parts = url.path.split(separator: "/").map(String.init)
-        return AppleHealthFixture.update(url.host() ?? "") { state in
+        let host = url.host() ?? ""
+        return AppleHealthFixture.update(host) { state in
             switch (method, url.path) {
             case ("POST", "/api/ingest/v1/devices/pair"):
                 return state.pair(body)
             case ("GET", "/api/ingest/v1/devices/self"):
-                return state.withDevice(token) { AppleHealthFixture.json(200, $0.selfBody) }
+                return state.withDevice(token) { device in
+                    // The source filter (J22.25): FakeServer+SourceFilter.swift.
+                    let filter = SourceFilterFixture.ingestBody(host, deviceID: device.id)
+                    return AppleHealthFixture.json(200, device.selfBody.merging(["source_filter": filter]) { $1 })
+                }
+            case ("PUT", "/api/ingest/v1/devices/self/sources"):
+                return state.withDevice(token) { SourceFilterFixture.report(host, deviceID: $0.id, body: body) }
             case ("POST", "/api/ingest/v1/batches"):
                 let reply = state.withDevice(token) { device in
                     device.lastSyncAt = Date()
@@ -79,6 +86,14 @@ extension FakeServer {
                 let input = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any]
                 state.devices[parts[3]]?.request(input?["types"] as? [String] ?? [], at: Date())
                 return Reply(status: 204)
+            case ("GET", 5) where parts[4] == "source-filter":
+                guard state.devices[parts[3]] != nil else { return AppleHealthFixture.problem(404, "not_found", "device not found") }
+                return SourceFilterFixture.view(host, deviceID: parts[3])
+            case ("PUT", 5) where parts[4] == "source-filter":
+                guard state.devices[parts[3]] != nil else { return AppleHealthFixture.problem(404, "not_found", "device not found") }
+                let (reply, pulled) = SourceFilterFixture.replace(host, deviceID: parts[3], body: body)
+                if !pulled.isEmpty { state.devices[parts[3]]?.request(pulled.contains("*") ? [] : pulled, at: Date()) }
+                return reply
             case ("POST", 5) where parts[4] == "revoke":
                 guard let device = state.devices[parts[3]] else { return AppleHealthFixture.problem(404, "not_found", "device not found") }
                 state.devices[parts[3]]?.revokedAt = device.revokedAt ?? Date()

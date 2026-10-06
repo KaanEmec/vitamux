@@ -1,6 +1,6 @@
-// A stateful stand-in for the device, pairing, origin and source-device endpoints used by
-// Settings › Devices (J15.6) and the rule builder's chips, on top of fake-api.ts. It mirrors
-// internal/api/devices.go and origins.go. All values are synthetic.
+// A stateful stand-in for the device, pairing, origin, source-filter and source-device endpoints
+// used by Settings › Devices (J15.6, J22.25) and the rule builder's chips, on top of fake-api.ts.
+// It mirrors internal/api/devices.go and origins.go. All values are synthetic.
 import type { Page, Route } from '@playwright/test';
 import { test as base, expect } from './fake-api';
 
@@ -9,6 +9,23 @@ type Json = Record<string, unknown>;
 const heart = 'HKQuantityTypeIdentifierHeartRate';
 const steps = 'HKQuantityTypeIdentifierStepCount';
 const sleep = 'HKCategoryTypeIdentifierSleepAnalysis';
+const bodyMass = 'HKQuantityTypeIdentifierBodyMass';
+const hoursAgo = (h: number) => new Date(Date.now() - h * 3600_000).toISOString();
+
+/** One app the phone found in Apple Health, with the server's default for it. */
+interface App {
+	bundle_id: string;
+	name: string | null;
+	default_mode: 'take' | 'ignore';
+	default_reason: 'native' | 'direct_connection' | null;
+	reason_provider: string | null;
+	reason_provider_name: string | null;
+	origin_id: string | null;
+	classification: 'native' | 'relayed' | 'direct';
+	relayed_provider: string | null;
+	writes: Json[];
+	ignored_records: number;
+}
 
 export class DevicesApi {
 	/** 'ok' answers pairing codes; a number answers that status (503 without a public URL). */
@@ -46,6 +63,48 @@ export class DevicesApi {
 		{ code: 'apple_health', name: 'Apple Health', official: true, auth_kind: 'device_pairing', remote: false, available: true, setup_state: 'connected', callback_url: null, problems: [], app_credentials: null, sidecar: null, connections: 1 },
 		{ code: 'garmin', name: 'Garmin Connect', official: false, auth_kind: 'interactive_mfa', remote: true, available: true, setup_state: 'connected', callback_url: null, problems: [], app_credentials: null, sidecar: null, connections: 1 }
 	];
+	/** The first device's Apple Health source filter: the apps it found and the owner's explicit choices. */
+	filterDevice = '00000000-0000-4000-8000-0000000000d1';
+	filterVersion = 3;
+	sourcesReportedAt: string | null = hoursAgo(2);
+	apps: App[] = [
+		{
+			bundle_id: 'com.apple.health.synthetic', name: 'Synthetic Watch', default_mode: 'take', default_reason: 'native', reason_provider: null, reason_provider_name: null,
+			origin_id: '00000000-0000-4000-8000-0000000000e2', classification: 'native', relayed_provider: null,
+			writes: [{ type: heart, last_sample_at: hoursAgo(1) }, { type: steps, last_sample_at: hoursAgo(3) }], ignored_records: 0
+		},
+		{
+			bundle_id: 'com.example.synthetic.band', name: 'Synthetic Band', default_mode: 'ignore', default_reason: 'direct_connection', reason_provider: 'synthetic_band',
+			reason_provider_name: 'Synthetic Band Cloud', origin_id: '00000000-0000-4000-8000-0000000000e3', classification: 'relayed', relayed_provider: 'synthetic_band',
+			writes: [{ type: heart, last_sample_at: hoursAgo(5) }, { type: sleep, last_sample_at: hoursAgo(9) }], ignored_records: 42
+		},
+		{
+			bundle_id: 'com.example.synthetic.scale', name: 'Synthetic Scale', default_mode: 'take', default_reason: null, reason_provider: null, reason_provider_name: null,
+			origin_id: null, classification: 'direct', relayed_provider: null, writes: [{ type: bodyMass, last_sample_at: hoursAgo(30) }], ignored_records: 0
+		}
+	];
+	/** The explicit choices (SourceFilterChoice), as the last PUT left them. */
+	choices: Json[] = [];
+	/** Bodies of PUT /devices/{id}/source-filter, in order (also the refused ones). */
+	filterPuts: Json[] = [];
+
+	/** Another client changes the filter: the version moves on. */
+	changeElsewhere() {
+		this.filterVersion++;
+	}
+
+	private filterView(): Json {
+		return {
+			device_id: this.filterDevice, version: this.filterVersion, sources_reported_at: this.sourcesReportedAt,
+			default_ignore: [{ origin_pattern: 'com.example.synthetic.band%', provider: 'synthetic_band', provider_name: 'Synthetic Band Cloud' }],
+			origins: this.apps.map((a) => {
+				const c = this.choices.find((x) => x.bundle_id === a.bundle_id);
+				const mode = (c?.mode as string | undefined) ?? a.default_mode;
+				return { ...a, mode, types: mode === 'per_type' ? c!.types : [], explicit: !!c };
+			})
+		};
+	}
+
 	/** Bodies of request-anchor-reset (by device id) and of PATCH /origins/{id}, in order. */
 	resets: { id: string; body: Json }[] = [];
 	classified: { id: string; body: Json }[] = [];
@@ -81,6 +140,26 @@ export class DevicesApi {
 			(d.anchor_resets as Json[]).push(...types.map((type) => ({ type, requested_at: '2026-10-04T09:00:00Z' })));
 			return r.fulfill({ status: 204 });
 		}
+		if ((m = path.match(/^\/devices\/([^/]+)\/source-filter$/))) {
+			const d = this.devices.find((x) => x.id === m![1]);
+			if (!d || d.revoked_at || d.id !== this.filterDevice) return problem(r, 404, 'not_found', 'no such active device');
+			if (method === 'GET') return json(r, 200, this.filterView());
+			if (method !== 'PUT') return r.fallback();
+			const b = body();
+			this.filterPuts.push(b);
+			if (b.version !== undefined && b.version !== this.filterVersion) {
+				return problem(r, 409, 'conflict', 'the source filter changed since it was read; reload it');
+			}
+			const origins = (b.origins as Json[] | undefined) ?? [];
+			for (const c of origins) {
+				if (!['take', 'ignore', 'per_type'].includes(c.mode as string) || (c.mode === 'per_type' && !(c.types as string[] | undefined)?.length)) {
+					return problem(r, 422, 'invalid', 'per_type needs at least one type');
+				}
+			}
+			this.choices = origins.map((c) => (c.mode === 'per_type' ? c : { bundle_id: c.bundle_id, name: c.name, mode: c.mode }));
+			this.filterVersion++;
+			return json(r, 200, this.filterView());
+		}
 		if ((m = path.match(/^\/devices\/([^/]+)\/revoke$/)) && method === 'POST') {
 			const d = this.devices.find((x) => x.id === m![1]);
 			if (!d) return problem(r, 404, 'not_found', 'no such active device');
@@ -89,7 +168,7 @@ export class DevicesApi {
 			return r.fulfill({ status: 204 });
 		}
 		if (path === '/origins' && method === 'GET') {
-			return json(r, 200, { origins: this.origins, relay_targets: [{ code: 'garmin', name: 'Garmin' }, { code: 'oura', name: 'Oura' }] });
+			return json(r, 200, { origins: this.origins, relay_targets: [{ code: 'garmin', name: 'Garmin' }, { code: 'oura', name: 'Oura' }, { code: 'synthetic_band', name: 'Synthetic Band Cloud' }] });
 		}
 		if ((m = path.match(/^\/origins\/([^/]+)$/)) && method === 'PATCH') {
 			const o = this.origins.find((x) => x.id === m![1]);

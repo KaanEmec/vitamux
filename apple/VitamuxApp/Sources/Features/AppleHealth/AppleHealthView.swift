@@ -93,17 +93,9 @@ private struct PairedSections: View {
             }
         }
         Section {
-            // J22.25 builds the take-or-ignore filter; until then every app's data is taken.
-            NavigationLink {
-                PlaceholderView(title: "Apple Health sources", detail: [], job: "J22.25")
-            } label: {
-                LabeledContent {
-                    Text("All apps taken")
-                } label: {
-                    Label("Sources", systemImage: "app.badge.checkmark")
-                }
-            }
-            .accessibilityIdentifier("appleHealthSources")
+            // J22.25: Sources/AppleHealthSourcesView.swift.
+            AppleHealthSourcesLink(device: device)
+                .accessibilityIdentifier("appleHealthSources")
         } footer: {
             Text("Choose which apps' data Vitamux takes from Apple Health, so a provider you connect directly is not counted twice.")
         }

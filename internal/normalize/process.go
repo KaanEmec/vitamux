@@ -133,12 +133,20 @@ func (p *Processor) attempt(ctx context.Context, id int64, vers map[string]int32
 		raw := RawPayload{ID: id, Stream: row.Stream, ExternalKey: row.ExternalKey, ContentType: row.ContentType,
 			FetchedAt: row.FetchedAt, RequestMeta: row.RequestMeta, Body: body}
 		var out Output
+		var ignored []Ignored
 		var stats WriteStats
 		err = p.guard(who, id, func() (err error) {
 			if out, err = n.Normalize(ctx, raw, Env{Provider: row.Provider}); err != nil {
 				return &normalizerError{err}
 			}
+			// Records of an origin the pushing device's source filter ignores stay raw (J22.25).
+			if out, ignored, err = sourceFilterGuard(ctx, q, row.Provider, raw, out); err != nil {
+				return err
+			}
 			stats, err = Write(ctx, q, Source{ConnectionID: row.ConnectionID, RawPayloadID: id, NormalizerVersionID: versionID, Blobs: p.Blobs}, out)
+			if err == nil && row.Provider == "apple_health" {
+				err = storeIgnored(ctx, q, id, ignored)
+			}
 			return err
 		})
 		var ne *normalizerError

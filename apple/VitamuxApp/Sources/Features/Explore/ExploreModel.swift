@@ -18,6 +18,13 @@ final class ExploreModel {
     private(set) var catalogue: [Components.Schemas.Metric] = []
     var filter = ExploreFilter()
     var showEmpty = false
+    /// "Show ignored sources": records an Apple Health source filter held raw (J22.25), hidden by default.
+    var showIgnored = false
+    private(set) var ignored: Loadable<[Components.Schemas.IgnoredItem]> = .loading
+
+    init(origin: String? = nil) {
+        filter.origin = origin ?? ""
+    }
 
     /// GET /resolved/summary takes at most 20 metrics.
     private static let summaryBatch = 20
@@ -38,6 +45,13 @@ final class ExploreModel {
                 }
             }
         }
+    }
+
+    /// Reads the inventory with `include_ignored` when the toggle is on.
+    func loadIgnored(_ client: Client?) async {
+        guard showIgnored, let client else { return }
+        ignored = .loading
+        ignored = await Loadable { try await client.getInventory(query: .init(includeIgnored: true)).ok.body.json.ignored ?? [] }
     }
 
     func loadCatalogue(_ client: Client?) async {

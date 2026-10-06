@@ -53,9 +53,12 @@ public struct DeviceSelf: Decodable, Equatable, Sendable {
     public let connectionID: String
     public let name: String
     public let anchorResets: [AnchorReset]
+    /// Which apps' data to take (J22.25); nil from a server older than the source filter.
+    public let sourceFilter: SourceFilter?
 
     enum CodingKeys: String, CodingKey {
         case deviceID = "device_id", connectionID = "connection_id", name, anchorResets = "anchor_resets"
+        case sourceFilter = "source_filter"
     }
 }
 
@@ -100,6 +103,24 @@ public struct IngestClient: Sendable {
         let (data, response) = try await send(request)
         guard (200..<300).contains(response.statusCode) else { throw Self.error(response.statusCode) }
         return try JSONDecoder().decode(DeviceSelf.self, from: data)
+    }
+
+    /// Reports the apps found in Apple Health at `PUT /api/ingest/v1/devices/self/sources`, replacing
+    /// the previous report (at most 500 apps of 200 types each). Bundle ids, names, types and times only.
+    public func reportSources(_ sources: [DiscoveredSource], credentials: Credentials) async throws {
+        struct Body: Encodable { let sources: [DiscoveredSource] }
+        let capped = sources.prefix(500).map { source in
+            var source = source
+            source.types = Array(source.types.prefix(200))
+            return source
+        }
+        var request = URLRequest(url: credentials.baseURL.appending(path: "api/ingest/v1/devices/self/sources"))
+        request.httpMethod = "PUT"
+        request.httpBody = try JSONEncoder().encode(Body(sources: capped))
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(credentials.token)", forHTTPHeaderField: "Authorization")
+        let (_, response) = try await send(request)
+        guard (200..<300).contains(response.statusCode) else { throw Self.error(response.statusCode) }
     }
 
     /// Posts the client checkpoint to `POST /api/ingest/v1/heartbeat` (schemas/heartbeat.v1.json): per-type anchor

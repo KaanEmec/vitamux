@@ -16,6 +16,25 @@ public struct AnchoredPage: @unchecked Sendable {
     }
 }
 
+/// An app or device that wrote to Apple Health (`HKSource`). `source` is nil in tests, which cannot
+/// create an `HKSource`; such a source cannot be excluded from a query. `HKSource` is immutable,
+/// hence `@unchecked Sendable`.
+public struct HealthSource: Equatable, @unchecked Sendable {
+    public var bundleID: String
+    public var name: String
+    public let source: HKSource?
+
+    public init(bundleID: String, name: String, source: HKSource? = nil) {
+        self.bundleID = bundleID
+        self.name = name
+        self.source = source
+    }
+
+    public init(_ source: HKSource) {
+        self.init(bundleID: source.bundleIdentifier, name: source.name, source: source)
+    }
+}
+
 public enum HealthStoreError: Error, Equatable {
     /// The store cannot read this detail (a store written before registry v2), so the page is not sent.
     case unsupported(String)
@@ -27,7 +46,13 @@ public enum HealthStoreError: Error, Equatable {
 public protocol HealthStore: Sendable {
     func requestReadAuthorization(_ types: Set<HKObjectType>) async throws
     func earliestPermittedSampleDate() -> Date
-    func anchoredPage(of type: HKSampleType, from start: Date, anchor: Data?, limit: Int) async throws -> AnchoredPage
+    /// One anchored page of `type` from `start`, leaving out the samples of `excluding` (the apps a
+    /// source filter ignores). No default: a wrapping store must forward the exclusion.
+    func anchoredPage(of type: HKSampleType, from start: Date, anchor: Data?, limit: Int, excluding: [HealthSource]) async throws -> AnchoredPage
+    /// The apps and devices that wrote `type` (`HKSourceQuery`).
+    func sources(for type: HKSampleType) async throws -> [HealthSource]
+    /// The end of the newest sample of `type` from `source`, nil when there is none.
+    func lastSampleDate(of type: HKSampleType, from source: HealthSource) async throws -> Date?
     /// Calls `onUpdate` on each change; `onUpdate` must call its completion handler exactly once.
     func observe(_ type: HKSampleType, onUpdate: @escaping @Sendable (@escaping @Sendable () -> Void) -> Void)
     func enableBackgroundDelivery(for type: HKSampleType) async throws
@@ -62,12 +87,35 @@ extension HKHealthStore: HealthStore {
         try await requestAuthorization(toShare: [], read: types)
     }
 
-    public func anchoredPage(of type: HKSampleType, from start: Date, anchor: Data?, limit: Int) async throws -> AnchoredPage {
+    public func anchoredPage(of type: HKSampleType, from start: Date, anchor: Data?, limit: Int,
+                             excluding: [HealthSource]) async throws -> AnchoredPage {
         let before = try anchor.flatMap { try NSKeyedUnarchiver.unarchivedObject(ofClass: HKQueryAnchor.self, from: $0) }
-        let predicate = HKSamplePredicate.sample(type: type, predicate: HKQuery.predicateForSamples(withStart: start, end: nil))
+        let predicate = HKSamplePredicate.sample(type: type, predicate: Self.anchoredPredicate(from: start, excluding: excluding))
         let result = try await HKAnchoredObjectQueryDescriptor(predicates: [predicate], anchor: before, limit: limit).result(for: self)
         return AnchoredPage(samples: result.addedSamples, deleted: result.deletedObjects.map(\.uuid),
                             anchor: try NSKeyedArchiver.archivedData(withRootObject: result.newAnchor, requiringSecureCoding: true))
+    }
+
+    /// Samples from `start` on, minus those of `excluding`. NOT(ignored) rather than "from the taken
+    /// sources", so an app that starts writing between discovery and the query is taken (unknown apps
+    /// are taken by default) and none of its samples are skipped past the anchor.
+    static func anchoredPredicate(from start: Date, excluding: [HealthSource]) -> NSPredicate {
+        let window = HKQuery.predicateForSamples(withStart: start, end: nil)
+        let excluded = Set(excluding.compactMap(\.source))
+        guard !excluded.isEmpty else { return window }
+        let ignored = NSCompoundPredicate(notPredicateWithSubpredicate: HKQuery.predicateForObjects(from: excluded))
+        return NSCompoundPredicate(andPredicateWithSubpredicates: [window, ignored])
+    }
+
+    public func sources(for type: HKSampleType) async throws -> [HealthSource] {
+        try await HKSourceQueryDescriptor(predicate: .sample(type: type)).result(for: self).map(HealthSource.init)
+    }
+
+    public func lastSampleDate(of type: HKSampleType, from source: HealthSource) async throws -> Date? {
+        guard let hkSource = source.source else { return nil }
+        let descriptor = HKSampleQueryDescriptor(predicates: [.sample(type: type, predicate: HKQuery.predicateForObjects(from: hkSource))],
+                                                 sortDescriptors: [SortDescriptor(\.endDate, order: .reverse)], limit: 1)
+        return try await descriptor.result(for: self).first?.endDate
     }
 
     public func observe(_ type: HKSampleType, onUpdate: @escaping @Sendable (@escaping @Sendable () -> Void) -> Void) {

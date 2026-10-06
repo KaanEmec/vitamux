@@ -215,6 +215,7 @@ final class ThisDevice {
         guard self.credentials == credentials, !isRevoked else { return }
         await observe(enabledTypes)
         await run(enabledTypes)
+        await reportSources(engine, credentials: credentials)
     }
 
     func syncNow() async {
@@ -258,6 +259,8 @@ final class ThisDevice {
                 defaults.set(newest, forKey: Key.reset)
                 refreshAnchors()
             }
+            // The source filter (J22.25): the next sync of each type applies it.
+            await engine.setSourceFilter(me.sourceFilter)
         } catch BridgeError.unauthorized {
             revoked()
         } catch {
@@ -308,6 +311,14 @@ final class ThisDevice {
         for type in types { await engine.resetAnchor(type) }
         refreshAnchors()
         await run(types)
+    }
+
+    /// Best effort, after a run: tells the server which apps wrote the enabled types (bundle ids,
+    /// names, types and newest sample times, never values), for Apple Health › Sources. Nothing
+    /// enabled, nothing to report: the server keeps the last report.
+    private func reportSources(_ engine: HealthSync, credentials: Credentials) async {
+        guard !enabledTypes.isEmpty, !isRevoked, let found = try? await engine.discoverSources(enabledTypes) else { return }
+        try? await IngestClient(transport: transport).reportSources(found, credentials: credentials)
     }
 
     private func observe(_ types: [HealthType]) async {
@@ -433,8 +444,21 @@ nonisolated struct GatedStore: HealthStore {
 
     func requestReadAuthorization(_ types: Set<HKObjectType>) async throws { try await base.requestReadAuthorization(types) }
     func earliestPermittedSampleDate() -> Date { base.earliestPermittedSampleDate() }
-    func anchoredPage(of type: HKSampleType, from start: Date, anchor: Data?, limit: Int) async throws -> AnchoredPage {
-        try await base.anchoredPage(of: type, from: start, anchor: anchor, limit: limit)
+    func anchoredPage(of type: HKSampleType, from start: Date, anchor: Data?, limit: Int,
+                      excluding: [HealthSource]) async throws -> AnchoredPage {
+        try await base.anchoredPage(of: type, from: start, anchor: anchor, limit: limit, excluding: excluding)
+    }
+    func sources(for type: HKSampleType) async throws -> [HealthSource] { try await base.sources(for: type) }
+    func lastSampleDate(of type: HKSampleType, from source: HealthSource) async throws -> Date? {
+        try await base.lastSampleDate(of: type, from: source)
+    }
+    // Registry v2 detail reads: without these the protocol's defaults would fail every such page.
+    func electrocardiogram(_ sample: HKSample) async throws -> ECG { try await base.electrocardiogram(sample) }
+    func heartbeats(_ sample: HKSample) async throws -> Beats { try await base.heartbeats(sample) }
+    func route(_ sample: HKSample) async throws -> HealthBridgeCore.Route { try await base.route(sample) }
+    func workoutUUID(of sample: HKSample) async throws -> UUID? { try await base.workoutUUID(of: sample) }
+    func activitySummaries(from start: Date, through end: Date, in calendar: Calendar) async throws -> [ActivitySummary] {
+        try await base.activitySummaries(from: start, through: end, in: calendar)
     }
     func observe(_ type: HKSampleType, onUpdate: @escaping @Sendable (@escaping @Sendable () -> Void) -> Void) {
         let id = type.identifier, gate = gate
@@ -478,12 +502,31 @@ extension ThisDevice {
 }
 
 /// Grants every authorization request and serves empty pages with a synthetic anchor, so a
-/// synced type shows an anchor and a reset type shows none until its next pull.
+/// synced type shows an anchor and a reset type shows none until its next pull. Its apps are the
+/// fake server's source-filter scenario (`FakeServer.SourceFilterScenario`).
 nonisolated struct FakeHealthStore: HealthStore {
+    typealias Scenario = FakeServer.SourceFilterScenario
+
     func requestReadAuthorization(_ types: Set<HKObjectType>) async throws {}
     func earliestPermittedSampleDate() -> Date { .distantPast }
-    func anchoredPage(of type: HKSampleType, from start: Date, anchor: Data?, limit: Int) async throws -> AnchoredPage {
+    func anchoredPage(of type: HKSampleType, from start: Date, anchor: Data?, limit: Int,
+                      excluding: [HealthSource]) async throws -> AnchoredPage {
         AnchoredPage(samples: [], deleted: [], anchor: anchor ?? Data("synthetic-anchor-\(type.identifier)".utf8))
+    }
+    func sources(for type: HKSampleType) async throws -> [HealthSource] {
+        let watch = HealthSource(bundleID: Scenario.watch, name: Scenario.watchName)
+        let band = HealthSource(bundleID: Scenario.band, name: Scenario.bandName)
+        let scale = HealthSource(bundleID: Scenario.scale, name: Scenario.scaleName)
+        switch HKQuantityTypeIdentifier(rawValue: type.identifier) {
+        case .heartRate: return [watch, band]
+        case .heartRateVariabilitySDNN: return [band]
+        case .stepCount: return [watch]
+        case .bodyMass: return [scale]
+        default: return []
+        }
+    }
+    func lastSampleDate(of type: HKSampleType, from source: HealthSource) async throws -> Date? {
+        Date(timeIntervalSinceNow: source.bundleID == Scenario.scale ? -26 * 3600 : -2 * 3600)
     }
     func observe(_ type: HKSampleType, onUpdate: @escaping @Sendable (@escaping @Sendable () -> Void) -> Void) {}
     func enableBackgroundDelivery(for type: HKSampleType) async throws {}

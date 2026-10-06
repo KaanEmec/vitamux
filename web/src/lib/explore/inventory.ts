@@ -11,8 +11,13 @@ const groupNames: Record<string, string> = { bp_reading: 'Blood pressure', body_
 
 export function itemName(it: Item): string {
 	if (it.kind === 'analyte') return it.analyte?.name ?? it.code;
-	if (it.kind === 'group') return groupNames[it.code] ?? metricLabel(it.code);
-	return metricLabel(it.code);
+	return codeName(it.kind, it.code);
+}
+
+/** The name of a metric, group, event, sleep or workouts code (also for records held raw). */
+export function codeName(kind: Item['kind'], code: string): string {
+	if (kind === 'group') return groupNames[code] ?? metricLabel(code);
+	return metricLabel(code);
 }
 
 /** The section an item is listed under: the catalogue section for metrics and groups. */

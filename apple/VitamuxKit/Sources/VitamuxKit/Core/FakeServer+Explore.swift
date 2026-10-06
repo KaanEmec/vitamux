@@ -30,7 +30,7 @@ extension FakeServer {
             let fixture = ExploreFixture(state: state)
             switch (method, path) {
             case ("GET", "/api/v1/inventory"):
-                return fixture.inventory()
+                return fixture.inventory(ignored: query.value("include_ignored") == "true" ? SourceFilterFixture.ignoredItems(host) : nil)
             case ("GET", "/api/v1/resolved/daily"):
                 return fixture.daily(query)
             case ("GET", "/api/v1/resolved/trend"):
@@ -328,7 +328,8 @@ struct ExploreFixture {
 
     // MARK: Endpoints
 
-    func inventory() -> Reply {
+    /// `ignored`: with include_ignored, the records a source filter held raw (FakeServer+SourceFilter.swift).
+    func inventory(ignored: [[String: Any]]? = nil) -> Reply {
         let lastAt = { (date: LocalDate) in Self.instant(date, hour: 7) }
         var items: [[String: Any]] = Self.series.compactMap { spec in
             guard let meta = Self.catalogue(spec.code) else { return nil }
@@ -368,7 +369,9 @@ struct ExploreFixture {
                 "latest": ["local_date": today.description, "value": 2.9, "unit": "mmol/L", "text": "2.9 mmol/L"],
             ]),
         ]
-        return Self.json(200, ["items": items, "aggregates_pending": true])
+        var body: [String: Any] = ["items": items, "aggregates_pending": true]
+        if let ignored { body["ignored"] = ignored }
+        return Self.json(200, body)
     }
 
     func metric(_ code: String) -> Reply {

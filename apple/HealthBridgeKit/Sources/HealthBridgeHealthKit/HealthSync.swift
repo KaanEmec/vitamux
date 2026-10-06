@@ -44,10 +44,11 @@ public actor HealthSync {
         guard let sampleType = type.sampleType, running.insert(type.id).inserted else { return }
         defer { running.remove(type.id) }
         let start = max(store.earliestPermittedSampleDate(), backfillStart)
+        let excluded = try await exclusions(for: type, sampleType)
         while true {
             let before = anchors.anchor(for: type.id)
             let startedAt = rfc3339(now())
-            let page = try await store.anchoredPage(of: sampleType, from: start, anchor: before, limit: type.pageLimit)
+            let page = try await store.anchoredPage(of: sampleType, from: start, anchor: before, limit: type.pageLimit, excluding: excluded)
             var samples: [Sample] = []
             samples.reserveCapacity(page.samples.count)
             for sample in page.samples { samples.append(try await detailed(sample, of: type)) }
@@ -58,6 +59,57 @@ public actor HealthSync {
                 deleted: page.deleted.map { Deleted(uuid: $0.uuidString) })
             try await sender.send(body, newAnchor: page.anchor)
             if page.samples.count + page.deleted.count < type.pageLimit { return }
+        }
+    }
+
+    /// The sources of `type` the stored filter does not take. When an app the last read excluded is
+    /// present and taken now, the type's anchor is reset first, so the app's history is pulled
+    /// (take to ignore needs no reset: later reads leave it out). Without a filter, and with nothing
+    /// excluded before, HealthKit is not asked for the sources at all.
+    func exclusions(for type: HealthType, _ sampleType: HKSampleType) async throws -> [HealthSource] {
+        let filter = anchors.sourceFilter
+        let before = anchors.excluded(for: type.id)
+        guard filter != nil || !before.isEmpty else { return [] }
+        let sources = try await store.sources(for: sampleType)
+        let excluded = sources.filter { !(filter?.takes($0.bundleID, type: type.id) ?? true) }
+        let now = Set(excluded.map(\.bundleID))
+        let present = Set(sources.map(\.bundleID))
+        if !before.subtracting(now).isDisjoint(with: present) { anchors.reset(type.id) }
+        anchors.setExcluded(now, for: type.id)
+        return excluded
+    }
+
+    /// Stores the server's source filter; the next sync of each type applies it. Nil (a server
+    /// without the filter) takes every app.
+    public func setSourceFilter(_ filter: SourceFilter?) {
+        anchors.sourceFilter = filter
+    }
+
+    /// The apps that wrote each of `types` (activity summaries have no source), with the end of each
+    /// type's newest sample, merged per bundle id. A Watch extension whose parent app is also found is
+    /// merged into the parent; otherwise it is listed on its own.
+    public func discoverSources(_ types: [HealthType]) async throws -> [DiscoveredSource] {
+        var found: [String: (name: String, types: [String: Date?])] = [:]
+        for type in types {
+            guard let sampleType = type.sampleType else { continue }
+            for source in try await store.sources(for: sampleType) {
+                let last = try await store.lastSampleDate(of: sampleType, from: source)
+                found[source.bundleID, default: (source.name, [:])].types[type.id] = last
+            }
+        }
+        for bundleID in found.keys.sorted() {
+            guard let parent = SourceFilter.parent(of: bundleID), found[parent] != nil, let child = found.removeValue(forKey: bundleID) else {
+                continue
+            }
+            for (type, last) in child.types {
+                let existing = found[parent]!.types[type] ?? nil
+                found[parent]!.types[type] = [existing, last].compactMap { $0 }.max()
+            }
+        }
+        return found.keys.sorted().map { bundleID in
+            let source = found[bundleID]!
+            return DiscoveredSource(bundleID: bundleID, name: source.name,
+                                    types: source.types.keys.sorted().map { .init(type: $0, lastSampleAt: source.types[$0] ?? nil) })
         }
     }
 

@@ -6,7 +6,8 @@ import Foundation
 enum Route: Hashable {
     // Tab roots: opening one resets its tab's stack and hands the root its query.
     case dashboard(date: String? = nil)
-    case explore
+    /// `origin`: Explore filtered to one origin app (`vitamux://explore?origin=<bundle id>`).
+    case explore(origin: String? = nil)
     case connections(ConnectionsReturn = .init())
     case lab
     case more
@@ -34,6 +35,7 @@ enum Route: Hashable {
     case ruleNew(metric: String? = nil, from: Int? = nil, blank: Bool = false)
     case settings(SettingsPage)
     case appleHealth
+    case appleHealthSources
 
     /// The specialised Explore views (`/explore/sleep` and siblings).
     enum ExploreKind: String, CaseIterable {
@@ -65,7 +67,7 @@ enum Route: Hashable {
         let part = { (index: Int) in index < segments.count ? segments[index] : nil }
         switch (part(0), part(1), part(2), part(3)) {
         case ("dashboard", nil, nil, nil): self = .dashboard(date: value("date"))
-        case ("explore", nil, nil, nil): self = .explore
+        case ("explore", nil, nil, nil): self = .explore(origin: value("origin"))
         case ("explore", "events", nil, nil): self = .events(code: value("code"))
         case ("explore", let name?, nil, nil) where ExploreKind(rawValue: name) != nil:
             self = .exploreView(ExploreKind(rawValue: name)!)
@@ -89,6 +91,7 @@ enum Route: Hashable {
         case ("settings", let page?, nil, nil) where page != "profile" && SettingsPage(rawValue: page) != nil:
             self = .settings(SettingsPage(rawValue: page)!)
         case ("apple-health", nil, nil, nil): self = .appleHealth
+        case ("apple-health", "sources", nil, nil): self = .appleHealthSources
         default: return nil
         }
     }
@@ -99,7 +102,7 @@ enum Route: Hashable {
         case .explore, .metric, .metricDay, .exploreView, .events: .explore
         case .connections, .connection: .sources
         case .lab, .labDocument, .labResults, .analyte, .labImport: .lab
-        case .more, .rules, .rule, .ruleNew, .settings, .appleHealth: .more
+        case .more, .rules, .rule, .ruleNew, .settings, .appleHealth, .appleHealthSources: .more
         }
     }
 
@@ -138,7 +141,7 @@ enum AppTab: Hashable, CaseIterable {
     var root: Route {
         switch self {
         case .dashboard: .dashboard()
-        case .explore: .explore
+        case .explore: .explore()
         case .sources: .connections()
         case .lab: .lab
         case .more: .more

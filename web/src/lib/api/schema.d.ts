@@ -115,6 +115,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ingest/v1/devices/self/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Report the apps the device found in Apple Health
+         * @description The apps (HealthKit sources) that wrote each enabled type, as HKSourceQuery lists them, with the end of each type's newest sample when the device read it. Replaces the previous report. Settings › Devices and the app's Apple Health › Sources screen list them (GET /api/v1/devices/{id}/source-filter). No health values.
+         */
+        put: operations["reportDeviceSources"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ingest/v1/devices/self/rotate-token": {
         parameters: {
             query?: never;
@@ -195,7 +215,7 @@ export interface paths {
         };
         /**
          * Everything stored, per metric, group kind, event code, sleep, workouts and lab analyte
-         * @description One item per kind and code that has active data, with its catalogue metadata. For metrics, first and last seen and the latest value come from the rows; count, days, providers, devices and origins come from the hourly aggregates plus the daily values, so they lag while aggregates_pending is true.
+         * @description One item per kind and code that has active data, with its catalogue metadata. For metrics, first and last seen and the latest value come from the rows; count, days, providers, devices and origins come from the hourly aggregates plus the daily values, so they lag while aggregates_pending is true. include_ignored adds ignored: records an Apple Health source filter left raw (ignored_by_filter), which the items never count.
          */
         get: operations["getInventory"];
         put?: never;
@@ -1231,6 +1251,30 @@ export interface paths {
          * @description The device reads the request from GET /api/ingest/v1/devices/self. Re-sent samples are deduplicated by UUID.
          */
         post: operations["requestDeviceAnchorReset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/{id}/source-filter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which apps' Apple Health data the device takes, per app
+         * @description One origin per app the device reported finding in Apple Health, the owner chose for, or the server has seen data from, with its effective mode, the default and why (docs/architecture/apple-health.md#source-filter). Defaults are evaluated on every read.
+         */
+        get: operations["getDeviceSourceFilter"];
+        /**
+         * Replace the owner's take or ignore choices for a device
+         * @description origins lists every explicit choice; an app left out follows its default. With version, the change applies only when it is still the device's version (409 otherwise). An app whose data changes from ignored to taken gets an anchor reset for the types now taken (* when the device has not reported them), and its records held raw on the server are normalized again. Audited as device.source_filter.
+         */
+        put: operations["setDeviceSourceFilter"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2500,6 +2544,33 @@ export interface components {
             items: components["schemas"]["InventoryItem"][];
             /** @description Days wait for the rebuild job, so metric counts, days and sources may lag. */
             aggregates_pending: boolean;
+            /** @description With include_ignored: records held raw because a source filter ignores their origin, per item and origin. */
+            ignored?: components["schemas"]["IgnoredItem"][];
+        };
+        IgnoredItem: {
+            /** @enum {string} */
+            kind: "metric" | "group" | "event" | "sleep" | "workouts";
+            /** @description Metric code, group kind, event code, sleep or workouts. */
+            code: string;
+            origin: components["schemas"]["OriginRef"];
+            /** Format: int64 */
+            records: number;
+            /** Format: date-time */
+            first_at: string;
+            /** Format: date-time */
+            last_at: string;
+        };
+        IgnoredSource: {
+            origin: components["schemas"]["OriginRef"];
+            /**
+             * Format: int64
+             * @description Records of the metric overlapping the range
+             */
+            records: number;
+            /** Format: date-time */
+            first_at: string;
+            /** Format: date-time */
+            last_at: string;
         };
         InventoryItem: {
             /** @enum {string} */
@@ -2633,6 +2704,8 @@ export interface components {
             /** @description Days of the metric in the range wait for the rebuild job (hour and day grains). */
             behind: boolean;
             sources: components["schemas"]["SourceSeriesSource"][];
+            /** @description With include_ignored: origins whose records of the metric in the range are held raw because a source filter ignores them; they have no values. */
+            ignored?: components["schemas"]["IgnoredSource"][];
             /** @description raw: more rows follow next_cursor. */
             has_more?: boolean;
             next_cursor?: string;
@@ -3829,6 +3902,102 @@ export interface components {
             name: string;
             /** @description Every reset the owner requested, kept by the server. Apply those whose requested_at is after the last reset applied for that type (* covers every type). */
             anchor_resets: components["schemas"]["AnchorReset"][];
+            source_filter: components["schemas"]["SourceFilter"];
+        };
+        /** @description The owner's explicit choice for one app in Apple Health. */
+        SourceFilterChoice: {
+            /** @description The HealthKit source's bundle id (the origin_key). */
+            bundle_id: string;
+            /** @description The app's name as Apple Health shows it. */
+            name?: string;
+            mode: components["schemas"]["SourceFilterMode"];
+            /** @description per_type: the HealthKit types taken (the others are ignored). Dropped for take and ignore. */
+            types?: string[];
+        };
+        /** @enum {string} */
+        SourceFilterMode: "take" | "ignore" | "per_type";
+        /** @description Origins ignored by default because the provider they relay is connected directly. */
+        SourceFilterDefault: {
+            /** @description A SQL LIKE pattern over bundle ids (% any run, _ one character, backslash escapes). */
+            origin_pattern: string;
+            /** @description The directly connected provider's code */
+            provider: string;
+            provider_name: string;
+        };
+        /** @description What the device applies (docs/architecture/apple-health.md#source-filter). For an app, the first that matches decides: an explicit choice for its bundle id, then for its parent app (a Watch extension's bundle id minus .watchkitapp, .watchkitextension and similar); Apple's own sources (com.apple.*) are taken by default; a default_ignore pattern matching the bundle id or the parent's ignores it; anything else is taken. */
+        SourceFilter: {
+            /** @description Incremented on every change of the explicit choices. */
+            version: number;
+            origins: components["schemas"]["SourceFilterChoice"][];
+            default_ignore: components["schemas"]["SourceFilterDefault"][];
+        };
+        SourceFilterUpdate: {
+            /** @description Apply only when the device's filter is still at this version. */
+            version?: number;
+            origins: components["schemas"]["SourceFilterChoice"][];
+        };
+        SourceFilterView: {
+            /** Format: uuid */
+            device_id: string;
+            version: number;
+            /**
+             * Format: date-time
+             * @description When the device last reported the apps it found in Apple Health.
+             */
+            sources_reported_at: string | null;
+            origins: components["schemas"]["SourceFilterOrigin"][];
+            default_ignore: components["schemas"]["SourceFilterDefault"][];
+        };
+        /** @description One app in Apple Health and what the device takes from it. */
+        SourceFilterOrigin: {
+            bundle_id: string;
+            name: string | null;
+            mode: components["schemas"]["SourceFilterMode"];
+            /** @description per_type: the types taken. */
+            types: string[];
+            /** @description The owner chose the mode; defaults never change it. */
+            explicit: boolean;
+            /** @enum {string} */
+            default_mode: "take" | "ignore";
+            /**
+             * @description native: Apple's own source; direct_connection: the provider it relays is connected directly, so its copy would count twice.
+             * @enum {string|null}
+             */
+            default_reason: "native" | "direct_connection" | null;
+            /** @description direct_connection: the provider code. */
+            reason_provider: string | null;
+            reason_provider_name: string | null;
+            /**
+             * Format: uuid
+             * @description The data origin once the server has seen data from the app.
+             */
+            origin_id: string | null;
+            /**
+             * @description The origin's classification (Settings › Devices).
+             * @enum {string}
+             */
+            classification: "native" | "relayed" | "direct";
+            relayed_provider: string | null;
+            /** @description The types the device found the app writing, with the newest sample's end; empty when not reported. */
+            writes: components["schemas"]["SourceType"][];
+            /**
+             * Format: int64
+             * @description Records from the app held raw on the server because a filter ignored them.
+             */
+            ignored_records: number;
+        };
+        SourceType: {
+            type: string;
+            /** Format: date-time */
+            last_sample_at?: string;
+        };
+        DeviceSourcesReport: {
+            sources: components["schemas"]["DeviceSource"][];
+        };
+        DeviceSource: {
+            bundle_id: string;
+            name?: string;
+            types: components["schemas"]["SourceType"][];
         };
         /** @description A stored lab PDF. A deleted document keeps only its id, status, sizes and times. */
         Document: {
@@ -4304,6 +4473,8 @@ export interface components {
         ConnectionFilter: components["schemas"]["ConnectionID"][];
         /** @description Device id (dev_…); repeatable. */
         DeviceFilter: components["schemas"]["DeviceID"][];
+        /** @description Also list the records an Apple Health source filter left raw (ignored_by_filter), per origin. They are never values: nothing was normalized from them. */
+        IncludeIgnored: boolean;
         /** @description Origin key (e.g. a HealthKit bundle id); repeatable. */
         OriginFilter: string[];
         /** @description Measurement kind; repeatable. */
@@ -4487,6 +4658,31 @@ export interface operations {
             403: components["responses"]["Problem"];
         };
     };
+    reportDeviceSources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeviceSourcesReport"];
+            };
+        };
+        responses: {
+            /** @description Stored. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
     rotateDeviceToken: {
         parameters: {
             query?: never;
@@ -4586,7 +4782,10 @@ export interface operations {
     };
     getInventory: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Also list the records an Apple Health source filter left raw (ignored_by_filter), per origin. They are never values: nothing was normalized from them. */
+                include_ignored?: components["parameters"]["IncludeIgnored"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -4691,6 +4890,8 @@ export interface operations {
                 start: string;
                 end: string;
                 grain?: "30s" | "1m" | "5m" | "15m" | "30m" | "raw" | "hour" | "day";
+                /** @description Also list the records an Apple Health source filter left raw (ignored_by_filter), per origin. They are never values: nothing was normalized from them. */
+                include_ignored?: components["parameters"]["IncludeIgnored"];
                 /** @description Page size. Endpoints may cap it lower than 10,000. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Opaque next_cursor from the previous page of the same query. */
@@ -6491,6 +6692,62 @@ export interface operations {
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getDeviceSourceFilter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The device's source filter. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceFilterView"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    setDeviceSourceFilter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceFilterUpdate"];
+            };
+        };
+        responses: {
+            /** @description The device's source filter after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceFilterView"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
         };
     };

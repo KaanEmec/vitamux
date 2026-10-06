@@ -123,7 +123,7 @@ Sign in and open **Connections**. Until something is connected it lists every so
 
 - **Withings** runs on your own Withings developer application ([details](providers/withings.md#app-registration-and-callback)). **Set up Withings** shows the callback URL to register there (`VITAMUX_PUBLIC_URL` + `/oauth/withings/callback`), takes the client id and secret, checks them with Withings, then sends you to Withings to allow access. The first sync fetches the whole history. Replace or remove the app credentials under Settings → Sources.
 - **Garmin and WHOOP** need their sidecar turned on first ([sidecars](#sidecars)); their card shows the line for your install and **Check again**. Then sign in with email, password and the verification code in one dialog; the password and code pass through once and are never stored.
-- **Apple Health** pairs from the iPhone app under Settings → Devices.
+- **Apple Health** pairs from the iPhone app under Settings → Devices. Each paired iPhone's **Sources** page there chooses which apps' Apple Health data it takes; a provider you also connect directly is ignored by default ([source filter](architecture/apple-health.md#source-filter)).
 
 When the panel refuses something it says what to change ([troubleshooting](operations/troubleshooting.md#source-setup)). Optional, for lower latency: turn on Withings notifications under Settings → Profile. Vitamux then subscribes **webhook URLs** of the form `https://vitamux.example.com/webhooks/withings/<token>` through the Withings API itself; your proxy must pass `/webhooks/` through. Hourly polling continues either way.
 
