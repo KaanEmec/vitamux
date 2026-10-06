@@ -37,7 +37,7 @@ struct MoreView: View {
     @State private var model = MoreModel()
     @State private var isSigningOut = false
     @State private var notificationsOn = AppPreferences.notificationsOn
-    @State private var cacheBytes = AppPreferences.cacheBytes
+    @State private var cacheBytes: Int64 = 0
 
     var body: some View {
         @Bindable var state = state
@@ -90,7 +90,7 @@ struct MoreView: View {
         .task { await model.load(state.client) }
         .onAppear {
             notificationsOn = AppPreferences.notificationsOn
-            cacheBytes = AppPreferences.cacheBytes
+            cacheBytes = Int64(state.cache.size)
         }
         .sheet(isPresented: $isSigningOut) { SignOutSheet() }
     }

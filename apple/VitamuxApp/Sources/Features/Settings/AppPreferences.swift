@@ -38,12 +38,4 @@ enum AppPreferences {
     }
 
     static var notificationsOn: Int { Notification.allCases.filter(\.isOn).count }
-
-    /// What the offline cache holds on disk: today the URL cache of the app's requests; the
-    /// file cache (J22.19) adds its folder here.
-    static var cacheBytes: Int64 { Int64(URLCache.shared.currentDiskUsage) }
-
-    static func clearCache() {
-        URLCache.shared.removeAllCachedResponses()
-    }
 }

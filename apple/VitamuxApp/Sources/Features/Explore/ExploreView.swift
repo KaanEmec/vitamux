@@ -23,7 +23,7 @@ struct ExploreView: View {
         .listStyle(.insetGrouped)
         .navigationTitle("Explore")
         .searchable(text: $model.filter.text, placement: .navigationBarDrawer(displayMode: .always), prompt: "Metrics, devices, analytes")
-        .refreshable { await model.load(state.client) }
+        .refreshable { await ResponseCache.refreshing { await model.load(state.client) } }
         .task {
             async let pinsLoaded: Void = pins.load(state.client)
             await model.load(state.client)

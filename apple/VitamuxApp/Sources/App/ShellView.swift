@@ -1,6 +1,8 @@
 import SwiftUI
+import VitamuxKit
 
-/// The signed-in shell: the tab bar, one `NavigationStack` per tab, search and sync status.
+/// The signed-in shell: the tab bar, one `NavigationStack` per tab, search, sync status and the
+/// offline banner.
 struct ShellView: View {
     @Environment(AppState.self) private var state
     @Environment(\.scenePhase) private var phase
@@ -54,5 +56,39 @@ private struct TabStack: View {
                 }
                 .navigationDestination(for: Route.self) { RouteView(route: $0) }
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            OfflineBanner(status: state.cacheStatus)
+        }
+    }
+}
+
+/// While the server cannot be reached: since when the shown data is (the offline cache's stored
+/// time, `ResponseCache`) and that changes need the network.
+private struct OfflineBanner: View {
+    let status: ResponseCache.Status
+
+    var body: some View {
+        if case .offline(let from) = status {
+            VStack(spacing: 2) {
+                Label(title(from), systemImage: "wifi.slash")
+                    .font(.footnote.weight(.semibold))
+                Text("Changes need the network.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 16)
+            .background(.thinMaterial)
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("offlineBanner")
+        }
+    }
+
+    private func title(_ from: Date?) -> String {
+        guard let from else { return "Offline" }
+        let today = Calendar.current.isDateInToday(from)
+        let time = from.formatted(today ? .dateTime.hour().minute() : .dateTime.day().month().hour().minute())
+        return "Offline, showing data from \(time)"
     }
 }

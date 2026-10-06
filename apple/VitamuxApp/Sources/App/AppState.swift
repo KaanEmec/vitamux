@@ -28,6 +28,9 @@ final class AppState {
 
     var isSignedIn: Bool { client != nil }
 
+    /// The offline read cache's state, for the shell's banner.
+    private(set) var cacheStatus: ResponseCache.Status = .online
+
     // MARK: Router
 
     var tab: AppTab = .dashboard
@@ -55,6 +58,8 @@ final class AppState {
     // MARK: Environment
 
     let sessions: SessionStore
+    /// The offline read cache (`ResponseCache`): files in the app group, 100 MB.
+    let cache: ResponseCache
     let device: ThisDevice
     let isUITest: Bool
     private let urlSession: URLSession
@@ -65,8 +70,12 @@ final class AppState {
         static let appLock = "appLock", lockAfter = "appLockAfter"
     }
 
-    init(sessions: SessionStore, urlSession: URLSession, defaults: UserDefaults, device: ThisDevice, isUITest: Bool = false) {
+    init(
+        sessions: SessionStore, cache: ResponseCache, urlSession: URLSession, defaults: UserDefaults, device: ThisDevice,
+        isUITest: Bool = false
+    ) {
         self.sessions = sessions
+        self.cache = cache
         self.urlSession = urlSession
         self.defaults = defaults
         self.device = device
@@ -80,6 +89,10 @@ final class AppState {
             client = makeClient(for: profile)
             isLocked = appLock
         }
+        // AppState lives as long as the app; the cache calls from any thread.
+        cache.onStatusChange { [self] _ in
+            Task { @MainActor in self.cacheStatus = self.cache.status }
+        }
     }
 
     /// The running app: the Keychain, the network, and Bridge's stores, so an installed Bridge
@@ -87,6 +100,7 @@ final class AppState {
     static func live() -> AppState {
         AppState(
             sessions: .keychain(),
+            cache: ResponseCache(appGroup: "group.org.vitamux.healthbridge"),
             urlSession: .shared,
             defaults: UserDefaults(suiteName: "group.org.vitamux.healthbridge") ?? .standard,
             device: .live()
@@ -98,13 +112,15 @@ final class AppState {
     /// A client for `profile`; requests carry the session only once it is saved for that server.
     func makeClient(for profile: ServerProfile) -> Client {
         // AppState lives as long as the app, so the client may hold it.
-        Client(profile: profile, sessions: sessions, urlSession: urlSession) { [self] in
+        Client(profile: profile, sessions: sessions, cache: cache, urlSession: urlSession) { [self] in
             Task { @MainActor in self.sessionExpired() }
         }
     }
 
     func didSignIn(_ session: Components.Schemas.AppSession, to profile: ServerProfile) throws {
         try sessions.save(session, for: profile)
+        // A new session (or server) never reads an old one's answers.
+        cache.clear()
         defaults.set(try JSONEncoder().encode(profile), forKey: Key.server)
         defaults.set(session.user.username, forKey: Key.username)
         self.profile = profile
@@ -137,6 +153,7 @@ final class AppState {
 
     private func endSession(_ reason: SignInReason) {
         try? sessions.clear()
+        cache.clear()
         client = nil
         signInReason = reason
         isLocked = false
@@ -154,6 +171,11 @@ final class AppState {
         // UI tests end the fake server's sessions to test expiry mid-use.
         if isUITest, Route.segments(of: url) == ["uitest", "expire-sessions"] {
             FakeServer.uiTest.expireSessions()
+            return
+        }
+        // ... and take the fake server off and on the network for the offline cache.
+        if isUITest, let segments = Route.segments(of: url), segments == ["uitest", "offline"] || segments == ["uitest", "online"] {
+            FakeServer.uiTest.isOffline = segments[1] == "offline"
             return
         }
         #endif
@@ -295,8 +317,11 @@ extension AppState {
         let defaults = UserDefaults(suiteName: "org.vitamux.app.uitest")!
         defaults.removePersistentDomain(forName: "org.vitamux.app.uitest")
         let device = ThisDevice.uiTest(arguments: arguments)
+        let cache = ResponseCache(directory: URL.temporaryDirectory.appending(path: "uitest-cache", directoryHint: .isDirectory))
+        cache.clear()
         return AppState(
-            sessions: .inMemory(), urlSession: servers[0].urlSession, defaults: defaults, device: device, isUITest: true
+            sessions: .inMemory(), cache: cache, urlSession: servers[0].urlSession, defaults: defaults, device: device,
+            isUITest: true
         )
     }
 }

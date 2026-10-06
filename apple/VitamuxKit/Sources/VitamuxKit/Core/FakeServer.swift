@@ -41,6 +41,8 @@ public final class FakeServer: Sendable {
         /// Live app-session tokens and their device names.
         var sessions: [String: String] = [:]
         var failedLogins = 0
+        /// Every request fails as if the phone had no network.
+        var isOffline = false
         var requests: [Request] = []
     }
 
@@ -85,10 +87,11 @@ public final class FakeServer: Sendable {
     }
 
     /// A generated client for this fake, with the real middleware.
-    public func client(sessions: SessionStore, onExpired: @escaping @Sendable () -> Void = {}) -> Client {
+    public func client(sessions: SessionStore, cache: ResponseCache? = nil, onExpired: @escaping @Sendable () -> Void = {}) -> Client {
         Client(
             profile: profile,
             sessions: sessions,
+            cache: cache,
             transport: URLSessionTransport(configuration: .init(session: urlSession, httpBodyProcessingMode: .buffered)),
             onExpired: onExpired
         )
@@ -97,6 +100,13 @@ public final class FakeServer: Sendable {
     public var totpEnabled: Bool {
         get { state.withLock { $0.totpEnabled } }
         set { state.withLock { $0.totpEnabled = newValue } }
+    }
+
+    /// The failure mode: while true, every request fails with "not connected to the internet",
+    /// as on a phone without a network (the offline cache's tests).
+    public var isOffline: Bool {
+        get { state.withLock { $0.isOffline } }
+        set { state.withLock { $0.isOffline = newValue } }
     }
 
     /// Ends every app session, as the server does after the idle or absolute lifetime.
@@ -144,6 +154,10 @@ final class FakeURLProtocol: URLProtocol {
               let server = Self.servers.withLock({ $0[host] })
         else {
             client?.urlProtocol(self, didFailWithError: URLError(.cannotFindHost))
+            return
+        }
+        guard !server.isOffline else {
+            client?.urlProtocol(self, didFailWithError: URLError(.notConnectedToInternet))
             return
         }
         let reply = server.respond(to: request, body: Self.body(of: request))

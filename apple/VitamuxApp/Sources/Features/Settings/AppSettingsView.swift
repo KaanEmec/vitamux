@@ -7,7 +7,7 @@ import VitamuxKit
 struct AppSettingsView: View {
     @Environment(AppState.self) private var state
     @State private var problem: Problem?
-    @State private var cacheBytes = AppPreferences.cacheBytes
+    @State private var cacheBytes: Int64 = 0
     @State private var isClearing = false
     @State private var isSigningOut = false
     @AppStorage(AppPreferences.redactWidgets, store: AppPreferences.store) private var redactWidgets = true
@@ -60,11 +60,12 @@ struct AppSettingsView: View {
                 LabeledContent("Stored on this iPhone", value: SettingsFormat.bytes(cacheBytes))
                     .accessibilityIdentifier("cacheSize")
                 Button("Clear the cache…", role: .destructive) { isClearing = true }
+                    .disabled(cacheBytes == 0)
                     .accessibilityIdentifier("clearCache")
             } header: {
                 Text("Offline cache")
             } footer: {
-                Text("Screens you opened, kept for reading offline. Signing out or changing the server clears it too.")
+                Text("What the app last showed, up to 100 MB on this iPhone, for when the server can't be reached. Never sign-in details, keys or lab PDFs. Cleared on sign-out.")
             }
             Section {
                 LabeledContent("Signed in to", value: state.profile?.baseURL.host() ?? "")
@@ -77,13 +78,14 @@ struct AppSettingsView: View {
         .navigationTitle("This app")
         .confirmationDialog("Clear the offline cache?", isPresented: $isClearing, titleVisibility: .visible) {
             Button("Clear the cache", role: .destructive) {
-                AppPreferences.clearCache()
-                cacheBytes = AppPreferences.cacheBytes
+                state.cache.clear()
+                cacheBytes = Int64(state.cache.size)
             }
             .accessibilityIdentifier("confirmClearCache")
         } message: {
             Text("Screens load from the server again the next time you open them.")
         }
+        .task { cacheBytes = Int64(state.cache.size) }
         .sheet(isPresented: $isSigningOut) { SignOutSheet() }
     }
 }
