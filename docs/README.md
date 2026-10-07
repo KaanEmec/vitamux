@@ -17,7 +17,7 @@ Precedence when documents disagree: `CLAUDE.md` (product brief) > ADRs in `docs/
 | [operations/upgrade.md](operations/upgrade.md) | Image bump, migrate, drain, rollback rules | Releases, migrations |
 | [operations/key-rotation.md](operations/key-rotation.md) | Master key rotation and what gets re-sealed | Anything sealed with the master key |
 | [operations/troubleshooting.md](operations/troubleshooting.md) | `/readyz` failures, schema mismatch, `needs_reauth`, degraded streams, cache verify | Health checks, connection states, error messages |
-| [apple/HealthBridgeApp/README.md](../apple/HealthBridgeApp/README.md) | Build the iOS app from source (team, signing, capabilities), pair it, privacy statement, background-timing limits | Installing or changing the Apple Health app |
+| [apple/VitamuxApp/README.md](../apple/VitamuxApp/README.md) | Build the iOS app from source (team, signing, capabilities), pair Apple Health, privacy statement, background-timing limits, upgrading from Bridge | Installing or changing the iOS app |
 | [apple-health-device-checklist.md](apple-health-device-checklist.md) | Physical-iPhone test checks and results table for the Apple Health app | Device campaign (J15.7), release sign-off |
 | [faq.md](faq.md) | What Vitamux is and is not, data ownership, sources, roadmap | Product questions |
 | [api-reference.md](api-reference.md) | Generated: operations by tag with access (`go run ./tools/apiref`) | API consumers; regenerate after spec or `authz.yaml` changes |
@@ -46,6 +46,8 @@ Precedence when documents disagree: `CLAUDE.md` (product brief) > ADRs in `docs/
 | [security.md](security.md) | Overview: assets, actors, trust boundaries, controls, residual risks | Security reviews, PRs touching anything exposed |
 | [apple-health.md](architecture/apple-health.md) | HealthKit bridge: package, app, sync, payload, origins, pairing | E15 |
 | [ios-app.md](architecture/ios-app.md) | iOS app: lean architecture, app sessions, native OAuth return, parity matrix, charts, Apple Health and Apple Watch data, cache, widgets, notifications | E22 |
+| [ios-app-screens.md](architecture/ios-app-screens.md) | iOS app screen map per tab, sheets, `vitamux://` deep links and the panel route each mirrors | E22 screens |
+| [ios-design.md](architecture/ios-design.md) | iOS visual spec: colour tokens (light and dark), type scale, tiles, surfaces, status and source cues, charts, app icon, widgets, screenshots | E22 design pass |
 | [lab-documents.md](architecture/lab-documents.md) | PDF storage, extraction providers, review, privacy | E12 |
 | [frontend.md](architecture/frontend.md) | UI stack, navigation, rule builder | E11 |
 | [project.md](architecture/project.md) | License, testing, releases, resource budget, deferred features, risks, assumptions, open questions | Release, CI, planning |

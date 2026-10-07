@@ -238,6 +238,7 @@ func (e *env) seedAll(s seeded, name string) {
 		SELECT $1, $2, '2026-09-01T07:00:00Z', '2026-09-01T08:00:00Z', '2026-09-01', 'running', c.provider_id, c.id, substr(sha256($4::bytea), 1, 16), $5, $6
 		FROM connections c WHERE c.id = $3`, workout, s.user, s.conn, []byte(name+"w"), v1["m2"], e.nvNew)
 	e.exec(`INSERT INTO workout_segments (workout_id, seq, kind, start_at) VALUES ($1, 1, 'lap', '2026-09-01T07:00:00Z')`, workout)
+	e.eventFile(s, s.conn, `{"format":"vitamux.waveform/1","synthetic":"`+name+`"}`, v1["m2"])
 	run := newID()
 	e.exec(`INSERT INTO import_runs (id, user_id, connection_id, source, status) VALUES ($1, $2, $3, 'ndjson', 'done')`, run, s.user, s.conn)
 	e.exec(`INSERT INTO import_items (import_run_id, source, item_key, checksum, status, raw_payload_id) VALUES ($1, 'ndjson', $2, sha256($3::bytea), 'done', $4)`,
@@ -272,6 +273,41 @@ func (e *env) seedAll(s seeded, name string) {
 	}
 	e.exec(`INSERT INTO exports (id, user_id, job_id, format, include_raw, finished_at, blob_sha256)
 		VALUES ($1, $2, $3, 'ndjson', false, now(), sha256($4::bytea))`, newID(), s.user, job, []byte("synthetic export "+name))
+}
+
+// eventFile stores a blob document and an ecg_recording event referencing it in two versions:
+// one superseded 100 days ago and the active one. Each row holds one reference.
+func (e *env) eventFile(s seeded, conn uuid.UUID, doc string, raw any) (old, cur uuid.UUID) {
+	e.t.Helper()
+	ctx := e.t.Context()
+	var sum []byte
+	err := e.d.Tx(ctx, func(q *dbq.Queries) error {
+		info, err := e.blobs.Put(ctx, q, bytes.NewReader([]byte(doc)), blob.Plain)
+		if err != nil {
+			return err
+		}
+		sum = info.SHA256
+		if err := blob.Retain(ctx, q, sum); err != nil {
+			return err
+		}
+		return blob.Retain(ctx, q, sum)
+	})
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	old, cur = newID(), newID()
+	for _, r := range []struct {
+		id         uuid.UUID
+		superseded any
+	}{{old, time.Now().AddDate(0, 0, -100)}, {cur, nil}} {
+		e.exec(`INSERT INTO health_events (id, user_id, code, start_at, local_date, level, file_blob_sha256, provider_id, connection_id,
+			dedupe_key, raw_payload_id, normalizer_version_id, superseded_at)
+			SELECT $1, $2, 'ecg_recording', '2026-09-01T07:00:00Z', '2026-09-01', 'sinus_rhythm', $4, c.provider_id, c.id,
+			substr(sha256($5::bytea), 1, 16), $6, $7, $8 FROM connections c WHERE c.id = $3`,
+			r.id, s.user, conn, sum, []byte(doc), raw, e.nvNew, r.superseded)
+	}
+	e.exec(`UPDATE health_events SET superseded_by = $2 WHERE id = $1`, old, cur)
+	return old, cur
 }
 
 func minimalPDF(salt string) []byte {
@@ -587,6 +623,47 @@ func TestPruneSuperseded(t *testing.T) {
 	}
 	if got := ids(`SELECT string_agg(id::text, ',') FROM measurements WHERE user_id = $1`, s.user); got != fmt.Sprint(m3) {
 		t.Errorf("measurements left %s", got)
+	}
+}
+
+// TestEventFileLifecycle (J22.17): a waveform or route document lives as long as an event row
+// names it. Raw retention leaves it alone, prune_superseded releases the old version's
+// reference, and deleting the connection releases the rest, after which the sweep removes it.
+func TestEventFileLifecycle(t *testing.T) {
+	e := newEnv(t)
+	ctx := t.Context()
+	s := e.newUser("owner")
+	files := e.files()
+	raw := e.raw(s, s.conn, map[string]string{"ecg": `{"synthetic":"ecg"}`})["ecg"]
+	e.normalized(e.nvNew, 400, raw)
+	e.eventFile(s, s.conn, `{"format":"vitamux.waveform/1","synthetic":"lifecycle"}`, nil)
+	refs := func() int64 {
+		return e.int(`SELECT coalesce(sum(refcount), -1) FROM blobs WHERE sha256 IN (SELECT file_blob_sha256 FROM health_events)`)
+	}
+	if refs() != 2 {
+		t.Fatalf("refcount %d, want 2", refs())
+	}
+	setRetention(t, e, s.user, lifecycle.Retention{RawDays: map[string]int{"withings": 30}, SupersededDays: 60, IdempotencyKeyDays: 30})
+	if st, err := lifecycle.PruneRaw(ctx, e.d, time.Now()); err != nil || st.Pruned != 1 {
+		t.Fatalf("raw retention: %+v %v", st, err)
+	}
+	e.sweep()
+	if refs() != 2 || len(e.files()) != len(files)+1 {
+		t.Errorf("raw retention touched the document: refcount %d, %d files", refs(), len(e.files()))
+	}
+	if n, err := lifecycle.PruneSuperseded(ctx, e.d, time.Now()); err != nil || n["health_events"] != 1 {
+		t.Fatalf("pruned %v, %v", n, err)
+	}
+	e.sweep()
+	if refs() != 1 || len(e.files()) != len(files)+1 {
+		t.Errorf("after pruning the old version: refcount %d, %d files", refs(), len(e.files()))
+	}
+	if err := e.d.Tx(ctx, func(q *dbq.Queries) error { _, err := lifecycle.DeleteConnection(ctx, q, s.user, s.conn); return err }); err != nil {
+		t.Fatal(err)
+	}
+	e.sweep()
+	if n := e.int(`SELECT count(*) FROM blobs`); n != 0 || !slices.Equal(e.files(), files) {
+		t.Errorf("after deleting the connection: %d blobs, %d files", n, len(e.files()))
 	}
 }
 

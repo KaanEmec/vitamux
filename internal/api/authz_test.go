@@ -62,7 +62,7 @@ func allowOf(a access) string {
 }
 
 // specAllow reads an operation's `security` in the matrix's terms; "" if it fits no
-// supported shape.
+// supported shape. Wherever the session cookie is offered, the app session must be too.
 func specAllow(security any) (allow string, csrf bool) {
 	reqs, ok := security.([]any)
 	if !ok {
@@ -72,12 +72,15 @@ func specAllow(security any) (allow string, csrf bool) {
 		return "public", false
 	}
 	var scopes []string
-	session, client := false, false
+	session, app, client := false, false, false
 	for _, r := range reqs {
 		m, _ := r.(map[string]any)
 		if _, ok := m["session"]; ok {
 			session = true
 			_, csrf = m["csrf"]
+		}
+		if _, ok := m["appSession"]; ok {
+			app = true
 		}
 		if _, ok := m["clientToken"]; ok {
 			client = true
@@ -89,11 +92,11 @@ func specAllow(security any) (allow string, csrf bool) {
 		}
 	}
 	switch {
-	case client && !session && len(scopes) == 0 && len(reqs) == 1:
+	case client && !session && !app && len(scopes) == 0 && len(reqs) == 1:
 		return "client", false
-	case session && len(scopes) == 0 && len(reqs) == 1:
+	case session && app && len(scopes) == 0 && len(reqs) == 2:
 		return "session", csrf
-	case session && len(scopes) == 1 && len(reqs) == 2:
+	case session && app && len(scopes) == 1 && len(reqs) == 3:
 		return scopes[0], csrf
 	}
 	return "", false

@@ -22,13 +22,20 @@ import (
 // DELETE /connections/{id} in connections.go. Begin and continue need the owner session,
 // because the state is bound to it. The provider callback is a public
 // route: the session cookie (SameSite=Strict) does not come back on the provider's redirect,
-// so the signed single-use state and the browser-binding cookie authorize it.
+// so the signed single-use state and the browser-binding cookie authorize it. An app session
+// begins with {"return": "app"}: its redirect goes through the public start route, which sets
+// the binding cookie in the app's auth browser, and the callback returns to appReturnURL.
 func (rt *router) oauthRoutes() {
 	rt.handle("POST /api/v1/providers/{provider}/auth/begin", session, rt.authBegin)
 	rt.handle("POST /api/v1/connections/{id}/auth/begin", session, rt.authBegin)
 	rt.handle("POST /api/v1/providers/{provider}/auth/continue", session, rt.authContinue)
+	rt.handle("GET /oauth/{provider}/start", public, rt.oauthStart)
 	rt.handle("GET /oauth/{provider}/callback", public, rt.oauthCallback)
 }
+
+// appReturnURL is where an app-originated flow ends (ADR-0023). It is a constant, never taken
+// from the request, so neither the start route nor the callback is an open redirect.
+const appReturnURL = "vitamux://connections"
 
 // oauthCookie binds a pending authorization to the browser that began it. SameSite=Lax so the
 // provider's top-level redirect carries it; short-lived and scoped to the two places that read
@@ -75,7 +82,25 @@ func (rt *router) authBegin(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, r, CodeUnavailable, "connections are unavailable: the master key or data directory is missing")
 		return
 	}
-	req := connectors.AuthRequest{Provider: r.PathValue("provider")}
+	var body struct {
+		Return string `json:"return"`
+	}
+	if !readOptionalJSON(w, r, &body) {
+		return
+	}
+	p := auth.PrincipalFrom(r.Context())
+	switch body.Return {
+	case "", "browser":
+	case "app":
+		if !p.App {
+			writeProblem(w, r, CodeForbidden, `"return": "app" needs an app session`)
+			return
+		}
+	default:
+		writeProblem(w, r, CodeValidationFailed, "unknown return", FieldError{Pointer: "/return", Detail: "browser or app"})
+		return
+	}
+	req := connectors.AuthRequest{Provider: r.PathValue("provider"), App: body.Return == "app"}
 	if v := r.PathValue("id"); v != "" {
 		id, err := ingest.ParseConnectionID(v)
 		if err != nil {
@@ -86,7 +111,6 @@ func (rt *router) authBegin(w http.ResponseWriter, r *http.Request) {
 	}
 	var b [32]byte
 	_, _ = rand.Read(b[:])
-	p := auth.PrincipalFrom(r.Context())
 	req.UserID, req.SessionID, req.Binding = p.UserID, p.ID, base64.RawURLEncoding.EncodeToString(b[:])
 	step, state, err := rt.opts.Connectors.BeginAuth(r.Context(), req)
 	switch {
@@ -162,8 +186,56 @@ func (rt *router) authContinue(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// oauthStart uses the single-use ticket of an app redirect step: it sets the binding cookie in
+// the auth browser and sends it on to the provider URL stored with the ticket. A bad, used or
+// expired ticket ends at appReturnURL with an auth_error. HEAD answers 200 and touches
+// nothing, so a probe never uses up a ticket.
+func (rt *router) oauthStart(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodHead {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	provider := r.PathValue("provider")
+	if rt.opts.Connectors != nil && !rt.opts.Connectors.HasProvider(provider) {
+		writeProblem(w, r, CodeNotFound, "no such provider")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	reason := "unavailable"
+	if rt.opts.Connectors != nil {
+		target, binding, err := rt.opts.Connectors.StartAuth(r.Context(), provider, r.URL.Query().Get("ticket"))
+		switch {
+		case err == nil:
+			http.SetCookie(w, rt.oauthBindingCookie(r, callbackCookiePath, binding, int(connectors.StateTTL.Seconds())))
+			// security: not an open redirect; target is the provider URL BeginAuth stored with the ticket.
+			http.Redirect(w, r, target, http.StatusSeeOther) //nolint:gosec // G710: the ticket only selects a server-stored URL
+			return
+		case errors.Is(err, connectors.ErrAuthState):
+			reason = "invalid_state"
+		case errors.Is(err, connectors.ErrAuthUnavailable):
+		default:
+			rt.log.WarnContext(r.Context(), "oauth start", "provider", provider, "request_id", requestIDFrom(r.Context()), "err", err)
+		}
+	}
+	http.Redirect(w, r, authOutcome(appReturnURL, provider, reason), http.StatusSeeOther)
+}
+
+// authOutcome is the URL a finished flow returns to: base?connected=<provider>, or
+// base?auth_error=<reason>&provider=<provider>.
+func authOutcome(base, provider, reason string) string {
+	v := url.Values{}
+	if reason == "" {
+		v.Set("connected", provider)
+	} else {
+		v.Set("auth_error", reason)
+		v.Set("provider", provider)
+	}
+	return base + "?" + v.Encode()
+}
+
 // oauthCallback completes the flow and sends the browser back to the UI with the outcome:
-// /connections?connected=<provider> or /connections?auth_error=<reason>&provider=<provider>. HEAD answers 200
+// /connections?connected=<provider> or /connections?auth_error=<reason>&provider=<provider>,
+// or the same query on appReturnURL for an app-originated state. HEAD answers 200
 // (the Withings dashboard test refuses 204) and touches nothing, so a probe never uses up a state. A provider without a connector is 404.
 func (rt *router) oauthCallback(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodHead {
@@ -180,10 +252,13 @@ func (rt *router) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		binding = c.Value
 	}
 	http.SetCookie(w, rt.oauthBindingCookie(r, callbackCookiePath, "", -1))
-	reason := "unavailable"
+	reason, back := "unavailable", "/connections"
 	if rt.opts.Connectors != nil {
 		q := r.URL.Query()
-		_, err := rt.opts.Connectors.CompleteAuth(r.Context(), provider, q.Get("state"), binding, q)
+		_, app, err := rt.opts.Connectors.CompleteAuth(r.Context(), provider, q.Get("state"), binding, q)
+		if app {
+			back = appReturnURL
+		}
 		switch {
 		case err == nil:
 			reason = ""
@@ -199,13 +274,6 @@ func (rt *router) oauthCallback(w http.ResponseWriter, r *http.Request) {
 			rt.log.WarnContext(r.Context(), "oauth callback", "provider", provider, "request_id", requestIDFrom(r.Context()), "err", err)
 		}
 	}
-	v := url.Values{}
-	if reason == "" {
-		v.Set("connected", provider)
-	} else {
-		v.Set("auth_error", reason)
-		v.Set("provider", provider)
-	}
 	w.Header().Set("Cache-Control", "no-store")
-	http.Redirect(w, r, "/connections?"+v.Encode(), http.StatusSeeOther)
+	http.Redirect(w, r, authOutcome(back, provider, reason), http.StatusSeeOther)
 }

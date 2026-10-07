@@ -1,0 +1,6 @@
+The native chart kit ([ios-app#charts](../../../../../docs/architecture/ios-app.md#charts), [J22.6](../../../../../docs/plan/E22-ios-app/J22.6-chart-kit.md)), the twin of `web/src/lib/charts`, on Swift Charts.
+
+- `ChartGrammar.swift`: `chartFor(metric)` from catalogue metadata (view and Day-view bucket). `DayLadder.swift`: the Day view's bucket ladder per `intraday` (the panel's `lib/explore/intraday.ts`). `fixtures/chart-grammar.json` is checked here (`ChartsTests`) and by `web/e2e/chart-grammar.spec.ts`.
+- Views: `TimeSeries` (line, band, step, baseline and printed range, dots, ghost, source overlays), `Bars` (plain or stacked by stage), `Hypnogram`, `RangeDumbbell`, `EventLanes`, `Sparkline`, `CoverageStrip`; `RangePicker` (1D only where a Day view exists) and `TrendRollup` (week and month grains of GET /resolved/trend for All).
+- Shared: `ChartFrame.swift` (legend, "Show as table", Reduce Motion, callout, status glyphs, pinch zoom with an optional owner-held window, tap callback, overlays, time axis), `ChartDescriptor.swift` (VoiceOver and Audio Graphs), `ChartModel.swift` (values, min/max decimation above 2,000 points), `ChartPalette.swift` (flat colour lookups), `TapTarget.swift` (the 44-point hit area for small controls, used by the app too).
+- `ChartSamples.swift`: synthetic data for the `#Preview` gallery and the rendering tests.

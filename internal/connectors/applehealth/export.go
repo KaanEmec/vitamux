@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"maps"
 	"math"
 	"regexp"
 	"slices"
@@ -64,7 +65,7 @@ type ExportRecord struct {
 type ExportNormalizer struct{}
 
 func (ExportNormalizer) ID() string                    { return ExportNormalizerID }
-func (ExportNormalizer) Version() int                  { return 1 }
+func (ExportNormalizer) Version() int                  { return 2 }
 func (ExportNormalizer) Accepts(stream, _ string) bool { return stream == StreamExport }
 
 func (ExportNormalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ normalize.Env) (normalize.Output, error) {
@@ -186,6 +187,17 @@ func exportWorkout(r ExportRecord) *workoutInfo {
 			total(id, st["sum"], st["unit"], "m")
 		case id == hkQuantity+"ActiveEnergyBurned":
 			total(id, st["sum"], st["unit"], "kcal")
+		case id == typeHeartRate: // average, minimum and maximum, as the app's workout.stats
+			var hr stat
+			for _, f := range []struct {
+				attr string
+				dst  **float64
+			}{{"average", &hr.Avg}, {"minimum", &hr.Min}, {"maximum", &hr.Max}} {
+				if v, u := convert(number(st[f.attr]), st["unit"], "count/min"); v != nil && u == "count/min" {
+					*f.dst = v
+				}
+			}
+			w.Stats = map[string]stat{id: hr}
 		}
 	}
 	// Exports before iOS 16 carry totals as attributes only; the distance's type is not given.
@@ -280,8 +292,43 @@ func exportDevice(desc string) *hkDevice {
 	return &d
 }
 
-// categoryValues maps the case names an export writes to HKCategoryValue raw values.
-var categoryValues = map[string]int{
+// categoryValues maps the case names an export writes to HKCategoryValue raw values: the v1
+// enums below plus the cycle-tracking and symptom enums of registry v2 (watchCategoryValues).
+var categoryValues = func() map[string]int {
+	m := map[string]int{}
+	for _, e := range watchCategoryEnums {
+		for i, name := range e.names {
+			if name != "" {
+				m["HKCategoryValue"+e.enum+name] = e.first + i
+			}
+		}
+	}
+	maps.Copy(m, v1CategoryValues)
+	return m
+}()
+
+// watchCategoryEnums are the registry v2 category enums (HKCategoryValues.h): case names from
+// the first raw value on; "" skips a value.
+var watchCategoryEnums = []struct {
+	enum  string
+	first int
+	names []string
+}{
+	{"VaginalBleeding", 1, []string{"Unspecified", "Light", "Medium", "Heavy", "None"}},
+	{"MenstrualFlow", 1, []string{"Unspecified", "Light", "Medium", "Heavy", "None"}}, // before iOS 18
+	{"CervicalMucusQuality", 1, []string{"Dry", "Sticky", "Creamy", "Watery", "EggWhite"}},
+	{"OvulationTestResult", 1, []string{"Negative", "LuteinizingHormoneSurge", "Indeterminate", "EstrogenSurge"}},
+	{"OvulationTestResult", 2, []string{"Positive"}}, // the pre-iOS 13 name of LuteinizingHormoneSurge
+	{"PregnancyTestResult", 1, []string{"Negative", "Positive", "Indeterminate"}},
+	{"ProgesteroneTestResult", 1, []string{"Negative", "Positive", "Indeterminate"}},
+	{"Contraceptive", 1, []string{"Unspecified", "Implant", "Injection", "IntrauterineDevice", "IntravaginalRing", "Oral", "Patch"}},
+	{"MenopausalState", 1, []string{"Menopause", "Perimenopause", "None"}},
+	{"Severity", 0, []string{"Unspecified", "NotPresent", "Mild", "Moderate", "Severe"}},
+	{"Presence", 0, []string{"Present", "NotPresent"}},
+	{"AppetiteChanges", 0, []string{"Unspecified", "NoChange", "Decreased", "Increased"}},
+}
+
+var v1CategoryValues = map[string]int{
 	"HKCategoryValueNotApplicable":                                 0,
 	"HKCategoryValueSleepAnalysisInBed":                            0,
 	"HKCategoryValueSleepAnalysisAsleep":                           1,

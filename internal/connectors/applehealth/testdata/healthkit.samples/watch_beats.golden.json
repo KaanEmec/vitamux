@@ -1,0 +1,122 @@
+{
+  "synthetic": true,
+  "normalizer": "healthkit.samples",
+  "version": 4,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "type": "watch",
+        "manufacturer": "Apple Inc.",
+        "model": "Watch",
+        "hardware_version": "Watch7,1",
+        "software_version": "11.0"
+      }
+    ],
+    "origins": [
+      {
+        "key": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "name": "Synthetic Watch",
+        "native": true
+      }
+    ],
+    "measurements": [
+      {
+        "metric": "rr_interval",
+        "kind": "sample",
+        "start": "2026-09-14T03:12:00.92+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "value": 0.92,
+        "unit": "s",
+        "device": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "key": {
+          "record_type": "HKDataTypeIdentifierHeartbeatSeries",
+          "external_id": "6F0D0000-0000-4000-8000-000000000111#1"
+        }
+      },
+      {
+        "metric": "rr_interval",
+        "kind": "sample",
+        "start": "2026-09-14T03:12:01.81+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "value": 0.89,
+        "unit": "s",
+        "device": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "key": {
+          "record_type": "HKDataTypeIdentifierHeartbeatSeries",
+          "external_id": "6F0D0000-0000-4000-8000-000000000111#2"
+        }
+      },
+      {
+        "metric": "rr_interval",
+        "kind": "sample",
+        "start": "2026-09-14T03:12:02.75+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "value": 0.94,
+        "unit": "s",
+        "device": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "key": {
+          "record_type": "HKDataTypeIdentifierHeartbeatSeries",
+          "external_id": "6F0D0000-0000-4000-8000-000000000111#3"
+        }
+      },
+      {
+        "metric": "rr_interval",
+        "kind": "sample",
+        "start": "2026-09-14T03:12:03.66+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "value": 0.9100000000000001,
+        "unit": "s",
+        "device": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "key": {
+          "record_type": "HKDataTypeIdentifierHeartbeatSeries",
+          "external_id": "6F0D0000-0000-4000-8000-000000000111#4"
+        }
+      },
+      {
+        "metric": "rr_interval",
+        "kind": "sample",
+        "start": "2026-09-14T03:12:06.4+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "value": 0.9100000000000001,
+        "unit": "s",
+        "device": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "key": {
+          "record_type": "HKDataTypeIdentifierHeartbeatSeries",
+          "external_id": "6F0D0000-0000-4000-8000-000000000111#6"
+        }
+      },
+      {
+        "metric": "rr_interval",
+        "kind": "sample",
+        "start": "2026-09-14T03:12:07.33+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "value": 0.9299999999999997,
+        "unit": "s",
+        "device": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "key": {
+          "record_type": "HKDataTypeIdentifierHeartbeatSeries",
+          "external_id": "6F0D0000-0000-4000-8000-000000000111#7"
+        }
+      }
+    ]
+  }
+}

@@ -175,7 +175,7 @@ const event = (id: string, code: string, date: string, hh: number, level: string
 	id, code, start_at: at(date, hh, 20), end_at: endMin ? at(date, hh, 20 + endMin) : null, tz_offset_min: offset, local_date: date, value: null, level,
 	context: {}, quality_flags: 0, source: source('apple_health'), provenance
 });
-const events = [
+export const events = [
 	event('ev1', 'environment_audio_alert', '2026-09-02', 17, 'momentary_limit'),
 	event('ev2', 'environment_audio_alert', '2026-09-09', 12, 'momentary_limit', 30),
 	event('ev3', 'headphone_audio_alert', '2026-09-11', 20, 'seven_day_limit')

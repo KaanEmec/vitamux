@@ -1,8 +1,9 @@
 -- OAuth connection flow (J08.2); see docs/architecture/connectors.md#oauth-connection-flow.
 
 -- name: InsertOAuthState :exec
-INSERT INTO oauth_states (id, user_id, session_id, provider_id, connection_id, expires_at, session)
-SELECT @id, @user_id, @session_id, p.id, sqlc.narg(connection_id), @expires_at, sqlc.narg(session)
+INSERT INTO oauth_states (id, user_id, session_id, provider_id, connection_id, expires_at, session, return_to, ticket_hash, start_url, binding)
+SELECT @id, @user_id, @session_id, p.id, sqlc.narg(connection_id), @expires_at, sqlc.narg(session), @return_to,
+  sqlc.narg(ticket_hash), sqlc.narg(start_url), sqlc.narg(binding)
 FROM providers p WHERE p.code = @provider;
 
 -- name: DeleteExpiredOAuthStates :exec
@@ -15,7 +16,17 @@ DELETE FROM oauth_states o
 USING providers p, sessions s
 WHERE o.id = @id AND p.id = o.provider_id AND p.code = @provider AND o.expires_at > now()
   AND s.id = o.session_id AND s.expires_at > now()
-RETURNING o.user_id, o.session_id, o.connection_id, o.session;
+RETURNING o.user_id, o.session_id, o.connection_id, o.session, o.return_to;
+
+-- name: UseOAuthTicket :one
+-- Single use: the start route clears the ticket; the state row stays for the callback. A
+-- ticket issued before @issued_after, of another provider or of an ended session is refused.
+UPDATE oauth_states o SET ticket_hash = NULL
+FROM providers p, sessions s
+WHERE o.ticket_hash = @ticket_hash AND p.id = o.provider_id AND p.code = @provider
+  AND o.created_at > @issued_after AND o.expires_at > now()
+  AND s.id = o.session_id AND s.expires_at > now()
+RETURNING o.id, o.start_url::text AS start_url, o.binding::bytea AS binding;
 
 -- name: GetConnectionAccount :one
 SELECT c.account_key FROM connections c JOIN providers p ON p.id = c.provider_id

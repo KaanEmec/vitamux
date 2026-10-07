@@ -1,5 +1,6 @@
 // Where each Explore item opens (docs/plan/E21-visualisation/J21.8-explore.md). Metrics get the
-// generic detail page; sleep, workouts, events, groups and lab analytes their specialised views.
+// generic detail page; sleep, workouts, events, groups and lab analytes their specialised views,
+// ECG recordings the ECG view.
 import type { Schemas } from '../api/client.ts';
 
 type Kind = Schemas['InventoryItem']['kind'];
@@ -7,6 +8,11 @@ type Kind = Schemas['InventoryItem']['kind'];
 const groups: Record<string, string> = {
 	bp_reading: '/explore/blood-pressure',
 	body_composition: '/explore/body-composition'
+};
+
+// Event types with a view of their own besides their lane (J22.18).
+const eventViews: Record<string, string> = {
+	ecg_recording: '/explore/ecg'
 };
 
 // Rule families a dashboard card or the command palette may name instead of a catalogue code.
@@ -23,7 +29,7 @@ export function exploreHref({ kind, code }: { kind: Kind; code: string }): strin
 		case 'workouts':
 			return '/explore/workouts';
 		case 'event':
-			return `/explore/events?code=${c}`;
+			return eventViews[code] ?? `/explore/events?code=${c}`;
 		case 'analyte':
 			return `/lab/analytes/${c}`;
 		case 'group':

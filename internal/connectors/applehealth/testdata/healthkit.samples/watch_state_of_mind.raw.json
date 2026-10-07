@@ -1,0 +1,48 @@
+{
+ "synthetic": true,
+ "type": "HKDataTypeStateOfMind",
+ "anchor": {
+  "before_hash": "synthetic-before",
+  "after_hash": "synthetic-after",
+  "query_started_at": "2026-09-14T21:00:03+02:00"
+ },
+ "samples": [
+  {
+   "uuid": "6F0D0000-0000-4000-8000-000000000151",
+   "start": "2026-09-14T21:30:00+02:00",
+   "end": "2026-09-14T21:30:00+02:00",
+   "source_revision": {
+    "bundle_id": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+    "name": "Synthetic Watch",
+    "version": "11.0",
+    "product_type": "Watch7,1",
+    "os_version": "11.0.0"
+   },
+   "device": {
+    "name": "Synthetic Watch",
+    "manufacturer": "Apple Inc.",
+    "model": "Watch",
+    "hardware_version": "Watch7,1",
+    "software_version": "11.0"
+   },
+   "metadata": {
+    "HKTimeZone": "Europe/Amsterdam"
+   },
+   "was_user_entered": false,
+   "state_of_mind": {
+    "kind": 2,
+    "valence": 0.35,
+    "valence_classification": 5,
+    "labels": [
+     13,
+     20
+    ],
+    "associations": [
+     6,
+     11
+    ]
+   }
+  }
+ ],
+ "deleted": []
+}

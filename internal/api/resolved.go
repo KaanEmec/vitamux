@@ -77,7 +77,8 @@ var opOf = map[catalog.Strategy]resolve.Op{
 
 func metricBody(m catalog.Metric) oapi.Metric {
 	out := oapi.Metric{Code: m.Code, Section: m.Section, Unit: m.Unit, Aggregation: oapi.MetricAggregation(m.Agg),
-		Kinds: []oapi.MetricKinds{}, PlausibleRange: []float64{m.Min, m.Max}, ProviderScoped: m.ProviderScoped,
+		Kinds: []oapi.MetricKinds{}, Windows: []oapi.MetricWindows{}, Strategies: []oapi.MetricStrategies{},
+		PlausibleRange: []float64{m.Min, m.Max}, ProviderScoped: m.ProviderScoped,
 		SelectionOnly: m.SelectionOnly, Group: optString(m.Group), DerivedFrom: optString(m.DerivedFrom)}
 	for _, k := range m.Kinds {
 		out.Kinds = append(out.Kinds, oapi.MetricKinds(k))
@@ -90,6 +91,9 @@ func metricBody(m catalog.Metric) oapi.Metric {
 	}
 	if f := resolve.RuleMetric(m.Code); f != m.Code {
 		out.Family = &f
+	}
+	if m.Unresolved {
+		out.Unresolved = &m.Unresolved
 	}
 	if in, ok := m.Intraday(); ok {
 		out.Intraday = &oapi.Intraday{Default: oapi.IntradayDefault(in.Default), Finest: oapi.IntradayFinest(in.Finest)}

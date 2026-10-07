@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "healthkit.samples",
-  "version": 3,
+  "version": 4,
   "output": {
     "devices": [
       {

@@ -66,6 +66,10 @@ func Purge(ctx context.Context, d *db.DB, user uuid.UUID, actor string, dryRun b
 			}
 			return nil
 		}
+		// Workout files, waveforms and routes are released with their rows; hold the blob lock first.
+		if err := blob.LockShared(ctx, q); err != nil {
+			return err
+		}
 		if err := run(
 			step{"resolution_dirty", q.PurgeResolutionDirty},
 			step{"measurements", q.PurgeMeasurements}, // before their groups
@@ -76,9 +80,6 @@ func Purge(ctx context.Context, d *db.DB, user uuid.UUID, actor string, dryRun b
 			step{"import_items", q.PurgeImportItems},
 			step{"import_runs", q.PurgeImportRuns},
 		); err != nil {
-			return err
-		}
-		if err := blob.LockShared(ctx, q); err != nil {
 			return err
 		}
 		if err := q.ReleaseUserBlobs(ctx, user); err != nil {

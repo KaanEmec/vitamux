@@ -292,12 +292,20 @@ func (q *Queries) PruneIdempotencyKeys(ctx context.Context, arg PruneIdempotency
 	return result.RowsAffected(), nil
 }
 
-const pruneSupersededEvents = `-- name: PruneSupersededEvents :execrows
-DELETE FROM health_events WHERE id IN (
-  SELECT e.id FROM health_events e
-  WHERE e.user_id = $1 AND e.superseded_at < $2::timestamptz
-    AND NOT EXISTS (SELECT 1 FROM health_events o WHERE o.superseded_by = e.id)
-  LIMIT $3)
+const pruneSupersededEvents = `-- name: PruneSupersededEvents :one
+WITH d AS (
+  DELETE FROM health_events WHERE id IN (
+    SELECT e.id FROM health_events e
+    WHERE e.user_id = $1 AND e.superseded_at < $2::timestamptz
+      AND NOT EXISTS (SELECT 1 FROM health_events o WHERE o.superseded_by = e.id)
+    LIMIT $3)
+  RETURNING file_blob_sha256
+), r AS (
+  UPDATE blobs b SET refcount = b.refcount - c.n
+  FROM (SELECT file_blob_sha256, count(*)::integer AS n FROM d WHERE file_blob_sha256 IS NOT NULL GROUP BY file_blob_sha256) c
+  WHERE b.sha256 = c.file_blob_sha256
+)
+SELECT count(*) FROM d
 `
 
 type PruneSupersededEventsParams struct {
@@ -306,12 +314,12 @@ type PruneSupersededEventsParams struct {
 	MaxRows int32
 }
 
+// Releases the waveform or route reference of each deleted row (hold blob.LockShared).
 func (q *Queries) PruneSupersededEvents(ctx context.Context, arg PruneSupersededEventsParams) (int64, error) {
-	result, err := q.db.Exec(ctx, pruneSupersededEvents, arg.UserID, arg.Cutoff, arg.MaxRows)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+	row := q.db.QueryRow(ctx, pruneSupersededEvents, arg.UserID, arg.Cutoff, arg.MaxRows)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const pruneSupersededGroups = `-- name: PruneSupersededGroups :execrows
@@ -386,12 +394,20 @@ func (q *Queries) PruneSupersededSleep(ctx context.Context, arg PruneSupersededS
 	return result.RowsAffected(), nil
 }
 
-const pruneSupersededWorkouts = `-- name: PruneSupersededWorkouts :execrows
-DELETE FROM workouts WHERE id IN (
-  SELECT w.id FROM workouts w
-  WHERE w.user_id = $1 AND w.superseded_at < $2::timestamptz
-    AND NOT EXISTS (SELECT 1 FROM workouts o WHERE o.superseded_by = w.id)
-  LIMIT $3)
+const pruneSupersededWorkouts = `-- name: PruneSupersededWorkouts :one
+WITH d AS (
+  DELETE FROM workouts WHERE id IN (
+    SELECT w.id FROM workouts w
+    WHERE w.user_id = $1 AND w.superseded_at < $2::timestamptz
+      AND NOT EXISTS (SELECT 1 FROM workouts o WHERE o.superseded_by = w.id)
+    LIMIT $3)
+  RETURNING file_blob_sha256
+), r AS (
+  UPDATE blobs b SET refcount = b.refcount - c.n
+  FROM (SELECT file_blob_sha256, count(*)::integer AS n FROM d WHERE file_blob_sha256 IS NOT NULL GROUP BY file_blob_sha256) c
+  WHERE b.sha256 = c.file_blob_sha256
+)
+SELECT count(*) FROM d
 `
 
 type PruneSupersededWorkoutsParams struct {
@@ -400,12 +416,12 @@ type PruneSupersededWorkoutsParams struct {
 	MaxRows int32
 }
 
+// Releases the activity-file reference of each deleted row (hold blob.LockShared).
 func (q *Queries) PruneSupersededWorkouts(ctx context.Context, arg PruneSupersededWorkoutsParams) (int64, error) {
-	result, err := q.db.Exec(ctx, pruneSupersededWorkouts, arg.UserID, arg.Cutoff, arg.MaxRows)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+	row := q.db.QueryRow(ctx, pruneSupersededWorkouts, arg.UserID, arg.Cutoff, arg.MaxRows)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const purgeAPIKeys = `-- name: PurgeAPIKeys :execrows
@@ -496,16 +512,21 @@ func (q *Queries) PurgeDocuments(ctx context.Context, userID uuid.UUID) (int64, 
 	return result.RowsAffected(), nil
 }
 
-const purgeEvents = `-- name: PurgeEvents :execrows
-DELETE FROM health_events WHERE user_id = $1
+const purgeEvents = `-- name: PurgeEvents :one
+WITH d AS (DELETE FROM health_events WHERE user_id = $1 RETURNING file_blob_sha256), r AS (
+  UPDATE blobs b SET refcount = b.refcount - c.n
+  FROM (SELECT file_blob_sha256, count(*)::integer AS n FROM d WHERE file_blob_sha256 IS NOT NULL GROUP BY file_blob_sha256) c
+  WHERE b.sha256 = c.file_blob_sha256
+)
+SELECT count(*) FROM d
 `
 
+// Releases each row's waveform or route reference (hold blob.LockShared).
 func (q *Queries) PurgeEvents(ctx context.Context, userID uuid.UUID) (int64, error) {
-	result, err := q.db.Exec(ctx, purgeEvents, userID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+	row := q.db.QueryRow(ctx, purgeEvents, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const purgeExports = `-- name: PurgeExports :execrows
@@ -694,16 +715,21 @@ func (q *Queries) PurgeUser(ctx context.Context, userID uuid.UUID) (int64, error
 	return result.RowsAffected(), nil
 }
 
-const purgeWorkouts = `-- name: PurgeWorkouts :execrows
-DELETE FROM workouts WHERE user_id = $1
+const purgeWorkouts = `-- name: PurgeWorkouts :one
+WITH d AS (DELETE FROM workouts WHERE user_id = $1 RETURNING file_blob_sha256), r AS (
+  UPDATE blobs b SET refcount = b.refcount - c.n
+  FROM (SELECT file_blob_sha256, count(*)::integer AS n FROM d WHERE file_blob_sha256 IS NOT NULL GROUP BY file_blob_sha256) c
+  WHERE b.sha256 = c.file_blob_sha256
+)
+SELECT count(*) FROM d
 `
 
+// Releases each row's activity-file reference (hold blob.LockShared).
 func (q *Queries) PurgeWorkouts(ctx context.Context, userID uuid.UUID) (int64, error) {
-	result, err := q.db.Exec(ctx, purgeWorkouts, userID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+	row := q.db.QueryRow(ctx, purgeWorkouts, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const releaseRawBlobs = `-- name: ReleaseRawBlobs :exec

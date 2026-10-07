@@ -3,6 +3,7 @@ package api
 import (
 	"cmp"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"maps"
 	"math"
@@ -29,6 +30,7 @@ func (rt *router) exploreRoutes() {
 	rt.handle("GET /api/v1/inventory", read, rt.ops.GetInventory)
 	rt.handle("GET /api/v1/event-types", read, rt.ops.ListEventTypes)
 	rt.handle("GET /api/v1/events", read, rt.ops.ListEvents)
+	rt.handle("GET /api/v1/events/{id}/waveform", read, rt.ops.GetEventWaveform)
 	rt.handle("GET /api/v1/sources/series", read, rt.ops.GetSourceSeries)
 }
 
@@ -73,7 +75,7 @@ func addSource(it *oapi.InventoryItem, provider string, device *uuid.UUID, devic
 // GetInventory lists every metric, group kind, event code, sleep, workouts and lab analyte with
 // active data. Metric bounds and latest values come from the rows (index probes); their counts,
 // days and sources from the hourly aggregates and daily values.
-func (o *owner) GetInventory(ctx context.Context, _ oapi.GetInventoryRequestObject) (oapi.GetInventoryResponseObject, error) {
+func (o *owner) GetInventory(ctx context.Context, req oapi.GetInventoryRequestObject) (oapi.GetInventoryResponseObject, error) {
 	d, err := o.ownerDB()
 	if err != nil {
 		return nil, err
@@ -174,7 +176,40 @@ func (o *owner) GetInventory(ctx context.Context, _ oapi.GetInventoryRequestObje
 	for i, it := range inv.items {
 		out.Items[i] = *it
 	}
+	if ptrVal(req.Params.IncludeIgnored) {
+		if out.Ignored, err = ignoredItems(ctx, q, user); err != nil {
+			return nil, err
+		}
+	}
 	return out, nil
+}
+
+// ignoredItems lists the records source filters left raw (J22.25), per item and origin. They are
+// never part of the items: nothing was normalized from them.
+func ignoredItems(ctx context.Context, q *dbq.Queries, user uuid.UUID) (*[]oapi.IgnoredItem, error) {
+	rows, err := q.ListIgnoredItems(ctx, user)
+	if err != nil {
+		return nil, db.MapErr(err)
+	}
+	out := make([]oapi.IgnoredItem, len(rows))
+	for i, r := range rows {
+		out[i] = oapi.IgnoredItem{Kind: oapi.IgnoredItemKind(r.ItemKind), Code: r.ItemCode,
+			Origin: oapi.OriginRef{Key: &r.OriginKey, Name: r.OriginName}, Records: r.Records, FirstAt: r.FirstAt, LastAt: r.LastAt}
+	}
+	return &out, nil
+}
+
+// ignoredSources lists the origins whose records of a metric in [start, end) source filters left raw.
+func ignoredSources(ctx context.Context, q *dbq.Queries, user uuid.UUID, metric string, start, end time.Time) (*[]oapi.IgnoredSource, error) {
+	rows, err := q.ListIgnoredForMetric(ctx, dbq.ListIgnoredForMetricParams{UserID: user, Metric: metric, Start: start, EndAt: end})
+	if err != nil {
+		return nil, db.MapErr(err)
+	}
+	out := make([]oapi.IgnoredSource, len(rows))
+	for i, r := range rows {
+		out[i] = oapi.IgnoredSource{Origin: oapi.OriginRef{Key: &r.OriginKey, Name: r.OriginName}, Records: r.Records, FirstAt: r.FirstAt, LastAt: r.LastAt}
+	}
+	return &out, nil
 }
 
 // recordLatest is the newest record of a group, event, sleep or workouts item, with its catalogue
@@ -258,6 +293,10 @@ func (o *owner) ListEvents(ctx context.Context, req oapi.ListEventsRequestObject
 		out.Events[i] = oapi.HealthEvent{ID: r.ID, Code: r.Code, StartAt: r.StartAt, EndAt: r.EndAt, TzOffsetMin: intp(r.TzOffsetMin),
 			LocalDate: apiDate(r.LocalDate), Value: r.Value, Level: r.Level, Context: r.Context, QualityFlags: int(r.QualityFlags),
 			Source: s.source(), Provenance: s.provenance(raws)}
+		if r.FileBlobSha256 != nil {
+			h := hex.EncodeToString(r.FileBlobSha256)
+			out.Events[i].FileSha256 = &h
+		}
 	}
 	return out, nil
 }
@@ -312,13 +351,20 @@ func (o *owner) GetSourceSeries(ctx context.Context, req oapi.GetSourceSeriesReq
 	}
 	out := oapi.GetSourceSeries200JSONResponse{Metric: m.Code, Unit: m.Unit, Aggregation: oapi.SourceSeriesAggregation(m.Agg),
 		Grain: oapi.SourceSeriesGrain(grain), Timezone: z.name(prm.Start), Sources: []oapi.SourceSeriesSource{}}
-	v, err := o.ruleFor(ctx, m.Code)
-	if err != nil {
-		return nil, err
+	rule := &resolve.Rule{Metric: m.Code} // a raw series (rr_interval) has no rule: every source is not in one
+	if !m.Unresolved {
+		v, err := o.ruleFor(ctx, m.Code)
+		if err != nil {
+			return nil, err
+		}
+		ref := ruleRef(v, v.Rule.Strategy.Op)
+		out.Rule, rule = &ref, v.Rule
 	}
-	ref := ruleRef(v, v.Rule.Strategy.Op)
-	out.Rule = &ref
-	rule := v.Rule
+	if ptrVal(prm.IncludeIgnored) {
+		if out.Ignored, err = ignoredSources(ctx, d.Q(), auth.PrincipalFrom(ctx).UserID, m.Code, prm.Start, prm.End); err != nil {
+			return nil, err
+		}
+	}
 
 	// source returns the index in out.Sources of the source with these ids, adding it first.
 	idx := map[string]int{}

@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"strings"
 	"testing"
+	"time"
 )
 
 func envOf(m map[string]string) Lookup {
@@ -132,6 +133,27 @@ func TestMetricsAddr(t *testing.T) {
 	for _, bad := range []string{"9090", "127.0.0.1:8080"} { // not host:port; same as the public listener
 		if _, err := load(envOf(map[string]string{"VITAMUX_METRICS_ADDR": bad}), filesOf(nil)); err == nil {
 			t.Errorf("VITAMUX_METRICS_ADDR=%q accepted", bad)
+		}
+	}
+}
+
+func TestAppSessionLifetimes(t *testing.T) {
+	c, err := load(envOf(nil), filesOf(nil))
+	if err != nil || c.AppSessionIdle != 30*24*time.Hour || c.AppSessionMax != 90*24*time.Hour {
+		t.Fatalf("defaults: %v %v, %v", c.AppSessionIdle, c.AppSessionMax, err)
+	}
+	c, err = load(envOf(map[string]string{"VITAMUX_APP_SESSION_IDLE": "24h", "VITAMUX_APP_SESSION_MAX": "168h"}), filesOf(nil))
+	if err != nil || c.AppSessionIdle != 24*time.Hour || c.AppSessionMax != 168*time.Hour {
+		t.Fatalf("got %v %v, %v", c.AppSessionIdle, c.AppSessionMax, err)
+	}
+	for _, bad := range []map[string]string{
+		{"VITAMUX_APP_SESSION_IDLE": "30d"}, // not a Go duration
+		{"VITAMUX_APP_SESSION_IDLE": "-1h"},
+		{"VITAMUX_APP_SESSION_MAX": "0s"},
+		{"VITAMUX_APP_SESSION_IDLE": "100h", "VITAMUX_APP_SESSION_MAX": "10h"}, // idle beyond the absolute end
+	} {
+		if _, err := load(envOf(bad), filesOf(nil)); err == nil {
+			t.Errorf("%v accepted", bad)
 		}
 	}
 }

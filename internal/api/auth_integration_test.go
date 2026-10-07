@@ -60,6 +60,7 @@ type authEnv struct {
 	h       http.Handler
 	userID  uuid.UUID
 	logs    *syncBuffer
+	blobs   *blob.Store
 	secrets []string
 }
 
@@ -104,7 +105,7 @@ func newAuthEnv(t *testing.T, development bool, configure ...func(*Options, *cry
 	rt.handle("GET /api/v1/test/health", scope(auth.ReadHealth), noContent)
 	rt.handle("PATCH /api/v1/test/config", scope(auth.WriteConfig), noContent)
 
-	e := &authEnv{t: t, d: d, svc: svc, h: rt.handler(), userID: uid, logs: logs,
+	e := &authEnv{t: t, d: d, svc: svc, h: rt.handler(), userID: uid, logs: logs, blobs: opts.Blobs,
 		secrets: []string{ownerPassword, wrongPassword}}
 	e.exec = func(sql string, args ...any) {
 		t.Helper()

@@ -72,11 +72,122 @@ jobs:
         run: go test -count=1 ./deploy/compose/
       - run: CGO_ENABLED=0 go build -tags webui -trimpath -o bin/vitamux ./cmd/vitamux && ./bin/vitamux version
 
+  # The iOS app and its kits (J22.22). macos-26 (arm64) carries Xcode 26.0.1-26.6 and the iOS 26.2,
+  # 26.4 and 26.5 simulator runtimes (actions/runner-images, macos-26-arm64); macos-15 has no
+  # iOS 26 runtime. Pinned: Xcode 26.6 and an iPhone 17 Pro on iOS 26.5, created per run.
   swift:
-    runs-on: macos-15
+    runs-on: macos-26
+    timeout-minutes: 120
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      SIM_DEVICE: iPhone 17 Pro
+      SIM_RUNTIME: com.apple.CoreSimulator.SimRuntime.iOS-26-5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: swift test --package-path apple/HealthBridgeKit
+      # VitamuxKit's spec copy (apple/VitamuxKit/copy-openapi.sh, J22.4) matches api/openapi.yaml.
+      - name: VitamuxKit spec copy is current
+        run: apple/VitamuxKit/copy-openapi.sh && git diff --exit-code -- apple/VitamuxKit/Sources/VitamuxKit/API/openapi.yaml
+      # ADR-0023: Apple's swift-openapi packages and what they resolve, nothing else.
+      - name: VitamuxKit dependencies are the pinned list
+        run: |
+          diff <(jq -r '.pins[] | "\(.identity) \(.location)"' apple/VitamuxKit/Package.resolved | sort) - <<'EOF'
+          openapikit https://github.com/mattpolzin/OpenAPIKit
+          swift-algorithms https://github.com/apple/swift-algorithms
+          swift-argument-parser https://github.com/apple/swift-argument-parser
+          swift-collections https://github.com/apple/swift-collections
+          swift-http-types https://github.com/apple/swift-http-types
+          swift-numerics https://github.com/apple/swift-numerics.git
+          swift-openapi-generator https://github.com/apple/swift-openapi-generator
+          swift-openapi-runtime https://github.com/apple/swift-openapi-runtime
+          swift-openapi-urlsession https://github.com/apple/swift-openapi-urlsession
+          yams https://github.com/jpsim/Yams
+          EOF
+      - run: swift test --package-path apple/VitamuxKit
+
+
+  # The app's simulator gates (apple/VitamuxApp/scripts/ui-gates.sh, as `make test-ios` runs them
+  # in one go), sharded by UI test class so each hosted runner finishes well inside an hour: app and
+  # widget build, package allowlist, privacy manifests, the shard's classes on the fake server with
+  # their accessibility audits, and the unified-log privacy scan. The first shard also runs the
+  # widget tests and the performance budgets (ui-gates.sh runs the performance class on its own
+  # when it is named). ScreenshotUITests (docs) and StackSmokeUITests (the ios-stack job) stay out.
+  ios-ui:
+    runs-on: macos-26
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: a11y-widgets-perf
+            classes: AccessibilityAuditUITests WidgetsUITests OfflineCacheUITests NotificationsUITests
+            extra: -only-testing:VitamuxWidgetsTests -skip-testing:VitamuxUITests/PerformanceUITests
+          - shard: settings-specialised-watch
+            classes: SettingsUITests SpecialisedUITests WatchUITests DeepLinkUITests AppLockUITests SystemStatusUITests UpgradeFromBridgeUITests
+            extra: ""
+          - shard: signin-sources-lab-health
+            classes: SignInUITests ConnectionDetailUITests LabUITests AppleHealthUITests AppleHealthSourcesUITests
+            extra: ""
+          - shard: shell-explore-dashboard-rules
+            classes: ShellUITests SourcesUITests ExploreUITests OverrideUITests DayViewUITests DashboardUITests RulesUITests
+            extra: ""
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      SIM_DEVICE: iPhone 17 Pro
+      SIM_RUNTIME: com.apple.CoreSimulator.SimRuntime.iOS-26-5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: brew install xcodegen
+      - name: App gates, shard ${{ matrix.shard }}
+        run: |
+          args=()
+          for c in ${{ matrix.classes }}; do args+=("-only-testing:VitamuxUITests/$c"); done
+          for a in ${{ matrix.extra }}; do args+=("$a"); done
+          apple/VitamuxApp/scripts/ui-gates.sh "${args[@]}"
+        env:
+          RESULT_BUNDLE: ${{ runner.temp }}/ios/ui-tests.xcresult
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: ios-ui-tests-${{ matrix.shard }}
+          path: ${{ runner.temp }}/ios
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # The app against a real `vitamux serve` on a throwaway database (scripts/ios-stack.sh, as
+  # `make test-ios-stack`). PostgreSQL 18 from Homebrew: macOS runners have no service containers.
+  ios-stack:
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      SIM_DEVICE: iPhone 17 Pro
+      SIM_RUNTIME: com.apple.CoreSimulator.SimRuntime.iOS-26-5
+      VITAMUX_DATABASE_URL: postgres://vitamux@127.0.0.1:5432/vitamux?sslmode=disable
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: PostgreSQL 18 (throwaway cluster, trust auth on loopback)
+        run: |
+          brew install postgresql@18 xcodegen
+          pg=$(brew --prefix postgresql@18)/bin
+          echo "$pg" >> "$GITHUB_PATH"
+          "$pg/initdb" -D "$RUNNER_TEMP/pg" -U vitamux --auth=trust >/dev/null
+          "$pg/pg_ctl" -D "$RUNNER_TEMP/pg" -l "$RUNNER_TEMP/pg.log" -o "-c listen_addresses=127.0.0.1" -w start
+          "$pg/createdb" -h 127.0.0.1 -U vitamux vitamux
+      - name: iOS stack smoke
+        run: scripts/ios-stack.sh
+        env:
+          RESULT_BUNDLE: ${{ runner.temp }}/ios-stack-smoke.xcresult
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: ios-stack-smoke.xcresult
+          path: ${{ runner.temp }}/ios-stack-smoke.xcresult
+          retention-days: 7
+          if-no-files-found: ignore
 
   integration:
     runs-on: ubuntu-latest

@@ -190,7 +190,8 @@ func pruneRawBatch(ctx context.Context, d *db.DB, user uuid.UUID, provider strin
 // PruneSuperseded deletes, per owner with SupersededDays set, canonical rows superseded more
 // than that many days before now, oldest end of each chain first (see dbq
 // PruneSupersededMeasurements), so active rows and the links between remaining rows stay
-// intact. Stages and segments go with their session or workout. It returns counts per table.
+// intact. Stages and segments go with their session or workout, and blob references (workout
+// files, waveforms, routes) with their rows. It returns counts per table.
 func PruneSuperseded(ctx context.Context, d *db.DB, now time.Time) (map[string]int64, error) {
 	total := map[string]int64{}
 	err := forEachUser(ctx, d, func(user uuid.UUID, pol Retention) error {
@@ -216,10 +217,14 @@ func PruneSuperseded(ctx context.Context, d *db.DB, now time.Time) (map[string]i
 				return q.PruneSupersededSleep(ctx, dbq.PruneSupersededSleepParams{UserID: user, Cutoff: cutoff, MaxRows: pruneBatch})
 			}},
 			{"workouts", func() (int64, error) {
-				return q.PruneSupersededWorkouts(ctx, dbq.PruneSupersededWorkoutsParams{UserID: user, Cutoff: cutoff, MaxRows: pruneBatch})
+				return withBlobLock(ctx, d, func(q *dbq.Queries) (int64, error) {
+					return q.PruneSupersededWorkouts(ctx, dbq.PruneSupersededWorkoutsParams{UserID: user, Cutoff: cutoff, MaxRows: pruneBatch})
+				})
 			}},
 			{"health_events", func() (int64, error) {
-				return q.PruneSupersededEvents(ctx, dbq.PruneSupersededEventsParams{UserID: user, Cutoff: cutoff, MaxRows: pruneBatch})
+				return withBlobLock(ctx, d, func(q *dbq.Queries) (int64, error) {
+					return q.PruneSupersededEvents(ctx, dbq.PruneSupersededEventsParams{UserID: user, Cutoff: cutoff, MaxRows: pruneBatch})
+				})
 			}},
 		} {
 			var n int64
@@ -238,6 +243,20 @@ func PruneSuperseded(ctx context.Context, d *db.DB, now time.Time) (map[string]i
 		return auditPrune(ctx, d, user, KindPruneSuperseded, counts, sum)
 	})
 	return total, err
+}
+
+// withBlobLock runs a statement that releases blob references (workout files, waveforms and
+// routes go with their rows) in a transaction holding the writers' side of the blob lock.
+func withBlobLock(ctx context.Context, d *db.DB, fn func(*dbq.Queries) (int64, error)) (int64, error) {
+	var n int64
+	err := d.Tx(ctx, func(q *dbq.Queries) (err error) {
+		if err = blob.LockShared(ctx, q); err != nil {
+			return err
+		}
+		n, err = fn(q)
+		return err
+	})
+	return n, err
 }
 
 // PruneIdempotencyKeys deletes stored ingest responses older than each owner's

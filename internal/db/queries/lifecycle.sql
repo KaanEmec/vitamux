@@ -125,19 +125,37 @@ DELETE FROM sleep_sessions WHERE id IN (
     AND NOT EXISTS (SELECT 1 FROM sleep_sessions o WHERE o.superseded_by = s.id)
   LIMIT @max_rows);
 
--- name: PruneSupersededWorkouts :execrows
-DELETE FROM workouts WHERE id IN (
-  SELECT w.id FROM workouts w
-  WHERE w.user_id = @user_id AND w.superseded_at < @cutoff::timestamptz
-    AND NOT EXISTS (SELECT 1 FROM workouts o WHERE o.superseded_by = w.id)
-  LIMIT @max_rows);
+-- name: PruneSupersededWorkouts :one
+-- Releases the activity-file reference of each deleted row (hold blob.LockShared).
+WITH d AS (
+  DELETE FROM workouts WHERE id IN (
+    SELECT w.id FROM workouts w
+    WHERE w.user_id = @user_id AND w.superseded_at < @cutoff::timestamptz
+      AND NOT EXISTS (SELECT 1 FROM workouts o WHERE o.superseded_by = w.id)
+    LIMIT @max_rows)
+  RETURNING file_blob_sha256
+), r AS (
+  UPDATE blobs b SET refcount = b.refcount - c.n
+  FROM (SELECT file_blob_sha256, count(*)::integer AS n FROM d WHERE file_blob_sha256 IS NOT NULL GROUP BY file_blob_sha256) c
+  WHERE b.sha256 = c.file_blob_sha256
+)
+SELECT count(*) FROM d;
 
--- name: PruneSupersededEvents :execrows
-DELETE FROM health_events WHERE id IN (
-  SELECT e.id FROM health_events e
-  WHERE e.user_id = @user_id AND e.superseded_at < @cutoff::timestamptz
-    AND NOT EXISTS (SELECT 1 FROM health_events o WHERE o.superseded_by = e.id)
-  LIMIT @max_rows);
+-- name: PruneSupersededEvents :one
+-- Releases the waveform or route reference of each deleted row (hold blob.LockShared).
+WITH d AS (
+  DELETE FROM health_events WHERE id IN (
+    SELECT e.id FROM health_events e
+    WHERE e.user_id = @user_id AND e.superseded_at < @cutoff::timestamptz
+      AND NOT EXISTS (SELECT 1 FROM health_events o WHERE o.superseded_by = e.id)
+    LIMIT @max_rows)
+  RETURNING file_blob_sha256
+), r AS (
+  UPDATE blobs b SET refcount = b.refcount - c.n
+  FROM (SELECT file_blob_sha256, count(*)::integer AS n FROM d WHERE file_blob_sha256 IS NOT NULL GROUP BY file_blob_sha256) c
+  WHERE b.sha256 = c.file_blob_sha256
+)
+SELECT count(*) FROM d;
 
 -- name: PruneIdempotencyKeys :execrows
 DELETE FROM idempotency_keys k USING clients c
@@ -167,11 +185,23 @@ DELETE FROM measurement_groups WHERE user_id = @user_id;
 -- name: PurgeSleep :execrows
 DELETE FROM sleep_sessions WHERE user_id = @user_id;
 
--- name: PurgeWorkouts :execrows
-DELETE FROM workouts WHERE user_id = @user_id;
+-- name: PurgeWorkouts :one
+-- Releases each row's activity-file reference (hold blob.LockShared).
+WITH d AS (DELETE FROM workouts WHERE user_id = @user_id RETURNING file_blob_sha256), r AS (
+  UPDATE blobs b SET refcount = b.refcount - c.n
+  FROM (SELECT file_blob_sha256, count(*)::integer AS n FROM d WHERE file_blob_sha256 IS NOT NULL GROUP BY file_blob_sha256) c
+  WHERE b.sha256 = c.file_blob_sha256
+)
+SELECT count(*) FROM d;
 
--- name: PurgeEvents :execrows
-DELETE FROM health_events WHERE user_id = @user_id;
+-- name: PurgeEvents :one
+-- Releases each row's waveform or route reference (hold blob.LockShared).
+WITH d AS (DELETE FROM health_events WHERE user_id = @user_id RETURNING file_blob_sha256), r AS (
+  UPDATE blobs b SET refcount = b.refcount - c.n
+  FROM (SELECT file_blob_sha256, count(*)::integer AS n FROM d WHERE file_blob_sha256 IS NOT NULL GROUP BY file_blob_sha256) c
+  WHERE b.sha256 = c.file_blob_sha256
+)
+SELECT count(*) FROM d;
 
 -- name: PurgeResolutionDirty :execrows
 DELETE FROM resolution_dirty WHERE user_id = @user_id;

@@ -1,11 +1,13 @@
 package normalize
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"slices"
 	"sort"
@@ -13,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/KaanEmec/vitamux/internal/blob"
 	"github.com/KaanEmec/vitamux/internal/catalog"
 	"github.com/KaanEmec/vitamux/internal/db"
 	"github.com/KaanEmec/vitamux/internal/db/dbq"
@@ -23,6 +26,8 @@ type Source struct {
 	ConnectionID        uuid.UUID
 	RawPayloadID        int64 // the payload normalized; also deleted_by_raw_id for its tombstones
 	NormalizerVersionID int32 // from RegisterVersions
+	// Blobs stores Output.Files (ECG waveforms, workout routes); required when there are any.
+	Blobs *blob.Store
 }
 
 // WriteStats counts what one Write did, over all record types.
@@ -48,9 +53,15 @@ func Write(ctx context.Context, q *dbq.Queries, src Source, out Output) (WriteSt
 	if err := out.Validate(); err != nil {
 		return WriteStats{}, err
 	}
+	if len(out.Files) > 0 && src.Blobs == nil {
+		return WriteStats{}, errors.New("normalize: the output has blob documents but no blob store is configured")
+	}
 	w, err := newWriter(ctx, q, src)
 	if err != nil {
 		return WriteStats{}, err
+	}
+	for _, f := range out.Files {
+		w.files[string(f.SHA256)] = f.Doc
 	}
 	if err := w.sources(out); err != nil {
 		return w.stats, err
@@ -91,6 +102,9 @@ func Write(ctx context.Context, q *dbq.Queries, src Source, out Output) (WriteSt
 	if err := w.tombstones(out.Tombstones); err != nil {
 		return w.stats, err
 	}
+	if err := w.seriesTombstones(out.SeriesTombstones); err != nil {
+		return w.stats, err
+	}
 	return w.stats, w.flushDirty()
 }
 
@@ -118,6 +132,8 @@ type writer struct {
 	devices  map[string]uuid.UUID
 	origins  map[string]originRef
 	dirty    map[dirtyKey]struct{}
+	files    map[string]json.RawMessage // Output.Files by hash
+	stored   map[string]bool            // files put in the blob store by this Write
 	stats    WriteStats
 }
 
@@ -129,7 +145,8 @@ func newWriter(ctx context.Context, q *dbq.Queries, src Source) (*writer, error)
 	w := &writer{ctx: ctx, q: q, src: src, user: c.UserID, provider: c.ProviderID,
 		keys:    newKeySource(c.Provider, c.AccountKey, src.ConnectionID),
 		metrics: map[string]int16{}, units: map[string]int16{},
-		devices: map[string]uuid.UUID{}, origins: map[string]originRef{}, dirty: map[dirtyKey]struct{}{}}
+		devices: map[string]uuid.UUID{}, origins: map[string]originRef{}, dirty: map[dirtyKey]struct{}{},
+		files: map[string]json.RawMessage{}, stored: map[string]bool{}}
 	if w.tl, err = loadTimeline(ctx, q, c.UserID); err != nil {
 		return nil, err
 	}
@@ -258,21 +275,22 @@ func (w *writer) flushDirty() error {
 
 // mrow is a measurement ready to insert; the JSON fields are the columns InsertMeasurements reads.
 type mrow struct {
-	MetricID     int16      `json:"metric_id"`
-	Kind         string     `json:"kind"`
-	StartAt      time.Time  `json:"start_at"`
-	EndAt        *time.Time `json:"end_at"`
-	TZOffsetMin  *int16     `json:"tz_offset_min"`
-	LocalDate    string     `json:"local_date"`
-	Value        float64    `json:"value"`
-	SourceValue  *float64   `json:"source_value"`
-	SourceUnitID *int16     `json:"source_unit_id"`
-	DeviceID     *uuid.UUID `json:"device_id"`
-	OriginID     *uuid.UUID `json:"origin_id"`
-	GroupID      *int64     `json:"group_id"`
-	ExternalID   *string    `json:"external_id"`
-	DedupeKey    string     `json:"dedupe_key"` // hex
-	QualityFlags int32      `json:"quality_flags"`
+	MetricID     int16           `json:"metric_id"`
+	Kind         string          `json:"kind"`
+	StartAt      time.Time       `json:"start_at"`
+	EndAt        *time.Time      `json:"end_at"`
+	TZOffsetMin  *int16          `json:"tz_offset_min"`
+	LocalDate    string          `json:"local_date"`
+	Value        float64         `json:"value"`
+	SourceValue  *float64        `json:"source_value"`
+	SourceUnitID *int16          `json:"source_unit_id"`
+	DeviceID     *uuid.UUID      `json:"device_id"`
+	OriginID     *uuid.UUID      `json:"origin_id"`
+	GroupID      *int64          `json:"group_id"`
+	ExternalID   *string         `json:"external_id"`
+	DedupeKey    string          `json:"dedupe_key"` // hex
+	QualityFlags int32           `json:"quality_flags"`
+	Context      json.RawMessage `json:"context,omitempty"`
 	date         time.Time
 }
 
@@ -307,7 +325,7 @@ func (w *writer) measurement(m Measurement, group Key, groupID *int64) (mrow, er
 	}
 	r := mrow{MetricID: metricID, Kind: string(m.Kind), StartAt: start, EndAt: end, TZOffsetMin: loc.OffsetMin,
 		LocalDate: loc.Date.Format(time.DateOnly), date: loc.Date, Value: v, DeviceID: w.device(m.Device),
-		OriginID: origin, GroupID: groupID, ExternalID: strp(key.ExternalID), QualityFlags: int32(flags),
+		OriginID: origin, GroupID: groupID, ExternalID: strp(key.ExternalID), QualityFlags: int32(flags), Context: m.Context,
 		DedupeKey: hex.EncodeToString(w.keys.key(key, m.Metric, string(m.Kind), start, end, m.Device, m.Origin))}
 	if converted {
 		unitID, ok := w.units[m.Unit]
@@ -324,7 +342,8 @@ func sameMeasurement(o dbq.ListActiveMeasurementsRow, n mrow) bool {
 		eqTime(o.EndAt, n.EndAt) && eq(o.TzOffsetMin, n.TZOffsetMin) && o.LocalDate.Equal(n.date) &&
 		o.Value == n.Value && eq(o.SourceValue, n.SourceValue) && eq(o.SourceUnitID, n.SourceUnitID) &&
 		eq(o.DeviceID, n.DeviceID) && eq(o.OriginID, n.OriginID) && eq(o.GroupID, n.GroupID) &&
-		eq(o.ExternalID, n.ExternalID) && o.QualityFlags == n.QualityFlags
+		eq(o.ExternalID, n.ExternalID) && o.QualityFlags == n.QualityFlags && (len(o.Context) == 0) == (len(n.Context) == 0) &&
+		jsonEqual(o.Context, n.Context)
 }
 
 // measurements upserts all rows of the payload in a few set-based statements, since intraday
@@ -691,8 +710,16 @@ func (w *writer) workout(x Workout) error {
 				DistanceM: x.DistanceM, EnergyKcal: x.EnergyKcal, AvgHrBpm: x.AvgHRBpm, MaxHrBpm: x.MaxHRBpm,
 				FileBlobSha256: file, ProviderID: w.provider, ConnectionID: w.src.ConnectionID, DeviceID: dev,
 				OriginID: org, ExternalID: ext, DedupeKey: dk, RawPayloadID: &raw,
-				NormalizerVersionID: w.src.NormalizerVersionID}); err != nil || len(segs) == 0 {
+				NormalizerVersionID: w.src.NormalizerVersionID}); err != nil {
 				return err
+			}
+			if file != nil { // every row naming a blob holds one reference (ADR-0004)
+				if err := blob.Retain(w.ctx, w.q, file); err != nil {
+					return err
+				}
+			}
+			if len(segs) == 0 {
+				return nil
 			}
 			body, err := json.Marshal(segs)
 			if err != nil {
@@ -732,10 +759,14 @@ func (w *writer) healthEvent(e Event) error {
 	if err != nil {
 		return err
 	}
+	var file []byte
+	if len(e.FileSHA256) > 0 {
+		file = e.FileSHA256
+	}
 	same := found && old.DeletedAt == nil && old.Code == e.Code && old.StartAt.Equal(start) && eqTime(old.EndAt, end) &&
 		eq(old.TzOffsetMin, loc.OffsetMin) && old.LocalDate.Equal(loc.Date) && eq(old.Value, e.Value) &&
 		eq(old.Level, level) && jsonEqual(old.Context, ctxJSON) && old.QualityFlags == int32(flags) &&
-		eq(old.DeviceID, dev) && eq(old.OriginID, org) && eq(old.ExternalID, ext)
+		slices.Equal(old.FileBlobSha256, file) && eq(old.DeviceID, dev) && eq(old.OriginID, org) && eq(old.ExternalID, ext)
 	id, err := newID()
 	if err != nil {
 		return err
@@ -747,17 +778,68 @@ func (w *writer) healthEvent(e Event) error {
 		},
 		func() error { return w.q.SupersedeEvent(w.ctx, old.ID) },
 		func() error {
-			return w.q.InsertEvent(w.ctx, dbq.InsertEventParams{ID: id, UserID: w.user, Code: e.Code, StartAt: start,
+			if err := w.putFile(file); err != nil {
+				return err
+			}
+			if err := w.q.InsertEvent(w.ctx, dbq.InsertEventParams{ID: id, UserID: w.user, Code: e.Code, StartAt: start,
 				EndAt: end, TzOffsetMin: loc.OffsetMin, LocalDate: loc.Date, Value: e.Value, Level: level,
-				Context: ctxJSON, QualityFlags: int32(flags), ProviderID: w.provider, ConnectionID: w.src.ConnectionID,
-				DeviceID: dev, OriginID: org, ExternalID: ext, DedupeKey: dk, RawPayloadID: &raw,
-				NormalizerVersionID: w.src.NormalizerVersionID})
+				Context: ctxJSON, QualityFlags: int32(flags), FileBlobSha256: file, ProviderID: w.provider,
+				ConnectionID: w.src.ConnectionID, DeviceID: dev, OriginID: org, ExternalID: ext, DedupeKey: dk,
+				RawPayloadID: &raw, NormalizerVersionID: w.src.NormalizerVersionID}); err != nil || file == nil {
+				return err
+			}
+			return blob.Retain(w.ctx, w.q, file) // every row naming a blob holds one reference (ADR-0004)
 		},
 		func() error {
 			return w.q.LinkEventSuccessor(w.ctx, dbq.LinkEventSuccessorParams{ID: old.ID, NewID: &id})
 		},
 	)
 	return err
+}
+
+// putFile stores the document with hash sum once per Write, before a row references it. The
+// store is content-addressed, so a document already stored is not written again.
+func (w *writer) putFile(sum []byte) error {
+	if sum == nil || w.stored[string(sum)] {
+		return nil
+	}
+	doc, ok := w.files[string(sum)]
+	if !ok { // Validate checked it
+		return fmt.Errorf("%w: event file not in Files", ErrInvalidOutput)
+	}
+	info, err := w.src.Blobs.Put(w.ctx, w.q, bytes.NewReader(doc), blob.Plain)
+	if err != nil {
+		return fmt.Errorf("normalize: store event file: %w", err)
+	}
+	if !bytes.Equal(info.SHA256, sum) {
+		return fmt.Errorf("%w: event file hash", ErrInvalidOutput)
+	}
+	w.stored[string(sum)] = true
+	return nil
+}
+
+// seriesTombstones withdraws every active row of the named series records.
+func (w *writer) seriesTombstones(ks []SeriesKey) error {
+	byMetric := map[string][]string{}
+	for _, k := range ks {
+		byMetric[k.Metric] = append(byMetric[k.Metric], k.ExternalID)
+	}
+	for _, code := range slices.Sorted(maps.Keys(byMetric)) {
+		metricID, ok := w.metrics[code]
+		if !ok {
+			return fmt.Errorf("normalize: metric %q is not seeded", code)
+		}
+		ms, err := w.q.DeleteMeasurementSeries(w.ctx, dbq.DeleteMeasurementSeriesParams{RawPayloadID: &w.src.RawPayloadID,
+			UserID: w.user, MetricID: metricID, ConnectionID: w.src.ConnectionID, ExternalIds: byMetric[code]})
+		if err != nil {
+			return db.MapErr(err)
+		}
+		for _, m := range ms {
+			w.mark(m.MetricID, m.LocalDate)
+		}
+		w.stats.Deleted += len(ms)
+	}
+	return nil
 }
 
 // tombstones marks the active rows with these upstream ids deleted, in every canonical table;

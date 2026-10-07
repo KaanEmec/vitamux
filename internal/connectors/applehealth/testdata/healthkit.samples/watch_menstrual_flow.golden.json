@@ -1,0 +1,34 @@
+{
+  "synthetic": true,
+  "normalizer": "healthkit.samples",
+  "version": 4,
+  "output": {
+    "origins": [
+      {
+        "key": "com.apple.Health",
+        "name": "Health"
+      }
+    ],
+    "events": [
+      {
+        "code": "menstrual_flow",
+        "start": "2026-09-10T00:00:00+02:00",
+        "end": "2026-09-11T00:00:00+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "level": "medium",
+        "context": {
+          "HKMenstrualCycleStart": 1,
+          "HKTimeZone": "Europe/Amsterdam"
+        },
+        "flags": 1,
+        "origin": "com.apple.Health",
+        "key": {
+          "record_type": "HKCategoryTypeIdentifierMenstrualFlow",
+          "external_id": "6F0D0000-0000-4000-8000-000000000171"
+        }
+      }
+    ]
+  }
+}

@@ -408,8 +408,13 @@ var tables = []table{
 				return e.q.ExportHealthEvents(e.ctx, dbq.ExportHealthEventsParams{UserID: e.user, After: after, Lim: pageSize})
 			}, func(r dbq.ExportHealthEventsRow) (uuid.UUID, json.RawMessage) { return r.ID, r.Row })
 		},
-		patch:  func(im *importer, r row) (bool, error) { return true, im.canonical(r) },
-		insert: execrows((*dbq.Queries).ImportHealthEvents),
+		patch: func(im *importer, r row) (bool, error) { return true, errors.Join(im.takeBlob(r), im.canonical(r)) },
+		insert: func(im *importer, rows []byte) (int64, error) {
+			if err := im.flushBlobs(); err != nil {
+				return 0, err
+			}
+			return im.q.ImportHealthEvents(im.ctx, rows)
+		},
 		link: func(im *importer) error {
 			return im.linkUUID("health_events", func(ctx context.Context, ids, by []uuid.UUID) error {
 				return im.q.LinkImportedHealthEvents(ctx, dbq.LinkImportedHealthEventsParams{Ids: ids, NewIds: by})
@@ -564,6 +569,8 @@ var withoutFile = map[string]string{ //nolint:unused,nolintlint // read by TestE
 	"sidecars":                 "secrets: sidecars added in the panel, added again on the target",
 	// Rebuildable resolution state (J09.9).
 	"resolved_cache": "derived: recomputed on read", "source_hourly_aggregates": "derived: rebuilt from resolution_dirty",
+	// Source filter guard (J22.25): the raw payloads keep the records; reprocessing marks them again.
+	"ignored_records": "derived: rewritten when the raw payloads are normalized again",
 }
 
 const zeroHash = "0000000000000000000000000000000000000000000000000000000000000000"

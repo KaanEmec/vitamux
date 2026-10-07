@@ -33,6 +33,7 @@ func (rt *router) sourceRoutes() {
 	rt.handle("GET /api/v1/sleep/{id}", read, rt.ops.GetSleep)
 	rt.handle("GET /api/v1/workouts", read, rt.ops.ListWorkouts)
 	rt.handle("GET /api/v1/workouts/{id}", read, rt.ops.GetWorkout)
+	rt.handle("GET /api/v1/workouts/{id}/route", read, rt.ops.GetWorkoutRoute)
 	rt.handle("GET /api/v1/provenance/{entity}/{id}", read, rt.ops.GetProvenance)
 }
 
@@ -237,10 +238,15 @@ func (o *owner) ListMeasurements(ctx context.Context, req oapi.ListMeasurementsR
 		s := srcCols{r.Provider, r.ConnectionID, r.DeviceID, r.DeviceType, r.OriginKey, r.ExternalID, r.DedupeKey,
 			r.RawPayloadID, r.NormalizerName, r.NormalizerVersion, r.IngestedAt, r.NormalizedAt,
 			r.SupersededAt, r.SupersededBy, r.DeletedAt, r.DeletedByRawID}
-		out.Measurements = append(out.Measurements, oapi.Measurement{ID: strconv.FormatInt(r.ID, 10), Metric: r.Metric,
+		m := oapi.Measurement{ID: strconv.FormatInt(r.ID, 10), Metric: r.Metric,
 			Kind: oapi.MeasurementKind(r.Kind), StartAt: r.StartAt, EndAt: r.EndAt, TzOffsetMin: intp(r.TzOffsetMin),
 			LocalDate: apiDate(r.LocalDate), Value: r.Value, Unit: r.Unit, SourceValue: r.SourceValue, SourceUnit: r.SourceUnit,
-			QualityFlags: int(r.QualityFlags), GroupID: idp(r.GroupID), Source: s.source(), Provenance: s.provenance(raws)})
+			QualityFlags: int(r.QualityFlags), GroupID: idp(r.GroupID), Source: s.source(), Provenance: s.provenance(raws)}
+		if len(r.Context) > 0 {
+			c := json.RawMessage(r.Context)
+			m.Context = &c
+		}
+		out.Measurements = append(out.Measurements, m)
 	}
 	return out, nil
 }

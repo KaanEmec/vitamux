@@ -1,0 +1,86 @@
+{
+  "synthetic": true,
+  "normalizer": "healthkit.samples",
+  "version": 4,
+  "output": {
+    "devices": [
+      {
+        "fingerprint": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "type": "watch",
+        "manufacturer": "Apple Inc.",
+        "model": "Watch",
+        "hardware_version": "Watch7,1",
+        "software_version": "11.0"
+      }
+    ],
+    "origins": [
+      {
+        "key": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "name": "Synthetic Watch",
+        "native": true
+      }
+    ],
+    "events": [
+      {
+        "code": "ecg_recording",
+        "start": "2026-09-14T20:10:00+02:00",
+        "end": "2026-09-14T20:10:00.031+02:00",
+        "zone": {
+          "tz": "Europe/Amsterdam"
+        },
+        "value": 64,
+        "level": "sinus_rhythm",
+        "context": {
+          "algorithm_version": 2,
+          "lead": "apple_watch_similar_to_lead_i",
+          "sampling_frequency_hz": 512,
+          "symptoms_status": "none",
+          "voltage_count": 16
+        },
+        "file_sha256": "T9gkBPW3dJKIqNr/QGqHhp0g8JDW8QO8ACs1wb5HU6Y=",
+        "device": "hk:c40e68bf1752360dac478eb36a21a6c3",
+        "origin": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
+        "key": {
+          "record_type": "HKDataTypeIdentifierElectrocardiogram",
+          "external_id": "6F0D0000-0000-4000-8000-000000000101"
+        }
+      }
+    ],
+    "tombstones": [
+      {
+        "record_type": "HKDataTypeIdentifierElectrocardiogram",
+        "external_id": "6F0D0000-0000-4000-8000-000000000102"
+      }
+    ],
+    "files": [
+      {
+        "sha256": "T9gkBPW3dJKIqNr/QGqHhp0g8JDW8QO8ACs1wb5HU6Y=",
+        "doc": {
+          "format": "vitamux.waveform/1",
+          "start": "2026-09-14T20:10:00+02:00",
+          "sampling_frequency_hz": 512,
+          "unit": "µV",
+          "lead": "apple_watch_similar_to_lead_i",
+          "values": [
+            0,
+            15.577,
+            28.694,
+            37.282,
+            39.983,
+            36.372,
+            27.019,
+            13.4,
+            -2.335,
+            -17.701,
+            -30.272,
+            -38.064,
+            -39.847,
+            -35.338,
+            -25.251,
+            -11.177
+          ]
+        }
+      }
+    ]
+  }
+}

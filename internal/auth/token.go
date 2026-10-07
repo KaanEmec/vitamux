@@ -27,6 +27,8 @@ import (
 const (
 	PATPrefix    = "vmx_pat_"
 	ClientPrefix = "vmx_cli_"
+	// SessionPrefix marks an app session token; its id is the sessions row.
+	SessionPrefix = "vmx_ses_"
 
 	secretLen        = 32
 	encodedSecretLen = 43
@@ -57,13 +59,15 @@ func tokenFor(prefix string, id uuid.UUID) (token string, hash []byte, err error
 	return prefix + hex.EncodeToString(id[:]) + "_" + base64.RawURLEncoding.EncodeToString(secret), sum[:], nil
 }
 
-// ParseToken splits a vmx_pat_/vmx_cli_ token into its prefix, row id and secret hash.
+// ParseToken splits a vmx_pat_/vmx_cli_/vmx_ses_ token into its prefix, row id and secret hash.
 func ParseToken(token string) (prefix string, id uuid.UUID, hash []byte, err error) {
 	switch {
 	case strings.HasPrefix(token, PATPrefix):
 		prefix = PATPrefix
 	case strings.HasPrefix(token, ClientPrefix):
 		prefix = ClientPrefix
+	case strings.HasPrefix(token, SessionPrefix):
+		prefix = SessionPrefix
 	default:
 		return "", uuid.Nil, nil, ErrInvalidToken
 	}
@@ -187,12 +191,15 @@ func CreateClientToken(ctx context.Context, d *db.DB, userID, connectionID uuid.
 	return id, token, nil
 }
 
-// Bearer authenticates an API key or client token. Every failure is ErrInvalidToken,
-// except database errors.
+// Bearer authenticates an API key, client token or app session. Every failure is
+// ErrInvalidToken, except database errors.
 func (s *Service) Bearer(ctx context.Context, token string) (*Principal, error) {
 	prefix, id, hash, err := ParseToken(token)
 	if err != nil {
 		return nil, err
+	}
+	if prefix == SessionPrefix {
+		return s.appSession(ctx, id, hash)
 	}
 	now := s.now()
 	q := s.db.Q()

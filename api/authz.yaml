@@ -2,11 +2,13 @@
 # One line per operation in openapi.yaml, keyed "METHOD /path" with the spec's path.
 #
 #   allow:   public    no credentials (authorized by something else: OAuth state, hook token)
-#            session   the owner's browser session only
+#            session   an owner session only: the browser cookie or an app session
+#                      (bearer vmx_ses_); never an API key
 #            client    a client or device token, only for its own connection
-#            <scope>   the owner's session, or an API key with this scope or admin
+#            <scope>   an owner session, or an API key with this scope or admin
 #                      (read:health, read:config, write:config, write:documents, admin)
-#   csrf:    true      a session request needs X-CSRF-Token (unsafe method allowing a session)
+#   csrf:    true      a cookie session request needs X-CSRF-Token (unsafe method allowing a
+#                      session); app sessions are bearer tokens and never need it
 #   planned: true      in the spec but not served yet; delete it when the route is registered
 #
 # TestAuthzMatrix fails when this file, the registered routes and the spec's `security`
@@ -19,11 +21,13 @@ routes:
   POST /api/ingest/v1/devices/pair: {allow: public}
   GET /api/ingest/v1/devices/self: {allow: client}
   POST /api/ingest/v1/devices/self/rotate-token: {allow: client}
+  PUT /api/ingest/v1/devices/self/sources: {allow: client}
   GET /api/v1/metrics: {allow: read:health}
   GET /api/v1/metrics/{code}: {allow: read:health}
   GET /api/v1/event-types: {allow: read:health}
   GET /api/v1/inventory: {allow: read:health}
   GET /api/v1/events: {allow: read:health}
+  GET /api/v1/events/{id}/waveform: {allow: read:health}
   GET /api/v1/sources/series: {allow: read:health}
   GET /api/v1/measurements: {allow: read:health}
   POST /api/v1/measurements/manual: {allow: write:config, csrf: true}
@@ -33,6 +37,7 @@ routes:
   GET /api/v1/sleep/{id}: {allow: read:health}
   GET /api/v1/workouts: {allow: read:health}
   GET /api/v1/workouts/{id}: {allow: read:health}
+  GET /api/v1/workouts/{id}/route: {allow: read:health}
   GET /api/v1/provenance/{entity}/{id}: {allow: read:health}
   GET /api/v1/resolved/daily: {allow: read:health}
   GET /api/v1/resolved/series: {allow: read:health}
@@ -51,7 +56,7 @@ routes:
   POST /api/v1/overrides/{id}/revoke: {allow: write:config, csrf: true}
   GET /api/v1/coverage: {allow: read:health}
   GET /api/v1/system/status: {allow: read:config}
-  GET /api/v1/system/version: {allow: read:config}
+  GET /api/v1/system/version: {allow: public}
   GET /api/v1/jobs: {allow: read:config}
   GET /api/v1/connections: {allow: read:config}
   POST /api/v1/connections: {allow: write:config, csrf: true}
@@ -84,6 +89,8 @@ routes:
   POST /api/v1/devices/pairing-codes: {allow: write:config, csrf: true}
   POST /api/v1/devices/{id}/request-anchor-reset: {allow: write:config, csrf: true}
   POST /api/v1/devices/{id}/revoke: {allow: write:config, csrf: true}
+  GET /api/v1/devices/{id}/source-filter: {allow: read:config}
+  PUT /api/v1/devices/{id}/source-filter: {allow: write:config, csrf: true}
   GET /api/v1/origins: {allow: read:config}
   PATCH /api/v1/origins/{id}: {allow: write:config, csrf: true}
   GET /api/v1/source-devices: {allow: read:config}
@@ -129,6 +136,7 @@ routes:
   POST /api/v1/timezone-periods: {allow: write:config, csrf: true}
   PATCH /api/v1/timezone-periods/{id}: {allow: write:config, csrf: true}
   DELETE /api/v1/timezone-periods/{id}: {allow: write:config, csrf: true}
+  GET /oauth/{provider}/start: {allow: public}
   GET /oauth/{provider}/callback: {allow: public}
   GET /webhooks/withings/{hook_token}: {allow: public}
   POST /webhooks/withings/{hook_token}: {allow: public}

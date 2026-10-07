@@ -188,6 +188,30 @@ paths:
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
 
+  /api/ingest/v1/devices/self/sources:
+    put:
+      tags: [ingest]
+      operationId: reportDeviceSources
+      summary: Report the apps the device found in Apple Health
+      description: >
+        The apps (HealthKit sources) that wrote each enabled type, as HKSourceQuery lists them,
+        with the end of each type's newest sample when the device read it. Replaces the previous
+        report. Settings › Devices and the app's Apple Health › Sources screen list them
+        (GET /api/v1/devices/{id}/source-filter). No health values.
+      security:
+        - clientToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DeviceSourcesReport'}
+      responses:
+        '204':
+          description: Stored.
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
   /api/ingest/v1/devices/self/rotate-token:
     post:
       tags: [ingest]
@@ -215,7 +239,7 @@ paths:
       tags: [catalogue]
       operationId: listMetrics
       summary: List catalogue metrics
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       responses:
         '200':
           description: All metrics.
@@ -234,7 +258,7 @@ paths:
       tags: [catalogue]
       operationId: getMetric
       summary: Get one catalogue metric
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/MetricCodePath'
       responses:
@@ -253,7 +277,7 @@ paths:
       operationId: listEventTypes
       summary: List health event types
       description: The event codes health_events may hold (docs/architecture/metric-catalog.md#events), with their level words.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       responses:
         '200':
           description: All event types.
@@ -278,8 +302,11 @@ paths:
         One item per kind and code that has active data, with its catalogue metadata. For metrics,
         first and last seen and the latest value come from the rows; count, days, providers,
         devices and origins come from the hourly aggregates plus the daily values, so they lag
-        while aggregates_pending is true.
-      security: [{session: []}, {apiKey: ['read:health']}]
+        while aggregates_pending is true. include_ignored adds ignored: records an Apple Health
+        source filter left raw (ignored_by_filter), which the items never count.
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/IncludeIgnored'
       responses:
         '200':
           description: The inventory.
@@ -298,7 +325,7 @@ paths:
       description: >
         Rows of health_events (alerts and other typed events), ordered by (start_at, id). code
         filters the event code; the other filters and include work as on /measurements.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/Start'
         - $ref: '#/components/parameters/End'
@@ -326,6 +353,31 @@ paths:
         '403': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
 
+  /api/v1/events/{id}/waveform:
+    get:
+      tags: [source-data]
+      operationId: getEventWaveform
+      summary: Get the waveform of an ECG recording
+      description: >
+        The vitamux.waveform/1 document of an ecg_recording event, any version
+        (docs/adr/0024-watch-data.md#read-endpoints). The ETag is the document's SHA-256. 404 when
+        the event does not exist or has no waveform.
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: The waveform document.
+          headers:
+            ETag: {description: 'SHA-256 of the document, hex in quotes.', schema: {type: string}}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WaveformDocument'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
+
   /api/v1/sources/series:
     get:
       tags: [source-data]
@@ -340,7 +392,7 @@ paths:
         active sample and interval rows for spans of at most a day (25 hours across a DST change),
         and each source reports its native spacing; raw lists the rows in time order, at most
         2,000 per page. Sleep and derived codes have no source series (422).
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - name: metric
           in: query
@@ -359,6 +411,7 @@ paths:
           in: query
           required: false
           schema: {type: string, enum: [30s, 1m, 5m, 15m, 30m, raw, hour, day], default: day}
+        - $ref: '#/components/parameters/IncludeIgnored'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
       responses:
@@ -381,7 +434,7 @@ paths:
         versions and include=deleted adds rows deleted upstream. start/end filter start_at,
         start_date/end_date the local date. include=provenance adds the raw payload's fetch
         metadata.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/Start'
         - $ref: '#/components/parameters/End'
@@ -411,7 +464,7 @@ paths:
       tags: [source-data]
       operationId: createManualMeasurement
       summary: Record a manual measurement (provider manual, audited)
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       requestBody:
         required: true
         content:
@@ -436,7 +489,7 @@ paths:
       description: >
         Groups with their components, ordered by (measured_at, id). Filters and include work as
         on /measurements.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - name: kind
           in: query
@@ -471,7 +524,7 @@ paths:
       description: >
         bp_reading groups with their components side by side, ordered by (measured_at, id).
         Filters and include work as on /measurements.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/Start'
         - $ref: '#/components/parameters/End'
@@ -503,7 +556,7 @@ paths:
         Ordered by (start_at, id). start_date/end_date filter sleep_date (the local wake date),
         start/end filter start_at. include=stages adds the stages; other filters and include
         work as on /measurements.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/Start'
         - $ref: '#/components/parameters/End'
@@ -532,7 +585,7 @@ paths:
       operationId: getSleep
       summary: Get one sleep session
       description: Any version, superseded or deleted included, always with its stages.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/ID'
         - $ref: '#/components/parameters/Include'
@@ -555,7 +608,7 @@ paths:
       description: >
         Ordered by (start_at, id). include=segments adds the laps, sets or intervals; other
         filters and include work as on /measurements.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/Start'
         - $ref: '#/components/parameters/End'
@@ -584,7 +637,7 @@ paths:
       operationId: getWorkout
       summary: Get one workout
       description: Any version, superseded or deleted included, always with its segments.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/ID'
         - $ref: '#/components/parameters/Include'
@@ -599,12 +652,39 @@ paths:
         '404': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
 
+  /api/v1/workouts/{id}/route:
+    get:
+      tags: [source-data]
+      operationId: getWorkoutRoute
+      summary: Get the route of a workout
+      description: >
+        The vitamux.route/1 document of the workout's route (docs/adr/0024-watch-data.md#read-endpoints):
+        the active workout_route event whose context.workout_uuid is the workout's external id,
+        else one of the same connection and origin inside the workout. Locations are CoreLocation
+        values as given (a negative accuracy, speed or course means invalid). The ETag is the
+        document's SHA-256. 404 when the workout does not exist or has no route.
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: The route document.
+          headers:
+            ETag: {description: 'SHA-256 of the document, hex in quotes.', schema: {type: string}}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RouteDocument'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
+
   /api/v1/provenance/{entity}/{id}:
     get:
       tags: [source-data]
       operationId: getProvenance
       summary: Trace a record back to its raw payload, batch and normalizer
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - name: entity
           in: path
@@ -629,7 +709,7 @@ paths:
       operationId: getResolvedDaily
       summary: Resolved values per local day
       description: Example in docs/architecture/api.md#example-resolved-day.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/StartDateRequired'
         - $ref: '#/components/parameters/EndDateRequired'
@@ -661,7 +741,7 @@ paths:
       description: >
         One point per window whose start lies in [start, end) (latest windows: whose as-of instant
         does), in start order, paged. The range spans at most 366 local dates.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - name: metric
           in: query
@@ -704,7 +784,7 @@ paths:
       operationId: getResolvedSleep
       summary: Resolved sleep episodes per night
       description: The sleep rule's main episode of every night in the range (at most 366), with every source that recorded it.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/StartDateRequired'
         - $ref: '#/components/parameters/EndDateRequired'
@@ -728,7 +808,7 @@ paths:
         Overlapping workouts clustered as in docs/architecture/resolution.md#sleep-episode-alignment,
         one entry per cluster starting on a local date of the range (at most 366), with the member
         the rule picks marked as selected.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/StartDateRequired'
         - $ref: '#/components/parameters/EndDateRequired'
@@ -749,7 +829,7 @@ paths:
       operationId: getResolvedSources
       summary: All-sources drilldown for one metric and window
       description: Example in docs/architecture/api.md#example-all-sources-drilldown.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/MetricPath'
         - name: window_key
@@ -786,7 +866,7 @@ paths:
         rule_warning_unacknowledged) and resolves it live beside the rule in effect, one window per
         local date (at most 366): the draft's local_day or local_night window, else local_day.
         Nothing is stored: no rule version, no cache rows, no jobs.
-      security: [{session: [], csrf: []}, {apiKey: ['read:health']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['read:health']}]
       requestBody:
         required: true
         content:
@@ -814,7 +894,7 @@ paths:
         values ending at date (mean, min, max, n, coverage). Rollups are plain statistics of
         resolved values, not a resolution strategy; values of windows still open are left out.
         Everything comes from the resolver and its cache.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - name: metrics
           in: query
@@ -856,7 +936,7 @@ paths:
         resolved daily values per ISO week (Monday first) or calendar month, clipped to the range.
         The range may span up to 3,660 dates, past the 366-date cap of the daily endpoints. Values
         of windows still open are left out. Everything comes from the resolver and its cache.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - name: metric
           in: query
@@ -885,7 +965,7 @@ paths:
       tags: [rules]
       operationId: listRules
       summary: List active rules per metric
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: Active rules.
@@ -904,7 +984,7 @@ paths:
       tags: [rules]
       operationId: listRuleVersions
       summary: List the versions of a metric's rule
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       parameters:
         - $ref: '#/components/parameters/MetricPath'
       responses:
@@ -924,7 +1004,7 @@ paths:
       tags: [rules]
       operationId: createRuleVersion
       summary: Save a new rule version (not yet active)
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/MetricPath'
       requestBody:
@@ -949,7 +1029,7 @@ paths:
       tags: [rules]
       operationId: activateRule
       summary: Activate a rule version
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/MetricPath'
       requestBody:
@@ -974,7 +1054,7 @@ paths:
       tags: [rules]
       operationId: listOverrides
       summary: List manual overrides
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       parameters:
         - $ref: '#/components/parameters/MetricFilter'
         - $ref: '#/components/parameters/Limit'
@@ -992,7 +1072,7 @@ paths:
       tags: [rules]
       operationId: createOverride
       summary: Create a manual override (audited, reversible)
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       requestBody:
         required: true
         content:
@@ -1014,7 +1094,7 @@ paths:
       tags: [rules]
       operationId: revokeOverride
       summary: Revoke a manual override
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -1034,7 +1114,7 @@ paths:
       tags: [system]
       operationId: getCoverage
       summary: Source × day coverage matrix
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/StartDateRequired'
         - $ref: '#/components/parameters/EndDateRequired'
@@ -1056,7 +1136,7 @@ paths:
       operationId: getSystemStatus
       summary: Instance diagnostics
       description: Versions, database and blob sizes, last backup, degraded connections, failing jobs.
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: Status.
@@ -1070,23 +1150,26 @@ paths:
     get:
       tags: [system]
       operationId: getSystemVersion
-      summary: Build version of the running server
-      security: [{session: []}, {apiKey: ['read:config']}]
+      summary: Client handshake and build version of the running server
+      description: >
+        Public, so the app can check a server before sign-in. Two shapes: anyone gets
+        {"product", "api_version", "min_app_version"}; a session or an API key with read:config
+        also gets version and commit. A bearer token that does not verify is still 401.
+      security: []
       responses:
         '200':
-          description: Version.
+          description: Handshake, with the build for read:config callers.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/SystemVersion'}
         '401': {$ref: '#/components/responses/Problem'}
-        '403': {$ref: '#/components/responses/Problem'}
 
   /api/v1/jobs:
     get:
       tags: [system]
       operationId: listJobs
       summary: List background jobs
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       parameters:
         - name: status
           in: query
@@ -1110,7 +1193,7 @@ paths:
       tags: [connections]
       operationId: listConnections
       summary: List connections with health
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: All connections.
@@ -1127,7 +1210,7 @@ paths:
       tags: [connections]
       operationId: createConnection
       summary: Create a connection
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       requestBody:
         required: true
         content:
@@ -1149,7 +1232,7 @@ paths:
       tags: [connections]
       operationId: getConnection
       summary: Get one connection
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
       responses:
@@ -1165,7 +1248,7 @@ paths:
       tags: [connections]
       operationId: updateConnection
       summary: Update a connection
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
       requestBody:
@@ -1188,7 +1271,7 @@ paths:
       tags: [connections]
       operationId: deleteConnection
       summary: Delete a connection, keeping or deleting its data
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
         - name: data
@@ -1219,10 +1302,17 @@ paths:
         {"state", "prompt"} to ask the owner for values and send them to continueProviderAuth.
         Sets the short-lived browser-binding cookie that the callback and continue need
         (docs/architecture/connectors.md#oauth-connection-flow). Owner session only, since the
-        state is bound to it.
-      security: [{session: [], csrf: []}]
+        state is bound to it. An app session may send {"return": "app"} (403 for a browser
+        session): a redirect step then points to oauthStart on this server, and the callback
+        returns to vitamux://connections.
+      security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AuthBeginInput'}
       responses:
         '200':
           description: Next step.
@@ -1233,6 +1323,7 @@ paths:
         '403': {$ref: '#/components/responses/Problem'}
         '404': {$ref: '#/components/responses/Problem'}
         '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
         '503': {$ref: '#/components/responses/Problem'}
 
   /api/v1/providers/{provider}/auth/begin:
@@ -1244,12 +1335,17 @@ paths:
         Like beginConnectionAuth, for an account not connected yet. The last step creates the
         connection, or reuses the existing one when the same provider account connects again.
         A new connection of an unofficial connector starts paused.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - name: provider
           in: path
           required: true
           schema: {type: string, pattern: '^[a-z][a-z0-9_]*$'}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AuthBeginInput'}
       responses:
         '200':
           description: Next step.
@@ -1258,6 +1354,7 @@ paths:
               schema: {$ref: '#/components/schemas/AuthStep'}
         '401': {$ref: '#/components/responses/Problem'}
         '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
         '503': {$ref: '#/components/responses/Problem'}
 
   /api/v1/providers/{provider}/app-credentials:
@@ -1271,7 +1368,7 @@ paths:
         without a restart (docs/adr/0021-source-setup.md). The secret is never returned. 409
         while the environment sets them (managed_by_environment). Audited as provider_app.set.
         Owner session only.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - name: provider
           in: path
@@ -1302,7 +1399,7 @@ paths:
         409 while connections hold tokens that refresh with these credentials, unless
         confirm=true (those connections then need new credentials before their next refresh),
         and while the environment sets them. Audited as provider_app.delete. Owner session only.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - name: provider
           in: path
@@ -1332,7 +1429,7 @@ paths:
         unverifiable where it needs a user grant, and the first connect checks them. 404 when
         none are set; 429 or 503 when the provider is rate limiting or unreachable. Audited as
         provider_app.verify. Owner session only.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - name: provider
           in: path
@@ -1359,7 +1456,7 @@ paths:
         Describes the provider's sidecar at once instead of waiting for the once-a-minute
         re-check, and answers the provider with its new setup state. Other providers are
         answered as they are.
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - name: provider
           in: path
@@ -1381,7 +1478,7 @@ paths:
       tags: [connections]
       operationId: listSidecars
       summary: List the sidecar connectors, from the environment and added in the panel
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: Every registered sidecar, by name. Environment ones are read-only.
@@ -1404,7 +1501,7 @@ paths:
         shared bearer secret, stores it sealed and returns it once, to configure the sidecar with;
         the provider is needs_sidecar until the sidecar answers describe (probeProvider checks
         again). Audited as sidecar.add. Owner session only.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       requestBody:
         required: true
         content:
@@ -1436,7 +1533,7 @@ paths:
       description: >
         409 for a sidecar of the environment, and while connections of its provider exist unless
         confirm=true (they stop syncing). Audited as sidecar.remove. Owner session only.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - name: name
           in: path
@@ -1466,7 +1563,7 @@ paths:
         setup_state, readiness problems, the OAuth callback URL to register, its app credentials
         (never the secret) and, for a sidecar, how to turn it on. A sidecar is re-checked on this
         call at most once a minute; probeProvider checks at once.
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: Every registered connector, by provider code.
@@ -1492,7 +1589,7 @@ paths:
         ends the flow; begin again: 422 when the provider refused the values (a wrong password
         or code), 429 with Retry-After while it limits sign-ins, 503 when the provider or its
         sidecar is unavailable. Owner session only, with the binding cookie of begin.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - name: provider
           in: path
@@ -1526,7 +1623,7 @@ paths:
       operationId: syncConnection
       summary: Queue a manual sync (coalesced with a pending one)
       description: One sync job per stream of the connector. A request while one is queued or running answers that job, so repeated clicks queue nothing new.
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
         - $ref: '#/components/parameters/IdempotencyKeyOptional'
@@ -1547,7 +1644,7 @@ paths:
       tags: [connections]
       operationId: listBackfills
       summary: List a connection's backfills, newest first
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
       responses:
@@ -1568,7 +1665,7 @@ paths:
       tags: [connections]
       operationId: createBackfill
       summary: Start a bounded, resumable backfill
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
         - $ref: '#/components/parameters/IdempotencyKeyOptional'
@@ -1595,7 +1692,7 @@ paths:
       tags: [connections]
       operationId: getBackfill
       summary: Get a backfill with its units
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
         - $ref: '#/components/parameters/BackfillIDPath'
@@ -1615,7 +1712,7 @@ paths:
       tags: [connections]
       operationId: retryBackfill
       summary: Requeue a backfill's failed (or unfinished) units
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
         - $ref: '#/components/parameters/BackfillIDPath'
@@ -1641,7 +1738,7 @@ paths:
       tags: [connections]
       operationId: cancelBackfill
       summary: Cancel a running or failed backfill (fetched data stays)
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
         - $ref: '#/components/parameters/BackfillIDPath'
@@ -1662,7 +1759,7 @@ paths:
       tags: [connections]
       operationId: listConnectionRuns
       summary: List sync and backfill runs of a connection
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
         - $ref: '#/components/parameters/Limit'
@@ -1683,7 +1780,7 @@ paths:
       tags: [connections]
       operationId: listConnectionStreams
       summary: List the streams of a connection with cursor and status
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
       responses:
@@ -1705,7 +1802,7 @@ paths:
       tags: [connections]
       operationId: resetStreamCursor
       summary: Reset a stream's sync cursor
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ConnectionIDPath'
         - name: stream
@@ -1732,7 +1829,7 @@ paths:
       tags: [connections]
       operationId: listSchedules
       summary: List sync schedules
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       parameters:
         - name: connection
           in: query
@@ -1758,7 +1855,7 @@ paths:
       tags: [connections]
       operationId: updateSchedule
       summary: Change a schedule's interval, lookback or enabled flag
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       requestBody:
@@ -1783,7 +1880,7 @@ paths:
       tags: [devices]
       operationId: listDevices
       summary: List paired devices, newest first, including revoked ones
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: Devices.
@@ -1802,8 +1899,8 @@ paths:
       tags: [devices]
       operationId: createPairingCode
       summary: Create a single-use pairing code, valid for 10 minutes
-      description: At most 5 codes per 10 minutes (429 with Retry-After). 503 without VITAMUX_PUBLIC_URL.
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      description: At most 5 codes per 10 minutes (429 with Retry-After). 503 without VITAMUX_PUBLIC_URL, except for an app session, which redeems the code itself and gets no url or qr_payload then.
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       responses:
         '201':
           description: The code (shown once).
@@ -1823,7 +1920,7 @@ paths:
       description: >
         The device reads the request from GET /api/ingest/v1/devices/self. Re-sent samples are
         deduplicated by UUID.
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       requestBody:
@@ -1847,12 +1944,63 @@ paths:
         '404': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
 
+  /api/v1/devices/{id}/source-filter:
+    get:
+      tags: [devices]
+      operationId: getDeviceSourceFilter
+      summary: Which apps' Apple Health data the device takes, per app
+      description: >
+        One origin per app the device reported finding in Apple Health, the owner chose for, or
+        the server has seen data from, with its effective mode, the default and why
+        (docs/architecture/apple-health.md#source-filter). Defaults are evaluated on every read.
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: The device's source filter.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SourceFilterView'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+    put:
+      tags: [devices]
+      operationId: setDeviceSourceFilter
+      summary: Replace the owner's take or ignore choices for a device
+      description: >
+        origins lists every explicit choice; an app left out follows its default. With version,
+        the change applies only when it is still the device's version (409 otherwise). An app
+        whose data changes from ignored to taken gets an anchor reset for the types now taken (*
+        when the device has not reported them), and its records held raw on the server are
+        normalized again. Audited as device.source_filter.
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SourceFilterUpdate'}
+      responses:
+        '200':
+          description: The device's source filter after the change.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SourceFilterView'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
   /api/v1/devices/{id}/revoke:
     post:
       tags: [devices]
       operationId: revokeDevice
       summary: Revoke a device's token; its next request is 401
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -1870,7 +2018,7 @@ paths:
       description: >
         Every origin seen inside a transport provider such as apple_health, by provider and key.
         relay_targets are the vendors an origin can be classified as relaying.
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: Origins and the vendors they may relay.
@@ -1894,7 +2042,7 @@ paths:
         The `relayed` rule selector and the all-sources view read the new state at once; resolved
         results are recomputed. The edit is audited and wins over the known relay defaults, which only seed
         new origins.
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       requestBody:
@@ -1925,7 +2073,7 @@ paths:
       description: >-
         The values the device_type, device_manufacturer and device_model rule selectors match (the rule builder's
         brand and device choices), the owner's names and merges, and the device types the owner can set. `include=records` adds each device's active records per connection.
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       parameters:
         - name: include
           in: query
@@ -1962,7 +2110,7 @@ paths:
         Merge patch: a field present replaces the value, null clears it. A type set here wins over the one the
         normalizer reports (null hands it back); rules that select by device type are recomputed. 409 for a merged
         device: edit the device it was merged into.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - $ref: '#/components/parameters/ID'
       requestBody:
@@ -1991,7 +2139,7 @@ paths:
         to the target. Dedupe keys keep the fingerprint, so reprocessing changes nothing. Rules that name the merged
         device by id stop matching it. 409 when either device is already merged; 422 for the device itself or a
         device of another provider.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - $ref: '#/components/parameters/ID'
       requestBody:
@@ -2027,7 +2175,7 @@ paths:
       tags: [documents]
       operationId: listDocuments
       summary: List documents
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
@@ -2050,7 +2198,7 @@ paths:
         `application/pdf` body. Encrypted, oversized, too-long and non-PDF files are refused: 413 `payload_too_large`,
         or 422 `validation_failed` whose `errors[0].detail` is the reason (`not_pdf`, `empty`, `encrypted`,
         `too_many_pages`, `malformed`). Content the owner already stored links to the existing document (200).
-      security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:documents']}]
       requestBody:
         required: true
         content:
@@ -2084,7 +2232,7 @@ paths:
       tags: [documents]
       operationId: getDocument
       summary: Get one document
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2101,7 +2249,7 @@ paths:
       tags: [documents]
       operationId: deleteDocument
       summary: Delete a document, keeping or deleting derived lab results
-      security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:documents']}]
       parameters:
         - $ref: '#/components/parameters/ID'
         - name: derived
@@ -2122,7 +2270,7 @@ paths:
       tags: [documents]
       operationId: getDocumentFile
       summary: Download the original PDF
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2141,7 +2289,7 @@ paths:
       tags: [documents]
       operationId: listExtractions
       summary: List a document's extraction runs, newest first (never the raw provider response)
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2167,7 +2315,7 @@ paths:
         (`documents.external_ai.<provider>.enabled`), else 403 `forbidden`; the body must carry `consent` naming the
         same provider and its configured model, else 409 `consent_required`. `fake` needs neither. A run already
         queued or running answers 409 `conflict`. Idempotency-Key is accepted.
-      security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:documents']}]
       parameters:
         - $ref: '#/components/parameters/ID'
         - $ref: '#/components/parameters/IdempotencyKeyOptional'
@@ -2197,7 +2345,7 @@ paths:
       description: >-
         `fake` is always listed. An external provider is listed once the admin configured it; `enabled` is the owner's
         setting `documents.external_ai.<provider>.enabled` (always true for `fake`). The consent dialog names `model`.
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: The providers, in a fixed order.
@@ -2220,7 +2368,7 @@ paths:
       description: >-
         Rows carry the extractor's warnings, deterministic validation warnings (lab-documents.md#validation), the alias
         suggestion and their review trail. Warnings only point at what to compare with the PDF; nothing is interpreted.
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2243,7 +2391,7 @@ paths:
         appended to the row's edit trail with their previous values. `review` accepts or rejects the row; any change
         marks it edited. Rows of a confirmed run may still be edited; confirm again to revise the results. 409 when the
         run has no rows to review (not succeeded).
-      security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:documents']}]
       parameters:
         - $ref: '#/components/parameters/ID'
         - name: row
@@ -2279,7 +2427,7 @@ paths:
         and kept rows missing a value or collection date; an accepted row without a unit is confirmed as unitless. 409
         when the run is not succeeded or another run of the document is confirmed. Confirming again applies later edits:
         changed results get a new revision (see /lab-results/{id}/history).
-      security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:documents']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2300,7 +2448,7 @@ paths:
       operationId: unconfirmExtraction
       summary: Delete the lab results confirmed from a run and return it to review (audited)
       description: 409 when the run is not the document's confirmed one.
-      security: [{session: [], csrf: []}, {apiKey: ['write:documents']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:documents']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2319,7 +2467,7 @@ paths:
       tags: [documents]
       operationId: listLabResults
       summary: List confirmed lab results by collection date
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/StartDate'
         - $ref: '#/components/parameters/EndDate'
@@ -2340,7 +2488,7 @@ paths:
       tags: [documents]
       operationId: getLabResultHistory
       summary: Revisions of one lab result
-      security: [{session: []}, {apiKey: ['read:health']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:health']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2362,7 +2510,7 @@ paths:
       tags: [documents]
       operationId: listAnalyteAliases
       summary: List analyte aliases
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: Aliases.
@@ -2379,7 +2527,7 @@ paths:
       tags: [documents]
       operationId: createAnalyteAlias
       summary: Map a printed label to an analyte
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       requestBody:
         required: true
         content:
@@ -2401,7 +2549,7 @@ paths:
       tags: [documents]
       operationId: deleteAnalyteAlias
       summary: Remove an owner alias (seeded aliases cannot be removed)
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2421,7 +2569,7 @@ paths:
       description: >
         Needs the admin scope: an export holds every health row, raw payload, rule and audit
         event at once. 409 while another export is queued or running.
-      security: [{session: [], csrf: []}, {apiKey: [admin]}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: [admin]}]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKeyOptional'
       requestBody:
@@ -2445,7 +2593,7 @@ paths:
       tags: [exports]
       operationId: getExport
       summary: Export status; carries a one-time download URL when done
-      security: [{session: []}, {apiKey: [admin]}]
+      security: [{session: []}, {appSession: []}, {apiKey: [admin]}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2464,7 +2612,7 @@ paths:
       operationId: downloadExport
       summary: Download the export zip with its one-time, short-lived token
       description: The token comes from getExport, works once and expires after 10 minutes (403 otherwise).
-      security: [{session: []}, {apiKey: [admin]}]
+      security: [{session: []}, {appSession: []}, {apiKey: [admin]}]
       parameters:
         - $ref: '#/components/parameters/ID'
         - name: token
@@ -2486,8 +2634,11 @@ paths:
     post:
       tags: [auth]
       operationId: login
-      summary: Sign in; sets the session cookie
-      description: Answers 429 with Retry-After while the username or address is locked out.
+      summary: Sign in; sets the session cookie, or returns an app session token
+      description: >
+        Answers 429 with Retry-After while the username or address is locked out. With
+        `client: app` it sets no cookie and answers an app session: a bearer token
+        `vmx_ses_<id>_<secret>`, shown in this response only, listed under `device_name`.
       security: []
       requestBody:
         required: true
@@ -2496,10 +2647,13 @@ paths:
             schema: {$ref: '#/components/schemas/LoginRequest'}
       responses:
         '200':
-          description: Signed in.
+          description: 'Signed in: a browser session, or an app session with `client: app`.'
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/Session'}
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Session'
+                  - $ref: '#/components/schemas/AppSession'
         '401': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
         '429': {$ref: '#/components/responses/Problem'}
@@ -2509,8 +2663,8 @@ paths:
     post:
       tags: [auth]
       operationId: logout
-      summary: Sign out and clear the session cookie
-      security: [{session: [], csrf: []}]
+      summary: Sign out (ends the calling browser or app session)
+      security: [{session: [], csrf: []}, {appSession: []}]
       responses:
         '204':
           description: Signed out.
@@ -2521,8 +2675,8 @@ paths:
     get:
       tags: [auth]
       operationId: getSession
-      summary: Current user and CSRF token
-      security: [{session: []}]
+      summary: Current user and CSRF token (empty for an app session)
+      security: [{session: []}, {appSession: []}]
       responses:
         '200':
           description: The session.
@@ -2537,7 +2691,7 @@ paths:
       tags: [auth]
       operationId: enrollTOTP
       summary: Start TOTP enrolment
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       responses:
         '200':
           description: Secret and otpauth URI (shown once).
@@ -2553,7 +2707,7 @@ paths:
       tags: [auth]
       operationId: confirmTOTP
       summary: Confirm TOTP enrolment with a code
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       requestBody:
         required: true
         content:
@@ -2583,7 +2737,7 @@ paths:
       tags: [auth]
       operationId: disableTOTP
       summary: Disable TOTP (password plus a code or recovery code)
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       requestBody:
         required: true
         content:
@@ -2612,7 +2766,7 @@ paths:
         Re-checks the current password (a wrong one is 422 on /current_password; repeated
         failures answer 429 with Retry-After). The new password needs at least 12 characters.
         The calling session stays signed in. Audited.
-      security: [{session: [], csrf: []}]
+      security: [{session: [], csrf: []}, {appSession: []}]
       requestBody:
         required: true
         content:
@@ -2636,7 +2790,7 @@ paths:
       tags: [auth]
       operationId: listSessions
       summary: List the owner's live sessions
-      security: [{session: []}]
+      security: [{session: []}, {appSession: []}]
       responses:
         '200':
           description: Live sessions, most recently used first.
@@ -2654,8 +2808,8 @@ paths:
     delete:
       tags: [auth]
       operationId: revokeSession
-      summary: End one session (ending the current one also clears its cookie)
-      security: [{session: [], csrf: []}]
+      summary: End one browser or app session (ending the current one also clears its cookie)
+      security: [{session: [], csrf: []}, {appSession: []}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2670,7 +2824,7 @@ paths:
       tags: [auth]
       operationId: listAPIKeys
       summary: List API keys
-      security: [{session: []}, {apiKey: [admin]}]
+      security: [{session: []}, {appSession: []}, {apiKey: [admin]}]
       responses:
         '200':
           description: API keys (never the secret).
@@ -2687,7 +2841,7 @@ paths:
       tags: [auth]
       operationId: createAPIKey
       summary: Create an API key; the token is returned once
-      security: [{session: [], csrf: []}, {apiKey: [admin]}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: [admin]}]
       requestBody:
         required: true
         content:
@@ -2714,7 +2868,7 @@ paths:
       tags: [auth]
       operationId: revokeAPIKey
       summary: Revoke an API key
-      security: [{session: [], csrf: []}, {apiKey: [admin]}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: [admin]}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2730,7 +2884,7 @@ paths:
       tags: [settings]
       operationId: getSettings
       summary: Owner settings
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: Settings.
@@ -2743,7 +2897,7 @@ paths:
       tags: [settings]
       operationId: updateSettings
       summary: Change settings (merge patch)
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       requestBody:
         required: true
         content:
@@ -2768,7 +2922,7 @@ paths:
       description: >
         The stored layout, or the curated default (is_default) while none is stored. Cards whose
         metric is no longer a catalogue code or rule family are dropped.
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: The layout.
@@ -2782,7 +2936,7 @@ paths:
       operationId: putDashboardLayout
       summary: Replace the dashboard layout
       description: Card order is array order. Audited.
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       requestBody:
         required: true
         content:
@@ -2803,7 +2957,7 @@ paths:
       tags: [settings]
       operationId: listTimezonePeriods
       summary: List timezone periods
-      security: [{session: []}, {apiKey: ['read:config']}]
+      security: [{session: []}, {appSession: []}, {apiKey: ['read:config']}]
       responses:
         '200':
           description: Periods, oldest first.
@@ -2820,7 +2974,7 @@ paths:
       tags: [settings]
       operationId: createTimezonePeriod
       summary: Add a timezone period (local dates are recomputed)
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       requestBody:
         required: true
         content:
@@ -2842,7 +2996,7 @@ paths:
       tags: [settings]
       operationId: updateTimezonePeriod
       summary: Change a timezone period's zone or start (local dates are recomputed)
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       requestBody:
@@ -2865,7 +3019,7 @@ paths:
       tags: [settings]
       operationId: deleteTimezonePeriod
       summary: Remove a timezone period (the previous one extends; local dates are recomputed)
-      security: [{session: [], csrf: []}, {apiKey: ['write:config']}]
+      security: [{session: [], csrf: []}, {appSession: []}, {apiKey: ['write:config']}]
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -2876,6 +3030,28 @@ paths:
         '404': {$ref: '#/components/responses/Problem'}
 
   # ---------------------------------------------------------------- provider callbacks (not under /api)
+  /oauth/{provider}/start:
+    get:
+      tags: [connections]
+      operationId: oauthStart
+      summary: App redirect step; sets the binding cookie in the auth browser and redirects to the provider
+      description: >
+        The redirect_url of a step begun with {"return": "app"}. Authorized by the ticket:
+        single use, valid for 2 minutes, only its SHA-256 stored. Answers 303 to the provider
+        with the browser-binding cookie set, or, for an unknown, used or expired ticket, 303 to
+        vitamux://connections?auth_error=invalid_state|unavailable&provider=<provider>. HEAD
+        answers 200 without side effects. A provider without a connector is 404.
+      security: []
+      parameters:
+        - {name: provider, in: path, required: true, schema: {type: string}}
+        - {name: ticket, in: query, schema: {type: string}}
+      responses:
+        '200':
+          description: HEAD probe.
+        '303':
+          description: To the provider, or back to the app with the error.
+        '404': {$ref: '#/components/responses/Problem'}
+
   /oauth/{provider}/callback:
     get:
       tags: [connections]
@@ -2884,7 +3060,8 @@ paths:
       description: >
         Authorized by the signed, single-use `state` and the browser-binding cookie, not by the
         session. Always answers 303 to /connections?connected=<provider> or
-        /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable&provider=<provider>.
+        /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable&provider=<provider>;
+        for a state begun with {"return": "app"}, the same query on vitamux://connections.
         HEAD answers 200 without side effects. A provider without a connector is 404.
       security: []
       parameters:
@@ -2948,6 +3125,10 @@ components:
       in: header
       name: X-CSRF-Token
       description: Required with the session cookie on mutating requests; the value comes from login or GET /api/v1/auth/session.
+    appSession:
+      type: http
+      scheme: bearer
+      description: 'App session token `vmx_ses_<id>_<secret>` from POST /api/v1/auth/login with `client: app`. Admitted wherever the session is, without CSRF.'
     apiKey:
       type: http
       scheme: bearer
@@ -3076,6 +3257,14 @@ components:
       required: false
       description: Device id (dev_…); repeatable.
       schema: {type: array, items: {$ref: '#/components/schemas/DeviceID'}}
+    IncludeIgnored:
+      name: include_ignored
+      in: query
+      required: false
+      description: >
+        Also list the records an Apple Health source filter left raw (ignored_by_filter), per
+        origin. They are never values: nothing was normalized from them.
+      schema: {type: boolean, default: false}
     OriginFilter:
       name: origin
       in: query
@@ -3636,6 +3825,30 @@ components:
       properties:
         items: {type: array, items: {$ref: '#/components/schemas/InventoryItem'}}
         aggregates_pending: {type: boolean, description: 'Days wait for the rebuild job, so metric counts, days and sources may lag.'}
+        ignored:
+          type: array
+          description: 'With include_ignored: records held raw because a source filter ignores their origin, per item and origin.'
+          items: {$ref: '#/components/schemas/IgnoredItem'}
+    IgnoredItem:
+      type: object
+      additionalProperties: false
+      required: [kind, code, origin, records, first_at, last_at]
+      properties:
+        kind: {type: string, enum: [metric, group, event, sleep, workouts]}
+        code: {type: string, description: 'Metric code, group kind, event code, sleep or workouts.'}
+        origin: {$ref: '#/components/schemas/OriginRef'}
+        records: {type: integer, format: int64}
+        first_at: {type: string, format: date-time}
+        last_at: {type: string, format: date-time}
+    IgnoredSource:
+      type: object
+      additionalProperties: false
+      required: [origin, records, first_at, last_at]
+      properties:
+        origin: {$ref: '#/components/schemas/OriginRef'}
+        records: {type: integer, format: int64, description: Records of the metric overlapping the range, held raw.}
+        first_at: {type: string, format: date-time}
+        last_at: {type: string, format: date-time}
     InventoryItem:
       type: object
       additionalProperties: false
@@ -3707,8 +3920,43 @@ components:
         level: {type: [string, 'null']}
         context: {type: object, description: Source metadata as given., x-go-type: json.RawMessage}
         quality_flags: {type: integer, minimum: 0}
+        file_sha256: {type: string, description: 'SHA-256 of the event''s blob document, when it has one: the waveform of an ecg_recording (GET /events/{id}/waveform) or the route of a workout_route.'}
         source: {$ref: '#/components/schemas/SourceRef'}
         provenance: {$ref: '#/components/schemas/RecordProvenance'}
+    WaveformDocument:
+      type: object
+      description: ECG waveform, vitamux.waveform/1 (ADR-0024). Values are the recorded voltages in order, as given.
+      required: [format, start, unit, values]
+      properties:
+        format: {type: string, enum: [vitamux.waveform/1]}
+        start: {type: string, format: date-time}
+        sampling_frequency_hz: {type: number, format: double}
+        unit: {type: string, description: µV.}
+        lead: {type: string, description: 'Lead word, e.g. apple_watch_similar_to_lead_i.'}
+        values: {type: array, items: {type: number, format: double}}
+        offsets_s: {type: array, items: {type: number, format: double}, description: Seconds since start per value; only when the spacing is not 1/sampling_frequency_hz.}
+    RouteDocument:
+      type: object
+      description: Workout route, vitamux.route/1 (ADR-0024). Parallel arrays of count entries; CoreLocation values as given (negative accuracy, speed or course = invalid).
+      required: [format, start, count, offsets_s, latitude, longitude]
+      properties:
+        format: {type: string, enum: [vitamux.route/1]}
+        start: {type: string, format: date-time}
+        count: {type: integer, minimum: 0}
+        offsets_s: {$ref: '#/components/schemas/Numbers'}
+        latitude: {$ref: '#/components/schemas/Numbers'}
+        longitude: {$ref: '#/components/schemas/Numbers'}
+        altitude_m: {$ref: '#/components/schemas/Numbers'}
+        ellipsoidal_altitude_m: {$ref: '#/components/schemas/Numbers'}
+        horizontal_accuracy_m: {$ref: '#/components/schemas/Numbers'}
+        vertical_accuracy_m: {$ref: '#/components/schemas/Numbers'}
+        speed_mps: {$ref: '#/components/schemas/Numbers'}
+        speed_accuracy_mps: {$ref: '#/components/schemas/Numbers'}
+        course_deg: {$ref: '#/components/schemas/Numbers'}
+        course_accuracy_deg: {$ref: '#/components/schemas/Numbers'}
+    Numbers:
+      type: array
+      items: {type: number, format: double}
     HealthEventPage:
       allOf:
         - $ref: '#/components/schemas/PageInfo'
@@ -3729,6 +3977,10 @@ components:
         rule: {$ref: '#/components/schemas/RuleRef'}
         behind: {type: boolean, description: Days of the metric in the range wait for the rebuild job (hour and day grains).}
         sources: {type: array, items: {$ref: '#/components/schemas/SourceSeriesSource'}}
+        ignored:
+          type: array
+          description: 'With include_ignored: origins whose records of the metric in the range are held raw because a source filter ignores them; they have no values.'
+          items: {$ref: '#/components/schemas/IgnoredSource'}
         has_more: {type: boolean, description: 'raw: more rows follow next_cursor.'}
         next_cursor: {type: string}
     SourceSeriesSource:
@@ -3817,10 +4069,14 @@ components:
     SystemVersion:
       type: object
       additionalProperties: false
-      required: [version, commit]
+      description: 'Anonymous shape {"product", "api_version", "min_app_version"}; read:config callers also get version and commit.'
+      required: [product, api_version, min_app_version]
       properties:
-        version: {type: string}
-        commit: {type: string}
+        product: {type: string, const: vitamux, description: Fixed marker that this is a Vitamux server.}
+        version: {type: string, description: Build version; read:config callers only.}
+        commit: {type: string, description: Build commit; read:config callers only.}
+        api_version: {type: integer, minimum: 1, description: Raised on every change that breaks existing clients; an app refuses a server older than the one it needs.}
+        min_app_version: {type: string, description: 'The oldest Vitamux iOS app version (CFBundleShortVersionString, e.g. 0.4.0) this server supports; an older app warns.'}
     SystemStatus:
       type: object
       description: Instance diagnostics (docs/architecture/reliability.md#health-logs-metrics). Lists are bounded.
@@ -3957,6 +4213,8 @@ components:
         password: {type: string}
         totp_code: {type: string}
         recovery_code: {type: string}
+        client: {type: string, enum: [browser, app], description: 'Omitted means `browser`; `app` answers a bearer app session instead of a cookie.'}
+        device_name: {type: string, minLength: 1, maxLength: 100, description: 'Required with `client: app`, not allowed otherwise; Settings › Security lists the session under it.'}
     User:
       type: object
       required: [id, username, totp_enabled]
@@ -3969,15 +4227,24 @@ components:
       required: [user, csrf_token]
       properties:
         user: {$ref: '#/components/schemas/User'}
-        csrf_token: {type: string}
+        csrf_token: {type: string, description: Empty for an app session, which needs none.}
+    AppSession:
+      type: object
+      required: [user, token, expires_at]
+      properties:
+        user: {$ref: '#/components/schemas/User'}
+        token: {type: string, description: 'Bearer token `vmx_ses_<id>_<secret>`; shown in this response only.'}
+        expires_at: {type: string, format: date-time, description: Absolute end; the session also ends after VITAMUX_APP_SESSION_IDLE without use.}
     ActiveSession:
       type: object
-      required: [id, created_at, last_seen_at, expires_at, current]
+      required: [id, kind, name, created_at, last_seen_at, expires_at, current]
       properties:
         id: {type: string, format: uuid}
+        kind: {type: string, enum: [browser, app]}
+        name: {type: [string, 'null'], description: The device name of an app session; null for a browser session.}
         created_at: {type: string, format: date-time}
         last_seen_at: {type: string, format: date-time, description: Updated at most once a minute.}
-        expires_at: {type: string, format: date-time, description: Absolute end; the session also ends after 12 h without use.}
+        expires_at: {type: string, format: date-time, description: 'Absolute end; the session also ends without use after 12 h (browser) or VITAMUX_APP_SESSION_IDLE (app).'}
         current: {type: boolean, description: This request's session.}
     TOTPEnrollment:
       type: object
@@ -4033,6 +4300,7 @@ components:
         provider_scoped: {type: boolean, description: A provider-namespaced score; never pooled.}
         selection_only: {type: boolean, description: Providers define it differently; rules select one source and never pool it.}
         derived_from: {type: string, description: The source metric of a derived code (rule extension E2).}
+        unresolved: {type: boolean, description: 'A raw series (rr_interval): stored and drawn, never resolved, so no windows or strategies.'}
         intraday: {$ref: '#/components/schemas/Intraday'}
     Intraday:
       type: object
@@ -4061,6 +4329,7 @@ components:
         source_unit: {type: [string, 'null']}
         quality_flags: {type: integer, minimum: 0, description: 'Bitset: 1 manual_entry, 2 motion_context, 4 implausible, 8 relayed, 16 migrated_without_raw, 32 prorated_source, 64 calibrating.'}
         group_id: {type: [string, 'null'], description: Measurement group (blood-pressure reading, weigh-in) this row is a component of.}
+        context: {type: object, description: 'Source detail kept with the value, when any: an activity-summary goal, move mode and paused flag; the workout_uuid of an effort score.', x-go-type: json.RawMessage}
         source: {$ref: '#/components/schemas/SourceRef'}
         provenance: {$ref: '#/components/schemas/RecordProvenance'}
     SourceRef:
@@ -4254,7 +4523,7 @@ components:
       required: [seq, kind, start_at, end_at, data]
       properties:
         seq: {type: integer}
-        kind: {type: string, enum: [lap, set, interval]}
+        kind: {type: string, enum: [lap, set, interval, activity, pause, marker], description: 'activity: a leg of a multisport workout; pause: pause to resume; marker: a marker or pause request (HealthKit).'}
         start_at: {type: string, format: date-time}
         end_at: {type: [string, 'null'], format: date-time}
         data: {type: object, x-go-type: json.RawMessage}
@@ -4645,6 +4914,15 @@ components:
       required: [connection_id]
       properties:
         connection_id: {$ref: '#/components/schemas/ConnectionID'}
+    AuthBeginInput:
+      type: object
+      additionalProperties: false
+      properties:
+        return:
+          type: string
+          enum: [browser, app]
+          default: browser
+          description: app (app sessions only) returns to the app through oauthStart and vitamux://connections.
     AuthContinueInput:
       type: object
       additionalProperties: false
@@ -4867,12 +5145,12 @@ components:
     PairingCode:
       type: object
       additionalProperties: false
-      required: [code, expires_at, url, qr_payload]
+      required: [code, expires_at]
       properties:
         code: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$', description: Crockford base32; single use.}
         expires_at: {type: string, format: date-time}
-        url: {type: string, format: uri, description: The public base URL (VITAMUX_PUBLIC_URL) the app pairs against.}
-        qr_payload: {type: string, description: 'Text for the QR code: the JSON object {"url", "code"} and nothing else.'}
+        url: {type: string, format: uri, description: The public base URL (VITAMUX_PUBLIC_URL) the app pairs against; omitted without one (app sessions only).}
+        qr_payload: {type: string, description: 'Text for the QR code: the JSON object {"url", "code"} and nothing else; omitted with url.'}
     DevicePairing:
       type: object
       additionalProperties: false
@@ -4884,7 +5162,7 @@ components:
     DeviceSelf:
       type: object
       additionalProperties: false
-      required: [device_id, connection_id, name, anchor_resets]
+      required: [device_id, connection_id, name, anchor_resets, source_filter]
       properties:
         device_id: {type: string, format: uuid}
         connection_id: {type: string, pattern: '^conn_[0-9a-f]{32}$'}
@@ -4895,6 +5173,115 @@ components:
           description: >
             Every reset the owner requested, kept by the server. Apply those whose requested_at is
             after the last reset applied for that type (* covers every type).
+        source_filter: {$ref: '#/components/schemas/SourceFilter'}
+    SourceFilterChoice:
+      type: object
+      description: The owner's explicit choice for one app in Apple Health.
+      additionalProperties: false
+      required: [bundle_id, mode]
+      properties:
+        bundle_id: {type: string, minLength: 1, maxLength: 255, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$', description: The HealthKit source's bundle id (the origin_key).}
+        name: {type: string, maxLength: 200, description: The app's name as Apple Health shows it.}
+        mode: {$ref: '#/components/schemas/SourceFilterMode'}
+        types:
+          type: array
+          maxItems: 64
+          description: 'per_type: the HealthKit types taken (the others are ignored). Dropped for take and ignore.'
+          items: {type: string, pattern: '^HK[A-Za-z0-9]{1,126}$'}
+    SourceFilterMode:
+      type: string
+      enum: [take, ignore, per_type]
+    SourceFilterDefault:
+      type: object
+      description: Origins ignored by default because the provider they relay is connected directly.
+      additionalProperties: false
+      required: [origin_pattern, provider, provider_name]
+      properties:
+        origin_pattern: {type: string, description: 'A SQL LIKE pattern over bundle ids (% any run, _ one character, backslash escapes).'}
+        provider: {type: string, description: The directly connected provider's code, e.g. whoop.}
+        provider_name: {type: string}
+    SourceFilter:
+      type: object
+      description: >
+        What the device applies (docs/architecture/apple-health.md#source-filter). For an app,
+        the first that matches decides: an explicit choice for its bundle id, then for its parent
+        app (a Watch extension's bundle id minus .watchkitapp, .watchkitextension and similar);
+        Apple's own sources (com.apple.*) are taken by default; a default_ignore pattern matching
+        the bundle id or the parent's ignores it; anything else is taken.
+      additionalProperties: false
+      required: [version, origins, default_ignore]
+      properties:
+        version: {type: integer, minimum: 1, description: Incremented on every change of the explicit choices.}
+        origins: {type: array, items: {$ref: '#/components/schemas/SourceFilterChoice'}}
+        default_ignore: {type: array, items: {$ref: '#/components/schemas/SourceFilterDefault'}}
+    SourceFilterUpdate:
+      type: object
+      additionalProperties: false
+      required: [origins]
+      properties:
+        version: {type: integer, minimum: 1, description: Apply only when the device's filter is still at this version.}
+        origins: {type: array, maxItems: 200, items: {$ref: '#/components/schemas/SourceFilterChoice'}}
+    SourceFilterView:
+      type: object
+      additionalProperties: false
+      required: [device_id, version, origins, default_ignore, sources_reported_at]
+      properties:
+        device_id: {type: string, format: uuid}
+        version: {type: integer, minimum: 1}
+        sources_reported_at: {type: [string, 'null'], format: date-time, description: When the device last reported the apps it found in Apple Health.}
+        origins: {type: array, items: {$ref: '#/components/schemas/SourceFilterOrigin'}}
+        default_ignore: {type: array, items: {$ref: '#/components/schemas/SourceFilterDefault'}}
+    SourceFilterOrigin:
+      type: object
+      description: One app in Apple Health and what the device takes from it.
+      additionalProperties: false
+      required: [bundle_id, name, mode, types, explicit, default_mode, default_reason, reason_provider, reason_provider_name,
+        origin_id, classification, relayed_provider, writes, ignored_records]
+      properties:
+        bundle_id: {type: string}
+        name: {type: [string, 'null']}
+        mode: {$ref: '#/components/schemas/SourceFilterMode'}
+        types: {type: array, items: {type: string}, description: 'per_type: the types taken.'}
+        explicit: {type: boolean, description: The owner chose the mode; defaults never change it.}
+        default_mode: {type: string, enum: [take, ignore]}
+        default_reason:
+          type: [string, 'null']
+          enum: [native, direct_connection, null]
+          description: 'native: Apple''s own source; direct_connection: the provider it relays is connected directly, so its copy would count twice.'
+        reason_provider: {type: [string, 'null'], description: 'direct_connection: the provider code.'}
+        reason_provider_name: {type: [string, 'null']}
+        origin_id: {type: [string, 'null'], format: uuid, description: The data origin once the server has seen data from the app.}
+        classification: {type: string, enum: [native, relayed, direct], description: The origin's classification (Settings › Devices).}
+        relayed_provider: {type: [string, 'null']}
+        writes:
+          type: array
+          description: The types the device found the app writing, with the newest sample's end; empty when not reported.
+          items: {$ref: '#/components/schemas/SourceType'}
+        ignored_records: {type: integer, format: int64, description: Records from the app held raw on the server because a filter ignored them.}
+    SourceType:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type: {type: string, pattern: '^HK[A-Za-z0-9]{1,126}$'}
+        last_sample_at: {type: string, format: date-time}
+    DeviceSourcesReport:
+      type: object
+      additionalProperties: false
+      required: [sources]
+      properties:
+        sources:
+          type: array
+          maxItems: 500
+          items: {$ref: '#/components/schemas/DeviceSource'}
+    DeviceSource:
+      type: object
+      additionalProperties: false
+      required: [bundle_id, types]
+      properties:
+        bundle_id: {type: string, minLength: 1, maxLength: 255}
+        name: {type: string, maxLength: 200}
+        types: {type: array, maxItems: 200, items: {$ref: '#/components/schemas/SourceType'}}
     Document:
       type: object
       description: A stored lab PDF. A deleted document keeps only its id, status, sizes and times.

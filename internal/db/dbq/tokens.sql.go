@@ -34,7 +34,7 @@ func (q *Queries) GetAPIKey(ctx context.Context, id uuid.UUID) (ApiKey, error) {
 }
 
 const getClient = `-- name: GetClient :one
-SELECT id, user_id, connection_id, kind, name, token_hash, metadata, created_at, last_seen_at, revoked_at, anchor_resets FROM clients WHERE id = $1
+SELECT id, user_id, connection_id, kind, name, token_hash, metadata, created_at, last_seen_at, revoked_at, anchor_resets, source_filter, source_filter_version, health_sources, health_sources_at FROM clients WHERE id = $1
 `
 
 func (q *Queries) GetClient(ctx context.Context, id uuid.UUID) (Client, error) {
@@ -52,6 +52,10 @@ func (q *Queries) GetClient(ctx context.Context, id uuid.UUID) (Client, error) {
 		&i.LastSeenAt,
 		&i.RevokedAt,
 		&i.AnchorResets,
+		&i.SourceFilter,
+		&i.SourceFilterVersion,
+		&i.HealthSources,
+		&i.HealthSourcesAt,
 	)
 	return i, err
 }

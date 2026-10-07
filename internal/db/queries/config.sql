@@ -106,11 +106,23 @@ DELETE FROM measurement_groups WHERE connection_id = @connection_id;
 -- name: DeleteConnectionSleep :execrows
 DELETE FROM sleep_sessions WHERE connection_id = @connection_id;
 
--- name: DeleteConnectionWorkouts :execrows
-DELETE FROM workouts WHERE connection_id = @connection_id;
+-- name: DeleteConnectionWorkouts :one
+-- Releases each row's activity-file reference (hold blob.LockShared).
+WITH d AS (DELETE FROM workouts WHERE connection_id = @connection_id RETURNING file_blob_sha256), r AS (
+  UPDATE blobs b SET refcount = b.refcount - c.n
+  FROM (SELECT file_blob_sha256, count(*)::integer AS n FROM d WHERE file_blob_sha256 IS NOT NULL GROUP BY file_blob_sha256) c
+  WHERE b.sha256 = c.file_blob_sha256
+)
+SELECT count(*) FROM d;
 
--- name: DeleteConnectionEvents :execrows
-DELETE FROM health_events WHERE connection_id = @connection_id;
+-- name: DeleteConnectionEvents :one
+-- Releases each row's waveform or route reference (hold blob.LockShared).
+WITH d AS (DELETE FROM health_events WHERE connection_id = @connection_id RETURNING file_blob_sha256), r AS (
+  UPDATE blobs b SET refcount = b.refcount - c.n
+  FROM (SELECT file_blob_sha256, count(*)::integer AS n FROM d WHERE file_blob_sha256 IS NOT NULL GROUP BY file_blob_sha256) c
+  WHERE b.sha256 = c.file_blob_sha256
+)
+SELECT count(*) FROM d;
 
 -- name: ReleaseConnectionRawBlobs :exec
 -- One blob reference per raw row goes away (hold blob.LockShared); the sweeper removes unreferenced files.

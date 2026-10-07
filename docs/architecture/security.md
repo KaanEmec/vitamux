@@ -18,6 +18,7 @@ This covers a personal, internet-reachable service with one owner. The overview 
 | Dependencies | Malicious update | Exact pins, lockfiles, manual review of risky bumps, SBOMs, vulnerability scans |
 | Logs | Secret or health-data leaks | Redacting handler, no bodies, sentinel-based CI tests |
 | Backups | Theft | Documented encrypted off-host backups; master key stored separately |
+| iOS app (E22) | Lost or stolen phone | Optional Face ID or passcode app lock and a blurred app-switcher snapshot; Keychain items `AfterFirstUnlockThisDeviceOnly` (no backup or migration); the app session and the device token are separate and each revoked from the panel (Settings › Security, Settings › Devices); widgets redact values while locked; no secrets cached. Canonical data in the offline cache is protected only by iOS file protection. |
 
 Out of scope: a fully compromised host, beyond least privilege and keeping secrets outside the DB.
 
@@ -32,6 +33,7 @@ Out of scope: a fully compromised host, beyond least privilege and keeping secre
 
 - Passwords: argon2id, m=64 MiB, t=3, p=2, 16-byte salt, 32-byte key, stored as a PHC string; at least 12 characters. Set by `vitamux admin create-owner|reset-password`, which read a TTY (no echo) or piped stdin (reset ends all sessions), or changed by the signed-in owner with `POST /auth/password`, which re-checks the current password (wrong ones throttled like logins, per account), ends every other session and is audited.
 - Sessions: 32 random bytes in cookie `vitamux_session` (`Path=/; HttpOnly; Secure; SameSite=Strict`; `Secure` is dropped only with `VITAMUX_ENV=development` on plain http). Only the SHA-256 is stored. Idle timeout 12 h, absolute 7 days, a new token on every login. `GET /auth/sessions` lists live sessions (created, last seen, current) and `DELETE /auth/sessions/{id}` ends one (audited). CSRF token = HMAC-SHA256(`session-signing` key, session token).
+- App sessions ([ADR-0023](../adr/0023-ios-app.md), [J22.2](../plan/E22-ios-app/J22.2-app-sessions.md)): the iOS app signs in the same way and gets a bearer token `vmx_ses_<id>_<secret>` in the body instead of a cookie. Same sessions table (`kind = app`, a device name), SHA-256 stored, listed and ended like browser sessions, ended by a password change; idle 30 days, absolute 90 days (`VITAMUX_APP_SESSION_*`); no CSRF for bearer requests; a `session` principal, so API keys still never reach session-only routes.
 - Throttling (in memory, single process): per username and per client address (IPv6 by /64). From the 5th consecutive failure, a lockout of 1 s doubling up to 15 min; attempts during it get 429 with `Retry-After`. Unknown usernames cost the same argon2 run.
 - TOTP: RFC 6238 (SHA-1, 6 digits, 30 s, ±1 step), each step accepted once. Secret sealed with purpose `credentials`, AAD `users.totp:<user id>`; enrolment is pending until a code confirms it. Ten single-use 80-bit recovery codes, stored as SHA-256.
 - Without a loadable master key, sign-in answers 503 and every protected route 401.
@@ -48,7 +50,7 @@ Only `vitamux:8080` sits behind the deployer's TLS proxy. HSTS, secure cookies, 
 
 ## Authorization
 
-[`api/authz.yaml`](../../api/authz.yaml) lists every OpenAPI operation with who may call it (`public`, `session`, `client`, or a scope, which admits the session and API keys with that scope or `admin`), whether CSRF applies, and `planned` for operations not served yet. `TestAuthzMatrix` (`internal/api/authz_test.go`) fails CI when the matrix, the routes registered with `rt.handle` and the spec's `security` disagree in either direction. `TestAuthzMatrixEnforced` (integration) calls every served route as anonymous, session without and with CSRF, an API key of each scope, and client tokens of the target and another connection, and checks admitted versus 401/403. Device tokens are client tokens.
+[`api/authz.yaml`](../../api/authz.yaml) lists every OpenAPI operation with who may call it (`public`, `session`, `client`, or a scope, which admits the session and API keys with that scope or `admin`), whether CSRF applies, and `planned` for operations not served yet. `TestAuthzMatrix` (`internal/api/authz_test.go`) fails CI when the matrix, the routes registered with `rt.handle` and the spec's `security` disagree in either direction. `TestAuthzMatrixEnforced` (integration) calls every served route as anonymous, browser session without and with CSRF, app session (bearer, CSRF not required), an API key of each scope, and client tokens of the target and another connection, and checks admitted versus 401/403. Device tokens are client tokens. The public `GET /api/v1/system/version` answers anonymous callers only the client handshake (`product`, `api_version`, `min_app_version`); build version and commit need `read:config`.
 
 ## Export and deletion
 

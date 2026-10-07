@@ -1,0 +1,27 @@
+{
+ "synthetic": true,
+ "type": "HKCategoryTypeIdentifierMenstrualFlow",
+ "anchor": {
+  "before_hash": "synthetic-before",
+  "after_hash": "synthetic-after",
+  "query_started_at": "2026-09-14T21:00:03+02:00"
+ },
+ "samples": [
+  {
+   "uuid": "6F0D0000-0000-4000-8000-000000000171",
+   "start": "2026-09-10T00:00:00+02:00",
+   "end": "2026-09-11T00:00:00+02:00",
+   "source_revision": {
+    "bundle_id": "com.apple.Health",
+    "name": "Health"
+   },
+   "metadata": {
+    "HKTimeZone": "Europe/Amsterdam",
+    "HKMenstrualCycleStart": 1
+   },
+   "was_user_entered": true,
+   "value": 3
+  }
+ ],
+ "deleted": []
+}

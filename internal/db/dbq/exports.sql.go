@@ -243,9 +243,47 @@ func (q *Queries) ExportDevices(ctx context.Context, arg ExportDevicesParams) ([
 	return items, nil
 }
 
+const exportEventFiles = `-- name: ExportEventFiles :many
+SELECT id, file_blob_sha256 FROM health_events
+WHERE user_id = $1 AND file_blob_sha256 IS NOT NULL AND id > $2::uuid ORDER BY id LIMIT $3
+`
+
+type ExportEventFilesParams struct {
+	UserID uuid.UUID
+	After  uuid.UUID
+	Lim    int32
+}
+
+type ExportEventFilesRow struct {
+	ID             uuid.UUID
+	FileBlobSha256 []byte
+}
+
+// Waveform and route documents (canonical data, so exported with or without include_raw).
+func (q *Queries) ExportEventFiles(ctx context.Context, arg ExportEventFilesParams) ([]ExportEventFilesRow, error) {
+	rows, err := q.db.Query(ctx, exportEventFiles, arg.UserID, arg.After, arg.Lim)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportEventFilesRow
+	for rows.Next() {
+		var i ExportEventFilesRow
+		if err := rows.Scan(&i.ID, &i.FileBlobSha256); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const exportHealthEvents = `-- name: ExportHealthEvents :many
-SELECT id, to_jsonb(t)::jsonb AS row FROM health_events t
-WHERE user_id = $1 AND id > $2::uuid ORDER BY id LIMIT $3
+SELECT t.id, (to_jsonb(t) || jsonb_build_object('_blob', to_jsonb(b)))::jsonb AS row
+FROM health_events t LEFT JOIN blobs b ON b.sha256 = t.file_blob_sha256
+WHERE t.user_id = $1 AND t.id > $2::uuid ORDER BY t.id LIMIT $3
 `
 
 type ExportHealthEventsParams struct {
@@ -1354,19 +1392,25 @@ func (q *Queries) ImportDevices(ctx context.Context, batch json.RawMessage) ([]I
 	return items, nil
 }
 
-const importHealthEvents = `-- name: ImportHealthEvents :execrows
-INSERT INTO health_events
-SELECT (p).* FROM jsonb_populate_recordset(NULL::health_events, $1::jsonb) p
-WHERE NOT EXISTS (SELECT 1 FROM health_events t WHERE t.dedupe_key = p.dedupe_key AND t.superseded_at IS NULL)
-ON CONFLICT DO NOTHING
+const importHealthEvents = `-- name: ImportHealthEvents :one
+WITH ins AS (
+  INSERT INTO health_events
+  SELECT (p).* FROM jsonb_populate_recordset(NULL::health_events, $1::jsonb) p
+  WHERE NOT EXISTS (SELECT 1 FROM health_events t WHERE t.dedupe_key = p.dedupe_key AND t.superseded_at IS NULL)
+  ON CONFLICT DO NOTHING RETURNING file_blob_sha256
+), refs AS (
+  UPDATE blobs b SET refcount = b.refcount + c.n
+  FROM (SELECT file_blob_sha256, count(*)::integer AS n FROM ins WHERE file_blob_sha256 IS NOT NULL GROUP BY file_blob_sha256) c
+  WHERE b.sha256 = c.file_blob_sha256
+)
+SELECT count(*) FROM ins
 `
 
 func (q *Queries) ImportHealthEvents(ctx context.Context, batch json.RawMessage) (int64, error) {
-	result, err := q.db.Exec(ctx, importHealthEvents, batch)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+	row := q.db.QueryRow(ctx, importHealthEvents, batch)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const importImportItems = `-- name: ImportImportItems :execrows

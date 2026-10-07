@@ -21,6 +21,24 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for ActiveSessionKind.
+const (
+	ActiveSessionKindApp     ActiveSessionKind = "app"
+	ActiveSessionKindBrowser ActiveSessionKind = "browser"
+)
+
+// Valid indicates whether the value is a known member of the ActiveSessionKind enum.
+func (e ActiveSessionKind) Valid() bool {
+	switch e {
+	case ActiveSessionKindApp:
+		return true
+	case ActiveSessionKindBrowser:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AnalyteAliasSource.
 const (
 	Owner AnalyteAliasSource = "owner"
@@ -54,6 +72,24 @@ func (e AppCredentialsVerificationResult) Valid() bool {
 	case Unverifiable:
 		return true
 	case Valid:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AuthBeginInputReturn.
+const (
+	AuthBeginInputReturnApp     AuthBeginInputReturn = "app"
+	AuthBeginInputReturnBrowser AuthBeginInputReturn = "browser"
+)
+
+// Valid indicates whether the value is a known member of the AuthBeginInputReturn enum.
+func (e AuthBeginInputReturn) Valid() bool {
+	switch e {
+	case AuthBeginInputReturnApp:
+		return true
+	case AuthBeginInputReturnBrowser:
 		return true
 	default:
 		return false
@@ -555,6 +591,33 @@ func (e Health) Valid() bool {
 	}
 }
 
+// Defines values for IgnoredItemKind.
+const (
+	IgnoredItemKindEvent    IgnoredItemKind = "event"
+	IgnoredItemKindGroup    IgnoredItemKind = "group"
+	IgnoredItemKindMetric   IgnoredItemKind = "metric"
+	IgnoredItemKindSleep    IgnoredItemKind = "sleep"
+	IgnoredItemKindWorkouts IgnoredItemKind = "workouts"
+)
+
+// Valid indicates whether the value is a known member of the IgnoredItemKind enum.
+func (e IgnoredItemKind) Valid() bool {
+	switch e {
+	case IgnoredItemKindEvent:
+		return true
+	case IgnoredItemKindGroup:
+		return true
+	case IgnoredItemKindMetric:
+		return true
+	case IgnoredItemKindSleep:
+		return true
+	case IgnoredItemKindWorkouts:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for IntradayDefault.
 const (
 	IntradayDefaultN1M  IntradayDefault = "1m"
@@ -648,6 +711,24 @@ func (e JobStatus) Valid() bool {
 	case JobStatusRunning:
 		return true
 	case JobStatusSucceeded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LoginRequestClient.
+const (
+	LoginRequestClientApp     LoginRequestClient = "app"
+	LoginRequestClientBrowser LoginRequestClient = "browser"
+)
+
+// Valid indicates whether the value is a known member of the LoginRequestClient enum.
+func (e LoginRequestClient) Valid() bool {
+	switch e {
+	case LoginRequestClientApp:
+		return true
+	case LoginRequestClientBrowser:
 		return true
 	default:
 		return false
@@ -926,25 +1007,25 @@ func (e ProvenanceEntity) Valid() bool {
 
 // Defines values for ProviderAuthKind.
 const (
-	DevicePairing  ProviderAuthKind = "device_pairing"
-	InteractiveMfa ProviderAuthKind = "interactive_mfa"
-	LessThanNil    ProviderAuthKind = "<nil>"
-	None           ProviderAuthKind = "none"
-	Oauth2         ProviderAuthKind = "oauth2"
+	ProviderAuthKindDevicePairing  ProviderAuthKind = "device_pairing"
+	ProviderAuthKindInteractiveMfa ProviderAuthKind = "interactive_mfa"
+	ProviderAuthKindLessThanNil    ProviderAuthKind = "<nil>"
+	ProviderAuthKindNone           ProviderAuthKind = "none"
+	ProviderAuthKindOauth2         ProviderAuthKind = "oauth2"
 )
 
 // Valid indicates whether the value is a known member of the ProviderAuthKind enum.
 func (e ProviderAuthKind) Valid() bool {
 	switch e {
-	case DevicePairing:
+	case ProviderAuthKindDevicePairing:
 		return true
-	case InteractiveMfa:
+	case ProviderAuthKindInteractiveMfa:
 		return true
-	case LessThanNil:
+	case ProviderAuthKindLessThanNil:
 		return true
-	case None:
+	case ProviderAuthKindNone:
 		return true
-	case Oauth2:
+	case ProviderAuthKindOauth2:
 		return true
 	default:
 		return false
@@ -1062,6 +1143,21 @@ func (e ResolvedValueStatus) Valid() bool {
 	case ResolvedValueStatusNoData:
 		return true
 	case ResolvedValueStatusOverridden:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RouteDocumentFormat.
+const (
+	VitamuxRoute1 RouteDocumentFormat = "vitamux.route/1"
+)
+
+// Valid indicates whether the value is a known member of the RouteDocumentFormat enum.
+func (e RouteDocumentFormat) Valid() bool {
+	switch e {
+	case VitamuxRoute1:
 		return true
 	default:
 		return false
@@ -1260,6 +1356,87 @@ func (e SleepStageStage) Valid() bool {
 	}
 }
 
+// Defines values for SourceFilterMode.
+const (
+	SourceFilterModeIgnore  SourceFilterMode = "ignore"
+	SourceFilterModePerType SourceFilterMode = "per_type"
+	SourceFilterModeTake    SourceFilterMode = "take"
+)
+
+// Valid indicates whether the value is a known member of the SourceFilterMode enum.
+func (e SourceFilterMode) Valid() bool {
+	switch e {
+	case SourceFilterModeIgnore:
+		return true
+	case SourceFilterModePerType:
+		return true
+	case SourceFilterModeTake:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SourceFilterOriginClassification.
+const (
+	SourceFilterOriginClassificationDirect  SourceFilterOriginClassification = "direct"
+	SourceFilterOriginClassificationNative  SourceFilterOriginClassification = "native"
+	SourceFilterOriginClassificationRelayed SourceFilterOriginClassification = "relayed"
+)
+
+// Valid indicates whether the value is a known member of the SourceFilterOriginClassification enum.
+func (e SourceFilterOriginClassification) Valid() bool {
+	switch e {
+	case SourceFilterOriginClassificationDirect:
+		return true
+	case SourceFilterOriginClassificationNative:
+		return true
+	case SourceFilterOriginClassificationRelayed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SourceFilterOriginDefaultMode.
+const (
+	SourceFilterOriginDefaultModeIgnore SourceFilterOriginDefaultMode = "ignore"
+	SourceFilterOriginDefaultModeTake   SourceFilterOriginDefaultMode = "take"
+)
+
+// Valid indicates whether the value is a known member of the SourceFilterOriginDefaultMode enum.
+func (e SourceFilterOriginDefaultMode) Valid() bool {
+	switch e {
+	case SourceFilterOriginDefaultModeIgnore:
+		return true
+	case SourceFilterOriginDefaultModeTake:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SourceFilterOriginDefaultReason.
+const (
+	SourceFilterOriginDefaultReasonDirectConnection SourceFilterOriginDefaultReason = "direct_connection"
+	SourceFilterOriginDefaultReasonLessThanNil      SourceFilterOriginDefaultReason = "<nil>"
+	SourceFilterOriginDefaultReasonNative           SourceFilterOriginDefaultReason = "native"
+)
+
+// Valid indicates whether the value is a known member of the SourceFilterOriginDefaultReason enum.
+func (e SourceFilterOriginDefaultReason) Valid() bool {
+	switch e {
+	case SourceFilterOriginDefaultReasonDirectConnection:
+		return true
+	case SourceFilterOriginDefaultReasonLessThanNil:
+		return true
+	case SourceFilterOriginDefaultReasonNative:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SourceSeriesAggregation.
 const (
 	SourceSeriesAggregationAdditive     SourceSeriesAggregation = "additive"
@@ -1386,6 +1563,36 @@ func (e SummaryPointStatus) Valid() bool {
 	}
 }
 
+// Defines values for SystemVersionProduct.
+const (
+	Vitamux SystemVersionProduct = "vitamux"
+)
+
+// Valid indicates whether the value is a known member of the SystemVersionProduct enum.
+func (e SystemVersionProduct) Valid() bool {
+	switch e {
+	case Vitamux:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WaveformDocumentFormat.
+const (
+	VitamuxWaveform1 WaveformDocumentFormat = "vitamux.waveform/1"
+)
+
+// Valid indicates whether the value is a known member of the WaveformDocumentFormat enum.
+func (e WaveformDocumentFormat) Valid() bool {
+	switch e {
+	case VitamuxWaveform1:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorkoutMemberRuleStatus.
 const (
 	WorkoutMemberRuleStatusExcluded  WorkoutMemberRuleStatus = "excluded"
@@ -1409,17 +1616,26 @@ func (e WorkoutMemberRuleStatus) Valid() bool {
 
 // Defines values for WorkoutSegmentKind.
 const (
+	WorkoutSegmentKindActivity WorkoutSegmentKind = "activity"
 	WorkoutSegmentKindInterval WorkoutSegmentKind = "interval"
 	WorkoutSegmentKindLap      WorkoutSegmentKind = "lap"
+	WorkoutSegmentKindMarker   WorkoutSegmentKind = "marker"
+	WorkoutSegmentKindPause    WorkoutSegmentKind = "pause"
 	WorkoutSegmentKindSet      WorkoutSegmentKind = "set"
 )
 
 // Valid indicates whether the value is a known member of the WorkoutSegmentKind enum.
 func (e WorkoutSegmentKind) Valid() bool {
 	switch e {
+	case WorkoutSegmentKindActivity:
+		return true
 	case WorkoutSegmentKindInterval:
 		return true
 	case WorkoutSegmentKindLap:
+		return true
+	case WorkoutSegmentKindMarker:
+		return true
+	case WorkoutSegmentKindPause:
 		return true
 	case WorkoutSegmentKindSet:
 		return true
@@ -1833,13 +2049,20 @@ type ActiveSession struct {
 	// Current This request's session.
 	Current bool `json:"current"`
 
-	// ExpiresAt Absolute end; the session also ends after 12 h without use.
+	// ExpiresAt Absolute end; the session also ends without use after 12 h (browser) or VITAMUX_APP_SESSION_IDLE (app).
 	ExpiresAt time.Time          `json:"expires_at"`
 	ID        openapi_types.UUID `json:"id"`
+	Kind      ActiveSessionKind  `json:"kind"`
 
 	// LastSeenAt Updated at most once a minute.
 	LastSeenAt time.Time `json:"last_seen_at"`
+
+	// Name The device name of an app session; null for a browser session.
+	Name *string `json:"name"`
 }
+
+// ActiveSessionKind defines model for ActiveSession.Kind.
+type ActiveSessionKind string
 
 // AnalyteAlias A printed label mapped to an analyte (docs/analytes.md). Owner aliases take precedence over seeded ones.
 type AnalyteAlias struct {
@@ -1905,6 +2128,25 @@ type AppCredentialsVerification struct {
 
 // AppCredentialsVerificationResult defines model for AppCredentialsVerification.Result.
 type AppCredentialsVerificationResult string
+
+// AppSession defines model for AppSession.
+type AppSession struct {
+	// ExpiresAt Absolute end; the session also ends after VITAMUX_APP_SESSION_IDLE without use.
+	ExpiresAt time.Time `json:"expires_at"`
+
+	// Token Bearer token `vmx_ses_<id>_<secret>`; shown in this response only.
+	Token string `json:"token"`
+	User  User   `json:"user"`
+}
+
+// AuthBeginInput defines model for AuthBeginInput.
+type AuthBeginInput struct {
+	// Return app (app sessions only) returns to the app through oauthStart and vitamux://connections.
+	Return *AuthBeginInputReturn `json:"return,omitempty"`
+}
+
+// AuthBeginInputReturn app (app sessions only) returns to the app through oauthStart and vitamux://connections.
+type AuthBeginInputReturn string
 
 // AuthContinueInput defines model for AuthContinueInput.
 type AuthContinueInput struct {
@@ -2532,11 +2774,14 @@ type HealthEvent struct {
 	Code string `json:"code"`
 
 	// Context Source metadata as given.
-	Context   json.RawMessage    `json:"context"`
-	EndAt     *time.Time         `json:"end_at"`
-	ID        openapi_types.UUID `json:"id"`
-	Level     *string            `json:"level"`
-	LocalDate openapi_types.Date `json:"local_date"`
+	Context json.RawMessage `json:"context"`
+	EndAt   *time.Time      `json:"end_at"`
+
+	// FileSha256 SHA-256 of the event's blob document, when it has one: the waveform of an ecg_recording (GET /events/{id}/waveform) or the route of a workout_route.
+	FileSha256 *string            `json:"file_sha256,omitempty"`
+	ID         openapi_types.UUID `json:"id"`
+	Level      *string            `json:"level"`
+	LocalDate  openapi_types.Date `json:"local_date"`
 
 	// Provenance Version and provenance columns of a canonical row; GET /provenance/{entity}/{id} has the full trace.
 	Provenance   RecordProvenance `json:"provenance"`
@@ -2566,6 +2811,30 @@ type HourPick struct {
 	Value  *float64  `json:"value,omitempty"`
 }
 
+// IgnoredItem defines model for IgnoredItem.
+type IgnoredItem struct {
+	// Code Metric code, group kind, event code, sleep or workouts.
+	Code    string          `json:"code"`
+	FirstAt time.Time       `json:"first_at"`
+	Kind    IgnoredItemKind `json:"kind"`
+	LastAt  time.Time       `json:"last_at"`
+	Origin  OriginRef       `json:"origin"`
+	Records int64           `json:"records"`
+}
+
+// IgnoredItemKind defines model for IgnoredItem.Kind.
+type IgnoredItemKind string
+
+// IgnoredSource defines model for IgnoredSource.
+type IgnoredSource struct {
+	FirstAt time.Time `json:"first_at"`
+	LastAt  time.Time `json:"last_at"`
+	Origin  OriginRef `json:"origin"`
+
+	// Records Records of the metric overlapping the range
+	Records int64 `json:"records"`
+}
+
 // Intraday A metric's day-view bucket ladder (resolution.md#windows); absent for metrics measured once a day or night.
 type Intraday struct {
 	// Default Bucket for a 24-hour span.
@@ -2584,8 +2853,11 @@ type IntradayFinest string
 // Inventory defines model for Inventory.
 type Inventory struct {
 	// AggregatesPending Days wait for the rebuild job, so metric counts, days and sources may lag.
-	AggregatesPending bool            `json:"aggregates_pending"`
-	Items             []InventoryItem `json:"items"`
+	AggregatesPending bool `json:"aggregates_pending"`
+
+	// Ignored With include_ignored: records held raw because a source filter ignores their origin, per item and origin.
+	Ignored *[]IgnoredItem  `json:"ignored,omitempty"`
+	Items   []InventoryItem `json:"items"`
 }
 
 // InventoryItem defines model for InventoryItem.
@@ -2734,11 +3006,19 @@ type LabResultPage struct {
 
 // LoginRequest defines model for LoginRequest.
 type LoginRequest struct {
+	// Client Omitted means `browser`; `app` answers a bearer app session instead of a cookie.
+	Client *LoginRequestClient `json:"client,omitempty"`
+
+	// DeviceName Required with `client: app`, not allowed otherwise; Settings › Security lists the session under it.
+	DeviceName   *string `json:"device_name,omitempty"`
 	Password     string  `json:"password"`
 	RecoveryCode *string `json:"recovery_code,omitempty"`
 	TotpCode     *string `json:"totp_code,omitempty"`
 	Username     string  `json:"username"`
 }
+
+// LoginRequestClient Omitted means `browser`; `app` answers a bearer app session instead of a cookie.
+type LoginRequestClient string
 
 // ManualMeasurementInput A value the owner entered. It is stored as a raw payload of the owner's manual connection and normalized like any source (provider manual, quality flag manual_entry). A sample without end_at, an interval with it. Grouped metrics (blood-pressure components) are not accepted here.
 type ManualMeasurementInput struct {
@@ -2758,6 +3038,9 @@ type ManualMeasurementInput struct {
 
 // Measurement Normalized measurement (docs/architecture/data-model.md#measurements).
 type Measurement struct {
+	// Context Source detail kept with the value, when any: an activity-summary goal, move mode and paused flag; the workout_uuid of an effort score.
+	Context *json.RawMessage `json:"context,omitempty"`
+
 	// EndAt Exclusive; null for samples.
 	EndAt *time.Time `json:"end_at"`
 
@@ -2838,6 +3121,9 @@ type Metric struct {
 	// Unit Canonical unit code.
 	Unit string `json:"unit"`
 
+	// Unresolved A raw series (rr_interval): stored and drawn, never resolved, so no windows or strategies.
+	Unresolved *bool `json:"unresolved,omitempty"`
+
 	// Windows Window kinds a rule for this metric may use.
 	Windows []MetricWindows `json:"windows"`
 }
@@ -2871,6 +3157,9 @@ type MetricSummary struct {
 	Unit  *string       `json:"unit,omitempty"`
 	Value ResolvedValue `json:"value"`
 }
+
+// Numbers defines model for Numbers.
+type Numbers = []float64
 
 // OriginRef defines model for OriginRef.
 type OriginRef struct {
@@ -2986,11 +3275,11 @@ type PairingCode struct {
 	Code      string    `json:"code"`
 	ExpiresAt time.Time `json:"expires_at"`
 
-	// QrPayload Text for the QR code: the JSON object {"url", "code"} and nothing else.
-	QrPayload string `json:"qr_payload"`
+	// QrPayload Text for the QR code: the JSON object {"url", "code"} and nothing else; omitted with url.
+	QrPayload *string `json:"qr_payload,omitempty"`
 
-	// URL The public base URL (VITAMUX_PUBLIC_URL) the app pairs against.
-	URL string `json:"url"`
+	// URL The public base URL (VITAMUX_PUBLIC_URL) the app pairs against; omitted without one (app sessions only).
+	URL *string `json:"url,omitempty"`
 }
 
 // PeriodComparison A period and the one before it, for a neutral delta. Both are plain rollups; compare mean, or for a family each component's mean.
@@ -3525,6 +3814,27 @@ type RollupValues struct {
 	N    int      `json:"n"`
 }
 
+// RouteDocument Workout route, vitamux.route/1 (ADR-0024). Parallel arrays of count entries; CoreLocation values as given (negative accuracy, speed or course = invalid).
+type RouteDocument struct {
+	AltitudeM            *Numbers            `json:"altitude_m,omitempty"`
+	Count                int                 `json:"count"`
+	CourseAccuracyDeg    *Numbers            `json:"course_accuracy_deg,omitempty"`
+	CourseDeg            *Numbers            `json:"course_deg,omitempty"`
+	EllipsoidalAltitudeM *Numbers            `json:"ellipsoidal_altitude_m,omitempty"`
+	Format               RouteDocumentFormat `json:"format"`
+	HorizontalAccuracyM  *Numbers            `json:"horizontal_accuracy_m,omitempty"`
+	Latitude             Numbers             `json:"latitude"`
+	Longitude            Numbers             `json:"longitude"`
+	OffsetsS             Numbers             `json:"offsets_s"`
+	SpeedAccuracyMps     *Numbers            `json:"speed_accuracy_mps,omitempty"`
+	SpeedMps             *Numbers            `json:"speed_mps,omitempty"`
+	Start                time.Time           `json:"start"`
+	VerticalAccuracyM    *Numbers            `json:"vertical_accuracy_m,omitempty"`
+}
+
+// RouteDocumentFormat defines model for RouteDocument.Format.
+type RouteDocumentFormat string
+
 // Rule A rule version, the owner's or a built-in (docs/architecture/resolution.md#rule-specification).
 type Rule = RuleVersion
 
@@ -3652,6 +3962,7 @@ type SeriesWindow struct {
 
 // Session defines model for Session.
 type Session struct {
+	// CsrfToken Empty for an app session
 	CsrfToken string `json:"csrf_token"`
 	User      User   `json:"user"`
 }
@@ -3832,6 +4143,94 @@ type SourceDevice struct {
 // SourceDevicePatch Merge patch of a device; null clears a field.
 type SourceDevicePatch = json.RawMessage
 
+// SourceFilterChoice The owner's explicit choice for one app in Apple Health.
+type SourceFilterChoice struct {
+	// BundleID The HealthKit source's bundle id (the origin_key).
+	BundleID string           `json:"bundle_id"`
+	Mode     SourceFilterMode `json:"mode"`
+
+	// Name The app's name as Apple Health shows it.
+	Name *string `json:"name,omitempty"`
+
+	// Types per_type: the HealthKit types taken (the others are ignored). Dropped for take and ignore.
+	Types *[]string `json:"types,omitempty"`
+}
+
+// SourceFilterDefault Origins ignored by default because the provider they relay is connected directly.
+type SourceFilterDefault struct {
+	// OriginPattern A SQL LIKE pattern over bundle ids (% any run, _ one character, backslash escapes).
+	OriginPattern string `json:"origin_pattern"`
+
+	// Provider The directly connected provider's code
+	Provider     string `json:"provider"`
+	ProviderName string `json:"provider_name"`
+}
+
+// SourceFilterMode defines model for SourceFilterMode.
+type SourceFilterMode string
+
+// SourceFilterOrigin One app in Apple Health and what the device takes from it.
+type SourceFilterOrigin struct {
+	BundleID string `json:"bundle_id"`
+
+	// Classification The origin's classification (Settings › Devices).
+	Classification SourceFilterOriginClassification `json:"classification"`
+	DefaultMode    SourceFilterOriginDefaultMode    `json:"default_mode"`
+
+	// DefaultReason native: Apple's own source; direct_connection: the provider it relays is connected directly, so its copy would count twice.
+	DefaultReason *SourceFilterOriginDefaultReason `json:"default_reason"`
+
+	// Explicit The owner chose the mode; defaults never change it.
+	Explicit bool `json:"explicit"`
+
+	// IgnoredRecords Records from the app held raw on the server because a filter ignored them.
+	IgnoredRecords int64            `json:"ignored_records"`
+	Mode           SourceFilterMode `json:"mode"`
+	Name           *string          `json:"name"`
+
+	// OriginID The data origin once the server has seen data from the app.
+	OriginID *openapi_types.UUID `json:"origin_id"`
+
+	// ReasonProvider direct_connection: the provider code.
+	ReasonProvider     *string `json:"reason_provider"`
+	ReasonProviderName *string `json:"reason_provider_name"`
+	RelayedProvider    *string `json:"relayed_provider"`
+
+	// Types per_type: the types taken.
+	Types []string `json:"types"`
+
+	// Writes The types the device found the app writing, with the newest sample's end; empty when not reported.
+	Writes []SourceType `json:"writes"`
+}
+
+// SourceFilterOriginClassification The origin's classification (Settings › Devices).
+type SourceFilterOriginClassification string
+
+// SourceFilterOriginDefaultMode defines model for SourceFilterOrigin.DefaultMode.
+type SourceFilterOriginDefaultMode string
+
+// SourceFilterOriginDefaultReason native: Apple's own source; direct_connection: the provider it relays is connected directly, so its copy would count twice.
+type SourceFilterOriginDefaultReason string
+
+// SourceFilterUpdate defines model for SourceFilterUpdate.
+type SourceFilterUpdate struct {
+	Origins []SourceFilterChoice `json:"origins"`
+
+	// Version Apply only when the device's filter is still at this version.
+	Version *int `json:"version,omitempty"`
+}
+
+// SourceFilterView defines model for SourceFilterView.
+type SourceFilterView struct {
+	DefaultIgnore []SourceFilterDefault `json:"default_ignore"`
+	DeviceID      openapi_types.UUID    `json:"device_id"`
+	Origins       []SourceFilterOrigin  `json:"origins"`
+
+	// SourcesReportedAt When the device last reported the apps it found in Apple Health.
+	SourcesReportedAt *time.Time `json:"sources_reported_at"`
+	Version           int        `json:"version"`
+}
+
 // SourcePoint One source's values in a bucket, local hour or day: additive metrics the intervals pro-rated to it (sum), the others the mean of its bucket means (5 minutes, or the bucket when shorter) with min and max. A raw point is one row with its value (n 1).
 type SourcePoint struct {
 	// DailyValue The value the source reported for the whole day (day grain).
@@ -3879,7 +4278,10 @@ type SourceSeries struct {
 	Grain  SourceSeriesGrain `json:"grain"`
 
 	// HasMore raw: more rows follow next_cursor.
-	HasMore    *bool                `json:"has_more,omitempty"`
+	HasMore *bool `json:"has_more,omitempty"`
+
+	// Ignored With include_ignored: origins whose records of the metric in the range are held raw because a source filter ignores them; they have no values.
+	Ignored    *[]IgnoredSource     `json:"ignored,omitempty"`
 	Metric     string               `json:"metric"`
 	NextCursor *string              `json:"next_cursor,omitempty"`
 	Rule       *RuleRef             `json:"rule,omitempty"`
@@ -3912,6 +4314,12 @@ type SourceSeriesSource struct {
 
 // SourceSeriesSourceRuleStatus defines model for SourceSeriesSource.RuleStatus.
 type SourceSeriesSourceRuleStatus string
+
+// SourceType defines model for SourceType.
+type SourceType struct {
+	LastSampleAt *time.Time `json:"last_sample_at,omitempty"`
+	Type         string     `json:"type"`
+}
 
 // SourcesDrilldown defines model for SourcesDrilldown.
 type SourcesDrilldown struct {
@@ -4018,11 +4426,26 @@ type SystemStatus struct {
 	Versions     StatusVersions `json:"versions"`
 }
 
-// SystemVersion defines model for SystemVersion.
+// SystemVersion Anonymous shape {"product", "api_version", "min_app_version"}; read:config callers also get version and commit.
 type SystemVersion struct {
-	Commit  string `json:"commit"`
-	Version string `json:"version"`
+	// APIVersion Raised on every change that breaks existing clients; an app refuses a server older than the one it needs.
+	APIVersion int `json:"api_version"`
+
+	// Commit Build commit; read:config callers only.
+	Commit *string `json:"commit,omitempty"`
+
+	// MinAppVersion The oldest Vitamux iOS app version (CFBundleShortVersionString, e.g. 0.4.0) this server supports; an older app warns.
+	MinAppVersion string `json:"min_app_version"`
+
+	// Product Fixed marker that this is a Vitamux server.
+	Product SystemVersionProduct `json:"product"`
+
+	// Version Build version; read:config callers only.
+	Version *string `json:"version,omitempty"`
 }
+
+// SystemVersionProduct Fixed marker that this is a Vitamux server.
+type SystemVersionProduct string
 
 // TOTPEnrollment defines model for TOTPEnrollment.
 type TOTPEnrollment struct {
@@ -4062,6 +4485,26 @@ type User struct {
 	TotpEnabled bool               `json:"totp_enabled"`
 	Username    string             `json:"username"`
 }
+
+// WaveformDocument ECG waveform, vitamux.waveform/1 (ADR-0024). Values are the recorded voltages in order, as given.
+type WaveformDocument struct {
+	Format WaveformDocumentFormat `json:"format"`
+
+	// Lead Lead word, e.g. apple_watch_similar_to_lead_i.
+	Lead *string `json:"lead,omitempty"`
+
+	// OffsetsS Seconds since start per value; only when the spacing is not 1/sampling_frequency_hz.
+	OffsetsS            *[]float64 `json:"offsets_s,omitempty"`
+	SamplingFrequencyHz *float64   `json:"sampling_frequency_hz,omitempty"`
+	Start               time.Time  `json:"start"`
+
+	// Unit µV.
+	Unit   string    `json:"unit"`
+	Values []float64 `json:"values"`
+}
+
+// WaveformDocumentFormat defines model for WaveformDocument.Format.
+type WaveformDocumentFormat string
 
 // Window defines model for Window.
 type Window struct {
@@ -4139,14 +4582,16 @@ type WorkoutPage struct {
 
 // WorkoutSegment defines model for WorkoutSegment.
 type WorkoutSegment struct {
-	Data    json.RawMessage    `json:"data"`
-	EndAt   *time.Time         `json:"end_at"`
+	Data  json.RawMessage `json:"data"`
+	EndAt *time.Time      `json:"end_at"`
+
+	// Kind activity: a leg of a multisport workout; pause: pause to resume; marker: a marker or pause request (HealthKit).
 	Kind    WorkoutSegmentKind `json:"kind"`
 	Seq     int                `json:"seq"`
 	StartAt time.Time          `json:"start_at"`
 }
 
-// WorkoutSegmentKind defines model for WorkoutSegment.Kind.
+// WorkoutSegmentKind activity: a leg of a multisport workout; pause: pause to resume; marker: a marker or pause request (HealthKit).
 type WorkoutSegmentKind string
 
 // BackfillIDPath defines model for BackfillIDPath.
@@ -4181,6 +4626,9 @@ type IdempotencyKeyOptional = string
 
 // Include defines model for Include.
 type Include = []string
+
+// IncludeIgnored defines model for IncludeIgnored.
+type IncludeIgnored = bool
 
 // KindFilter defines model for KindFilter.
 type KindFilter = []string
@@ -4217,6 +4665,11 @@ type CreateAPIKeyJSONBody struct {
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 	Name      string     `json:"name"`
 	Scopes    []Scope    `json:"scopes"`
+}
+
+// Login200JSONResponseBody defines parameters for Login.
+type Login200JSONResponseBody struct {
+	union json.RawMessage
 }
 
 // ChangePasswordJSONBody defines parameters for ChangePassword.
@@ -4451,6 +4904,12 @@ type ListGroupsParamsKind string
 
 // ListGroupsParamsInclude defines parameters for ListGroups.
 type ListGroupsParamsInclude string
+
+// GetInventoryParams defines parameters for GetInventory.
+type GetInventoryParams struct {
+	// IncludeIgnored Also list the records an Apple Health source filter left raw (ignored_by_filter), per origin. They are never values: nothing was normalized from them.
+	IncludeIgnored *IncludeIgnored `form:"include_ignored,omitempty" json:"include_ignored,omitempty"`
+}
 
 // ListJobsParams defines parameters for ListJobs.
 type ListJobsParams struct {
@@ -4730,6 +5189,9 @@ type GetSourceSeriesParams struct {
 	End    time.Time                   `form:"end" json:"end"`
 	Grain  *GetSourceSeriesParamsGrain `form:"grain,omitempty" json:"grain,omitempty"`
 
+	// IncludeIgnored Also list the records an Apple Health source filter left raw (ignored_by_filter), per origin. They are never values: nothing was normalized from them.
+	IncludeIgnored *IncludeIgnored `form:"include_ignored,omitempty" json:"include_ignored,omitempty"`
+
 	// Limit Page size. Endpoints may cap it lower than 10,000.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
@@ -4794,6 +5256,11 @@ type OauthCallbackParams struct {
 	Code  *string `form:"code,omitempty" json:"code,omitempty"`
 }
 
+// OauthStartParams defines parameters for OauthStart.
+type OauthStartParams struct {
+	Ticket *string `form:"ticket,omitempty" json:"ticket,omitempty"`
+}
+
 // WithingsNotifyFormdataBody defines parameters for WithingsNotify.
 type WithingsNotifyFormdataBody struct {
 	Appli     *int    `form:"appli,omitempty" json:"appli,omitempty"`
@@ -4826,6 +5293,9 @@ type CreateConnectionJSONRequestBody = ConnectionInput
 // UpdateConnectionJSONRequestBody defines body for UpdateConnection for application/json ContentType.
 type UpdateConnectionJSONRequestBody = ConnectionPatch
 
+// BeginConnectionAuthJSONRequestBody defines body for BeginConnectionAuth for application/json ContentType.
+type BeginConnectionAuthJSONRequestBody = AuthBeginInput
+
 // CreateBackfillJSONRequestBody defines body for CreateBackfill for application/json ContentType.
 type CreateBackfillJSONRequestBody = BackfillInput
 
@@ -4834,6 +5304,9 @@ type RetryBackfillJSONRequestBody = BackfillRetryInput
 
 // RequestDeviceAnchorResetJSONRequestBody defines body for RequestDeviceAnchorReset for application/json ContentType.
 type RequestDeviceAnchorResetJSONRequestBody RequestDeviceAnchorResetJSONBody
+
+// SetDeviceSourceFilterJSONRequestBody defines body for SetDeviceSourceFilter for application/json ContentType.
+type SetDeviceSourceFilterJSONRequestBody = SourceFilterUpdate
 
 // UploadDocumentMultipartRequestBody defines body for UploadDocument for multipart/form-data ContentType.
 type UploadDocumentMultipartRequestBody UploadDocumentMultipartBody
@@ -4858,6 +5331,9 @@ type CreateOverrideJSONRequestBody = OverrideInput
 
 // PutProviderAppCredentialsJSONRequestBody defines body for PutProviderAppCredentials for application/json ContentType.
 type PutProviderAppCredentialsJSONRequestBody = AppCredentialsInput
+
+// BeginProviderAuthJSONRequestBody defines body for BeginProviderAuth for application/json ContentType.
+type BeginProviderAuthJSONRequestBody = AuthBeginInput
 
 // ContinueProviderAuthJSONRequestBody defines body for ContinueProviderAuth for application/json ContentType.
 type ContinueProviderAuthJSONRequestBody = AuthContinueInput
@@ -4956,6 +5432,68 @@ func (t AuthStep) MarshalJSON() ([]byte, error) {
 }
 
 func (t *AuthStep) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsSession returns the union data inside the Login200JSONResponseBody as a Session
+func (t Login200JSONResponseBody) AsSession() (Session, error) {
+	var body Session
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSession overwrites any union data inside the Login200JSONResponseBody as the provided Session
+func (t *Login200JSONResponseBody) FromSession(v Session) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSession performs a merge with any union data inside the Login200JSONResponseBody, using the provided Session
+func (t *Login200JSONResponseBody) MergeSession(v Session) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAppSession returns the union data inside the Login200JSONResponseBody as a AppSession
+func (t Login200JSONResponseBody) AsAppSession() (AppSession, error) {
+	var body AppSession
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAppSession overwrites any union data inside the Login200JSONResponseBody as the provided AppSession
+func (t *Login200JSONResponseBody) FromAppSession(v AppSession) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAppSession performs a merge with any union data inside the Login200JSONResponseBody, using the provided AppSession
+func (t *Login200JSONResponseBody) MergeAppSession(v AppSession) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t Login200JSONResponseBody) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *Login200JSONResponseBody) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
@@ -5068,22 +5606,22 @@ type ServerInterface interface {
 	// RevokeAPIKey Revoke an API key
 	// (DELETE /api/v1/api-keys/{id})
 	RevokeAPIKey(w http.ResponseWriter, r *http.Request, id ID)
-	// Login Sign in; sets the session cookie
+	// Login Sign in; sets the session cookie, or returns an app session token
 	// (POST /api/v1/auth/login)
 	Login(w http.ResponseWriter, r *http.Request)
-	// Logout Sign out and clear the session cookie
+	// Logout Sign out (ends the calling browser or app session)
 	// (POST /api/v1/auth/logout)
 	Logout(w http.ResponseWriter, r *http.Request)
 	// ChangePassword Change the password; ends every other session
 	// (POST /api/v1/auth/password)
 	ChangePassword(w http.ResponseWriter, r *http.Request)
-	// GetSession Current user and CSRF token
+	// GetSession Current user and CSRF token (empty for an app session)
 	// (GET /api/v1/auth/session)
 	GetSession(w http.ResponseWriter, r *http.Request)
 	// ListSessions List the owner's live sessions
 	// (GET /api/v1/auth/sessions)
 	ListSessions(w http.ResponseWriter, r *http.Request)
-	// RevokeSession End one session (ending the current one also clears its cookie)
+	// RevokeSession End one browser or app session (ending the current one also clears its cookie)
 	// (DELETE /api/v1/auth/sessions/{id})
 	RevokeSession(w http.ResponseWriter, r *http.Request, id ID)
 	// ConfirmTOTP Confirm TOTP enrolment with a code
@@ -5158,6 +5696,12 @@ type ServerInterface interface {
 	// RevokeDevice Revoke a device's token; its next request is 401
 	// (POST /api/v1/devices/{id}/revoke)
 	RevokeDevice(w http.ResponseWriter, r *http.Request, id ID)
+	// GetDeviceSourceFilter Which apps' Apple Health data the device takes, per app
+	// (GET /api/v1/devices/{id}/source-filter)
+	GetDeviceSourceFilter(w http.ResponseWriter, r *http.Request, id ID)
+	// SetDeviceSourceFilter Replace the owner's take or ignore choices for a device
+	// (PUT /api/v1/devices/{id}/source-filter)
+	SetDeviceSourceFilter(w http.ResponseWriter, r *http.Request, id ID)
 	// ListDocuments List documents
 	// (GET /api/v1/documents)
 	ListDocuments(w http.ResponseWriter, r *http.Request, params ListDocumentsParams)
@@ -5185,6 +5729,9 @@ type ServerInterface interface {
 	// ListEvents List health events
 	// (GET /api/v1/events)
 	ListEvents(w http.ResponseWriter, r *http.Request, params ListEventsParams)
+	// GetEventWaveform Get the waveform of an ECG recording
+	// (GET /api/v1/events/{id}/waveform)
+	GetEventWaveform(w http.ResponseWriter, r *http.Request, id ID)
 	// CreateExport Start an export job
 	// (POST /api/v1/exports)
 	CreateExport(w http.ResponseWriter, r *http.Request, params CreateExportParams)
@@ -5214,7 +5761,7 @@ type ServerInterface interface {
 	ListGroups(w http.ResponseWriter, r *http.Request, params ListGroupsParams)
 	// GetInventory Everything stored, per metric, group kind, event code, sleep, workouts and lab analyte
 	// (GET /api/v1/inventory)
-	GetInventory(w http.ResponseWriter, r *http.Request)
+	GetInventory(w http.ResponseWriter, r *http.Request, params GetInventoryParams)
 	// ListJobs List background jobs
 	// (GET /api/v1/jobs)
 	ListJobs(w http.ResponseWriter, r *http.Request, params ListJobsParams)
@@ -5359,7 +5906,7 @@ type ServerInterface interface {
 	// GetSystemStatus Instance diagnostics
 	// (GET /api/v1/system/status)
 	GetSystemStatus(w http.ResponseWriter, r *http.Request)
-	// GetSystemVersion Build version of the running server
+	// GetSystemVersion Client handshake and build version of the running server
 	// (GET /api/v1/system/version)
 	GetSystemVersion(w http.ResponseWriter, r *http.Request)
 	// ListTimezonePeriods List timezone periods
@@ -5380,9 +5927,15 @@ type ServerInterface interface {
 	// GetWorkout Get one workout
 	// (GET /api/v1/workouts/{id})
 	GetWorkout(w http.ResponseWriter, r *http.Request, id ID, params GetWorkoutParams)
+	// GetWorkoutRoute Get the route of a workout
+	// (GET /api/v1/workouts/{id}/route)
+	GetWorkoutRoute(w http.ResponseWriter, r *http.Request, id ID)
 	// OauthCallback OAuth redirect target; completes the authorization and redirects to the UI
 	// (GET /oauth/{provider}/callback)
 	OauthCallback(w http.ResponseWriter, r *http.Request, provider string, params OauthCallbackParams)
+	// OauthStart App redirect step; sets the binding cookie in the auth browser and redirects to the provider
+	// (GET /oauth/{provider}/start)
+	OauthStart(w http.ResponseWriter, r *http.Request, provider string, params OauthStartParams)
 	// WithingsNotifyProbe Withings callback validation; HEAD and GET answer 200 without side effects
 	// (GET /webhooks/withings/{hook_token})
 	WithingsNotifyProbe(w http.ResponseWriter, r *http.Request, hookToken string)
@@ -6456,6 +7009,58 @@ func (siw *ServerInterfaceWrapper) RevokeDevice(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// GetDeviceSourceFilter operation middleware
+func (siw *ServerInterfaceWrapper) GetDeviceSourceFilter(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDeviceSourceFilter(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetDeviceSourceFilter operation middleware
+func (siw *ServerInterfaceWrapper) SetDeviceSourceFilter(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetDeviceSourceFilter(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListDocuments operation middleware
 func (siw *ServerInterfaceWrapper) ListDocuments(w http.ResponseWriter, r *http.Request) {
 
@@ -6867,6 +7472,32 @@ func (siw *ServerInterfaceWrapper) ListEvents(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListEvents(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetEventWaveform operation middleware
+func (siw *ServerInterfaceWrapper) GetEventWaveform(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEventWaveform(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -7291,8 +7922,27 @@ func (siw *ServerInterfaceWrapper) ListGroups(w http.ResponseWriter, r *http.Req
 // GetInventory operation middleware
 func (siw *ServerInterfaceWrapper) GetInventory(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetInventoryParams
+
+	// ------------- Optional query parameter "include_ignored" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_ignored", r.URL.Query(), &params.IncludeIgnored, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_ignored"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_ignored", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetInventory(w, r)
+		siw.Handler.GetInventory(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -9135,6 +9785,19 @@ func (siw *ServerInterfaceWrapper) GetSourceSeries(w http.ResponseWriter, r *htt
 		return
 	}
 
+	// ------------- Optional query parameter "include_ignored" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_ignored", r.URL.Query(), &params.IncludeIgnored, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_ignored"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_ignored", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "limit" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
@@ -9485,6 +10148,32 @@ func (siw *ServerInterfaceWrapper) GetWorkout(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// GetWorkoutRoute operation middleware
+func (siw *ServerInterfaceWrapper) GetWorkoutRoute(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetWorkoutRoute(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // OauthCallback operation middleware
 func (siw *ServerInterfaceWrapper) OauthCallback(w http.ResponseWriter, r *http.Request) {
 
@@ -9531,6 +10220,48 @@ func (siw *ServerInterfaceWrapper) OauthCallback(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.OauthCallback(w, r, provider, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// OauthStart operation middleware
+func (siw *ServerInterfaceWrapper) OauthStart(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", r.PathValue("provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params OauthStartParams
+
+	// ------------- Optional query parameter "ticket" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "ticket", r.URL.Query(), &params.Ticket, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "ticket"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "ticket", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.OauthStart(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -9717,6 +10448,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/event-types", wrapper.ListEventTypes)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/inventory", wrapper.GetInventory)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/events", wrapper.ListEvents)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/events/{id}/waveform", wrapper.GetEventWaveform)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/sources/series", wrapper.GetSourceSeries)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/measurements", wrapper.ListMeasurements)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/measurements/manual", wrapper.CreateManualMeasurement)
@@ -9726,6 +10458,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/sleep/{id}", wrapper.GetSleep)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/workouts", wrapper.ListWorkouts)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/workouts/{id}", wrapper.GetWorkout)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/workouts/{id}/route", wrapper.GetWorkoutRoute)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/provenance/{entity}/{id}", wrapper.GetProvenance)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/resolved/daily", wrapper.GetResolvedDaily)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/resolved/series", wrapper.GetResolvedSeries)
@@ -9776,6 +10509,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/devices", wrapper.ListDevices)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/devices/pairing-codes", wrapper.CreatePairingCode)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/devices/{id}/request-anchor-reset", wrapper.RequestDeviceAnchorReset)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/devices/{id}/source-filter", wrapper.GetDeviceSourceFilter)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/devices/{id}/source-filter", wrapper.SetDeviceSourceFilter)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/devices/{id}/revoke", wrapper.RevokeDevice)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/origins", wrapper.ListOrigins)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/origins/{id}", wrapper.ClassifyOrigin)
@@ -9822,6 +10557,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/timezone-periods", wrapper.CreateTimezonePeriod)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/timezone-periods/{id}", wrapper.DeleteTimezonePeriod)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/timezone-periods/{id}", wrapper.UpdateTimezonePeriod)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/oauth/{provider}/start", wrapper.OauthStart)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/oauth/{provider}/callback", wrapper.OauthCallback)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/webhooks/withings/{hook_token}", wrapper.WithingsNotifyProbe)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/webhooks/withings/{hook_token}", wrapper.WithingsNotify)
@@ -10225,12 +10961,12 @@ type LoginResponseObject interface {
 	VisitLoginResponse(w http.ResponseWriter) error
 }
 
-type Login200JSONResponse Session
+type Login200JSONResponse = Login200JSONResponseBody
 
 func (response Login200JSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+	if err := json.NewEncoder(&buf).Encode(response.union); err != nil {
 		return err
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -11265,7 +12001,8 @@ func (response UpdateConnection422ApplicationProblemPlusJSONResponse) VisitUpdat
 }
 
 type BeginConnectionAuthRequestObject struct {
-	ID ConnectionIDPath `json:"id"`
+	ID   ConnectionIDPath `json:"id"`
+	Body *BeginConnectionAuthJSONRequestBody
 }
 
 type BeginConnectionAuthResponseObject interface {
@@ -11348,6 +12085,20 @@ func (response BeginConnectionAuth409ApplicationProblemPlusJSONResponse) VisitBe
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginConnectionAuth422ApplicationProblemPlusJSONResponse Problem
+
+func (response BeginConnectionAuth422ApplicationProblemPlusJSONResponse) VisitBeginConnectionAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -12488,6 +13239,167 @@ func (response RevokeDevice404ApplicationProblemPlusJSONResponse) VisitRevokeDev
 	return err
 }
 
+type GetDeviceSourceFilterRequestObject struct {
+	ID ID `json:"id"`
+}
+
+type GetDeviceSourceFilterResponseObject interface {
+	VisitGetDeviceSourceFilterResponse(w http.ResponseWriter) error
+}
+
+type GetDeviceSourceFilter200JSONResponse SourceFilterView
+
+func (response GetDeviceSourceFilter200JSONResponse) VisitGetDeviceSourceFilterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDeviceSourceFilter401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response GetDeviceSourceFilter401ApplicationProblemPlusJSONResponse) VisitGetDeviceSourceFilterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDeviceSourceFilter403ApplicationProblemPlusJSONResponse Problem
+
+func (response GetDeviceSourceFilter403ApplicationProblemPlusJSONResponse) VisitGetDeviceSourceFilterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDeviceSourceFilter404ApplicationProblemPlusJSONResponse Problem
+
+func (response GetDeviceSourceFilter404ApplicationProblemPlusJSONResponse) VisitGetDeviceSourceFilterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetDeviceSourceFilterRequestObject struct {
+	ID   ID `json:"id"`
+	Body *SetDeviceSourceFilterJSONRequestBody
+}
+
+type SetDeviceSourceFilterResponseObject interface {
+	VisitSetDeviceSourceFilterResponse(w http.ResponseWriter) error
+}
+
+type SetDeviceSourceFilter200JSONResponse SourceFilterView
+
+func (response SetDeviceSourceFilter200JSONResponse) VisitSetDeviceSourceFilterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetDeviceSourceFilter401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response SetDeviceSourceFilter401ApplicationProblemPlusJSONResponse) VisitSetDeviceSourceFilterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetDeviceSourceFilter403ApplicationProblemPlusJSONResponse Problem
+
+func (response SetDeviceSourceFilter403ApplicationProblemPlusJSONResponse) VisitSetDeviceSourceFilterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetDeviceSourceFilter404ApplicationProblemPlusJSONResponse Problem
+
+func (response SetDeviceSourceFilter404ApplicationProblemPlusJSONResponse) VisitSetDeviceSourceFilterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetDeviceSourceFilter409ApplicationProblemPlusJSONResponse Problem
+
+func (response SetDeviceSourceFilter409ApplicationProblemPlusJSONResponse) VisitSetDeviceSourceFilterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetDeviceSourceFilter422ApplicationProblemPlusJSONResponse Problem
+
+func (response SetDeviceSourceFilter422ApplicationProblemPlusJSONResponse) VisitSetDeviceSourceFilterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListDocumentsRequestObject struct {
 	Params ListDocumentsParams
 }
@@ -13243,6 +14155,96 @@ func (response ListEvents422ApplicationProblemPlusJSONResponse) VisitListEventsR
 	return err
 }
 
+type GetEventWaveformRequestObject struct {
+	ID ID `json:"id"`
+}
+
+type GetEventWaveformResponseObject interface {
+	VisitGetEventWaveformResponse(w http.ResponseWriter) error
+}
+
+type GetEventWaveform200ResponseHeaders struct {
+	ETag *string
+}
+
+type GetEventWaveform200JSONResponse struct {
+	Body    WaveformDocument
+	Headers GetEventWaveform200ResponseHeaders
+}
+
+func (response GetEventWaveform200JSONResponse) VisitGetEventWaveformResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.ETag != nil {
+		w.Header().Set("ETag", fmt.Sprint(*response.Headers.ETag))
+	}
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEventWaveform401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response GetEventWaveform401ApplicationProblemPlusJSONResponse) VisitGetEventWaveformResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEventWaveform403ApplicationProblemPlusJSONResponse Problem
+
+func (response GetEventWaveform403ApplicationProblemPlusJSONResponse) VisitGetEventWaveformResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEventWaveform404ApplicationProblemPlusJSONResponse Problem
+
+func (response GetEventWaveform404ApplicationProblemPlusJSONResponse) VisitGetEventWaveformResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEventWaveform503ApplicationProblemPlusJSONResponse Problem
+
+func (response GetEventWaveform503ApplicationProblemPlusJSONResponse) VisitGetEventWaveformResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateExportRequestObject struct {
 	Params CreateExportParams
 	Body   *CreateExportJSONRequestBody
@@ -13933,6 +14935,7 @@ func (response ListGroups422ApplicationProblemPlusJSONResponse) VisitListGroupsR
 }
 
 type GetInventoryRequestObject struct {
+	Params GetInventoryParams
 }
 
 type GetInventoryResponseObject interface {
@@ -15245,6 +16248,7 @@ func (response VerifyProviderAppCredentials503ApplicationProblemPlusJSONResponse
 
 type BeginProviderAuthRequestObject struct {
 	Provider string `json:"provider"`
+	Body     *BeginProviderAuthJSONRequestBody
 }
 
 type BeginProviderAuthResponseObject interface {
@@ -15299,6 +16303,20 @@ func (response BeginProviderAuth403ApplicationProblemPlusJSONResponse) VisitBegi
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderAuth422ApplicationProblemPlusJSONResponse Problem
+
+func (response BeginProviderAuth422ApplicationProblemPlusJSONResponse) VisitBeginProviderAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -17622,20 +18640,6 @@ func (response GetSystemVersion401ApplicationProblemPlusJSONResponse) VisitGetSy
 	return err
 }
 
-type GetSystemVersion403ApplicationProblemPlusJSONResponse Problem
-
-func (response GetSystemVersion403ApplicationProblemPlusJSONResponse) VisitGetSystemVersionResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/problem+json")
-	w.WriteHeader(403)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
 type ListTimezonePeriodsRequestObject struct {
 }
 
@@ -18071,6 +19075,96 @@ func (response GetWorkout422ApplicationProblemPlusJSONResponse) VisitGetWorkoutR
 	return err
 }
 
+type GetWorkoutRouteRequestObject struct {
+	ID ID `json:"id"`
+}
+
+type GetWorkoutRouteResponseObject interface {
+	VisitGetWorkoutRouteResponse(w http.ResponseWriter) error
+}
+
+type GetWorkoutRoute200ResponseHeaders struct {
+	ETag *string
+}
+
+type GetWorkoutRoute200JSONResponse struct {
+	Body    RouteDocument
+	Headers GetWorkoutRoute200ResponseHeaders
+}
+
+func (response GetWorkoutRoute200JSONResponse) VisitGetWorkoutRouteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.ETag != nil {
+		w.Header().Set("ETag", fmt.Sprint(*response.Headers.ETag))
+	}
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetWorkoutRoute401ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response GetWorkoutRoute401ApplicationProblemPlusJSONResponse) VisitGetWorkoutRouteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetWorkoutRoute403ApplicationProblemPlusJSONResponse Problem
+
+func (response GetWorkoutRoute403ApplicationProblemPlusJSONResponse) VisitGetWorkoutRouteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetWorkoutRoute404ApplicationProblemPlusJSONResponse Problem
+
+func (response GetWorkoutRoute404ApplicationProblemPlusJSONResponse) VisitGetWorkoutRouteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetWorkoutRoute503ApplicationProblemPlusJSONResponse Problem
+
+func (response GetWorkoutRoute503ApplicationProblemPlusJSONResponse) VisitGetWorkoutRouteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type OauthCallbackRequestObject struct {
 	Provider string `json:"provider"`
 	Params   OauthCallbackParams
@@ -18101,6 +19195,47 @@ type OauthCallback404ApplicationProblemPlusJSONResponse struct {
 }
 
 func (response OauthCallback404ApplicationProblemPlusJSONResponse) VisitOauthCallbackResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type OauthStartRequestObject struct {
+	Provider string `json:"provider"`
+	Params   OauthStartParams
+}
+
+type OauthStartResponseObject interface {
+	VisitOauthStartResponse(w http.ResponseWriter) error
+}
+
+type OauthStart200Response struct {
+}
+
+func (response OauthStart200Response) VisitOauthStartResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type OauthStart303Response struct {
+}
+
+func (response OauthStart303Response) VisitOauthStartResponse(w http.ResponseWriter) error {
+	w.WriteHeader(303)
+	return nil
+}
+
+type OauthStart404ApplicationProblemPlusJSONResponse struct {
+	ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response OauthStart404ApplicationProblemPlusJSONResponse) VisitOauthStartResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -18211,22 +19346,22 @@ type StrictServerInterface interface {
 	// RevokeAPIKey Revoke an API key
 	// (DELETE /api/v1/api-keys/{id})
 	RevokeAPIKey(ctx context.Context, request RevokeAPIKeyRequestObject) (RevokeAPIKeyResponseObject, error)
-	// Login Sign in; sets the session cookie
+	// Login Sign in; sets the session cookie, or returns an app session token
 	// (POST /api/v1/auth/login)
 	Login(ctx context.Context, request LoginRequestObject) (LoginResponseObject, error)
-	// Logout Sign out and clear the session cookie
+	// Logout Sign out (ends the calling browser or app session)
 	// (POST /api/v1/auth/logout)
 	Logout(ctx context.Context, request LogoutRequestObject) (LogoutResponseObject, error)
 	// ChangePassword Change the password; ends every other session
 	// (POST /api/v1/auth/password)
 	ChangePassword(ctx context.Context, request ChangePasswordRequestObject) (ChangePasswordResponseObject, error)
-	// GetSession Current user and CSRF token
+	// GetSession Current user and CSRF token (empty for an app session)
 	// (GET /api/v1/auth/session)
 	GetSession(ctx context.Context, request GetSessionRequestObject) (GetSessionResponseObject, error)
 	// ListSessions List the owner's live sessions
 	// (GET /api/v1/auth/sessions)
 	ListSessions(ctx context.Context, request ListSessionsRequestObject) (ListSessionsResponseObject, error)
-	// RevokeSession End one session (ending the current one also clears its cookie)
+	// RevokeSession End one browser or app session (ending the current one also clears its cookie)
 	// (DELETE /api/v1/auth/sessions/{id})
 	RevokeSession(ctx context.Context, request RevokeSessionRequestObject) (RevokeSessionResponseObject, error)
 	// ConfirmTOTP Confirm TOTP enrolment with a code
@@ -18301,6 +19436,12 @@ type StrictServerInterface interface {
 	// RevokeDevice Revoke a device's token; its next request is 401
 	// (POST /api/v1/devices/{id}/revoke)
 	RevokeDevice(ctx context.Context, request RevokeDeviceRequestObject) (RevokeDeviceResponseObject, error)
+	// GetDeviceSourceFilter Which apps' Apple Health data the device takes, per app
+	// (GET /api/v1/devices/{id}/source-filter)
+	GetDeviceSourceFilter(ctx context.Context, request GetDeviceSourceFilterRequestObject) (GetDeviceSourceFilterResponseObject, error)
+	// SetDeviceSourceFilter Replace the owner's take or ignore choices for a device
+	// (PUT /api/v1/devices/{id}/source-filter)
+	SetDeviceSourceFilter(ctx context.Context, request SetDeviceSourceFilterRequestObject) (SetDeviceSourceFilterResponseObject, error)
 	// ListDocuments List documents
 	// (GET /api/v1/documents)
 	ListDocuments(ctx context.Context, request ListDocumentsRequestObject) (ListDocumentsResponseObject, error)
@@ -18328,6 +19469,9 @@ type StrictServerInterface interface {
 	// ListEvents List health events
 	// (GET /api/v1/events)
 	ListEvents(ctx context.Context, request ListEventsRequestObject) (ListEventsResponseObject, error)
+	// GetEventWaveform Get the waveform of an ECG recording
+	// (GET /api/v1/events/{id}/waveform)
+	GetEventWaveform(ctx context.Context, request GetEventWaveformRequestObject) (GetEventWaveformResponseObject, error)
 	// CreateExport Start an export job
 	// (POST /api/v1/exports)
 	CreateExport(ctx context.Context, request CreateExportRequestObject) (CreateExportResponseObject, error)
@@ -18502,7 +19646,7 @@ type StrictServerInterface interface {
 	// GetSystemStatus Instance diagnostics
 	// (GET /api/v1/system/status)
 	GetSystemStatus(ctx context.Context, request GetSystemStatusRequestObject) (GetSystemStatusResponseObject, error)
-	// GetSystemVersion Build version of the running server
+	// GetSystemVersion Client handshake and build version of the running server
 	// (GET /api/v1/system/version)
 	GetSystemVersion(ctx context.Context, request GetSystemVersionRequestObject) (GetSystemVersionResponseObject, error)
 	// ListTimezonePeriods List timezone periods
@@ -18523,9 +19667,15 @@ type StrictServerInterface interface {
 	// GetWorkout Get one workout
 	// (GET /api/v1/workouts/{id})
 	GetWorkout(ctx context.Context, request GetWorkoutRequestObject) (GetWorkoutResponseObject, error)
+	// GetWorkoutRoute Get the route of a workout
+	// (GET /api/v1/workouts/{id}/route)
+	GetWorkoutRoute(ctx context.Context, request GetWorkoutRouteRequestObject) (GetWorkoutRouteResponseObject, error)
 	// OauthCallback OAuth redirect target; completes the authorization and redirects to the UI
 	// (GET /oauth/{provider}/callback)
 	OauthCallback(ctx context.Context, request OauthCallbackRequestObject) (OauthCallbackResponseObject, error)
+	// OauthStart App redirect step; sets the binding cookie in the auth browser and redirects to the provider
+	// (GET /oauth/{provider}/start)
+	OauthStart(ctx context.Context, request OauthStartRequestObject) (OauthStartResponseObject, error)
 	// WithingsNotifyProbe Withings callback validation; HEAD and GET answer 200 without side effects
 	// (GET /webhooks/withings/{hook_token})
 	WithingsNotifyProbe(ctx context.Context, request WithingsNotifyProbeRequestObject) (WithingsNotifyProbeResponseObject, error)
@@ -19154,6 +20304,16 @@ func (sh *strictHandler) BeginConnectionAuth(w http.ResponseWriter, r *http.Requ
 
 	request.ID = id
 
+	var body BeginConnectionAuthJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
+
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.BeginConnectionAuth(ctx, request.(BeginConnectionAuthRequestObject))
 	}
@@ -19568,6 +20728,65 @@ func (sh *strictHandler) RevokeDevice(w http.ResponseWriter, r *http.Request, id
 	}
 }
 
+// GetDeviceSourceFilter operation middleware
+func (sh *strictHandler) GetDeviceSourceFilter(w http.ResponseWriter, r *http.Request, id ID) {
+	var request GetDeviceSourceFilterRequestObject
+
+	request.ID = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetDeviceSourceFilter(ctx, request.(GetDeviceSourceFilterRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetDeviceSourceFilter")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetDeviceSourceFilterResponseObject); ok {
+		if err := validResponse.VisitGetDeviceSourceFilterResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetDeviceSourceFilter operation middleware
+func (sh *strictHandler) SetDeviceSourceFilter(w http.ResponseWriter, r *http.Request, id ID) {
+	var request SetDeviceSourceFilterRequestObject
+
+	request.ID = id
+
+	var body SetDeviceSourceFilterJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetDeviceSourceFilter(ctx, request.(SetDeviceSourceFilterRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetDeviceSourceFilter")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetDeviceSourceFilterResponseObject); ok {
+		if err := validResponse.VisitSetDeviceSourceFilterResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListDocuments operation middleware
 func (sh *strictHandler) ListDocuments(w http.ResponseWriter, r *http.Request, params ListDocumentsParams) {
 	var request ListDocumentsRequestObject
@@ -19812,6 +21031,32 @@ func (sh *strictHandler) ListEvents(w http.ResponseWriter, r *http.Request, para
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListEventsResponseObject); ok {
 		if err := validResponse.VisitListEventsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetEventWaveform operation middleware
+func (sh *strictHandler) GetEventWaveform(w http.ResponseWriter, r *http.Request, id ID) {
+	var request GetEventWaveformRequestObject
+
+	request.ID = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetEventWaveform(ctx, request.(GetEventWaveformRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetEventWaveform")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetEventWaveformResponseObject); ok {
+		if err := validResponse.VisitGetEventWaveformResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -20068,8 +21313,10 @@ func (sh *strictHandler) ListGroups(w http.ResponseWriter, r *http.Request, para
 }
 
 // GetInventory operation middleware
-func (sh *strictHandler) GetInventory(w http.ResponseWriter, r *http.Request) {
+func (sh *strictHandler) GetInventory(w http.ResponseWriter, r *http.Request, params GetInventoryParams) {
 	var request GetInventoryRequestObject
+
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.GetInventory(ctx, request.(GetInventoryRequestObject))
@@ -20558,6 +21805,16 @@ func (sh *strictHandler) BeginProviderAuth(w http.ResponseWriter, r *http.Reques
 	var request BeginProviderAuthRequestObject
 
 	request.Provider = provider
+
+	var body BeginProviderAuthJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.BeginProviderAuth(ctx, request.(BeginProviderAuthRequestObject))
@@ -21606,6 +22863,32 @@ func (sh *strictHandler) GetWorkout(w http.ResponseWriter, r *http.Request, id I
 	}
 }
 
+// GetWorkoutRoute operation middleware
+func (sh *strictHandler) GetWorkoutRoute(w http.ResponseWriter, r *http.Request, id ID) {
+	var request GetWorkoutRouteRequestObject
+
+	request.ID = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetWorkoutRoute(ctx, request.(GetWorkoutRouteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetWorkoutRoute")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetWorkoutRouteResponseObject); ok {
+		if err := validResponse.VisitGetWorkoutRouteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // OauthCallback operation middleware
 func (sh *strictHandler) OauthCallback(w http.ResponseWriter, r *http.Request, provider string, params OauthCallbackParams) {
 	var request OauthCallbackRequestObject
@@ -21626,6 +22909,33 @@ func (sh *strictHandler) OauthCallback(w http.ResponseWriter, r *http.Request, p
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(OauthCallbackResponseObject); ok {
 		if err := validResponse.VisitOauthCallbackResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// OauthStart operation middleware
+func (sh *strictHandler) OauthStart(w http.ResponseWriter, r *http.Request, provider string, params OauthStartParams) {
+	var request OauthStartRequestObject
+
+	request.Provider = provider
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.OauthStart(ctx, request.(OauthStartRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "OauthStart")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(OauthStartResponseObject); ok {
+		if err := validResponse.VisitOauthStartResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

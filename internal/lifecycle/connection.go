@@ -27,6 +27,10 @@ func DeleteConnection(ctx context.Context, q *dbq.Queries, user, id uuid.UUID) (
 	if err := q.MarkConnectionDirty(ctx, dbq.MarkConnectionDirtyParams{ConnectionID: id, SleepCodes: sleepCodes}); err != nil {
 		return nil, err
 	}
+	// Workout files, waveforms and routes are released with their rows.
+	if err := blob.LockShared(ctx, q); err != nil {
+		return nil, err
+	}
 	counts := map[string]int64{}
 	for _, del := range []struct {
 		name string
@@ -41,9 +45,6 @@ func DeleteConnection(ctx context.Context, q *dbq.Queries, user, id uuid.UUID) (
 			return nil, err
 		}
 		counts[del.name] = n
-	}
-	if err := blob.LockShared(ctx, q); err != nil {
-		return nil, err
 	}
 	if err := q.ReleaseConnectionRawBlobs(ctx, id); err != nil {
 		return nil, err

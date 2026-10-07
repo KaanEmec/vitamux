@@ -10,6 +10,7 @@ import { test as labTest, syntheticPdf } from './lab-fake';
 import { test as rulesTest } from './rules-fake';
 import { test as settingsTest } from './settings-fake';
 import { test as viewsTest } from './views-fake';
+import { ecgIds, test as watchTest } from './watch-fake';
 import { test as anonTest } from './fake-api';
 
 /** Waits for the page to settle, then fails on serious or critical axe violations (light and dark). */
@@ -153,6 +154,22 @@ devicesTest('Settings › Devices: pairing code, devices, origins, resync dialog
 	await scan(page, '/settings/devices (resync dialog)');
 });
 
+devicesTest('Settings › Devices › Sources: the source filter and the types dialog', async ({ page }) => {
+	await page.goto('/settings/devices/00000000-0000-4000-8000-0000000000d1/sources');
+	await expect(page.getByRole('article', { name: 'Synthetic Band' })).toBeVisible();
+	await scan(page, '/settings/devices/[id]/sources');
+	await page.getByRole('button', { name: 'Choose types from Synthetic Watch' }).click();
+	await expect(page.getByRole('dialog')).toBeVisible();
+	await scan(page, '/settings/devices/[id]/sources (types dialog)');
+});
+
+dataTest('Explore with ignored sources shown', async ({ page }) => {
+	await page.goto('/explore?origin=com.example.synthetic.band');
+	await page.getByRole('switch', { name: 'Ignored sources' }).check();
+	await expect(page.getByRole('region', { name: 'Ignored sources' }).getByRole('row')).toHaveCount(3);
+	await scan(page, '/explore (ignored sources)');
+});
+
 viewsTest('Specialised views: sleep, blood pressure, body composition, workouts, events, lab analyte', async ({ page }) => {
 	viewsTest.slow(); // many full-page scans in two themes and two widths
 	for (const path of ['/explore/sleep', '/explore/blood-pressure', '/explore/body-composition', '/explore/workouts', '/explore/events', '/lab/analytes/glucose']) {
@@ -164,6 +181,20 @@ viewsTest('Specialised views: sleep, blood pressure, body composition, workouts,
 	for (const path of ['/explore/sleep', '/explore/blood-pressure', '/explore/body-composition', '/explore/workouts', '/explore/events']) {
 		await page.goto(path);
 		if (path.endsWith('sleep')) await page.getByRole('region', { name: 'Nights' }).locator('summary').first().click();
+		await scan(page, `${path} (390 px)`);
+	}
+});
+
+watchTest('Apple Watch views: ECG, beat-to-beat, activity rings, workout route, event families', async ({ page }) => {
+	watchTest.slow(); // many full-page scans in two themes and two widths
+	const paths = ['/explore/ecg', `/explore/ecg/${ecgIds.withWaveform}`, '/explore/beats?date=2026-09-14', '/explore/activity-rings', '/explore/workouts/w-run-apple', '/explore/events'];
+	for (const path of paths) {
+		await page.goto(path);
+		await scan(page, path);
+	}
+	await page.setViewportSize({ width: 390, height: 844 });
+	for (const path of paths) {
+		await page.goto(path);
 		await scan(page, `${path} (390 px)`);
 	}
 });

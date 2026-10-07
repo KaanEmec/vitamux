@@ -1,0 +1,20 @@
+# swift-openapi-generator build plugin config (J22.4). Reads openapi.yaml, a symlink to
+# api/openapi.yaml; nothing generated is committed. The ingest tag is HealthBridgeKit's.
+generate:
+  - types
+  - client
+accessModifier: public
+namingStrategy: idiomatic
+filter:
+  tags:
+    - catalogue
+    - source-data
+    - resolved
+    - rules
+    - system
+    - connections
+    - devices
+    - documents
+    - exports
+    - auth
+    - settings

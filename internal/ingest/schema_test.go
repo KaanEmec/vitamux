@@ -84,6 +84,55 @@ func TestExamplesValidate(t *testing.T) {
 	}
 }
 
+// The schema only grows within v1 (ADR-0014): the v1 normalizer fixtures and the Apple Watch
+// examples of ADR-0024 must both validate, and the new fields keep their required parts.
+func TestHealthKitSamplesSchema(t *testing.T) {
+	s := compile(t, "healthkit-samples.v1.json")
+	v1, err := filepath.Glob("../connectors/applehealth/testdata/healthkit.samples/*.raw.json")
+	if err != nil || len(v1) == 0 {
+		t.Fatalf("v1 fixtures: %v (%d files)", err, len(v1))
+	}
+	watch, err := filepath.Glob(filepath.Join(schemaDir, "examples", "healthkit-samples.v1", "*.json"))
+	if err != nil || len(watch) == 0 {
+		t.Fatalf("watch examples: %v (%d files)", err, len(watch))
+	}
+	for _, name := range append(v1, watch...) {
+		doc, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !schemaValid(t, s, doc) {
+			t.Errorf("%s: rejected by healthkit-samples.v1.json", filepath.Base(name))
+		}
+	}
+	sample0 := func(m map[string]any) map[string]any { return m["samples"].([]any)[0].(map[string]any) }
+	field := func(m map[string]any, k string) map[string]any { return sample0(m)[k].(map[string]any) }
+	bad := map[string]struct {
+		file string
+		f    func(m map[string]any)
+	}{
+		"ecg without voltages":     {"ecg.json", func(m map[string]any) { delete(field(m, "ecg"), "voltages") }},
+		"ecg string voltage":       {"ecg.json", func(m map[string]any) { field(m, "ecg")["voltages"] = []any{"1.0"} }},
+		"beats without gap flags":  {"beats.json", func(m map[string]any) { delete(field(m, "beats"), "preceded_by_gap") }},
+		"route latitude too large": {"route.json", func(m map[string]any) { field(m, "route")["latitude"] = []any{91.0} }},
+		"bad workout uuid":         {"route.json", func(m map[string]any) { sample0(m)["workout_uuid"] = "workout-1" }},
+		"valence above one":        {"state_of_mind.json", func(m map[string]any) { field(m, "state_of_mind")["valence"] = 1.5 }},
+		"summary without date":     {"activity_summary.json", func(m map[string]any) { delete(field(m, "activity_summary"), "date") }},
+		"event without start": {"workout_detail.json", func(m map[string]any) {
+			delete(field(m, "workout")["events"].([]any)[0].(map[string]any), "start")
+		}},
+	}
+	for name, c := range bad {
+		doc, err := os.ReadFile(filepath.Join(schemaDir, "examples", "healthkit-samples.v1", c.file))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if schemaValid(t, s, mutate(t, doc, c.f)) {
+			t.Errorf("%s: accepted by healthkit-samples.v1.json", name)
+		}
+	}
+}
+
 // mutate applies f to a decoded copy of doc and re-encodes it.
 func mutate(t *testing.T, doc []byte, f func(m map[string]any)) []byte {
 	t.Helper()

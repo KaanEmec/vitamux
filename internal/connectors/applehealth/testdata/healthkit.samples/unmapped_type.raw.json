@@ -1,6 +1,6 @@
 {
  "synthetic": true,
- "type": "HKQuantityTypeIdentifierHeartRateVariabilityRMSSD",
+ "type": "HKQuantityTypeIdentifierDietaryIron",
  "anchor": {
   "before_hash": "synthetic-before",
   "after_hash": "synthetic-after",
@@ -12,7 +12,7 @@
    "start": "2026-09-14T12:00:00+02:00",
    "end": "2026-09-14T12:00:00+02:00",
    "value": 42,
-   "unit": "ms",
+   "unit": "mg",
    "source_revision": {
     "bundle_id": "com.apple.health.00000000-0000-4000-8000-0000000000A1",
     "name": "Synthetic Watch",

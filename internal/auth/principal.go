@@ -39,6 +39,9 @@ type Principal struct {
 	UserID uuid.UUID
 	// ID is the session, API key or client row id.
 	ID uuid.UUID
+	// App marks an app session (OwnerSession by bearer vmx_ses_ token): it needs no CSRF
+	// token and has no cookie.
+	App bool
 	// Scopes is set for API keys only; a session holds every owner scope.
 	Scopes []Scope
 	// ConnectionID is the only connection a client token may ingest into.

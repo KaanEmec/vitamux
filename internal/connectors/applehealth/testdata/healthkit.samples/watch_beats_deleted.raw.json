@@ -1,0 +1,15 @@
+{
+ "synthetic": true,
+ "type": "HKDataTypeIdentifierHeartbeatSeries",
+ "anchor": {
+  "before_hash": "synthetic-before",
+  "after_hash": "synthetic-after",
+  "query_started_at": "2026-09-14T21:00:03+02:00"
+ },
+ "samples": [],
+ "deleted": [
+  {
+   "uuid": "6F0D0000-0000-4000-8000-000000000111"
+  }
+ ]
+}

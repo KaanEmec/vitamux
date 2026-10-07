@@ -74,7 +74,8 @@ func (e *env) complete(state, code string) (uuid.UUID, error) {
 	} else {
 		cb.Set("error", "access_denied")
 	}
-	return e.rt.CompleteAuth(context.Background(), Provider, state, binding, cb)
+	id, _, err := e.rt.CompleteAuth(context.Background(), Provider, state, binding, cb)
+	return id, err
 }
 
 func TestOAuthLifecycle(t *testing.T) {
@@ -114,10 +115,10 @@ func TestOAuthLifecycle(t *testing.T) {
 
 	// Foreign browser: wrong binding is refused and does not use up the state.
 	state = e.begin(t, nil)
-	if _, err := e.rt.CompleteAuth(ctx, Provider, state, "other-browser", url.Values{"code": {"x"}}); !errors.Is(err, connectors.ErrAuthState) {
+	if _, _, err := e.rt.CompleteAuth(ctx, Provider, state, "other-browser", url.Values{"code": {"x"}}); !errors.Is(err, connectors.ErrAuthState) {
 		t.Fatalf("foreign binding: %v", err)
 	}
-	if _, err := e.rt.CompleteAuth(ctx, Provider, state+"x", binding, url.Values{"code": {"x"}}); !errors.Is(err, connectors.ErrAuthState) {
+	if _, _, err := e.rt.CompleteAuth(ctx, Provider, state+"x", binding, url.Values{"code": {"x"}}); !errors.Is(err, connectors.ErrAuthState) {
 		t.Fatalf("tampered state: %v", err)
 	}
 

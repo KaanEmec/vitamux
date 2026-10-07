@@ -12,8 +12,8 @@ import (
 	"github.com/KaanEmec/vitamux/internal/db"
 )
 
-// Owner account: password change and session management. Session only, like the rest of
-// the sign-in state: an API key cannot change the password or end browser sessions.
+// Owner account: password change and session management. Session only (browser or app),
+// like the rest of the sign-in state: an API key cannot change the password or end sessions.
 func (rt *router) accountRoutes() {
 	rt.handle("POST /api/v1/auth/password", session, rt.changePassword)
 	rt.handle("GET /api/v1/auth/sessions", session, rt.listSessions)
@@ -56,7 +56,8 @@ func (rt *router) listSessions(w http.ResponseWriter, r *http.Request) {
 	writeJSON(rt.log, w, http.StatusOK, map[string]any{"sessions": sessions})
 }
 
-// revokeSession ends one session; ending the caller's own also clears its cookie.
+// revokeSession ends one browser or app session; ending the caller's own browser session
+// also clears its cookie.
 func (rt *router) revokeSession(w http.ResponseWriter, r *http.Request) {
 	p := auth.PrincipalFrom(r.Context())
 	id, err := uuid.Parse(r.PathValue("id"))
@@ -71,7 +72,7 @@ func (rt *router) revokeSession(w http.ResponseWriter, r *http.Request) {
 	case err != nil:
 		rt.internal(w, r, "revoke session", err)
 	default:
-		if id == p.ID {
+		if id == p.ID && !p.App {
 			http.SetCookie(w, rt.sessionCookie(r, "", -1))
 		}
 		w.WriteHeader(http.StatusNoContent)

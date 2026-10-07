@@ -1,7 +1,8 @@
 <!--
 	One window of the metric detail chart: its resolved value, status and explanation, the rule's
 	inputs with their records (provenance, exclude), and the override actions. The all-sources
-	day view has the full drilldown and the window's overrides.
+	day view has the full drilldown and the window's overrides; an HRV day also opens its
+	beat-to-beat series (J22.18).
 -->
 <script lang="ts">
 	import type { Schemas } from '../api/client.ts';
@@ -13,6 +14,7 @@
 	import Button from '../ui/Button.svelte';
 	import { icons } from '../ui/icons.ts';
 	import { dayLabel } from '../views/format.ts';
+	import { beatCode } from '../watch/watch.ts';
 	import { warningCodes } from './series.ts';
 
 	let {
@@ -72,6 +74,7 @@
 		<button class="btn sm" type="button" disabled={!groups.length} onclick={() => (override = { action: 'force_source', inputId: '' })}>Force a source…</button>
 		<button class="btn sm" type="button" onclick={() => (override = { action: 'set_value', inputId: '' })}>Set a value…</button>
 		<a class="btn ghost sm" href="/explore/{encodeURIComponent(metric)}/day/{date}">All sources and overrides</a>
+		{#if beatCode(metric)}<a class="btn ghost sm" href="/explore/beats?date={date}">Beat-to-beat intervals on this day</a>{/if}
 	</div>
 </section>
 

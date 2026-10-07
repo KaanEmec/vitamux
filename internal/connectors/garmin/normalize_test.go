@@ -1,7 +1,6 @@
 package garmin
 
 import (
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -39,7 +38,7 @@ func TestNormalizersRegister(t *testing.T) {
 func TestFITStaysRaw(t *testing.T) {
 	out, err := Normalizer{StreamActivities}.Normalize(t.Context(),
 		normalize.RawPayload{Stream: StreamActivities, ContentType: "application/zip", Body: []byte("PK\x03\x04synthetic")}, normalize.Env{})
-	if err != nil || !slices.Equal(out.Measurements, nil) || out.Workouts != nil {
+	if err != nil || len(out.Measurements) != 0 || out.Workouts != nil {
 		t.Fatalf("FIT: %+v %v", out, err)
 	}
 }

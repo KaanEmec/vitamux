@@ -6,8 +6,8 @@
 // timestamps in UTC), so the importer can insert it again with jsonb_populate_record and keep
 // ids, timestamps and provenance exactly. Credentials, sessions, API keys, client and webhook
 // token hashes, jobs and cursors are never exported. Optional extras: measurements.csv (format csv: active
-// measurements with catalogue codes, for spreadsheets) and blob_content.ndjson (include_raw:
-// raw payload and workout file content, base64). manifest.json, written last, lists every
+// measurements with catalogue codes, for spreadsheets) and blob_content.ndjson (base64 content of
+// the ECG waveform and route documents, plus with include_raw the raw payloads and workout files). manifest.json, written last, lists every
 // file with its row count and SHA-256, plus the schema version the rows belong to.
 //
 // All reads run in one REPEATABLE READ snapshot and are keyset-paged, so memory stays
@@ -97,7 +97,7 @@ func (m *Manifest) file(name string) (File, bool) {
 }
 
 // Write streams the export zip to w and returns its manifest. blobs may be nil unless
-// o.IncludeRaw.
+// o.IncludeRaw or the owner has waveform or route documents.
 func Write(ctx context.Context, d *db.DB, blobs *blob.Store, w io.Writer, o Options) (*Manifest, error) {
 	if o.Format != FormatNDJSON && o.Format != FormatCSV {
 		return nil, fmt.Errorf("export: unknown format %q", o.Format)
@@ -143,9 +143,22 @@ func Write(ctx context.Context, d *db.DB, blobs *blob.Store, w io.Writer, o Opti
 				return fmt.Errorf("csv: %w", err)
 			}
 		}
-		if o.IncludeRaw {
-			if err := e.file(contentName, e.content); err != nil {
-				return fmt.Errorf("raw content: %w", err)
+		// Waveforms and routes are canonical data, so their documents are exported whether or
+		// not raw content is included.
+		withContent := o.IncludeRaw
+		if !withContent {
+			files, err := q.ExportEventFiles(ctx, dbq.ExportEventFilesParams{UserID: o.UserID, Lim: 1})
+			if err != nil {
+				return err
+			}
+			withContent = len(files) > 0
+		}
+		if withContent {
+			if blobs == nil {
+				return errors.New("export: waveform and route documents need the blob store")
+			}
+			if err := e.file(contentName, func() (int64, error) { return e.content(o.IncludeRaw) }); err != nil {
+				return fmt.Errorf("blob content: %w", err)
 			}
 		}
 		return nil
@@ -299,11 +312,18 @@ func csvUUID(v *uuid.UUID) string {
 	return v.String()
 }
 
-// content writes blob_content.ndjson: one line per raw payload and workout file,
-// {"sha256": "<hex>", "content_base64": "…"}, streamed from the blob store. A blob shared by
-// several rows appears once per row; content the store lacks is counted, not fatal.
-func (e *exporter) content() (int64, error) {
-	_, err := paged(func(after int64) ([]dbq.ExportRawContentRow, error) {
+// content writes blob_content.ndjson: one line per event document (ECG waveform, workout
+// route) and, with raw, per raw payload and workout file, {"sha256": "<hex>", "content_base64":
+// "…"}, streamed from the blob store. A blob shared by several rows appears once per row;
+// content the store lacks is counted, not fatal.
+func (e *exporter) content(raw bool) (int64, error) {
+	_, err := paged(func(after uuid.UUID) ([]dbq.ExportEventFilesRow, error) {
+		return e.q.ExportEventFiles(e.ctx, dbq.ExportEventFilesParams{UserID: e.user, After: after, Lim: pageSize})
+	}, func(r dbq.ExportEventFilesRow) (uuid.UUID, []byte) { return r.ID, r.FileBlobSha256 }, e.blobLine)
+	if err != nil || !raw {
+		return 0, err
+	}
+	_, err = paged(func(after int64) ([]dbq.ExportRawContentRow, error) {
 		return e.q.ExportRawContent(e.ctx, dbq.ExportRawContentParams{UserID: e.user, After: after, Lim: pageSize})
 	}, func(r dbq.ExportRawContentRow) (int64, []byte) { return r.ID, r.ContentSha256 }, e.blobLine)
 	if err != nil {

@@ -17,7 +17,7 @@ DELETE FROM oauth_states o
 USING providers p, sessions s
 WHERE o.id = $1 AND p.id = o.provider_id AND p.code = $2 AND o.expires_at > now()
   AND s.id = o.session_id AND s.expires_at > now()
-RETURNING o.user_id, o.session_id, o.connection_id, o.session
+RETURNING o.user_id, o.session_id, o.connection_id, o.session, o.return_to
 `
 
 type ConsumeOAuthStateParams struct {
@@ -30,6 +30,7 @@ type ConsumeOAuthStateRow struct {
 	SessionID    uuid.UUID
 	ConnectionID *uuid.UUID
 	Session      []byte
+	ReturnTo     string
 }
 
 // Single use: the row is gone after the first callback or continue, whatever happens next. A
@@ -42,6 +43,7 @@ func (q *Queries) ConsumeOAuthState(ctx context.Context, arg ConsumeOAuthStatePa
 		&i.SessionID,
 		&i.ConnectionID,
 		&i.Session,
+		&i.ReturnTo,
 	)
 	return i, err
 }
@@ -102,9 +104,10 @@ func (q *Queries) GetConnectionAccount(ctx context.Context, arg GetConnectionAcc
 
 const insertOAuthState = `-- name: InsertOAuthState :exec
 
-INSERT INTO oauth_states (id, user_id, session_id, provider_id, connection_id, expires_at, session)
-SELECT $1, $2, $3, p.id, $4, $5, $6
-FROM providers p WHERE p.code = $7
+INSERT INTO oauth_states (id, user_id, session_id, provider_id, connection_id, expires_at, session, return_to, ticket_hash, start_url, binding)
+SELECT $1, $2, $3, p.id, $4, $5, $6, $7,
+  $8, $9, $10
+FROM providers p WHERE p.code = $11
 `
 
 type InsertOAuthStateParams struct {
@@ -114,6 +117,10 @@ type InsertOAuthStateParams struct {
 	ConnectionID *uuid.UUID
 	ExpiresAt    time.Time
 	Session      []byte
+	ReturnTo     string
+	TicketHash   []byte
+	StartUrl     *string
+	Binding      []byte
 	Provider     string
 }
 
@@ -126,6 +133,10 @@ func (q *Queries) InsertOAuthState(ctx context.Context, arg InsertOAuthStatePara
 		arg.ConnectionID,
 		arg.ExpiresAt,
 		arg.Session,
+		arg.ReturnTo,
+		arg.TicketHash,
+		arg.StartUrl,
+		arg.Binding,
 		arg.Provider,
 	)
 	return err
@@ -187,5 +198,35 @@ func (q *Queries) UpsertOAuthConnection(ctx context.Context, arg UpsertOAuthConn
 	)
 	var i UpsertOAuthConnectionRow
 	err := row.Scan(&i.ID, &i.Created)
+	return i, err
+}
+
+const useOAuthTicket = `-- name: UseOAuthTicket :one
+UPDATE oauth_states o SET ticket_hash = NULL
+FROM providers p, sessions s
+WHERE o.ticket_hash = $1 AND p.id = o.provider_id AND p.code = $2
+  AND o.created_at > $3 AND o.expires_at > now()
+  AND s.id = o.session_id AND s.expires_at > now()
+RETURNING o.id, o.start_url::text AS start_url, o.binding::bytea AS binding
+`
+
+type UseOAuthTicketParams struct {
+	TicketHash  []byte
+	Provider    string
+	IssuedAfter time.Time
+}
+
+type UseOAuthTicketRow struct {
+	ID       uuid.UUID
+	StartUrl string
+	Binding  []byte
+}
+
+// Single use: the start route clears the ticket; the state row stays for the callback. A
+// ticket issued before @issued_after, of another provider or of an ended session is refused.
+func (q *Queries) UseOAuthTicket(ctx context.Context, arg UseOAuthTicketParams) (UseOAuthTicketRow, error) {
+	row := q.db.QueryRow(ctx, useOAuthTicket, arg.TicketHash, arg.Provider, arg.IssuedAfter)
+	var i UseOAuthTicketRow
+	err := row.Scan(&i.ID, &i.StartUrl, &i.Binding)
 	return i, err
 }

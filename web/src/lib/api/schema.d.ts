@@ -115,6 +115,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ingest/v1/devices/self/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Report the apps the device found in Apple Health
+         * @description The apps (HealthKit sources) that wrote each enabled type, as HKSourceQuery lists them, with the end of each type's newest sample when the device read it. Replaces the previous report. Settings › Devices and the app's Apple Health › Sources screen list them (GET /api/v1/devices/{id}/source-filter). No health values.
+         */
+        put: operations["reportDeviceSources"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ingest/v1/devices/self/rotate-token": {
         parameters: {
             query?: never;
@@ -195,7 +215,7 @@ export interface paths {
         };
         /**
          * Everything stored, per metric, group kind, event code, sleep, workouts and lab analyte
-         * @description One item per kind and code that has active data, with its catalogue metadata. For metrics, first and last seen and the latest value come from the rows; count, days, providers, devices and origins come from the hourly aggregates plus the daily values, so they lag while aggregates_pending is true.
+         * @description One item per kind and code that has active data, with its catalogue metadata. For metrics, first and last seen and the latest value come from the rows; count, days, providers, devices and origins come from the hourly aggregates plus the daily values, so they lag while aggregates_pending is true. include_ignored adds ignored: records an Apple Health source filter left raw (ignored_by_filter), which the items never count.
          */
         get: operations["getInventory"];
         put?: never;
@@ -218,6 +238,26 @@ export interface paths {
          * @description Rows of health_events (alerts and other typed events), ordered by (start_at, id). code filters the event code; the other filters and include work as on /measurements.
          */
         get: operations["listEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/events/{id}/waveform": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the waveform of an ECG recording
+         * @description The vitamux.waveform/1 document of an ecg_recording event, any version (docs/adr/0024-watch-data.md#read-endpoints). The ETag is the document's SHA-256. 404 when the event does not exist or has no waveform.
+         */
+        get: operations["getEventWaveform"];
         put?: never;
         post?: never;
         delete?: never;
@@ -395,6 +435,26 @@ export interface paths {
          * @description Any version, superseded or deleted included, always with its segments.
          */
         get: operations["getWorkout"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/{id}/route": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the route of a workout
+         * @description The vitamux.route/1 document of the workout's route (docs/adr/0024-watch-data.md#read-endpoints): the active workout_route event whose context.workout_uuid is the workout's external id, else one of the same connection and origin inside the workout. Locations are CoreLocation values as given (a negative accuracy, speed or course means invalid). The ETag is the document's SHA-256. 404 when the workout does not exist or has no route.
+         */
+        get: operations["getWorkoutRoute"];
         put?: never;
         post?: never;
         delete?: never;
@@ -711,7 +771,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Build version of the running server */
+        /**
+         * Client handshake and build version of the running server
+         * @description Public, so the app can check a server before sign-in. Two shapes: anyone gets {"product", "api_version", "min_app_version"}; a session or an API key with read:config also gets version and commit. A bearer token that does not verify is still 401.
+         */
         get: operations["getSystemVersion"];
         put?: never;
         post?: never;
@@ -786,7 +849,7 @@ export interface paths {
         put?: never;
         /**
          * Reauthorize a connection (OAuth redirect or credential prompt)
-         * @description Answers the first step: {"redirect_url"} to send the browser to the provider, or {"state", "prompt"} to ask the owner for values and send them to continueProviderAuth. Sets the short-lived browser-binding cookie that the callback and continue need (docs/architecture/connectors.md#oauth-connection-flow). Owner session only, since the state is bound to it.
+         * @description Answers the first step: {"redirect_url"} to send the browser to the provider, or {"state", "prompt"} to ask the owner for values and send them to continueProviderAuth. Sets the short-lived browser-binding cookie that the callback and continue need (docs/architecture/connectors.md#oauth-connection-flow). Owner session only, since the state is bound to it. An app session may send {"return": "app"} (403 for a browser session): a redirect step then points to oauthStart on this server, and the callback returns to vitamux://connections.
          */
         post: operations["beginConnectionAuth"];
         delete?: never;
@@ -1165,7 +1228,7 @@ export interface paths {
         put?: never;
         /**
          * Create a single-use pairing code, valid for 10 minutes
-         * @description At most 5 codes per 10 minutes (429 with Retry-After). 503 without VITAMUX_PUBLIC_URL.
+         * @description At most 5 codes per 10 minutes (429 with Retry-After). 503 without VITAMUX_PUBLIC_URL, except for an app session, which redeems the code itself and gets no url or qr_payload then.
          */
         post: operations["createPairingCode"];
         delete?: never;
@@ -1188,6 +1251,30 @@ export interface paths {
          * @description The device reads the request from GET /api/ingest/v1/devices/self. Re-sent samples are deduplicated by UUID.
          */
         post: operations["requestDeviceAnchorReset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/{id}/source-filter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which apps' Apple Health data the device takes, per app
+         * @description One origin per app the device reported finding in Apple Health, the owner chose for, or the server has seen data from, with its effective mode, the default and why (docs/architecture/apple-health.md#source-filter). Defaults are evaluated on every read.
+         */
+        get: operations["getDeviceSourceFilter"];
+        /**
+         * Replace the owner's take or ignore choices for a device
+         * @description origins lists every explicit choice; an app left out follows its default. With version, the change applies only when it is still the device's version (409 otherwise). An app whose data changes from ignored to taken gets an anchor reset for the types now taken (* when the device has not reported them), and its records held raw on the server are normalized again. Audited as device.source_filter.
+         */
+        put: operations["setDeviceSourceFilter"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1624,8 +1711,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Sign in; sets the session cookie
-         * @description Answers 429 with Retry-After while the username or address is locked out.
+         * Sign in; sets the session cookie, or returns an app session token
+         * @description Answers 429 with Retry-After while the username or address is locked out. With `client: app` it sets no cookie and answers an app session: a bearer token `vmx_ses_<id>_<secret>`, shown in this response only, listed under `device_name`.
          */
         post: operations["login"];
         delete?: never;
@@ -1643,7 +1730,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Sign out and clear the session cookie */
+        /** Sign out (ends the calling browser or app session) */
         post: operations["logout"];
         delete?: never;
         options?: never;
@@ -1658,7 +1745,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Current user and CSRF token */
+        /** Current user and CSRF token (empty for an app session) */
         get: operations["getSession"];
         put?: never;
         post?: never;
@@ -1766,7 +1853,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** End one session (ending the current one also clears its cookie) */
+        /** End one browser or app session (ending the current one also clears its cookie) */
         delete: operations["revokeSession"];
         options?: never;
         head?: never;
@@ -1886,6 +1973,26 @@ export interface paths {
         patch: operations["updateTimezonePeriod"];
         trace?: never;
     };
+    "/oauth/{provider}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * App redirect step; sets the binding cookie in the auth browser and redirects to the provider
+         * @description The redirect_url of a step begun with {"return": "app"}. Authorized by the ticket: single use, valid for 2 minutes, only its SHA-256 stored. Answers 303 to the provider with the browser-binding cookie set, or, for an unknown, used or expired ticket, 303 to vitamux://connections?auth_error=invalid_state|unavailable&provider=<provider>. HEAD answers 200 without side effects. A provider without a connector is 404.
+         */
+        get: operations["oauthStart"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/oauth/{provider}/callback": {
         parameters: {
             query?: never;
@@ -1895,7 +2002,7 @@ export interface paths {
         };
         /**
          * OAuth redirect target; completes the authorization and redirects to the UI
-         * @description Authorized by the signed, single-use `state` and the browser-binding cookie, not by the session. Always answers 303 to /connections?connected=<provider> or /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable&provider=<provider>. HEAD answers 200 without side effects. A provider without a connector is 404.
+         * @description Authorized by the signed, single-use `state` and the browser-binding cookie, not by the session. Always answers 303 to /connections?connected=<provider> or /connections?auth_error=invalid_state|denied|account_mismatch|exchange_failed|unavailable&provider=<provider>; for a state begun with {"return": "app"}, the same query on vitamux://connections. HEAD answers 200 without side effects. A provider without a connector is 404.
          */
         get: operations["oauthCallback"];
         put?: never;
@@ -2437,6 +2544,33 @@ export interface components {
             items: components["schemas"]["InventoryItem"][];
             /** @description Days wait for the rebuild job, so metric counts, days and sources may lag. */
             aggregates_pending: boolean;
+            /** @description With include_ignored: records held raw because a source filter ignores their origin, per item and origin. */
+            ignored?: components["schemas"]["IgnoredItem"][];
+        };
+        IgnoredItem: {
+            /** @enum {string} */
+            kind: "metric" | "group" | "event" | "sleep" | "workouts";
+            /** @description Metric code, group kind, event code, sleep or workouts. */
+            code: string;
+            origin: components["schemas"]["OriginRef"];
+            /** Format: int64 */
+            records: number;
+            /** Format: date-time */
+            first_at: string;
+            /** Format: date-time */
+            last_at: string;
+        };
+        IgnoredSource: {
+            origin: components["schemas"]["OriginRef"];
+            /**
+             * Format: int64
+             * @description Records of the metric overlapping the range
+             */
+            records: number;
+            /** Format: date-time */
+            first_at: string;
+            /** Format: date-time */
+            last_at: string;
         };
         InventoryItem: {
             /** @enum {string} */
@@ -2514,9 +2648,47 @@ export interface components {
             /** @description Source metadata as given. */
             context: Record<string, never>;
             quality_flags: number;
+            /** @description SHA-256 of the event's blob document, when it has one: the waveform of an ecg_recording (GET /events/{id}/waveform) or the route of a workout_route. */
+            file_sha256?: string;
             source: components["schemas"]["SourceRef"];
             provenance: components["schemas"]["RecordProvenance"];
         };
+        /** @description ECG waveform, vitamux.waveform/1 (ADR-0024). Values are the recorded voltages in order, as given. */
+        WaveformDocument: {
+            /** @enum {string} */
+            format: "vitamux.waveform/1";
+            /** Format: date-time */
+            start: string;
+            /** Format: double */
+            sampling_frequency_hz?: number;
+            /** @description µV. */
+            unit: string;
+            /** @description Lead word, e.g. apple_watch_similar_to_lead_i. */
+            lead?: string;
+            values: number[];
+            /** @description Seconds since start per value; only when the spacing is not 1/sampling_frequency_hz. */
+            offsets_s?: number[];
+        };
+        /** @description Workout route, vitamux.route/1 (ADR-0024). Parallel arrays of count entries; CoreLocation values as given (negative accuracy, speed or course = invalid). */
+        RouteDocument: {
+            /** @enum {string} */
+            format: "vitamux.route/1";
+            /** Format: date-time */
+            start: string;
+            count: number;
+            offsets_s: components["schemas"]["Numbers"];
+            latitude: components["schemas"]["Numbers"];
+            longitude: components["schemas"]["Numbers"];
+            altitude_m?: components["schemas"]["Numbers"];
+            ellipsoidal_altitude_m?: components["schemas"]["Numbers"];
+            horizontal_accuracy_m?: components["schemas"]["Numbers"];
+            vertical_accuracy_m?: components["schemas"]["Numbers"];
+            speed_mps?: components["schemas"]["Numbers"];
+            speed_accuracy_mps?: components["schemas"]["Numbers"];
+            course_deg?: components["schemas"]["Numbers"];
+            course_accuracy_deg?: components["schemas"]["Numbers"];
+        };
+        Numbers: number[];
         HealthEventPage: components["schemas"]["PageInfo"] & {
             events: components["schemas"]["HealthEvent"][];
         };
@@ -2532,6 +2704,8 @@ export interface components {
             /** @description Days of the metric in the range wait for the rebuild job (hour and day grains). */
             behind: boolean;
             sources: components["schemas"]["SourceSeriesSource"][];
+            /** @description With include_ignored: origins whose records of the metric in the range are held raw because a source filter ignores them; they have no values. */
+            ignored?: components["schemas"]["IgnoredSource"][];
             /** @description raw: more rows follow next_cursor. */
             has_more?: boolean;
             next_cursor?: string;
@@ -2618,9 +2792,21 @@ export interface components {
             /** @description No layout is stored; this is the curated default. */
             is_default: boolean;
         };
+        /** @description Anonymous shape {"product", "api_version", "min_app_version"}; read:config callers also get version and commit. */
         SystemVersion: {
-            version: string;
-            commit: string;
+            /**
+             * @description Fixed marker that this is a Vitamux server.
+             * @constant
+             */
+            product: "vitamux";
+            /** @description Build version; read:config callers only. */
+            version?: string;
+            /** @description Build commit; read:config callers only. */
+            commit?: string;
+            /** @description Raised on every change that breaks existing clients; an app refuses a server older than the one it needs. */
+            api_version: number;
+            /** @description The oldest Vitamux iOS app version (CFBundleShortVersionString, e.g. 0.4.0) this server supports; an older app warns. */
+            min_app_version: string;
         };
         /** @description Instance diagnostics (docs/architecture/reliability.md#health-logs-metrics). Lists are bounded. */
         SystemStatus: {
@@ -2746,6 +2932,13 @@ export interface components {
             password: string;
             totp_code?: string;
             recovery_code?: string;
+            /**
+             * @description Omitted means `browser`; `app` answers a bearer app session instead of a cookie.
+             * @enum {string}
+             */
+            client?: "browser" | "app";
+            /** @description Required with `client: app`, not allowed otherwise; Settings › Security lists the session under it. */
+            device_name?: string;
         };
         User: {
             /** Format: uuid */
@@ -2755,11 +2948,26 @@ export interface components {
         };
         Session: {
             user: components["schemas"]["User"];
+            /** @description Empty for an app session */
             csrf_token: string;
+        };
+        AppSession: {
+            user: components["schemas"]["User"];
+            /** @description Bearer token `vmx_ses_<id>_<secret>`; shown in this response only. */
+            token: string;
+            /**
+             * Format: date-time
+             * @description Absolute end; the session also ends after VITAMUX_APP_SESSION_IDLE without use.
+             */
+            expires_at: string;
         };
         ActiveSession: {
             /** Format: uuid */
             id: string;
+            /** @enum {string} */
+            kind: "browser" | "app";
+            /** @description The device name of an app session; null for a browser session. */
+            name: string | null;
             /** Format: date-time */
             created_at: string;
             /**
@@ -2769,7 +2977,7 @@ export interface components {
             last_seen_at: string;
             /**
              * Format: date-time
-             * @description Absolute end; the session also ends after 12 h without use.
+             * @description Absolute end; the session also ends without use after 12 h (browser) or VITAMUX_APP_SESSION_IDLE (app).
              */
             expires_at: string;
             /** @description This request's session. */
@@ -2822,6 +3030,8 @@ export interface components {
             selection_only: boolean;
             /** @description The source metric of a derived code (rule extension E2). */
             derived_from?: string;
+            /** @description A raw series (rr_interval): stored and drawn, never resolved, so no windows or strategies. */
+            unresolved?: boolean;
             intraday?: components["schemas"]["Intraday"];
         };
         /** @description A metric's day-view bucket ladder (resolution.md#windows); absent for metrics measured once a day or night. */
@@ -2871,6 +3081,8 @@ export interface components {
             quality_flags: number;
             /** @description Measurement group (blood-pressure reading */
             group_id: string | null;
+            /** @description Source detail kept with the value, when any: an activity-summary goal, move mode and paused flag; the workout_uuid of an effort score. */
+            context?: Record<string, never>;
             source: components["schemas"]["SourceRef"];
             provenance: components["schemas"]["RecordProvenance"];
         };
@@ -3066,8 +3278,11 @@ export interface components {
         };
         WorkoutSegment: {
             seq: number;
-            /** @enum {string} */
-            kind: "lap" | "set" | "interval";
+            /**
+             * @description activity: a leg of a multisport workout; pause: pause to resume; marker: a marker or pause request (HealthKit).
+             * @enum {string}
+             */
+            kind: "lap" | "set" | "interval" | "activity" | "pause" | "marker";
             /** Format: date-time */
             start_at: string;
             /** Format: date-time */
@@ -3428,6 +3643,14 @@ export interface components {
         AuthDone: {
             connection_id: components["schemas"]["ConnectionID"];
         };
+        AuthBeginInput: {
+            /**
+             * @description app (app sessions only) returns to the app through oauthStart and vitamux://connections.
+             * @default browser
+             * @enum {string}
+             */
+            return: "browser" | "app";
+        };
         AuthContinueInput: {
             state: string;
             /** @description The prompt's field values by name; never stored or logged. */
@@ -3659,11 +3882,11 @@ export interface components {
             expires_at: string;
             /**
              * Format: uri
-             * @description The public base URL (VITAMUX_PUBLIC_URL) the app pairs against.
+             * @description The public base URL (VITAMUX_PUBLIC_URL) the app pairs against; omitted without one (app sessions only).
              */
-            url: string;
-            /** @description Text for the QR code: the JSON object {"url", "code"} and nothing else. */
-            qr_payload: string;
+            url?: string;
+            /** @description Text for the QR code: the JSON object {"url", "code"} and nothing else; omitted with url. */
+            qr_payload?: string;
         };
         DevicePairing: {
             /** Format: uuid */
@@ -3679,6 +3902,102 @@ export interface components {
             name: string;
             /** @description Every reset the owner requested, kept by the server. Apply those whose requested_at is after the last reset applied for that type (* covers every type). */
             anchor_resets: components["schemas"]["AnchorReset"][];
+            source_filter: components["schemas"]["SourceFilter"];
+        };
+        /** @description The owner's explicit choice for one app in Apple Health. */
+        SourceFilterChoice: {
+            /** @description The HealthKit source's bundle id (the origin_key). */
+            bundle_id: string;
+            /** @description The app's name as Apple Health shows it. */
+            name?: string;
+            mode: components["schemas"]["SourceFilterMode"];
+            /** @description per_type: the HealthKit types taken (the others are ignored). Dropped for take and ignore. */
+            types?: string[];
+        };
+        /** @enum {string} */
+        SourceFilterMode: "take" | "ignore" | "per_type";
+        /** @description Origins ignored by default because the provider they relay is connected directly. */
+        SourceFilterDefault: {
+            /** @description A SQL LIKE pattern over bundle ids (% any run, _ one character, backslash escapes). */
+            origin_pattern: string;
+            /** @description The directly connected provider's code */
+            provider: string;
+            provider_name: string;
+        };
+        /** @description What the device applies (docs/architecture/apple-health.md#source-filter). For an app, the first that matches decides: an explicit choice for its bundle id, then for its parent app (a Watch extension's bundle id minus .watchkitapp, .watchkitextension and similar); Apple's own sources (com.apple.*) are taken by default; a default_ignore pattern matching the bundle id or the parent's ignores it; anything else is taken. */
+        SourceFilter: {
+            /** @description Incremented on every change of the explicit choices. */
+            version: number;
+            origins: components["schemas"]["SourceFilterChoice"][];
+            default_ignore: components["schemas"]["SourceFilterDefault"][];
+        };
+        SourceFilterUpdate: {
+            /** @description Apply only when the device's filter is still at this version. */
+            version?: number;
+            origins: components["schemas"]["SourceFilterChoice"][];
+        };
+        SourceFilterView: {
+            /** Format: uuid */
+            device_id: string;
+            version: number;
+            /**
+             * Format: date-time
+             * @description When the device last reported the apps it found in Apple Health.
+             */
+            sources_reported_at: string | null;
+            origins: components["schemas"]["SourceFilterOrigin"][];
+            default_ignore: components["schemas"]["SourceFilterDefault"][];
+        };
+        /** @description One app in Apple Health and what the device takes from it. */
+        SourceFilterOrigin: {
+            bundle_id: string;
+            name: string | null;
+            mode: components["schemas"]["SourceFilterMode"];
+            /** @description per_type: the types taken. */
+            types: string[];
+            /** @description The owner chose the mode; defaults never change it. */
+            explicit: boolean;
+            /** @enum {string} */
+            default_mode: "take" | "ignore";
+            /**
+             * @description native: Apple's own source; direct_connection: the provider it relays is connected directly, so its copy would count twice.
+             * @enum {string|null}
+             */
+            default_reason: "native" | "direct_connection" | null;
+            /** @description direct_connection: the provider code. */
+            reason_provider: string | null;
+            reason_provider_name: string | null;
+            /**
+             * Format: uuid
+             * @description The data origin once the server has seen data from the app.
+             */
+            origin_id: string | null;
+            /**
+             * @description The origin's classification (Settings › Devices).
+             * @enum {string}
+             */
+            classification: "native" | "relayed" | "direct";
+            relayed_provider: string | null;
+            /** @description The types the device found the app writing, with the newest sample's end; empty when not reported. */
+            writes: components["schemas"]["SourceType"][];
+            /**
+             * Format: int64
+             * @description Records from the app held raw on the server because a filter ignored them.
+             */
+            ignored_records: number;
+        };
+        SourceType: {
+            type: string;
+            /** Format: date-time */
+            last_sample_at?: string;
+        };
+        DeviceSourcesReport: {
+            sources: components["schemas"]["DeviceSource"][];
+        };
+        DeviceSource: {
+            bundle_id: string;
+            name?: string;
+            types: components["schemas"]["SourceType"][];
         };
         /** @description A stored lab PDF. A deleted document keeps only its id, status, sizes and times. */
         Document: {
@@ -4154,6 +4473,8 @@ export interface components {
         ConnectionFilter: components["schemas"]["ConnectionID"][];
         /** @description Device id (dev_…); repeatable. */
         DeviceFilter: components["schemas"]["DeviceID"][];
+        /** @description Also list the records an Apple Health source filter left raw (ignored_by_filter), per origin. They are never values: nothing was normalized from them. */
+        IncludeIgnored: boolean;
         /** @description Origin key (e.g. a HealthKit bundle id); repeatable. */
         OriginFilter: string[];
         /** @description Measurement kind; repeatable. */
@@ -4337,6 +4658,31 @@ export interface operations {
             403: components["responses"]["Problem"];
         };
     };
+    reportDeviceSources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeviceSourcesReport"];
+            };
+        };
+        responses: {
+            /** @description Stored. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
     rotateDeviceToken: {
         parameters: {
             query?: never;
@@ -4436,7 +4782,10 @@ export interface operations {
     };
     getInventory: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Also list the records an Apple Health source filter left raw (ignored_by_filter), per origin. They are never values: nothing was normalized from them. */
+                include_ignored?: components["parameters"]["IncludeIgnored"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -4505,6 +4854,34 @@ export interface operations {
             422: components["responses"]["Problem"];
         };
     };
+    getEventWaveform: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The waveform document. */
+            200: {
+                headers: {
+                    /** @description SHA-256 of the document, hex in quotes. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaveformDocument"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
     getSourceSeries: {
         parameters: {
             query: {
@@ -4513,6 +4890,8 @@ export interface operations {
                 start: string;
                 end: string;
                 grain?: "30s" | "1m" | "5m" | "15m" | "30m" | "raw" | "hour" | "day";
+                /** @description Also list the records an Apple Health source filter left raw (ignored_by_filter), per origin. They are never values: nothing was normalized from them. */
+                include_ignored?: components["parameters"]["IncludeIgnored"];
                 /** @description Page size. Endpoints may cap it lower than 10,000. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Opaque next_cursor from the previous page of the same query. */
@@ -4857,6 +5236,34 @@ export interface operations {
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+        };
+    };
+    getWorkoutRoute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The route document. */
+            200: {
+                headers: {
+                    /** @description SHA-256 of the document, hex in quotes. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RouteDocument"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     getProvenance: {
@@ -5389,7 +5796,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Version. */
+            /** @description Handshake, with the build for read:config callers. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -5399,7 +5806,6 @@ export interface operations {
                 };
             };
             401: components["responses"]["Problem"];
-            403: components["responses"]["Problem"];
         };
     };
     listJobs: {
@@ -5577,7 +5983,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AuthBeginInput"];
+            };
+        };
         responses: {
             /** @description Next step. */
             200: {
@@ -5592,6 +6002,7 @@ export interface operations {
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
         };
     };
@@ -5604,7 +6015,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AuthBeginInput"];
+            };
+        };
         responses: {
             /** @description Next step. */
             200: {
@@ -5617,6 +6032,7 @@ export interface operations {
             };
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
         };
     };
@@ -6276,6 +6692,62 @@ export interface operations {
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getDeviceSourceFilter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The device's source filter. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceFilterView"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    setDeviceSourceFilter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceFilterUpdate"];
+            };
+        };
+        responses: {
+            /** @description The device's source filter after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceFilterView"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
         };
     };
@@ -7031,13 +7503,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Signed in. */
+            /** @description Signed in: a browser session, or an app session with `client: app`. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Session"];
+                    "application/json": components["schemas"]["Session"] | components["schemas"]["AppSession"];
                 };
             };
             401: components["responses"]["Problem"];
@@ -7531,6 +8003,36 @@ export interface operations {
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+        };
+    };
+    oauthStart: {
+        parameters: {
+            query?: {
+                ticket?: string;
+            };
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description HEAD probe. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description To the provider, or back to the app with the error. */
+            303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["Problem"];
         };
     };
     oauthCallback: {

@@ -50,6 +50,8 @@ ADRs are written during implementation (J01.1 and the owning jobs).
 | ADR-010 | Frontend | SvelteKit static SPA embedded via `go:embed` | No extra container; Node only at build time |
 | ADR-020 | Charts | LayerChart behind our own chart kit, lazy-loaded | [ADR-0022](../adr/0022-layerchart.md) |
 | ADR-021 | Source setup | Provider apps and panel sidecars sealed in PostgreSQL, the environment wins, a setup state per provider; no Docker socket | [ADR-0021](../adr/0021-source-setup.md) |
+| ADR-023 | iOS app | Native SwiftUI, iPhone only, replaces Bridge; two packages and one app target; bearer app sessions; fixed `vitamux://` OAuth return | [ADR-0023](../adr/0023-ios-app.md) |
+| ADR-024 | Apple Watch data | Registry v2 through the iPhone, optional fields within `healthkit.samples.v1`, existing tables, sensitive groups opt-in | [ADR-0024](../adr/0024-watch-data.md) |
 | ADR-011 | Secrets | Master key file, HKDF purposes, AES-256-GCM, single-flight token refresh | [security.md](security.md#keys-and-secrets) |
 | ADR-012 | License | MIT + DCO (decided 2026-10-03) | Simplest permissive license; compatible with every planned dependency |
 | ADR-013 | Extraction | Provider interface, consent model, no interpretation | [ADR-0013](../adr/0013-extraction-consent.md), [lab-documents.md](lab-documents.md) |

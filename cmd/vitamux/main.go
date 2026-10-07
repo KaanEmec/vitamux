@@ -139,7 +139,9 @@ func serve(stderr io.Writer) int {
 	}
 	var authSvc *auth.Service // nil without a key: sign-in fails closed
 	if keyErr == nil {
-		authSvc, keyErr = auth.New(db.New(pool), keys)
+		if authSvc, keyErr = auth.New(db.New(pool), keys); keyErr == nil {
+			authSvc.SetAppSessionLifetimes(cfg.AppSessionIdle, cfg.AppSessionMax)
+		}
 	}
 	if keyErr != nil {
 		log.Error("master key", "err", keyErr) // /readyz reports it as not loaded

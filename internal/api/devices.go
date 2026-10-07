@@ -145,20 +145,30 @@ func anchorResets(raw json.RawMessage) ([]oapi.AnchorReset, error) {
 	return out, nil
 }
 
+// CreatePairingCode needs VITAMUX_PUBLIC_URL for the QR, except for an app session: the app
+// redeems the code itself against the server it is signed in to, so without a public URL the
+// answer has no url and no qr_payload (J22.3).
 func (o *owner) CreatePairingCode(ctx context.Context, _ oapi.CreatePairingCodeRequestObject) (oapi.CreatePairingCodeResponseObject, error) {
-	if o.opts.PublicURL == nil {
+	p := auth.PrincipalFrom(ctx)
+	if o.opts.PublicURL == nil && !p.App {
 		return nil, problemErr(CodeUnavailable, "pairing needs VITAMUX_PUBLIC_URL, the address devices reach Vitamux at")
 	}
-	pc, err := o.opts.Auth.CreatePairingCode(ctx, auth.PrincipalFrom(ctx))
+	pc, err := o.opts.Auth.CreatePairingCode(ctx, p)
 	if err != nil {
 		return nil, err
+	}
+	out := oapi.CreatePairingCode201JSONResponse{Code: pc.Code, ExpiresAt: pc.ExpiresAt}
+	if o.opts.PublicURL == nil {
+		return out, nil
 	}
 	base := o.opts.PublicURL.String()
 	qr, err := json.Marshal(map[string]string{"url": base, "code": pc.Code})
 	if err != nil {
 		return nil, err
 	}
-	return oapi.CreatePairingCode201JSONResponse{Code: pc.Code, ExpiresAt: pc.ExpiresAt, URL: base, QrPayload: string(qr)}, nil
+	qrs := string(qr)
+	out.URL, out.QrPayload = &base, &qrs
+	return out, nil
 }
 
 func (o *owner) RequestDeviceAnchorReset(ctx context.Context, req oapi.RequestDeviceAnchorResetRequestObject) (oapi.RequestDeviceAnchorResetResponseObject, error) {
@@ -270,7 +280,7 @@ func (rt *router) pairDevice(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// deviceSelf answers the calling device's configuration.
+// deviceSelf answers the calling device's configuration: anchor resets and the source filter.
 func (rt *router) deviceSelf(w http.ResponseWriter, r *http.Request) {
 	if rt.opts.DB == nil {
 		writeProblem(w, r, CodeUnavailable, "ingest is unavailable")
@@ -286,8 +296,13 @@ func (rt *router) deviceSelf(w http.ResponseWriter, r *http.Request) {
 		rt.internal(w, r, "device self", err)
 		return
 	}
+	filter, err := deviceSourceFilter(r.Context(), rt.opts.DB.Q(), c)
+	if err != nil {
+		rt.internal(w, r, "device self", err)
+		return
+	}
 	writeJSON(rt.log, w, http.StatusOK, map[string]any{"device_id": c.ID, "connection_id": ingest.FormatConnectionID(c.ConnectionID),
-		"name": c.Name, "anchor_resets": resets})
+		"name": c.Name, "anchor_resets": resets, "source_filter": filter})
 }
 
 // rotateDeviceToken replaces the caller's token; the old one is invalid from now on.

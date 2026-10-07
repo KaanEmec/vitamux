@@ -2,6 +2,7 @@
 	Workouts (J21.9): a month calendar and the month's workouts as clusters. Workouts that overlap
 	in time are listed together, one row per source, so duplicates across sources are visible; the
 	rule's pick is marked (GET /resolved/workouts). Pick a day in the calendar to list only that day.
+	Each row opens the workout as its source recorded it: route and laps (workouts/[id], J22.18).
 -->
 <script lang="ts">
 	import { api, type Problem, type Schemas } from '#lib/api/client.ts';
@@ -84,7 +85,7 @@
 								<thead>
 									<tr>
 										<th scope="col">Source</th><th scope="col">Duration</th><th scope="col" class="num">Distance</th>
-										<th scope="col" class="num">Energy</th><th scope="col" class="num">Avg / max HR</th><th scope="col">Rule</th><th scope="col">Provenance</th>
+										<th scope="col" class="num">Energy</th><th scope="col" class="num">Avg / max HR</th><th scope="col">Rule</th><th scope="col">Details</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -96,7 +97,8 @@
 											<td class="num">{num(m.energy_kcal, 'kcal')}</td>
 											<td class="num">{num(m.avg_hr_bpm)} / {num(m.max_hr_bpm)} bpm</td>
 											<td><Badge tone={m.selected ? 'accent' : 'neutral'}>{ruleTag(m)}</Badge></td>
-											<td>
+											<td class="details">
+												<a href="/explore/workouts/{m.id}">Route and laps<span class="visually-hidden"> of {memberLabel(m)} workout</span></a>
 												<button class="btn link" type="button" onclick={() => (provenanceId = m.id)}>
 													Provenance<span class="visually-hidden"> of {memberLabel(m)} workout</span>
 												</button>
@@ -176,6 +178,9 @@
 	}
 	.num {
 		text-align: right;
+	}
+	.details a {
+		margin-right: var(--space-3);
 	}
 	.explain {
 		margin: var(--space-3) 0 0;

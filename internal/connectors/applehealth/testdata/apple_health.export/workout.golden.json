@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "normalizer": "apple_health.export",
-  "version": 1,
+  "version": 2,
   "output": {
     "devices": [
       {

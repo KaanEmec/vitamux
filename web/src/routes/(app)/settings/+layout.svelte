@@ -1,6 +1,6 @@
 <!--
 	Settings section: one h1, the pages grouped in a side menu (a scrolling row on narrow screens),
-	the current page's h2, and the page itself: a short intro and a stack of cards
+	the current page's h2 (a nested page sets its own), and the page itself: a short intro and a stack of cards
 	(lib/settings/Card.svelte). Pages set their own <title>. The form, table and notice styles
 	below apply to every card in the section.
 -->
@@ -13,6 +13,8 @@
 	const groups = [...new Set(settingsPages.map((p) => p.group))].map((name) => ({ name, items: settingsPages.filter((p) => p.group === name) }));
 	const path = $derived(page.url.pathname.replace(/\/$/, '') || '/');
 	const current = $derived(settingsPages.find((p) => p.href === path));
+	/** A nested page (such as a device's sources) highlights the page it belongs to and sets its own h2. */
+	const section = $derived(current ?? settingsPages.find((p) => p.href !== '/settings' && path.startsWith(`${p.href}/`)));
 </script>
 
 <h1>Settings</h1>
@@ -24,7 +26,7 @@
 				<p class="group-name" id="settings-group-{g.name}">{g.name}</p>
 				<ul aria-labelledby="settings-group-{g.name}">
 					{#each g.items as p (p.href)}
-						<li><a href={p.href} aria-current={p.href === path ? 'page' : undefined}>{p.label}</a></li>
+						<li><a href={p.href} aria-current={p === current ? 'page' : p === section ? 'true' : undefined}>{p.label}</a></li>
 					{/each}
 				</ul>
 			</div>
@@ -77,7 +79,7 @@
 		color: var(--color-text);
 		background: var(--color-surface-2);
 	}
-	.menu a[aria-current='page'] {
+	.menu a[aria-current] {
 		font-weight: 600;
 		color: var(--color-text);
 		background: var(--color-selected);

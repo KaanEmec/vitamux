@@ -117,6 +117,14 @@ type Client struct {
 	RevokedAt    *time.Time
 	// Device anchor resets the owner requested: HealthKit type identifier (or * for every type) to the latest request time. The device applies those newer than the last it applied.
 	AnchorResets json.RawMessage
+	// Device source filter: the owner's explicit choices {"origins": [{"bundle_id", "name", "mode": take|ignore|per_type, "types"}]}; per_type takes only the listed HealthKit types.
+	SourceFilter json.RawMessage
+	// Incremented on every change of source_filter; the device and PUT preconditions read it.
+	SourceFilterVersion int32
+	// The apps the device last found in Apple Health: [{"bundle_id", "name", "types": [{"type", "last_sample_at"}]}]. No health values.
+	HealthSources json.RawMessage
+	// When the device last reported health_sources.
+	HealthSourcesAt *time.Time
 }
 
 type Connection struct {
@@ -299,6 +307,8 @@ type HealthEvent struct {
 	SupersededBy        *uuid.UUID
 	DeletedAt           *time.Time
 	DeletedByRawID      *int64
+	// Blob document of the event, if any: an ECG waveform (vitamux.waveform/1) or a workout route (vitamux.route/1). One blobs.refcount reference per row.
+	FileBlobSha256 []byte
 }
 
 // First successful response per (client, Idempotency-Key), replayed for the same request; another request with the key is a conflict.
@@ -312,6 +322,20 @@ type IdempotencyKey struct {
 	// Batch or blob receipt: ids, external keys and outcomes; never payload bodies.
 	ResponseBody []byte
 	CreatedAt    time.Time
+}
+
+// Records of a raw payload that were not normalized because the device's source filter ignores their origin (ignored_by_filter). The raw payload keeps them; normalizing it again after a take rewrites these rows.
+type IgnoredRecord struct {
+	RawPayloadID int64
+	OriginID     uuid.UUID
+	UserID       uuid.UUID
+	// What the records would have been, as in the inventory: metric, group, event, sleep or workouts; item_code is the metric, group kind or event code.
+	ItemKind string
+	ItemCode string
+	Reason   string
+	Records  int32
+	FirstAt  time.Time
+	LastAt   time.Time
 }
 
 // Items already imported, so re-running an importer skips them.
@@ -552,6 +576,8 @@ type Measurement struct {
 	SupersededBy        *int64
 	DeletedAt           *time.Time
 	DeletedByRawID      *int64
+	// Source detail kept with the value, e.g. an activity-summary goal or the workout of an effort score; null when none.
+	Context []byte
 }
 
 // Readings taken together (blood pressure, weigh-ins); components are measurements with group_id.
@@ -606,6 +632,14 @@ type OauthState struct {
 	CreatedAt    time.Time
 	// Opaque connector continuation (e.g. a PKCE verifier or a login session), sealed by internal/crypto (purpose credentials, AAD auth-session:<id>). Never sent to the browser; rows live minutes, so key rotation skips them.
 	Session []byte
+	// Where the callback sends the owner: the panel (browser) or the app (vitamux://connections).
+	ReturnTo string
+	// SHA-256 of the start ticket of an app redirect step; cleared when GET /oauth/{provider}/start uses it (single use).
+	TicketHash []byte
+	// Provider URL the start route redirects to.
+	StartUrl *string
+	// Browser binding the start route sets as cookie, sealed by internal/crypto (purpose credentials, AAD auth-binding:<id>). Rows live minutes, so key rotation skips them.
+	Binding []byte
 }
 
 // Short-lived, single-use codes a device exchanges for a client token at POST /api/ingest/v1/devices/pair. Only the code's SHA-256 is stored.
@@ -736,7 +770,7 @@ type Schedule struct {
 	Mode string
 }
 
-// Server-side UI sessions; the cookie holds the token, the row only its SHA-256.
+// Owner sessions: browser (cookie token) or app (bearer vmx_ses_ token, named after the device). The row keeps only a SHA-256.
 type Session struct {
 	ID         uuid.UUID
 	UserID     uuid.UUID
@@ -744,6 +778,9 @@ type Session struct {
 	CreatedAt  time.Time
 	LastSeenAt time.Time
 	ExpiresAt  time.Time
+	Kind       string
+	// Device name the app sent at sign-in; NULL for browser sessions.
+	Name *string
 }
 
 // Owner settings as key/value.
@@ -907,8 +944,9 @@ type Workout struct {
 type WorkoutSegment struct {
 	WorkoutID uuid.UUID
 	Seq       int32
-	Kind      string
-	StartAt   time.Time
-	EndAt     *time.Time
-	Data      json.RawMessage
+	// lap, set or interval; activity (a leg of a multisport workout), pause (pause to resume) and marker (HealthKit).
+	Kind    string
+	StartAt time.Time
+	EndAt   *time.Time
+	Data    json.RawMessage
 }

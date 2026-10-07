@@ -349,7 +349,7 @@ func (q *Queries) InventoryRecords(ctx context.Context, userID uuid.UUID) ([]Inv
 
 const readEvents = `-- name: ReadEvents :many
 SELECT x.id, x.code, x.start_at, x.end_at, x.tz_offset_min, x.local_date, x.value, x.level, x.context, x.quality_flags,
-  p.code AS provider, x.connection_id, x.device_id, d.device_type, o.origin_key, x.external_id, x.dedupe_key,
+  x.file_blob_sha256, p.code AS provider, x.connection_id, x.device_id, d.device_type, o.origin_key, x.external_id, x.dedupe_key,
   x.raw_payload_id, nv.name AS normalizer_name, nv.version AS normalizer_version, x.ingested_at, x.normalized_at,
   x.superseded_at, COALESCE(x.superseded_by::text, '')::text AS superseded_by, x.deleted_at, x.deleted_by_raw_id
 FROM health_events x
@@ -403,6 +403,7 @@ type ReadEventsRow struct {
 	Level             *string
 	Context           json.RawMessage
 	QualityFlags      int32
+	FileBlobSha256    []byte
 	Provider          string
 	ConnectionID      uuid.UUID
 	DeviceID          *uuid.UUID
@@ -457,6 +458,7 @@ func (q *Queries) ReadEvents(ctx context.Context, arg ReadEventsParams) ([]ReadE
 			&i.Level,
 			&i.Context,
 			&i.QualityFlags,
+			&i.FileBlobSha256,
 			&i.Provider,
 			&i.ConnectionID,
 			&i.DeviceID,

@@ -2,7 +2,8 @@
 	All-sources drilldown for one metric and local day (the day view of the metric page): the resolved result and why, an overlay
 	of every source's series (the Day chart for metrics with `intraday`, else each source's records),
 	which sources the rule used, excluded or ignored, the rule's inputs with their records
-	(provenance chain, exclusion) and the day's overrides.
+	(provenance chain, exclusion) and the day's overrides. "Ignored sources" (off by default) lists the
+	origins a device's source filter left raw on the day (lib/explore/IgnoredSources.svelte, J22.25).
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
@@ -13,10 +14,13 @@
 	import ProvenanceDialog, { type ProvenanceEntity } from '#lib/components/ProvenanceDialog.svelte';
 	import ResultStatus from '#lib/components/ResultStatus.svelte';
 	import StatusIcon, { type Status } from '#lib/components/StatusIcon.svelte';
-	import { formatValue, metricLabel } from '#lib/data/format.ts';
+	import { addDays, formatValue, metricLabel } from '#lib/data/format.ts';
 	import { readAll } from '#lib/data/paging.ts';
 	import type { Series } from '#lib/charts/types.ts';
 	import DayChart from '#lib/explore/DayChart.svelte';
+	import IgnoredSources from '#lib/explore/IgnoredSources.svelte';
+	import { zonedInstant } from '#lib/settings/tz.ts';
+	import Switch from '#lib/ui/Switch.svelte';
 	import Skeleton from '#lib/ui/Skeleton.svelte';
 
 	type Source = Schemas['SourcesDrilldown']['sources'][number];
@@ -41,6 +45,11 @@
 	let loadingChart = $state(true);
 	let meta = $state<Schemas['Metric'] | null>(null);
 	const intraday = $derived(meta?.intraday ? { ...meta, intraday: meta.intraday } : null);
+
+	let showIgnored = $state(false);
+	/** The local day as instants, once the person's timezone is known (UTC until then). */
+	const dayStart = $derived((timezone && zonedInstant(`${date}T00:00`, timezone)) || `${date}T00:00:00Z`);
+	const dayEnd = $derived((timezone && zonedInstant(`${addDays(date, 1)}T00:00`, timezone)) || `${addDays(date, 1)}T00:00:00Z`);
 
 	let overrideDialog = $state<{ action: OverrideAction; inputId: string } | null>(null);
 	let provenance = $state<{ entity: ProvenanceEntity; id: string } | null>(null);
@@ -282,6 +291,8 @@
 	{:else if !sourcesProblem}
 		<p class="muted">No sources.</p>
 	{/if}
+	<Switch label="Ignored sources" hint="Records a device’s source filter left raw on this day. They are kept, not used." bind:checked={showIgnored} />
+	{#if showIgnored}<IgnoredSources {metric} start={dayStart} end={dayEnd} />{/if}
 </section>
 
 {#if result?.inputs?.length}

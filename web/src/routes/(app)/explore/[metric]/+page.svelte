@@ -11,6 +11,10 @@
 	When nothing resolved but sources have values, their own series are drawn with a note why.
 	Metrics with `intraday` add a Day range (1D) with a date stepper: the Day chart (DayChart) zooms
 	through the bucket ladder; a day on the longer ranges drills into it.
+	"Ignored sources" (off by default) lists the origins whose records a device's source filter left
+	raw in the range (lib/explore/IgnoredSources.svelte, J22.25); they never reach the chart.
+	Activity-summary codes link to the activity rings, HRV codes and rr_interval to the beat-to-beat
+	view (J22.18).
 	Query: ?range=1D|1W|1M|3M|1Y|All&end=YYYY-MM-DD (shareable).
 -->
 <script lang="ts">
@@ -25,6 +29,7 @@
 	import type { Series } from '#lib/charts/types.ts';
 	import { addDays, datesDescending, isDate, metricLabel, today } from '#lib/data/format.ts';
 	import DayChart from '#lib/explore/DayChart.svelte';
+	import IgnoredSources from '#lib/explore/IgnoredSources.svelte';
 	import MetricStats from '#lib/explore/MetricStats.svelte';
 	import PointPanel from '#lib/explore/PointPanel.svelte';
 	import { Pins } from '#lib/explore/pins.svelte.ts';
@@ -41,6 +46,7 @@
 	import { sourceClass } from '#lib/ui/source.ts';
 	import { displayStatus } from '#lib/ui/status.ts';
 	import { dayLabel, dayMs, mean as meanOf } from '#lib/views/format.ts';
+	import { beatCode, ringCodes } from '#lib/watch/watch.ts';
 
 	type Resolved = Schemas['ResolvedValue'];
 	type Days = Record<string, Resolved | undefined>;
@@ -79,6 +85,7 @@
 	let showBaseline = $state(true);
 	let shownSources = $state<string[]>([]);
 	let compare = $state(false);
+	let showIgnored = $state(false);
 	let lensOpen = $state(false);
 	let draft = $state<Draft | null>(null);
 	let selected = $state<string | null>(null);
@@ -150,16 +157,21 @@
 	const from = $derived(rangeStart(range, end) ?? trend?.buckets[0]?.start_date ?? null);
 	const dates = $derived(range === 'All' || !from ? [] : datesDescending(from, end).reverse());
 
+	/** Whole local days with a day of margin either side, within the endpoint's ten years. */
+	const sourceSpan = $derived.by(() => {
+		if (!from) return null;
+		const first = from < addDays(end, -3655) ? addDays(end, -3655) : from;
+		return { start: `${addDays(first, -1)}T00:00:00Z`, end: `${addDays(end, 2)}T00:00:00Z` };
+	});
+
 	$effect(() => {
-		const [m, s, e] = [metric, from, end];
+		const [m, s, e, q] = [metric, from, end, sourceSpan];
 		sources = null;
 		sourcesProblem = null;
-		if (!s) return;
-		// Whole local days with a day of margin either side, within the endpoint's ten years.
-		const first = s < addDays(e, -3655) ? addDays(e, -3655) : s;
+		if (!s || !q) return;
 		void api
 			.GET('/api/v1/sources/series', {
-				params: { query: { metric: m, start: `${addDays(first, -1)}T00:00:00Z`, end: `${addDays(e, 2)}T00:00:00Z`, grain: 'day' } }
+				params: { query: { metric: m, start: q.start, end: q.end, grain: 'day' } }
 			})
 			.then((res) => {
 				if (m !== metric || s !== from || e !== end) return;
@@ -376,6 +388,10 @@
 		<p class="muted">Readings are paired with their other values in the <a href="/explore/blood-pressure">blood pressure view</a>.</p>
 	{:else if view === 'sleep'}
 		<p class="muted">Stages and nights side by side are in the <a href="/explore/sleep">sleep view</a>.</p>
+	{:else if ringCodes.includes(metric)}
+		<p class="muted">Each day against Apple’s goal is in the <a href="/explore/activity-rings">activity rings view</a>.</p>
+	{:else if beatCode(metric)}
+		<p class="muted">The beat-to-beat intervals behind HRV readings are in the <a href="/explore/beats?date={end}">beat-to-beat view</a>.</p>
 	{/if}
 
 	<div class={['layout', lensOpen && 'with-lens']} style:--metric={look.color}>
@@ -396,6 +412,7 @@
 					{#if !fallback}
 						<button type="button" class={['chip', !prefs.sourceStrip && 'dashed']} aria-pressed={prefs.sourceStrip} onclick={toggleSourceStrip}>{range === '1D' ? 'Source per bucket' : 'Source per day'}</button>
 					{/if}
+					<button type="button" class={['chip', !showIgnored && 'dashed']} aria-pressed={showIgnored} onclick={() => (showIgnored = !showIgnored)}>Ignored sources</button>
 					<span class="muted small span">{range === '1D' ? 'Drag on the chart to zoom in' : `${spanText}${resolved && !bars ? ' · drag on the chart to zoom' : ''}`}</span>
 				</div>
 
@@ -466,6 +483,9 @@
 					{/await}
 				{:else if !seriesProblem}
 					<EmptyState title="No values in this range" text="Choose a longer range, or check the sources on the Connections page." />
+				{/if}
+				{#if showIgnored && sourceSpan}
+					<IgnoredSources {metric} start={sourceSpan.start} end={sourceSpan.end} />
 				{/if}
 			</section>
 

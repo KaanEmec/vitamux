@@ -16,7 +16,7 @@ Adding a code means appending it to `internal/catalog` in the job that needs it 
 - **Intraday resolution is catalogue metadata**, planned in [J22.26](../plan/E22-ios-app/J22.26-intraday-views.md) and built in [E26](../plan/E26-intraday-views/README.md): `intraday {default, finest}` per metric, set by aggregation (high-frequency intensive 1 min → 30 s and raw; sparse intensive 5 min → raw; additive 30 min → 1 min; `daily_summary`, `latest`, `sleep_derived` and nightly codes none). Clients pick the bucket from the visible span and never draw a source finer than it was sent; no metric has its own chart code.
 - **Calculated values are never stored as measurements.** BMI, MAP, pulse pressure, time-in-range, GMI and sleep debt come from resolution or views. A value the *provider* reports (e.g., BMI from a scale) is stored as-is with its origin.
 - **Canonical units** use SI-style units, kept readable: s for durations, m for distances, kg, kcal, °C, mmol/L, % (0–100). The source value and unit are kept whenever conversion changed the value ([data-model.md](data-model.md#measurements)).
-- **Phase:** codes marked below are not implemented yet; the J07.1 seed (`v1`, MVP), the Apple bridge codes (J15.2) and the mapping codes of [J25.1](../plan/E25-catalogue-mappings/J25.1-policy-ledger-seed.md) (Apple HK activity, audio, mobility and respiratory types, segmental body composition, ECG intervals, nightly and provider-scoped codes) are implemented and listed in [metrics.md](../metrics.md). `J08.6` = Withings activity and sleep (post-MVP) · `later` = backlog, added with the first connector that needs it. A connector that needs a code not yet in the catalogue adds it in its own job.
+- **Phase:** codes marked below are not implemented yet; the J07.1 seed (`v1`, MVP), the Apple bridge codes (J15.2), the mapping codes of [J25.1](../plan/E25-catalogue-mappings/J25.1-policy-ledger-seed.md) (Apple HK activity, audio, mobility and respiratory types, segmental body composition, ECG intervals, nightly and provider-scoped codes) and the Apple Watch codes of [ADR-0024](../adr/0024-watch-data.md) ([J22.17](../plan/E22-ios-app/J22.17-watch-normalizer.md)) are implemented and listed in [metrics.md](../metrics.md). `J08.6` = Withings activity and sleep (post-MVP) · `later` = backlog, added with the first connector that needs it. A connector that needs a code not yet in the catalogue adds it in its own job.
 - **Withings `meastype` codes** were verified against the official `getmeas` reference in [J08.1](../providers/withings.md#assumptions-checked). Measures outside `bp_reading` and `body_composition` (SpO2, temperature, VO2max) are stored as plain samples.
 
 Kinds: `S` sample · `I` interval · `C` cumulative · `D` daily_value. Aggregation values are defined in [resolution.md](resolution.md#within-source-aggregation). HK ids omit the `HKQuantityTypeIdentifier` / `HKCategoryTypeIdentifier` prefix. W = Withings `meastype`.
@@ -27,11 +27,7 @@ Kinds: `S` sample · `I` interval · `C` cumulative · `D` daily_value. Aggregat
 | --- | --- | --- | --- | --- | --- | --- |
 | `cadence_steps` | steps/min | S | intensive 5 min | | | later |
 
-## Heart and circulation
-
-| Code | Unit | Kinds | Aggregation | Apple HK | W | Phase |
-| --- | --- | --- | --- | --- | --- | --- |
-| `rr_interval` | s | S | raw series, not resolved | HKHeartbeatSeriesSample | | later |
+E22 ([J22.17](../plan/E22-ios-app/J22.17-watch-normalizer.md)) extended implemented codes: `hrv_rmssd` takes HK HeartRateVariabilityRMSSD (iOS 27); `active_energy`, `move_time`, `exercise_time` and `stand_hours` take Apple's activity-summary daily values with the goal, move mode and paused flag in the row's `context`, so `move_time` gained the `D` kind. `rr_interval` (beat-to-beat intervals) is a raw series: stored and drawn, never resolved (`Unresolved` in the catalogue: no rule, windows or strategies).
 
 ## Blood pressure (group `bp_reading`)
 
@@ -107,9 +103,9 @@ Sleep vitals (HR, HRV, respiratory rate, SpO2, temperature) use the regular code
 A workout is an event. Its scalar fields are columns or segment `data`, not catalogue codes:
 
 - Session: sport (canonical and provider), start/end, duration, moving time, distance, energy, average and max HR, elevation, route file, planned workout reference.
-- Segments: laps, splits, intervals, strength sets (exercise, reps, weight), swim lengths (stroke, SWOLF).
+- Segments: laps, splits, intervals, strength sets (exercise, reps, weight), swim lengths (stroke, SWOLF); for HealthKit also multisport activities, pauses and markers (E22).
 - Zones: time in HR, power and pace zones, with zone bounds stored as given by the provider.
-- Provider effort and load: HK WorkoutEffortScore / EstimatedWorkoutEffortScore, training load, TSS, intensity factor and normalized power are stored as provider-namespaced fields in segment `data`.
+- Provider effort and load: HK WorkoutEffortScore and EstimatedWorkoutEffortScore are the codes `apple_workout_effort` and `apple_workout_effort_estimated` (linked by the measurement's `context.workout_uuid`). Training load, TSS, intensity factor and normalized power are stored as provider-namespaced fields in segment `data`.
 
 ## Provider-namespaced scores
 
@@ -132,18 +128,13 @@ Implemented with their connectors ([J18.4](../plan/E18-garmin/J18.4-normalizers.
 
 ## Events
 
-These are typed events with a value or level, not numbers that can be resolved. **Decided in [ADR-0014](../adr/0014-healthkit-contract.md): one `health_events` table** (code, start/end, level or value, context), not one table per family. Implemented codes are in [metrics.md](../metrics.md#events) (`internal/catalog/events.go`); the rows below are not implemented yet. Implemented ([J25.2](../plan/E25-catalogue-mappings/J25.2-withings-measures.md)): `afib_ecg_result` (W 130) and `afib_ppg_result` (W 139), the Withings AFib category (0 to 13) as level.
+These are typed events with a value or level, not numbers that can be resolved. **Decided in [ADR-0014](../adr/0014-healthkit-contract.md): one `health_events` table** (code, start/end, level or value, context), not one table per family. Implemented codes are in [metrics.md](../metrics.md#events) (`internal/catalog/events.go`); the rows below are not implemented yet. Implemented ([J25.2](../plan/E25-catalogue-mappings/J25.2-withings-measures.md)): `afib_ecg_result` (W 130) and `afib_ppg_result` (W 139), the Withings AFib category (0 to 13) as level. Implemented ([J22.17](../plan/E22-ios-app/J22.17-watch-normalizer.md), [ADR-0024](../adr/0024-watch-data.md)): `ecg_recording` (waveform document), `irregular_rhythm_alert`, `workout_route` (route document), the 18 cycle-tracking codes, `mindful_session`, `state_of_mind`, `handwashing` and the 39 `symptom_<name>` codes; HealthKit metadata stays in `context`.
 
 | Family | Codes | Sources | Phase |
 | --- | --- | --- | --- |
-| ECG recording | `ecg_recording` (waveform blob, classification, average HR) | HKElectrocardiogram; Withings heart list (no job yet) | later |
-| Rhythm results | `irregular_rhythm_alert` | HK IrregularHeartRhythmEvent | later |
-| Cycle tracking | `menstrual_flow`, `intermenstrual_bleeding`, `ovulation_test`, `pregnancy_test`, `progesterone_test`, `cervical_mucus`, `sexual_activity`, `contraceptive`, `pregnancy`, `lactation`, cycle-deviation alerts | HK categories with the same names | later |
-| Mind | `mindful_session`, `state_of_mind` (valence, labels) | HK MindfulSession, HKStateOfMind | later |
-| Hygiene | `handwashing`, `toothbrushing` | HK HandwashingEvent, ToothbrushingEvent | later |
-| Symptoms (`symptom_<name>`, severity level) | abdominal_cramps, acne, appetite_changes, bladder_incontinence, bloating, breast_pain, chest_tightness_or_pain, chills, constipation, coughing, diarrhea, dizziness, dry_skin, fainting, fatigue, fever, generalized_body_ache, hair_loss, headache, heartburn, hot_flashes, loss_of_smell, loss_of_taste, lower_back_pain, memory_lapse, mood_changes, nausea, night_sweats, pelvic_pain, rapid_pounding_or_fluttering_heartbeat, runny_nose, shortness_of_breath, sinus_congestion, skipped_heartbeat, sleep_changes, sore_throat, vaginal_dryness, vomiting, wheezing | HK symptom categories | later |
-| Medication | `medication_dose` | HKMedicationDoseEvent; manual entry | later |
-| Clinical records | allergies, conditions, immunizations, procedures (FHIR resources kept raw) | HK clinical records | later |
+| Hygiene | `toothbrushing` | HK ToothbrushingEvent | later |
+| Medication | `medication_dose` | HKMedicationDoseEvent; manual entry | later (outside ADR-0024: per-medication authorization) |
+| Clinical records | allergies, conditions, immunizations, procedures (FHIR resources kept raw) | HK clinical records | later (outside ADR-0024: needs the Health Records capability) |
 
 ## Open questions and decisions
 

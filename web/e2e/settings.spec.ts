@@ -123,6 +123,8 @@ test('security: change the password, then sign out one and all other sessions', 
 	await page.goto('/settings/security');
 	await expect(page.getByRole('row')).toHaveCount(4); // header plus three sessions
 	await expect(page.getByRole('cell', { name: 'This browser' })).toBeVisible();
+	await expect(page.getByRole('cell', { name: 'App · Synthetic iPhone', exact: true })).toBeVisible();
+	await expect(page.getByRole('button', { name: /^Sign out App · Synthetic iPhone session from/ })).toBeVisible();
 
 	await page.getByLabel('Current password').fill('wrong-synthetic-password');
 	await page.getByLabel('New password').fill('synthetic-password-renewed');
@@ -138,7 +140,7 @@ test('security: change the password, then sign out one and all other sessions', 
 	settings.sessions.push({ ...settings.sessions[0], id: '00000000-0000-4000-8000-0000000000c4', current: false },
 		{ ...settings.sessions[0], id: '00000000-0000-4000-8000-0000000000c5', current: false });
 	await page.reload();
-	await page.getByRole('button', { name: /^Sign out session from/ }).first().click();
+	await page.getByRole('button', { name: /^Sign out .+ session from/ }).first().click();
 	await expect(page.getByText('Session signed out.')).toBeVisible();
 	await expect(page.getByRole('row')).toHaveCount(3);
 	await page.getByRole('button', { name: 'Sign out other sessions' }).click();

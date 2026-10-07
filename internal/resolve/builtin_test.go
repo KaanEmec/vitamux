@@ -43,6 +43,11 @@ func TestEveryMetricHasBuiltinOrIsExempt(t *testing.T) {
 	for _, m := range catalog.Metrics() {
 		code := m.Code
 		switch {
+		case m.Unresolved: // a raw series: no rule at all
+			if _, has := LookupBuiltin(code); has {
+				t.Errorf("%s is never resolved, so it has no built-in", code)
+			}
+			continue
 		case m.Agg == catalog.SleepDerived:
 			code = FamilySleep
 		case m.Group == "bp_reading":

@@ -76,9 +76,12 @@ type Metric struct {
 	// has no rows of its own: resolution computes it from the source metric's series with a
 	// window statistic, so it has no Kinds and only the night windows.
 	DerivedFrom string
-	HK          string // HealthKit identifier without prefix
-	Withings    string // meastype
-	Since       int    // seed migration marker (SeedV1 when 0); a code added later takes a new one
+	// Unresolved marks a raw series (rr_interval): stored and drawn like other metrics, but no
+	// rule resolves it, so it has no windows or strategies.
+	Unresolved bool
+	HK         string // HealthKit identifier without prefix
+	Withings   string // meastype
+	Since      int    // seed migration marker (SeedV1 when 0); a code added later takes a new one
 }
 
 // BaseBucket is the bucket size for within-source aggregation: 5 minutes for sample and
@@ -98,7 +101,7 @@ type Intraday struct{ Default, Finest string }
 // dense lists the intensive codes sent seconds apart. Other intensive codes arrive a minute or
 // more apart (SpO2, respiration, temperature, HRV, stress, glucose, gait), so their view starts coarser.
 var dense = []string{"heart_rate", "physical_effort", "power_cycling", "power_running", "cadence_cycling",
-	"speed_cycling", "speed_running", "speed_rowing", "speed_paddle",
+	"speed_cycling", "speed_running", "speed_rowing", "speed_paddle", "speed_xc_ski",
 	"running_ground_contact_time", "running_stride_length", "running_vertical_oscillation"}
 
 // Intraday returns the day-view ladder by aggregation class; ok is false for metrics measured
@@ -119,6 +122,9 @@ func (m Metric) Intraday() (in Intraday, ok bool) {
 
 // Windows lists the window kinds a rule may use for this metric.
 func (m Metric) Windows() []Window {
+	if m.Unresolved {
+		return nil
+	}
 	if m.DerivedFrom != "" {
 		return []Window{WindowLocalNight, WindowSleepEpisode}
 	}
@@ -145,6 +151,9 @@ func (m Metric) Windows() []Window {
 // additive data (and the rule must still acknowledge the duplicate risk); mean, min and max
 // are rejected for provider-scoped scores and selection-only metrics; event_priority applies to sleep episodes only.
 func (m Metric) Strategies() []Strategy {
+	if m.Unresolved {
+		return nil
+	}
 	s := []Strategy{SingleSource, FirstAvailable}
 	if m.Poolable() {
 		s = append(s, Mean, Min, Max)

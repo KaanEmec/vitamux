@@ -62,3 +62,11 @@ go run ./tools/fixturegen labpdf     # -seed 42 -out fixtures/generated/lab -tru
 Twelve synthetic blood-test reports from invented labs and `SYNTHETIC PATIENT nn` placeholders (date of birth `0000-00-00`), with values drawn from the seed within the printed range, a few pushed outside it so printed flags appear. The PDFs (hand-written PDF 1.4, Helvetica text layer, `.synthetic` sidecars) go to the git-ignored `fixtures/generated/lab/`. Committed in `fixtures/lab/`: one ground truth per report in the extraction contract ([lab-documents#extracted-row-schema-v1](../docs/architecture/lab-documents.md#extracted-row-schema-v1)) and `manifest.json` with each PDF's sha256, layout, features and the [analyte-catalog](../docs/architecture/analyte-catalog.md) code per row (`null` = unknown analyte). `tools/fixturegen/labpdf_test.go` regenerates and compares, so the manifest pins the PDFs. `fixtures/lab/lab.go` embeds the ground truth for the `fake` extractor, which answers by PDF sha256.
 
 Coverage: table, inline, stacked and two-panel layouts; Letter and A4; mg/dL and SI units, HbA1c in % and mmol/mol, Lp(a) in mg/dL and nmol/L, D-dimer in µg/mL FEU; comparators `<`, `>`, `≤` in results and ranges; upper- or lower-only ranges; German labels with decimal comma; US, ISO, German and ambiguous `dd/mm` dates; qualitative results and a titre; row-level specimen; multi-page (2 and 3 pages); `lab-10` is scanned (1-bit image, no text layer) with one smudged, unreadable result; unknown analytes in `lab-04`, `lab-08`, `lab-11`.
+
+## Chart grammar
+
+`chart-grammar.json` (hand-written, catalogue metadata only): `GET /metrics` entries with the chart view and Day-view bucket each should get. Checked by the panel (`web/e2e/chart-grammar.spec.ts`) and VitamuxKit (`ChartsTests`), so the two grammars cannot drift ([J22.6](../docs/plan/E22-ios-app/J22.6-chart-kit.md)).
+
+## Rule model
+
+`rule-model.json` (generated from the panel's `web/src/lib/rules/rule.ts` and `sentence.ts`, catalogue-free): builder forms, the exact rule JSON each saves and its plain sentence, including every rule in `internal/resolve/testdata/valid`. Checked by the panel (`web/e2e/rule-model.spec.ts`) and VitamuxKit (`RuleModelTests`), so a rule saved on the phone is byte-identical to the same rule saved in the panel ([J22.10](../docs/plan/E22-ios-app/J22.10-rules.md)).

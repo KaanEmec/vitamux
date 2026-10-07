@@ -1,0 +1,13 @@
+{
+  "synthetic": true,
+  "normalizer": "healthkit.samples",
+  "version": 4,
+  "output": {
+    "series_tombstones": [
+      {
+        "metric": "rr_interval",
+        "external_id": "6F0D0000-0000-4000-8000-000000000111"
+      }
+    ]
+  }
+}

@@ -8,7 +8,7 @@ COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 LDFLAGS := -s -w -X github.com/KaanEmec/vitamux/internal/version.Version=$(VERSION) -X github.com/KaanEmec/vitamux/internal/version.Commit=$(COMMIT)
 COMPOSE := docker compose -f deploy/compose/compose.dev.yaml
 
-.PHONY: help dev services migrate services-down web-install web-build build test test-integration test-e2e-stack redaction-audit vulncheck sqlc openapi lint fixtures fixture-guard golden fuzz notices notices-check image upgrade-test changelog clean
+.PHONY: help dev services migrate services-down web-install web-build build test test-integration test-e2e-stack test-ios test-ios-stack redaction-audit vulncheck sqlc openapi lint fixtures fixture-guard golden fuzz notices notices-check image upgrade-test changelog clean
 
 help: ## Show targets
 	@grep -hE '^[a-z0-9-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -46,6 +46,12 @@ test-integration: services ## Integration tests against dev PostgreSQL
 test-e2e-stack: services web-build ## Real-stack Playwright smoke on a throwaway database (needs psql, chromium)
 	scripts/e2e-stack.sh
 
+test-ios: ## iOS app on a throwaway simulator: build, UI suite on the fake server, accessibility audits, log scan, budgets (needs Xcode, xcodegen)
+	apple/VitamuxApp/scripts/ui-gates.sh
+
+test-ios-stack: services ## iOS app against a real server on a throwaway database with synthetic data, on a throwaway simulator
+	scripts/ios-stack.sh
+
 redaction-audit: services ## Sentinel secrets and health values through a real stack; fails on any hit in logs, metrics, DB or export
 	scripts/redaction-audit.sh
 
@@ -56,9 +62,10 @@ vulncheck: ## Known-vulnerability scan: Go (govulncheck, reachable code) and npm
 sqlc: ## Regenerate internal/db/dbq from migrations and queries
 	go tool sqlc generate
 
-openapi: web-install ## Regenerate Go server types and the TS client from api/openapi.yaml
+openapi: web-install ## Regenerate Go server types, the TS client and VitamuxKit's spec copy from api/openapi.yaml
 	go tool oapi-codegen -config internal/api/oapi/config.yaml api/openapi.yaml
 	npm --prefix web run openapi
+	apple/VitamuxKit/copy-openapi.sh
 
 lint: web-install ## Go and web linters
 	golangci-lint run ./...

@@ -2,6 +2,33 @@
 
 Newest first. Before a final release, `scripts/release-notes.sh --changelog vX.Y.Z` adds its section from the Conventional Commits since the previous final tag; edit it and add upgrade notes under "Breaking changes" before tagging. The release workflow refuses a final tag without its section and uses it as the release notes. Release candidates are described on their GitHub releases only.
 
+## Unreleased (v0.4.0)
+
+The Vitamux iOS app ([E22](docs/plan/E22-ios-app/README.md), [ADR-0023](docs/adr/0023-ios-app.md)) and Apple Watch data ([ADR-0024](docs/adr/0024-watch-data.md)). Not released yet: the device campaign and the release are [J22.23](docs/plan/E22-ios-app/J22.23-device-campaign-release.md).
+
+### iOS app
+
+- **Sign-in** to any Vitamux server with password and TOTP or a recovery code; a bearer app session, listed and ended in Settings › Security; optional Face ID or passcode lock.
+- **Panel parity:** dashboard, Explore and metric detail with overrides and provenance, the specialised views, rules with the rule lens and builder, Sources with connect and guided setup, Lab with review, and every Settings page ([parity matrix](docs/architecture/ios-app.md#parity-matrix)).
+- **Charts** in Swift Charts with the panel's grammar (one shared fixture), a "Show as table" fallback everywhere, and a Day view that zooms to 30-second buckets and raw readings.
+- **Apple Health** sync inside the app, replacing Vitamux Bridge (an installed Bridge upgrades in place), with one-tap pairing and take or ignore per Health app and type.
+- **Phone extras:** widgets (redacted while locked), an offline read cache, local notifications without health values, and lab PDFs from the camera or Files.
+- **Design:** one token file and a few shared components, light and dark ([ios-design](docs/architecture/ios-design.md)).
+
+### Apple Watch
+
+- Type registry v2: ECG, beat-to-beat series, workout routes and segments, activity summaries, cycle tracking, symptoms and State of Mind; sensitive groups stay off until turned on.
+- ECG strips, beat-to-beat plots, activity rings against Apple's goals and workout routes, in the app and the panel; nothing is interpreted.
+
+### Server and API
+
+- App sessions (`POST /auth/login` with `client: app`) and the native OAuth return (`/oauth/{provider}/start`).
+- `GET /events/{id}/waveform`, `GET /workouts/{id}` and `GET /workouts/{id}/route`; `GET`/`PUT /devices/{id}/source-filter`; `GET /system/version` without sign-in.
+
+### Quality
+
+- CI builds the app and widget, runs both Swift packages' tests and the UI suite on the fake server, an accessibility audit per screen, the privacy log scan and performance budgets; a stack smoke runs the app against a real server.
+
 ## v0.3.1 (2026-10-05)
 
 Resolution defaults and visible data ([E24](docs/plan/E24-resolution-visibility/README.md)), catalogue completeness and mapping corrections ([E25](docs/plan/E25-catalogue-mappings/README.md)), and intraday Day views ([E26](docs/plan/E26-intraday-views/README.md)).
@@ -44,24 +71,24 @@ No data is removed. Migrations 00032-00041 run on start. Upgrade steps:
 
 1. Pull the new core and sidecar images (`vitamux`, `vitamux-sidecar-garmin`, `vitamux-sidecar-whoop`; the sidecars share the core's tag, or `:stable`). Garmin and WHOOP need the new images for their new streams.
 2. Reconnect Withings for the new scope, then run its new streams' backfills.
-3. Renormalize stored data, one line per normalizer whose version changed (Apple Health 2 to 3, Withings measures 1 to 3, WHOOP and Garmin below):
+3. Renormalize stored data (add `--wait` to see each result; on Coolify use `docker exec <vitamux container> /vitamux …`), one line per normalizer whose version changed (Apple Health 2 to 3, Withings measures 1 to 3, WHOOP and Garmin below):
 
    ```sh
-   vitamux reprocess --normalizer healthkit.samples
-   vitamux reprocess --stream withings.measures
-   vitamux reprocess --stream whoop.heart_rate
-   vitamux reprocess --stream whoop.cycles
-   vitamux reprocess --stream whoop.sleep
-   vitamux reprocess --stream whoop.workouts
-   vitamux reprocess --stream whoop.strain_deep_dive
-   vitamux reprocess --stream garmin.daily_summary
-   vitamux reprocess --stream garmin.steps
-   vitamux reprocess --stream garmin.sleep
-   vitamux reprocess --stream garmin.hrv
-   vitamux reprocess --stream garmin.spo2
-   vitamux reprocess --stream garmin.training
-   vitamux reprocess --stream garmin.body_composition
-   vitamux reprocess --stream garmin.activities
+   docker compose exec vitamux /vitamux reprocess --normalizer healthkit.samples
+   docker compose exec vitamux /vitamux reprocess --stream withings.measures
+   docker compose exec vitamux /vitamux reprocess --stream whoop.heart_rate
+   docker compose exec vitamux /vitamux reprocess --stream whoop.cycles
+   docker compose exec vitamux /vitamux reprocess --stream whoop.sleep
+   docker compose exec vitamux /vitamux reprocess --stream whoop.workouts
+   docker compose exec vitamux /vitamux reprocess --stream whoop.strain_deep_dive
+   docker compose exec vitamux /vitamux reprocess --stream garmin.daily_summary
+   docker compose exec vitamux /vitamux reprocess --stream garmin.steps
+   docker compose exec vitamux /vitamux reprocess --stream garmin.sleep
+   docker compose exec vitamux /vitamux reprocess --stream garmin.hrv
+   docker compose exec vitamux /vitamux reprocess --stream garmin.spo2
+   docker compose exec vitamux /vitamux reprocess --stream garmin.training
+   docker compose exec vitamux /vitamux reprocess --stream garmin.body_composition
+   docker compose exec vitamux /vitamux reprocess --stream garmin.activities
    ```
 
 4. Built-in rule versions changed: steps, distance and active energy `:4` (no gates), heart rate `:3` (WHOOP above Garmin), resting heart rate nocturnal `:3` and sleep `:3` (no coverage gates); total energy is new (`:1`, follows active energy). Rules you edited keep their copy and are untouched; open Rules to compare or reset to the new default.

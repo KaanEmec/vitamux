@@ -1,8 +1,9 @@
 package api
 
 import (
-	"bytes"
+	"encoding/json"
 	"log/slog"
+	"maps"
 	"net/http"
 	"testing"
 
@@ -12,44 +13,54 @@ import (
 	"github.com/KaanEmec/vitamux/internal/version"
 )
 
-// TestSystemVersionContract exercises the generated strict server behind rt.handle: access
-// is enforced and the response matches the spec.
+// TestSystemVersionContract exercises the generated strict server behind rt.handle: the
+// handshake is public, the build is for read:config callers only, and both shapes match the spec.
 func TestSystemVersionContract(t *testing.T) {
 	rt, err := newRouter(slog.New(slog.DiscardHandler), newUITestFS(), Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	const pattern = "GET /api/v1/system/version"
-	call := func(p *auth.Principal) *http.Response {
-		req := request(t, http.MethodGet, "/api/v1/system/version", nil)
-		if p != nil {
-			req = req.WithContext(auth.WithPrincipal(req.Context(), p))
-		}
-		return serve(t, rt.mux, req)
-	}
 	key := func(s ...auth.Scope) *auth.Principal {
 		return &auth.Principal{Kind: auth.APIKey, UserID: uuid.New(), ID: uuid.New(), Scopes: s}
 	}
-
-	res := call(key(auth.ReadConfig))
-	if res.StatusCode != http.StatusOK || res.Header.Get("Cache-Control") != "no-store" {
-		t.Fatalf("read:config key: %d, Cache-Control %q", res.StatusCode, res.Header.Get("Cache-Control"))
+	handshake := map[string]any{"product": "vitamux", "api_version": float64(version.APIVersion), "min_app_version": version.MinAppVersion}
+	full := map[string]any{"version": version.Version, "commit": version.Commit}
+	maps.Copy(full, handshake)
+	tests := []struct {
+		name string
+		p    *auth.Principal
+		want map[string]any
+	}{
+		{"anonymous", nil, handshake},
+		{"read:health key", key(auth.ReadHealth), handshake},
+		{"client token", &auth.Principal{Kind: auth.Client, ConnectionID: uuid.New()}, handshake},
+		{"read:config key", key(auth.ReadConfig), full},
+		{"session", &auth.Principal{Kind: auth.OwnerSession, UserID: uuid.New()}, full},
+		{"app session", &auth.Principal{Kind: auth.OwnerSession, App: true, UserID: uuid.New()}, full},
 	}
-	if body := checkResponse(t, pattern, res); !bytes.Contains(body, []byte(`"version":"`+version.Version+`"`)) {
-		t.Fatalf("body %s lacks the version", body)
-	}
-	if res := call(&auth.Principal{Kind: auth.OwnerSession, UserID: uuid.New()}); res.StatusCode != http.StatusOK {
-		t.Fatalf("session: %d", res.StatusCode)
-	}
-	for name, p := range map[string]*auth.Principal{
-		"read:health key": key(auth.ReadHealth),
-		"client token":    {Kind: auth.Client, ConnectionID: uuid.New()},
-		"anonymous":       nil,
-	} {
-		res := call(p)
-		if res.StatusCode != http.StatusUnauthorized && res.StatusCode != http.StatusForbidden {
-			t.Errorf("%s: %d", name, res.StatusCode)
-		}
-		checkResponse(t, pattern, res)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := request(t, http.MethodGet, "/api/v1/system/version", nil)
+			if tt.p != nil {
+				req = req.WithContext(auth.WithPrincipal(req.Context(), tt.p))
+			}
+			res := serve(t, rt.mux, req)
+			if res.StatusCode != http.StatusOK || res.Header.Get("Cache-Control") != "no-store" {
+				t.Fatalf("%d, Cache-Control %q", res.StatusCode, res.Header.Get("Cache-Control"))
+			}
+			var got map[string]any
+			if err := json.Unmarshal(checkResponse(t, pattern, res), &got); err != nil {
+				t.Fatal(err)
+			}
+			if len(got) != len(tt.want) {
+				t.Fatalf("body %v, want %v", got, tt.want)
+			}
+			for k, v := range tt.want {
+				if got[k] != v {
+					t.Fatalf("body %v, want %v", got, tt.want)
+				}
+			}
+		})
 	}
 }
