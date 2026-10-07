@@ -18,7 +18,8 @@ from datetime import datetime
 
 path, dash, chart = sys.argv[1], float(sys.argv[2]), float(sys.argv[3])
 budgets = {"dashboardReady": dash, "chartRender": chart}
-minimum = {"dashboardReady": 2, "chartRender": 4}
+# One dashboard interval is enough: a hosted runner's simulator log keeps the latest spans only.
+minimum = {"dashboardReady": 1, "chartRender": 4}
 open_, spans = {}, {name: [] for name in budgets}
 for line in open(path):
     if not line.startswith("{"):
