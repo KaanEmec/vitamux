@@ -135,7 +135,8 @@ final class ConnectionDetailUITests: XCTestCase {
         let app = open(Self.withings, tab: "backfills")
         let status = app.element("backfillStatus-withings.measures")
         XCTAssertTrue(status.waitForExistence(timeout: 10))
-        waitForLabel(status, containing: "done", timeout: 30)
+        // The fake advances one unit per 5-second poll: eight units take about 40 s before margin.
+        waitForLabel(status, containing: "done", timeout: 90)
         waitForLabel(app.element("backfillProgress-withings.measures"), containing: "8 of 8 units done")
 
         app.buttons["newBackfill"].tap()
