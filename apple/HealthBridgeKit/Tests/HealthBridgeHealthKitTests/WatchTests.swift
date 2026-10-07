@@ -220,10 +220,14 @@ final class WatchTests: XCTestCase {
 
     func testTwelveHourRouteIsSentAloneUnderTheServerLimit() async throws {
         let n = 12 * 3600
-        let locations = (0..<n).map { i in
-            CLLocation(coordinate: CLLocationCoordinate2D(latitude: Double(i % 997) * 1e-6, longitude: Double(i % 991) * 1e-6),
-                       altitude: 1.5, horizontalAccuracy: 4, verticalAccuracy: 3, course: Double(i % 360), courseAccuracy: 5,
-                       speed: 3, speedAccuracy: 0.4, timestamp: t0 + Double(i))
+        let locations: [CLLocation] = (0..<n).map { i in
+            let latitude: Double = Double(i % 997) * 1e-6
+            let longitude: Double = Double(i % 991) * 1e-6
+            let course: Double = Double(i % 360)
+            let timestamp: Date = t0.addingTimeInterval(Double(i))
+            return CLLocation(coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
+                              altitude: 1.5, horizontalAccuracy: 4, verticalAccuracy: 3, course: course, courseAccuracy: 5,
+                              speed: 3, speedAccuracy: 0.4, timestamp: timestamp)
         }
         let sample = placeholderSample(start: t0, end: t0 + Double(n))
         let h = Harness()
