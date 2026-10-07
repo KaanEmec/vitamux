@@ -1,6 +1,6 @@
 # ADR-0024 Apple Watch data contract: registry v2, optional payload fields, existing tables
 
-Status: Proposed (accepted once the owner reviews it) · Date: 2026-10-05 · Deciders: owner
+Status: Accepted (2026-10-07) · Date: 2026-10-05 · Deciders: owner
 
 ## Context
 [E22](../plan/E22-ios-app/README.md) brings in everything Apple Watch records. There is no watchOS app: the Watch writes into the iPhone's Health store, and the app reads it through HealthBridgeKit under the frozen `healthkit.samples.v1` contract ([ADR-0014](0014-healthkit-contract.md)). The kit ([J22.16](../plan/E22-ios-app/J22.16-watch-kit.md)) and the normalizer ([J22.17](../plan/E22-ios-app/J22.17-watch-normalizer.md)) are built in parallel, so the types, bytes and storage are fixed here first ([J22.15](../plan/E22-ios-app/J22.15-watch-data-contract.md)). Background: [ios-app › Apple Watch](../architecture/ios-app.md#apple-watch), [apple-health](../architecture/apple-health.md).

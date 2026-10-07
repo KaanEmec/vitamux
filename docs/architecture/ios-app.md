@@ -1,6 +1,6 @@
 # Vitamux iOS app
 
-This document is for epic [E22](../plan/E22-ios-app/README.md). Its structural decisions are recorded in [ADR-0023](../adr/0023-ios-app.md) (proposed until the owner accepts it); the Apple Watch data contract is [ADR-0024](../adr/0024-watch-data.md) ([J22.15](../plan/E22-ios-app/J22.15-watch-data-contract.md)), also proposed. Screens and deep links: [ios-app-screens](ios-app-screens.md). Visual design: [ios-design](ios-design.md) (stock SwiftUI restyled through one token file and a few shared components, [J22.24](../plan/E22-ios-app/J22.24-design-pass.md)).
+This document is for epic [E22](../plan/E22-ios-app/README.md). Its structural decisions are recorded in [ADR-0023](../adr/0023-ios-app.md) (accepted 2026-10-07); the Apple Watch data contract is [ADR-0024](../adr/0024-watch-data.md) ([J22.15](../plan/E22-ios-app/J22.15-watch-data-contract.md)). Screens and deep links: [ios-app-screens](ios-app-screens.md). Visual design: [ios-design](ios-design.md) (stock SwiftUI restyled through one token file and a few shared components, [J22.24](../plan/E22-ios-app/J22.24-design-pass.md)).
 
 ## Goal and scope
 

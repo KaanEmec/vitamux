@@ -1,6 +1,6 @@
 # ADR-0023 Vitamux iOS app
 
-Status: Proposed · Date: 2026-10-05 · Deciders: owner
+Status: Accepted (2026-10-07) · Date: 2026-10-05 · Deciders: owner
 
 ## Context
 Epic [E22](../plan/E22-ios-app/README.md) adds a native iPhone client with full panel parity that also replaces the Vitamux Bridge app ([ADR-0014](0014-healthkit-contract.md), [apple-health](../architecture/apple-health.md)). It must stay small enough for one contributor. Details live in [ios-app](../architecture/ios-app.md); the screens in [ios-app-screens](../architecture/ios-app-screens.md).

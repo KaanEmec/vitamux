@@ -55,7 +55,7 @@ Owner decisions (2026-10-04):
 ## Jobs
 | Job | Title | Depends on | Gate | Status |
 | --- | --- | --- | --- | --- |
-| [J22.1](J22.1-app-adr-parity.md) | App ADR, lean rules, parity matrix and screen map | None | None | in progress (owner accepts ADR-0023) |
+| [J22.1](J22.1-app-adr-parity.md) | App ADR, lean rules, parity matrix and screen map | None | None | done |
 | [J22.2](J22.2-app-sessions.md) | Backend: bearer app sessions | J22.1 | None | done |
 | [J22.3](J22.3-native-auth-return.md) | Backend: native connection auth, pairing and version checks | J22.1, J22.2 | None | done |
 | [J22.4](J22.4-vitamuxkit-client.md) | VitamuxKit: generated client, core and fake server | J22.1 | None | done |
@@ -69,7 +69,7 @@ Owner decisions (2026-10-04):
 | [J22.12](J22.12-lab.md) | Lab documents, review and results | J22.5, J22.6 | None | done |
 | [J22.13](J22.13-settings.md) | Settings parity | J22.5 | None | done |
 | [J22.14](J22.14-apple-health.md) | Apple Health in the app | J22.3, J22.5 | None | done |
-| [J22.15](J22.15-watch-data-contract.md) | Apple Watch data contract (ADR-0024) | None | None | in progress (owner accepts ADR-0024) |
+| [J22.15](J22.15-watch-data-contract.md) | Apple Watch data contract (ADR-0024) | None | None | done |
 | [J22.16](J22.16-watch-kit.md) | HealthBridgeKit: type registry v2 and Watch readers | J22.15 | None | done |
 | [J22.17](J22.17-watch-normalizer.md) | Server: Watch data normalizer, storage and endpoints | J22.15 | None | done |
 | [J22.18](J22.18-watch-views.md) | Apple Watch views in the app and the panel | J22.6, J22.14, J22.17 | None | done |
@@ -78,7 +78,7 @@ Owner decisions (2026-10-04):
 | [J22.21](J22.21-notifications.md) | Local notifications | J22.14, J22.19 | None | done |
 | [J22.22](J22.22-quality-gates.md) | Quality gates and CI | J22.7–J22.21, J22.25, J22.26 | None | done |
 | [J22.23](J22.23-device-campaign-release.md) | Device campaign, docs and v0.4.0 | J22.22, G6 | G8 | todo |
-| [J22.24](J22.24-design-pass.md) | Visual design pass (after parity) | J22.22 | None | in progress (owner accepts the restyle) |
+| [J22.24](J22.24-design-pass.md) | Visual design pass (after parity) | J22.22 | None | done |
 | [J22.25](J22.25-apple-health-source-filter.md) | Apple Health source filter: take or ignore per app and type | J22.3, J22.14, J22.16 | None | done |
 | [J22.26](J22.26-intraday-views.md) | Intraday views: one day at the metric's own resolution | J22.6, J22.8 | None | done |
 
