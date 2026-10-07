@@ -108,7 +108,7 @@ final class AccessibilityAuditUITests: XCTestCase {
     private func settle(_ app: XCUIApplication) {
         sleep(2)
         let idle = NSPredicate(format: "count == 0")
-        _ = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: idle, object: app.activityIndicators)], timeout: 10)
+        _ = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: idle, object: app.activityIndicators)], timeout: 60)
         sleep(1)
     }
 

@@ -135,6 +135,10 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       SIM_DEVICE: iPhone 17 Pro
       SIM_RUNTIME: com.apple.CoreSimulator.SimRuntime.iOS-26-5
+      # Hosted runners are two to three times slower than a developer Mac: the signpost budgets
+      # here catch regressions, not frame times (those are J22.23's, on a device).
+      DASHBOARD_BUDGET_MS: "2000"
+      CHART_BUDGET_MS: "1000"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: brew install xcodegen
