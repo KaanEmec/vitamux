@@ -152,7 +152,7 @@ private struct BackfillSection: View {
                     .accessibilityElement(children: .combine)
                     .accessibilityIdentifier("backfillStatus-\(backfill.stream)")
                 }
-                Text("\(SourcesCopy.day(backfill.start)) – \(SourcesCopy.day(backfill.end)) · started \(SourcesCopy.when(backfill.createdAt))")
+                Text("\(Format.date(backfill.start)) – \(Format.date(backfill.end)) · started \(SourcesCopy.when(backfill.createdAt))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 ProgressView(value: Double(backfill.unitCounts.done), total: Double(max(backfill.total, 1)))
@@ -180,8 +180,8 @@ private struct BackfillSection: View {
                 HStack {
                     StatusIcon(kind: icon(unit.status.rawValue))
                     VStack(alignment: .leading) {
-                        Text("\(SourcesCopy.day(unit.start)) – \(SourcesCopy.day(unit.end))").font(.footnote)
-                        Text("\(unit.status.rawValue) · \(SourcesCopy.plural(unit.attempts, "attempt"))" + (unit.errorClass.map { " · \($0)" } ?? ""))
+                        Text("\(Format.date(unit.start)) – \(Format.date(unit.end))").font(.footnote)
+                        Text("\(unit.status.rawValue) · \(Format.plural(unit.attempts, "attempt"))" + (unit.errorClass.map { " · \($0)" } ?? ""))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -189,7 +189,7 @@ private struct BackfillSection: View {
                     if unit.status == .failed && backfill.status != .cancelled {
                         Button("Retry") { Task { await model.retry(backfill, unit: unit.start, client: state.client, id: connection.id) } }
                             .buttonStyle(.borderless)
-                            .accessibilityLabel("Retry unit from \(SourcesCopy.day(unit.start))")
+                            .accessibilityLabel("Retry unit from \(Format.date(unit.start))")
                             .accessibilityIdentifier("retryUnit")
                     }
                 }

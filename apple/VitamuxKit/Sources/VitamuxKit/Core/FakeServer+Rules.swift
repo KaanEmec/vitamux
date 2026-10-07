@@ -80,7 +80,7 @@ struct RulesFixture {
     static var appleWatch: [String: Any] { ["provider": "apple_health", "device_type": "watch", "relayed": false] }
 
     static var builtins: [Version] { [
-        builtin(spec("heart_rate_resting", window: ["kind": "local_day"], groups: [
+        builtin(spec("resting_heart_rate", window: ["kind": "local_day"], groups: [
             ("whoop", [["provider": "whoop"]]), ("garmin", [["provider": "garmin"]]), ("apple_watch", [appleWatch]),
         ], op: "first_available", extra: ["exclude": [["provider": "apple_health", "relayed": true]], "quality": ["max_staleness": "36h"]]),
         reason: "Selection only (definitions differ); a suggested order of the connected sources."),

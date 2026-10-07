@@ -147,10 +147,10 @@ private struct KeyRow: View {
             }
             .font(.subheadline)
             Text(key.scopes.map(\.rawValue).joined(separator: ", ")).font(.caption.monospaced())
-            Text("Created \(SettingsFormat.when(key.createdAt)) · last used \(key.lastUsedAt.map(SettingsFormat.when) ?? "never")")
+            Text("Created \(Format.instant(key.createdAt)) · last used \(key.lastUsedAt.map(Format.instant) ?? "never")")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Text(key.expiresAt.map { "Expires \(SettingsFormat.when($0))" } ?? "No expiry")
+            Text(key.expiresAt.map { "Expires \(Format.instant($0))" } ?? "No expiry")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

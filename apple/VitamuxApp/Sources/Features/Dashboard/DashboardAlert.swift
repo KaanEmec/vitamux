@@ -26,7 +26,7 @@ struct DashboardAlert: Identifiable, Equatable {
             let route = job.connectionId.map { Route.connection(id: $0, tab: "history") }
             out.append(DashboardAlert(
                 key: "job:\(job.id)", level: .error,
-                text: "Job \(job.kind) failed permanently after \(job.attempts) attempts, \(ago(job.finishedAt ?? job.createdAt)).",
+                text: "Job \(job.kind) failed permanently after \(job.attempts) attempts, \(Format.ago(job.finishedAt ?? job.createdAt)).",
                 action: route == nil ? nil : "See history", route: route
             ))
         }
@@ -35,7 +35,7 @@ struct DashboardAlert: Identifiable, Equatable {
         }
         if let lastBackup, now.timeIntervalSince(lastBackup) > backupMaxAge {
             out.append(DashboardAlert(
-                key: "backup:\(instant(lastBackup))", level: .warning, text: "The last backup is from \(ago(lastBackup)).",
+                key: "backup:\(instant(lastBackup))", level: .warning, text: "The last backup is from \(Format.ago(lastBackup)).",
                 action: "Backups", route: .settings(.backups)
             ))
         }
@@ -58,18 +58,13 @@ struct DashboardAlert: Identifiable, Equatable {
                                   action: "See history", route: .connection(id: c.id, tab: "history"))
         case .stale:
             return DashboardAlert(key: key("stale", since), level: .warning,
-                                  text: "\(name) has not synced successfully since \(c.lastSuccessAt.map(ago) ?? "never").",
+                                  text: "\(name) has not synced successfully since \(c.lastSuccessAt.map(Format.ago) ?? "never").",
                                   action: "Open", route: .connection(id: c.id))
         default:
             return DashboardAlert(key: key("degraded", c.healthReason ?? ""), level: .warning,
                                   text: "\(name) is degraded" + (c.healthReason.map { ": \($0)" } ?? "."),
                                   action: "See streams", route: .connection(id: c.id, tab: "streams"))
         }
-    }
-
-    /// "2 days ago".
-    static func ago(_ date: Date) -> String {
-        date.formatted(.relative(presentation: .named))
     }
 
     /// The instant as the server writes it (RFC 3339, fraction only when there is one), for keys.

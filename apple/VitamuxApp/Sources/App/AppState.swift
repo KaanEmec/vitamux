@@ -311,8 +311,11 @@ extension AppState {
     /// cleared preferences. `-uitest-totp` turns two-factor on; `-uitest-paired`,
     /// `-uitest-keep-device`, `-uitest-revoked` and `-uitest-anchor-reset` set up this iPhone's
     /// pairing (`ThisDevice.uiTest`); `-uitest-empty-install` and `-uitest-panel-layout` pick the
-    /// dashboard's start.
+    /// dashboard's start. The app runs in the fake owner's timezone, so its "today" is the
+    /// fixtures' whatever the host's zone and hour.
     static func uiTest(arguments: [String]) -> AppState {
+        setenv("TZ", FakeServer.timeZone.identifier, 1)
+        NSTimeZone.resetSystemTimeZone()
         let servers = FakeServer.uiTestServers
         FakeServer.uiTest.totpEnabled = arguments.contains("-uitest-totp")
         FakeServer.uiTest.dashboardInstall = .init(arguments: arguments)

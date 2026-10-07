@@ -295,10 +295,10 @@ private struct DeviceSection: View {
                 }
             }
             if let reset = device.anchorResets.map(\.requestedAt).max() {
-                Text("Resync requested \(SettingsFormat.when(reset)).").font(.footnote).foregroundStyle(.secondary)
+                Text("Resync requested \(Format.instant(reset)).").font(.footnote).foregroundStyle(.secondary)
             }
             if let revoked = device.revokedAt {
-                Label("Revoked \(SettingsFormat.when(revoked))", systemImage: "nosign")
+                Label("Revoked \(Format.instant(revoked))", systemImage: "nosign")
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("revoked-\(device.name)")
             } else {
@@ -320,7 +320,7 @@ private struct DeviceSection: View {
     }
 
     private static func contact(_ date: Date) -> String {
-        "\(SettingsFormat.when(date)) (\(SettingsFormat.ago(date)))"
+        "\(Format.instant(date)) (\(Format.ago(date)))"
     }
 }
 

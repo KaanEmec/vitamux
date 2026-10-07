@@ -310,16 +310,16 @@ private struct OrderSection: View {
                 ForEach(Array(order.enumerated()), id: \.element) { index, code in
                     HStack {
                         Text("\(index + 1)").monospacedDigit().foregroundStyle(.secondary)
-                        Text(SettingsFormat.provider(code))
+                        Text(providerLabel(code))
                         Spacer()
-                        Button("Move \(SettingsFormat.provider(code)) up", systemImage: "arrow.up") { model.move(index, by: -1) }
+                        Button("Move \(providerLabel(code)) up", systemImage: "arrow.up") { model.move(index, by: -1) }
                             .disabled(index == 0)
                             .accessibilityIdentifier("orderUp-\(code)")
-                        Button("Move \(SettingsFormat.provider(code)) down", systemImage: "arrow.down") { model.move(index, by: 1) }
+                        Button("Move \(providerLabel(code)) down", systemImage: "arrow.down") { model.move(index, by: 1) }
                             .disabled(index == order.count - 1)
                             .accessibilityIdentifier("orderDown-\(code)")
                     }
-                    .labelStyle(.iconOnly)
+                    .labelStyle(.iconTapTarget)
                     .buttonStyle(.borderless)
                 }
                 Button("Save order") { Task { await model.saveOrder(state.client) } }
@@ -358,7 +358,7 @@ private struct CredentialsRow: View {
                 Text(id).font(.caption.monospaced()).foregroundStyle(.secondary)
             }
             if let updated = app?.updatedAt {
-                Text("Last changed \(SettingsFormat.when(updated))").font(.caption).foregroundStyle(.secondary)
+                Text("Last changed \(Format.instant(updated))").font(.caption).foregroundStyle(.secondary)
             }
             if app?.managedByEnvironment != true {
                 HStack {
@@ -387,7 +387,7 @@ private struct SidecarRow: View {
                 Label(sidecar.available ? "Answering" : "Not answering", systemImage: sidecar.available ? "checkmark.circle" : "circle.slash")
                     .font(.caption)
                     .foregroundStyle(sidecar.available ? Color.feedbackOK : .secondary)
-                Text(sidecar.source == .panel ? sidecar.createdAt.map { "Added \(SettingsFormat.when($0))" } ?? "Added here" : sidecar.bundled ? "Bundled" : "Environment")
+                Text(sidecar.source == .panel ? sidecar.createdAt.map { "Added \(Format.instant($0))" } ?? "Added here" : sidecar.bundled ? "Bundled" : "Environment")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

@@ -73,8 +73,10 @@ struct ChartFrame<Content: View>: View {
             } else {
                 content.transaction { if reduceMotion { $0.animation = nil } }
             }
-            Button(showsTable ? "Show as chart" : "Show as table") {
+            Button {
                 withAnimation(reduceMotion ? nil : .default) { showsTable.toggle() }
+            } label: {
+                Text(showsTable ? "Show as chart" : "Show as table").tapTarget()
             }
             .font(.footnote)
         }

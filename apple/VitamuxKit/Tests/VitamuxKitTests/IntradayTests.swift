@@ -94,7 +94,7 @@ struct IntradayFakeTests {
         let client = try await signedIn()
         #expect(try await client.getMetric(path: .init(code: "heart_rate")).ok.body.json.intraday == .init(_default: ._1m, finest: .raw))
         #expect(try await client.getMetric(path: .init(code: "steps")).ok.body.json.intraday == .init(_default: ._30m, finest: ._1m))
-        #expect(try await client.getMetric(path: .init(code: "heart_rate_resting")).ok.body.json.intraday == nil)
+        #expect(try await client.getMetric(path: .init(code: "resting_heart_rate")).ok.body.json.intraday == nil)
         let listed = try await client.listMetrics().ok.body.json.metrics
         #expect(listed.filter { $0.intraday != nil }.map(\.code).sorted() == ["heart_rate", "rr_interval", "spo2", "stand_hours", "steps"])
     }

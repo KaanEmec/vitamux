@@ -165,7 +165,7 @@ final class ReviewModel {
         do {
             let confirmed = try await client.confirmExtraction(path: .init(id: run.id)).ok.body.json
             let kept = (confirmed.rows ?? []).filter { $0.reviewStatus != .rejected }.count
-            notice = "Confirmed \(LabText.plural(kept, "result"))."
+            notice = "Confirmed \(Format.plural(kept, "result"))."
             await loadRuns(client)
         } catch {
             confirmProblem = Problem(error)

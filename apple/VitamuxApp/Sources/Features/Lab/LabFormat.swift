@@ -109,10 +109,6 @@ enum LabText {
         guard let comparator, !value.trimmingCharacters(in: .whitespaces).hasPrefix(comparator) else { return value }
         return "\(comparator) \(value)"
     }
-
-    static func plural(_ count: Int, _ one: String, _ many: String? = nil) -> String {
-        "\(count) \(count == 1 ? one : many ?? one + "s")"
-    }
 }
 
 extension LabDocument {

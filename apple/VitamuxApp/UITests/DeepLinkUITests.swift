@@ -9,7 +9,7 @@ final class DeepLinkUITests: XCTestCase {
     private let links: [(String, String, String, String?)] = [
         ("vitamux://dashboard?date=2026-01-31", "Dashboard", "Dashboard", nil), // the day: DashboardUITests
         ("vitamux://explore", "Explore", "Explore", nil),
-        ("vitamux://explore/heart_rate_resting?range=3M", "Explore", "Heart rate resting", nil),
+        ("vitamux://explore/resting_heart_rate?range=3M", "Explore", "Resting heart rate", nil),
         ("vitamux://explore/heart_rate/day/2026-01-31", "Explore", "Heart rate, 2026-01-31", nil),
         ("vitamux://explore/sleep", "Explore", "Sleep", nil),
         ("vitamux://explore/blood-pressure", "Explore", "Blood pressure", nil),
@@ -63,10 +63,10 @@ final class DeepLinkUITests: XCTestCase {
     func testLinkToAMetricWhileSignedOutOpensAfterSignIn() {
         let app = XCUIApplication.launch()
         XCTAssertTrue(app.textFields["serverField"].waitForExistence(timeout: 10))
-        app.openLink("vitamux://explore/heart_rate_resting?range=3M")
+        app.openLink("vitamux://explore/resting_heart_rate?range=3M")
         XCTAssertTrue(app.textFields["serverField"].waitForExistence(timeout: 5), "the link waits for sign-in")
         app.signIn()
-        XCTAssertTrue(app.navigationBars["Heart rate resting"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars["Resting heart rate"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.tabBars.buttons["Explore"].isSelected)
     }
 }

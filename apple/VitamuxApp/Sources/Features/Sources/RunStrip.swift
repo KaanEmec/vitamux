@@ -62,7 +62,7 @@ struct RunStrip: View {
             HStack {
                 Text("Sync runs · \(Runs.days) days")
                 Spacer()
-                if let runs = runs.value { Text(SourcesCopy.plural(runs.count, "run")) }
+                if let runs = runs.value { Text(Format.plural(runs.count, "run")) }
             }
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -71,7 +71,7 @@ struct RunStrip: View {
             }
             if large, let first = days.first {
                 HStack {
-                    Text(SourcesCopy.day(first.date))
+                    Text(Format.date(first.date))
                     Spacer()
                     Text("Today")
                 }
@@ -92,7 +92,7 @@ struct RunStrip: View {
         case .loaded:
             let ok = days.filter { $0.succeeded > 0 && $0.failed == 0 }.count
             let failed = days.filter { $0.failed > 0 }.count
-            let p = SourcesCopy.plural
+            let p = Format.plural
             return "Sync runs, last \(Runs.days) days: \(p(ok, "day", nil)) with successful runs, \(p(failed, "day", nil)) with a failed run, \(p(Runs.days - ok - failed, "day", nil)) without runs"
         }
     }

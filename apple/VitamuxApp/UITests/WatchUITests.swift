@@ -30,15 +30,6 @@ final class WatchUITests: XCTestCase {
         for _ in 0..<times { button.tap() }
     }
 
-    /// A local date `offset` days from today in the fake's timezone.
-    private func day(_ offset: Int) -> String {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "Europe/Berlin")!
-        let date = calendar.date(byAdding: .day, value: offset, to: .now)!
-        let parts = calendar.dateComponents([.year, .month, .day], from: date)
-        return String(format: "%04d-%02d-%02d", parts.year!, parts.month!, parts.day!)
-    }
-
     // MARK: ECG
 
     func testECGRecordingShowsAppleLabelStripAndTable() {
@@ -88,13 +79,13 @@ final class WatchUITests: XCTestCase {
     }
 
     func testBeatsSeriesPerDayAndEmptyDay() {
-        let app = open("vitamux://explore/beats?date=\(day(-1))", title: "Beat-to-beat")
+        let app = open("vitamux://explore/beats?date=\(Fake.day(-1))", title: "Beat-to-beat")
         XCTAssertTrue(app.element("beatsChart-0").waitForExistence(timeout: 10))
         XCTAssertTrue(app.scrollTo(app.element("beatsChart-1")).exists, "two series on the day")
         let count = app.scrollTo(app.element("beatsCount-1"))
         XCTAssertTrue(count.exists && count.label.hasPrefix("89 intervals"), count.debugDescription)
 
-        app.openLink("vitamux://explore/beats?date=\(day(-2))")
+        app.openLink("vitamux://explore/beats?date=\(Fake.day(-2))")
         XCTAssertTrue(app.element("beatsChart-0").waitForExistence(timeout: 10))
         for _ in 0..<4 { app.swipeDown() }
         app.buttons["earlierDay"].tap()
@@ -105,9 +96,9 @@ final class WatchUITests: XCTestCase {
 
     func testActivityRingsAgainstApplesGoals() {
         let app = open("vitamux://explore/activity-rings", title: "Activity rings")
-        XCTAssertTrue(app.element("ring-move-\(day(-1))").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.element("ring-move-\(Fake.day(-1))").waitForExistence(timeout: 10))
         XCTAssertTrue(any(app, "value ENDSWITH %@", "of 500 kcal, Apple’s goal").exists, "the value against Apple's goal")
-        XCTAssertTrue(app.scrollTo(app.element("ring-exercise-\(day(-1))")).exists)
+        XCTAssertTrue(app.scrollTo(app.element("ring-exercise-\(Fake.day(-1))")).exists)
         XCTAssertTrue(app.scrollTo(any(app, "label BEGINSWITH %@", "Apple’s rings were paused on this day.")).exists, "the paused day says so")
 
         for _ in 0..<6 where !app.buttons["1M"].isHittable { app.swipeDown() }
@@ -150,7 +141,7 @@ final class WatchUITests: XCTestCase {
         }
 
         // Today's evening ride, by its link (`914` + days since 1970 of the fake's today).
-        let parts = day(0).split(separator: "-").map { Int($0)! }
+        let parts = Fake.day(0).split(separator: "-").map { Int($0)! }
         var utc = Calendar(identifier: .gregorian)
         utc.timeZone = .gmt
         let days = Int(utc.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))!.timeIntervalSince1970 / 86_400)
@@ -249,8 +240,8 @@ final class WatchUITests: XCTestCase {
         app.signInToDashboard()
         let views = [
             ("vitamux://explore/ecg", "ECG", "ecgCount"), ("vitamux://explore/ecg/\(poorECG)", "ECG recording", "noWaveform"),
-            ("vitamux://explore/ecg/\(latestECG)", "ECG recording", "ecgStrip"), ("vitamux://explore/beats?date=\(day(-1))", "Beat-to-beat", "beatsChart-0"),
-            ("vitamux://explore/activity-rings", "Activity rings", "ring-move-\(day(-1))"), ("vitamux://explore/state-of-mind", "State of Mind", "mindCount"),
+            ("vitamux://explore/ecg/\(latestECG)", "ECG recording", "ecgStrip"), ("vitamux://explore/beats?date=\(Fake.day(-1))", "Beat-to-beat", "beatsChart-0"),
+            ("vitamux://explore/activity-rings", "Activity rings", "ring-move-\(Fake.day(-1))"), ("vitamux://explore/state-of-mind", "State of Mind", "mindCount"),
         ]
         for (link, title, ready) in views {
             app.openLink(link)

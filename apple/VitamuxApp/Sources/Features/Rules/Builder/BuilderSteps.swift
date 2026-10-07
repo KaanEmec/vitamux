@@ -105,7 +105,7 @@ private struct GroupEditor: View {
                 Button("Remove group \(index + 1)", role: .destructive) { model.form?.groups.remove(at: index) }
                     .disabled(count == 1)
             }
-            .labelStyle(.iconOnly)
+            .labelStyle(.iconTapTarget)
             .buttonStyle(.borderless)
             SelectorListEditor(
                 list: Binding { model.form?.groups[safe: index]?.match ?? [] } set: { model.form?.groups[index].match = $0 },
@@ -134,8 +134,10 @@ private struct SelectorListEditor: View {
                     Text("\(kind) \(si + 1)").font(.footnote.weight(.semibold))
                     Spacer()
                     if !model.choices.isEmpty {
-                        Menu("Choose a source or device") {
+                        Menu {
                             ForEach(model.choices, id: \.label) { c in Button(c.label) { list[si] = c.selector } }
+                        } label: {
+                            Text("Choose a source or device").tapTarget()
                         }
                         .font(.footnote)
                     }
@@ -150,23 +152,29 @@ private struct SelectorListEditor: View {
                 InlineError(text: model.error("\(pointer)/\(si)"), id: "selectorError-\(si)")
                 HStack {
                     if let field = RuleSelector.Field.allCases.first(where: { f in !selector.conditions.contains { $0.field == f } }) {
-                        Button("And…") { list[si].conditions.append(.init(field, field == .relayed ? .flag(false) : .text(""))) }
+                        Button { list[si].conditions.append(.init(field, field == .relayed ? .flag(false) : .text(""))) } label: {
+                            Text("And…").tapTarget()
+                        }
                     }
                     Spacer()
-                    Button("Remove", role: .destructive) { list.remove(at: si) }
+                    Button(role: .destructive) { list.remove(at: si) } label: { Text("Remove").tapTarget() }
                 }
                 .font(.footnote)
                 .buttonStyle(.borderless)
             }
         }
         HStack {
-            Button(list.isEmpty ? "Add \(kind.lowercased())" : "Or \(kind.lowercased())…") {
+            Button {
                 list.append(RuleSelector([.provider: .text("")]))
+            } label: {
+                Text(list.isEmpty ? "Add \(kind.lowercased())" : "Or \(kind.lowercased())…").tapTarget()
             }
             Spacer()
             if !model.chips.isEmpty {
-                Menu("One-click") {
+                Menu {
                     ForEach(model.chips, id: \.label) { c in Button(c.label) { list.append(c.selector) } }
+                } label: {
+                    Text("One-click").tapTarget()
                 }
             }
         }
@@ -208,7 +216,7 @@ private struct ConditionRow: View {
                     .autocorrectionDisabled()
             }
             Button("Remove condition", systemImage: "minus.circle", action: remove)
-                .labelStyle(.iconOnly)
+                .labelStyle(.iconTapTarget)
                 .buttonStyle(.borderless)
         }
     }

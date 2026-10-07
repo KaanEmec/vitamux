@@ -8,7 +8,7 @@ import Synchronization
 // overrides (applied the way the engine applies them) and provenance chains. The dashboard layout
 // (pins) and GET /resolved/summary belong to FakeServer+Dashboard.swift. Every value is synthetic and derived from the date, so any range works.
 //
-// Scenario `heart_rate_resting`: the preferred source (whoop) has a degraded stream every day, so
+// Scenario `resting_heart_rate`: the preferred source (whoop) has a degraded stream every day, so
 // each day falls back to garmin; excluding garmin's record falls back again to apple_watch.
 extension FakeServer {
     /// The extra catalogue entries Explore needs beside the shell's four (`metrics`).
@@ -136,7 +136,7 @@ struct ExploreFixture {
     static let phoneApp = (key: "com.example.health", name: "Example Health")
 
     static let series: [Series] = [
-        Series(code: "heart_rate_resting", unit: "bpm", strategy: "first_available", base: 52, swing: 2, digits: 0, sources: [
+        Series(code: "resting_heart_rate", unit: "bpm", strategy: "first_available", base: 52, swing: 2, digits: 0, sources: [
             Source(group: "whoop", provider: "whoop", device: "band", offset: 0, degraded: "stream degraded: schema_drift since 2026-01-01T06:00Z"),
             Source(group: "garmin", provider: "garmin", device: "watch", offset: 0),
             Source(group: "apple_watch", provider: "apple_health", device: "watch", offset: 2),

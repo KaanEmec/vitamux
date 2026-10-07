@@ -8,6 +8,16 @@ enum Fake {
     static let password = "synthetic-password"
     static let totp = "123456"
     static let recovery = "synthetic-recovery-1"
+
+    /// A local date `offset` days from today in the fixtures' timezone (the app runs in it under
+    /// `-uitest`, and the stack smoke's synthetic week is written in it), as links write it.
+    static func day(_ offset: Int = 0) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Berlin")!
+        let date = calendar.date(byAdding: .day, value: offset, to: .now)!
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", parts.year!, parts.month!, parts.day!)
+    }
 }
 
 extension XCUIApplication {

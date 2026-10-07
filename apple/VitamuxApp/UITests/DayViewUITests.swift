@@ -7,7 +7,7 @@ import XCTest
 final class DayViewUITests: XCTestCase {
     override func setUp() async throws { continueAfterFailure = false }
 
-    private func openDay(_ app: XCUIApplication, _ code: String, _ date: String = ExploreUITests.day(-1)) {
+    private func openDay(_ app: XCUIApplication, _ code: String, _ date: String = Fake.day(-1)) {
         app.openLink("vitamux://explore/\(code)?range=1D&end=\(date)")
         XCTAssertTrue(app.staticTexts["dayStep"].waitForExistence(timeout: 10), "\(code) opens the Day view")
     }
@@ -26,7 +26,7 @@ final class DayViewUITests: XCTestCase {
     func testOnlyMetricsWithIntradayHaveADayTab() {
         let app = XCUIApplication.launch()
         app.signInToDashboard()
-        app.openLink("vitamux://explore/heart_rate_resting?range=1D")
+        app.openLink("vitamux://explore/resting_heart_rate?range=1D")
         XCTAssertTrue(app.buttons["3M"].waitForExistence(timeout: 10))
         let fellBack = NSPredicate(format: "isSelected == true")
         XCTAssertEqual(XCTWaiter.wait(for: [expectation(for: fellBack, evaluatedWith: app.buttons["3M"])], timeout: 10), .completed, "a Day link falls back to the default range")
@@ -79,7 +79,7 @@ final class DayViewUITests: XCTestCase {
     func testTodayShowsNightWorkoutsAndNow() {
         let app = XCUIApplication.launch()
         app.signInToDashboard()
-        openDay(app, "heart_rate", ExploreUITests.day(0))
+        openDay(app, "heart_rate", Fake.day(0))
         let any = app.descendants(matching: .any)
         XCTAssertTrue(any.matching(NSPredicate(format: "label BEGINSWITH 'Now '")).firstMatch.waitForExistence(timeout: 10), "a now line on today")
         XCTAssertTrue(any.matching(NSPredicate(format: "label BEGINSWITH 'Running '")).firstMatch.exists, "today's run is a band")

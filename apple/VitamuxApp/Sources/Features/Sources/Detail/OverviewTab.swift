@@ -51,7 +51,7 @@ struct OverviewTab: View {
                 Text(SourcesCopy.ago(connection.lastSuccessAt) + (connection.lastSuccessAt.map { " · " + SourcesCopy.when($0) } ?? ""))
             }
             LabeledContent("Last error") {
-                Text(connection.lastErrorClass.map { "\($0) · \(SourcesCopy.plural(connection.consecutiveFailures, "consecutive failure")) " } ?? "None")
+                Text(connection.lastErrorClass.map { "\($0) · \(Format.plural(connection.consecutiveFailures, "consecutive failure")) " } ?? "None")
             }
             LabeledContent("Connected", value: SourcesCopy.when(connection.createdAt))
             LabeledContent("ID") { Text(connection.id).font(.caption.monospaced()).textSelection(.enabled) }

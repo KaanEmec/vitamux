@@ -135,9 +135,11 @@ private struct CodeFields: View {
                  : "Enter the 6-digit code from your authenticator app.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            Button(model.usesRecoveryCode ? "Use the authenticator code" : "Use a recovery code instead") {
+            Button {
                 model.usesRecoveryCode.toggle()
                 model.code = ""
+            } label: {
+                Text(model.usesRecoveryCode ? "Use the authenticator code" : "Use a recovery code instead").tapTarget()
             }
             .font(.subheadline)
             .accessibilityIdentifier("recoveryToggle")

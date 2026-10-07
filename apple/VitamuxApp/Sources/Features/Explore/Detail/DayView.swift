@@ -74,9 +74,8 @@ private struct ZoomButtons: View {
                 .disabled(!model.canZoomIn || model.domain == nil)
                 .accessibilityIdentifier("dayZoomIn")
         }
-        .labelStyle(.iconOnly)
-        .buttonStyle(.bordered)
-        .controlSize(.small)
+        .labelStyle(.iconTapTarget)
+        .buttonStyle(.borderless)
     }
 }
 

@@ -275,13 +275,13 @@ struct RulesFakeTests {
     }
 
     private func heartRateResting() async throws -> RuleForm {
-        let versions = try await client.listRuleVersions(path: .init(metric: "heart_rate_resting")).ok.body.json.versions
+        let versions = try await client.listRuleVersions(path: .init(metric: "resting_heart_rate")).ok.body.json.versions
         return RuleForm(spec: JSONValue(try #require(versions.first { $0.active }).spec))
     }
 
     @Test func `the catalogue lists built-in and default rules`() async throws {
         let rules = try await client.listRules().ok.body.json.rules
-        #expect(rules.map(\.metric).contains("heart_rate_resting"))
+        #expect(rules.map(\.metric).contains("resting_heart_rate"))
         let spo2 = try #require(rules.first { $0.metric == "spo2" })
         #expect(spo2._default && spo2.builtin)
         #expect(rules.allSatisfy { $0.active })
@@ -292,15 +292,15 @@ struct RulesFakeTests {
         form.groups.swapAt(1, 2)
         let saved = try await save(form, activate: true)
         #expect(saved.version == 2 && saved.active)
-        var versions = try await client.listRuleVersions(path: .init(metric: "heart_rate_resting")).ok.body.json.versions
+        var versions = try await client.listRuleVersions(path: .init(metric: "resting_heart_rate")).ok.body.json.versions
         #expect(versions.map(\.version) == [2, 1])
-        #expect(versions[1].basedOn == "builtin:heart_rate_resting:1")
+        #expect(versions[1].basedOn == "builtin:resting_heart_rate:1")
         // The spec comes back exactly as the phone wrote it.
         #expect(JSONValue(versions[0].spec).sorted == form.spec.sorted)
 
-        let back = try await client.activateRule(path: .init(metric: "heart_rate_resting"), body: .json(.init(version: 1))).ok.body.json
+        let back = try await client.activateRule(path: .init(metric: "resting_heart_rate"), body: .json(.init(version: 1))).ok.body.json
         #expect(back.version == 1 && back.active)
-        versions = try await client.listRuleVersions(path: .init(metric: "heart_rate_resting")).ok.body.json.versions
+        versions = try await client.listRuleVersions(path: .init(metric: "resting_heart_rate")).ok.body.json.versions
         #expect(versions.first { $0.active }?.version == 1)
     }
 

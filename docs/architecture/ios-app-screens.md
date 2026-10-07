@@ -25,7 +25,7 @@ Wireframe-level map for [E22](../plan/E22-ios-app/README.md): which screens, she
 | Dashboard | Dashboard: day picker, alerts, cards, edit mode | `/?date=` | `vitamux://dashboard?date=2026-01-31` | J22.7 |
 | | *Add metric* | dialog | | J22.7 |
 | Explore | Inventory: filters (`?origin=` preselects an origin app), pins, ignored sources toggle | `/explore?origin=` | `vitamux://explore?origin=` | J22.8, J22.25 |
-| | Metric detail: range, zoom, sources, coverage, stats, values; Day range | `/explore/{metric}?range=&end=` | `vitamux://explore/heart_rate_resting?range=3M` | J22.8, J22.26 |
+| | Metric detail: range, zoom, sources, coverage, stats, values; Day range | `/explore/{metric}?range=&end=` | `vitamux://explore/resting_heart_rate?range=3M` | J22.8, J22.26 |
 | | *Point panel*: provenance, overrides (exclude, force, set value) | dialog | | J22.8 |
 | | *Rule lens*: draft overlay, save, activate, revert | sheet | | J22.10 |
 | | All-sources day: inputs, overrides list, revoke | `/explore/{metric}/day/{date}` | `vitamux://explore/heart_rate/day/2026-01-31` | J22.8 |

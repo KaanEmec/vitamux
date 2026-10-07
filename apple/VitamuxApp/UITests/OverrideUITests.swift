@@ -11,8 +11,8 @@ final class OverrideUITests: XCTestCase {
     private func openPoint() -> XCUIApplication {
         let app = XCUIApplication.launch()
         app.signInToDashboard()
-        app.openLink("vitamux://explore/heart_rate_resting?range=1M")
-        let row = app.buttons["valueRow-\(ExploreUITests.day(-1))"]
+        app.openLink("vitamux://explore/resting_heart_rate?range=1M")
+        let row = app.buttons["valueRow-\(Fake.day(-1))"]
         XCTAssertTrue(app.scrollTo(row).waitForExistence(timeout: 10))
         row.tap()
         XCTAssertTrue(app.staticTexts["pointSource"].waitForExistence(timeout: 10))
@@ -117,7 +117,7 @@ final class OverrideUITests: XCTestCase {
     func testAllSourcesDayOverlaysEverySource() {
         let app = XCUIApplication.launch()
         app.signInToDashboard()
-        app.openLink("vitamux://explore/heart_rate/day/\(ExploreUITests.day(-1))")
+        app.openLink("vitamux://explore/heart_rate/day/\(Fake.day(-1))")
         XCTAssertTrue(app.element("dayChart").waitForExistence(timeout: 15), "every source's readings over the day")
         let trace = app.buttons["trace-garmin-used"]
         XCTAssertTrue(app.scrollTo(trace).exists)

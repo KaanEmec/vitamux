@@ -104,15 +104,11 @@ enum SourcesCopy {
     static func ago(_ date: Date?) -> String {
         guard let date else { return "never" }
         if abs(date.timeIntervalSinceNow) < 60 { return "just now" }
-        return date.formatted(.relative(presentation: .named))
+        return Format.ago(date)
     }
 
     static func when(_ date: Date?) -> String {
-        date.map { $0.formatted(date: .abbreviated, time: .shortened) } ?? "–"
-    }
-
-    static func day(_ date: Date) -> String {
-        date.formatted(date: .abbreviated, time: .omitted)
+        date.map(Format.instant) ?? "–"
     }
 
     /// "15 min", "2 h", "1 day".
@@ -129,10 +125,6 @@ enum SourcesCopy {
         guard let to else { return "running" }
         let s = max(0, Int(to.timeIntervalSince(from).rounded()))
         return s >= 60 ? "\(s / 60) min \(s % 60) s" : "\(s) s"
-    }
-
-    static func plural(_ n: Int, _ one: String, _ many: String? = nil) -> String {
-        "\(n) \(n == 1 ? one : many ?? one + "s")"
     }
 
     /// Plain language for a failed sign-in step (setup.ts `signInError`); the server's own words

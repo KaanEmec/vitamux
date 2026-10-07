@@ -120,7 +120,7 @@ private struct GroupSection: View {
                     Text("\(group.title) (unknown analyte)")
                 }
                 if let latest = group.items.first {
-                    Text("\(LabText.plural(group.items.count, "result")) · latest \(latest.printedValue) \(latest.unitText ?? "") on \(Format.day(latest.collectedDate, weekday: false))")
+                    Text("\(Format.plural(group.items.count, "result")) · latest \(latest.printedValue) \(latest.unitText ?? "") on \(Format.day(latest.collectedDate, weekday: false))")
                         .textCase(nil)
                 }
             }

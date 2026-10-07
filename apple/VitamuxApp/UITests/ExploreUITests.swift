@@ -7,7 +7,7 @@ final class ExploreUITests: XCTestCase {
 
     /// The fake's catalogue (`GET /metrics`): every code must open a view without an error.
     static let catalogue = [
-        ("heart_rate", "Heart rate"), ("heart_rate_resting", "Heart rate resting"), ("steps", "Steps"), ("body_mass", "Body mass"),
+        ("heart_rate", "Heart rate"), ("resting_heart_rate", "Resting heart rate"), ("steps", "Steps"), ("body_mass", "Body mass"),
         ("spo2", "Spo2"), ("hrv_rmssd_nightly", "Hrv rmssd nightly"), ("bp_systolic", "Bp systolic"), ("sleep_total", "Sleep total"),
         ("vo2max", "Vo2max"),
     ]
@@ -16,14 +16,14 @@ final class ExploreUITests: XCTestCase {
         let app = XCUIApplication.launch()
         app.signInToDashboard()
         app.tabBars.buttons["Explore"].tap()
-        XCTAssertTrue(app.buttons["exploreRow-heart_rate_resting"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["exploreRow-resting_heart_rate"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.element("aggregatesPending").exists, "the catching-up note shows while aggregates rebuild")
 
         app.buttons["sourceFilter-withings"].tap()
         XCTAssertTrue(app.buttons["exploreRow-body_mass"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["exploreRow-heart_rate_resting"].exists, "Withings has no resting heart rate")
+        XCTAssertFalse(app.buttons["exploreRow-resting_heart_rate"].exists, "Withings has no resting heart rate")
         app.buttons["sourceFilter-all"].tap()
-        XCTAssertTrue(app.buttons["exploreRow-heart_rate_resting"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["exploreRow-resting_heart_rate"].waitForExistence(timeout: 5))
 
         XCTAssertFalse(app.buttons["exploreRow-vo2max"].exists)
         app.scrollTo(app.switches["showEmptyToggle"]).switches.firstMatch.tap()
@@ -34,13 +34,13 @@ final class ExploreUITests: XCTestCase {
         let app = XCUIApplication.launch()
         app.signInToDashboard()
         app.tabBars.buttons["Explore"].tap()
-        XCTAssertTrue(app.buttons["exploreRow-heart_rate_resting"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["exploreRow-resting_heart_rate"].waitForExistence(timeout: 10))
         let field = app.searchFields.firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 5), app.debugDescription)
         field.tap()
         field.typeText("ldl")
         XCTAssertTrue(app.buttons["exploreRow-ldl_c"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["exploreRow-heart_rate_resting"].exists)
+        XCTAssertFalse(app.buttons["exploreRow-resting_heart_rate"].exists)
     }
 
     func testPinAndUnpin() {
@@ -80,7 +80,7 @@ final class ExploreUITests: XCTestCase {
     func testEveryCatalogueMetricOpensWithoutError() {
         let app = XCUIApplication.launch()
         app.signInToDashboard()
-        let yesterday = Self.day(-1)
+        let yesterday = Fake.day(-1)
         for (code, title) in Self.catalogue {
             app.openLink("vitamux://explore/\(code)")
             XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: 10), code)
@@ -97,8 +97,8 @@ final class ExploreUITests: XCTestCase {
     func testRollupDrillDown() {
         let app = XCUIApplication.launch()
         app.signInToDashboard()
-        app.openLink("vitamux://explore/heart_rate_resting?range=All")
-        XCTAssertTrue(app.navigationBars["Heart rate resting"].waitForExistence(timeout: 10))
+        app.openLink("vitamux://explore/resting_heart_rate?range=All")
+        XCTAssertTrue(app.navigationBars["Resting heart rate"].waitForExistence(timeout: 10))
         let rollup = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'rollupRow-'")).firstMatch
         XCTAssertTrue(app.scrollTo(rollup).waitForExistence(timeout: 10), "All plots rollups")
         rollup.tap()
@@ -112,7 +112,7 @@ final class ExploreUITests: XCTestCase {
     func testSourceAndCoverageToggles() {
         let app = XCUIApplication.launch()
         app.signInToDashboard()
-        app.openLink("vitamux://explore/heart_rate_resting?range=1M")
+        app.openLink("vitamux://explore/resting_heart_rate?range=1M")
         let garmin = app.element("toggleSource-garmin")
         XCTAssertTrue(garmin.waitForExistence(timeout: 10))
         garmin.tap()
@@ -122,13 +122,6 @@ final class ExploreUITests: XCTestCase {
         app.assertNoProblem("toggles")
         app.scrollTo(app.buttons["editRule"]).tap()
         XCTAssertTrue(app.navigationBars["How it's calculated"].waitForExistence(timeout: 5), "Edit rule opens the rule lens (J22.10)")
-    }
-
-    /// A local date `offset` days from today, as the app's links write it.
-    static func day(_ offset: Int) -> String {
-        let date = Calendar.current.date(byAdding: .day, value: offset, to: .now)!
-        let parts = Calendar.current.dateComponents([.year, .month, .day], from: date)
-        return String(format: "%04d-%02d-%02d", parts.year!, parts.month!, parts.day!)
     }
 }
 

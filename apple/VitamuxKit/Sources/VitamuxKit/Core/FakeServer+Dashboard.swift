@@ -90,7 +90,7 @@ extension FakeServer {
 
     static let defaultHero = ["steps", "resting_heart_rate", "hrv_rmssd_nightly", "weight"]
     /// The owner's timezone in the fake (its current timezone period).
-    static let dashboardTimeZone = "Europe/Berlin"
+    static let dashboardTimeZone = timeZone.identifier
 
     // MARK: - Routing
 

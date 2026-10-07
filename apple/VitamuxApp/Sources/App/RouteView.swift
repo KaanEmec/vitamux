@@ -83,9 +83,3 @@ extension Route.SettingsPage {
         }
     }
 }
-
-/// `heart_rate_resting` → "Heart rate resting", as the panel's `metricLabel`.
-func metricLabel(_ code: String) -> String {
-    let words = code.replacingOccurrences(of: "_", with: " ")
-    return words.prefix(1).uppercased() + words.dropFirst()
-}

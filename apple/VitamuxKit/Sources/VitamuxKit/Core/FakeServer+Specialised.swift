@@ -41,8 +41,8 @@ extension FakeServer {
 struct SpecialisedFixture {
     typealias JSON = [String: Any]
 
-    static let timezone = "Europe/Berlin"
-    static let zone = TimeZone(identifier: timezone)!
+    static let timezone = FakeServer.timeZone.identifier
+    static let zone = FakeServer.timeZone
     static let pageSize = 25
     static let sleepNights = 60
     static let gapNight = 9

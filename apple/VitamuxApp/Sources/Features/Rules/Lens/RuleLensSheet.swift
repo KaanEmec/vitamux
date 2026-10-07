@@ -245,11 +245,11 @@ private struct GroupRow: View {
             }
             Spacer(minLength: 4)
             Button("Move \(label) up", systemImage: "arrow.up") { model.move(index, to: index - 1) }
-                .labelStyle(.iconOnly)
+                .labelStyle(.iconTapTarget)
                 .disabled(index == 0)
                 .accessibilityIdentifier("moveUp-\(group.name)")
             Button("Move \(label) down", systemImage: "arrow.down") { model.move(index, to: index + 1) }
-                .labelStyle(.iconOnly)
+                .labelStyle(.iconTapTarget)
                 .disabled(index == count - 1)
                 .accessibilityIdentifier("moveDown-\(group.name)")
         }
@@ -274,7 +274,7 @@ private struct LensExclusions: View {
                     Text(text.isEmpty ? "empty exclusion" : text)
                     Spacer()
                     Button("Remove exclusion \(text)", systemImage: "xmark.circle.fill") { model.removeExclusion(at: i) }
-                        .labelStyle(.iconOnly)
+                        .labelStyle(.iconTapTarget)
                         .foregroundStyle(.secondary)
                         .buttonStyle(.borderless)
                 }

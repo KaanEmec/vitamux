@@ -38,7 +38,7 @@ final class OverrideModel {
         return switch action {
         case .excludeInput: !recordID.trimmingCharacters(in: .whitespaces).isEmpty
         case .forceSource: !group.isEmpty
-        case .setValue: Self.number(value) != nil && !unit.trimmingCharacters(in: .whitespaces).isEmpty && !note.trimmingCharacters(in: .whitespaces).isEmpty
+        case .setValue: Format.decimal(value) != nil && !unit.trimmingCharacters(in: .whitespaces).isEmpty && !note.trimmingCharacters(in: .whitespaces).isEmpty
         }
     }
 
@@ -53,7 +53,7 @@ final class OverrideModel {
         case .excludeInput: body.inputId = recordID.trimmingCharacters(in: .whitespaces)
         case .forceSource: body.group = group
         case .setValue:
-            body.value = Self.number(value)
+            body.value = Format.decimal(value)
             body.unit = unit.trimmingCharacters(in: .whitespaces)
             body.note = note.trimmingCharacters(in: .whitespaces)
         }
@@ -69,12 +69,6 @@ final class OverrideModel {
     /// The field's message from the server, matched by JSON pointer.
     func error(_ field: String) -> String? {
         problem?.detail(for: "/\(field)")
-    }
-
-    /// A decimal in the person's locale or with a point.
-    private static func number(_ text: String) -> Double? {
-        let trimmed = text.trimmingCharacters(in: .whitespaces)
-        return (try? Double(trimmed, format: .number)) ?? Double(trimmed.replacingOccurrences(of: ",", with: "."))
     }
 }
 

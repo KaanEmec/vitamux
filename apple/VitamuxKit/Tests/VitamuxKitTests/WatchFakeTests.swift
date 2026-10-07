@@ -116,7 +116,7 @@ struct WatchFakeTests {
     @Test func `the inventory and catalogue gain the Watch codes`() async throws {
         let client = try await signedIn()
         let inventory = try await client.getInventory().ok.body.json
-        #expect(inventory.items.contains { $0.code == "heart_rate_resting" })
+        #expect(inventory.items.contains { $0.code == "resting_heart_rate" })
         #expect(inventory.items.contains { $0.kind == .event && $0.code == "ecg_recording" })
         let rr = try #require(inventory.items.first { $0.code == "rr_interval" })
         #expect(rr.metric?.unresolved == true && rr.devices.contains { $0._type == "watch" })

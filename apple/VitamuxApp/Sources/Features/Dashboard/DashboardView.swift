@@ -171,7 +171,7 @@ private struct AlertRow: View {
                 .foregroundStyle(color)
                 .frame(maxWidth: .infinity, alignment: .leading)
             if let action = alert.action, let route = alert.route {
-                Button(action) { open(route) }
+                Button { open(route) } label: { Text(action).tapTarget() }
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(color)
             }
@@ -322,7 +322,7 @@ private struct SourceRow: View {
                         Text(providerLabel(connection.provider)).font(.headline)
                         if connection.official == false { UnofficialBadge() }
                     }
-                    Text("Last success " + (connection.lastSuccessAt.map(DashboardAlert.ago) ?? "never"))
+                    Text("Last success " + (connection.lastSuccessAt.map(Format.ago) ?? "never"))
                         .font(.footnote)
                         .foregroundStyle(Color.inkMuted)
                     if let reason = connection.healthReason {

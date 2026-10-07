@@ -39,7 +39,7 @@ The asset catalogue also holds `AccentColor` (the same teal, for system controls
 - **Cards** (`CardBackground`, `.card()`): the dashboard's metric and source cards, sign-in fields and notes, stat tiles. Light theme: white on the pale ground with the border carrying the edge.
 - **Section headers** (`SectionHeader`) above custom card stacks; list sections keep the stock header.
 - **Tab bar:** stock, the selected tab in `ink` and the others in the system's secondary, as the artboard; content inside each tab is tinted `accent`.
-- **Buttons:** stock styles tinted `accent`; a filled (`borderedProminent`) button sets its label in `onAccent`, so dark-theme text on teal stays readable. Selected chips and segments are an `ink` pill on `raised`.
+- **Buttons:** stock styles tinted `accent`; a filled (`borderedProminent`) button sets its label in `onAccent`, so dark-theme text on teal stays readable. Selected chips and segments are an `ink` pill on `raised`. Small controls (icon buttons, steppers, text buttons in rows, calendar days) keep their look and get a 44-point hit area from VitamuxKit's `tapTarget()` and `.iconTapTarget` label style.
 
 ## Status and source cues
 

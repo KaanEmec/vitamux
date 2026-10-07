@@ -50,7 +50,7 @@ struct RowForm: Equatable {
         }
         func number(_ new: String, _ old: String, _ field: String, set: (Double) -> Void) {
             text(new, old, field) { value in
-                guard let number = Self.number(value) else {
+                guard let number = Format.decimal(value) else {
                     errors[field] = "must be a number"
                     return
                 }
@@ -72,11 +72,6 @@ struct RowForm: Equatable {
     }
 
     static let cannotClear = "Clearing a field is not available in the app yet; enter what is printed, or clear it in the web panel."
-
-    /// A decimal in the person's locale or with a point.
-    static func number(_ text: String) -> Double? {
-        (try? Double(text, format: .number)) ?? Double(text.replacingOccurrences(of: ",", with: "."))
-    }
 }
 
 /// Review of one extracted row (`PATCH /extractions/{id}/rows/{row}`, changed fields only): edit
@@ -127,7 +122,7 @@ struct RowEditor: View {
                 } header: {
                     VStack(alignment: .leading, spacing: 4) {
                         LabStatus(row.reviewStatus)
-                        Text("Confidence \(row.confidence.formatted(.number.precision(.fractionLength(2)))), an extractor hint only · \(notes.isEmpty ? "no checks" : LabText.plural(notes.count, "check") + " to compare with the PDF")")
+                        Text("Confidence \(row.confidence.formatted(.number.precision(.fractionLength(2)))), an extractor hint only · \(notes.isEmpty ? "no checks" : Format.plural(notes.count, "check") + " to compare with the PDF")")
                     }
                     .textCase(nil)
                     .accessibilityElement(children: .combine)

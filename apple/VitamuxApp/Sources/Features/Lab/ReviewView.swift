@@ -155,7 +155,7 @@ private struct ReviewHeader: View {
         Section {
             VStack(alignment: .leading, spacing: 4) {
                 Text(document.name).font(.headline)
-                Text("Uploaded \(Format.instant(document.uploadedAt)) · \(LabText.plural(document.pageCount, "page"))")
+                Text("Uploaded \(Format.instant(document.uploadedAt)) · \(Format.plural(document.pageCount, "page"))")
                     .font(.footnote).foregroundStyle(.secondary)
                 LabStatus(document.status).accessibilityIdentifier("documentStatus")
             }
@@ -264,7 +264,7 @@ private struct RowLine: View {
                 LabStatus(row.reviewStatus)
                 let checks = row.validation.count + row.warnings.count
                 if checks > 0, row.reviewStatus == .pending {
-                    Label(LabText.plural(checks, "check"), systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.secondary)
+                    Label(Format.plural(checks, "check"), systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.secondary)
                 }
             }
         }
@@ -333,7 +333,7 @@ private struct ConfirmBar: View {
                 }
             } else {
                 Button { act { await model.confirm(state.client) } } label: {
-                    Text(model.pending > 0 ? "Confirm results · \(LabText.plural(model.pending, "row")) still need\(model.pending == 1 ? "s" : "") review" : "Confirm results")
+                    Text(model.pending > 0 ? "Confirm results · \(Format.plural(model.pending, "row")) still need\(model.pending == 1 ? "s" : "") review" : "Confirm results")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)

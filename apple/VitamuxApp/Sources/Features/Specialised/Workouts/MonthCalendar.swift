@@ -24,7 +24,7 @@ struct MonthCalendar: View {
                     .disabled(model.isLatestMonth)
                     .accessibilityIdentifier("nextMonth")
             }
-            .labelStyle(.iconOnly)
+            .labelStyle(.iconTapTarget)
             .buttonStyle(.borderless)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
                 ForEach(Array(weekdays.enumerated()), id: \.offset) { _, symbol in
@@ -77,11 +77,12 @@ private struct DayCell: View {
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.tint)
             }
-            .frame(maxWidth: .infinity, minHeight: 40)
+            .frame(maxWidth: .infinity, minHeight: TapTarget.minimum)
             .background(picked ? AnyShapeStyle(.tint.opacity(0.18)) : AnyShapeStyle(.clear), in: .rect(cornerRadius: 8))
             .overlay {
                 if picked { RoundedRectangle(cornerRadius: 8).stroke(.tint, lineWidth: 1.5) }
             }
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(Format.day(date)), \(count == 1 ? "1 workout" : "\(count) workouts")")

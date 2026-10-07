@@ -47,9 +47,9 @@ final class StackSmokeUITests: XCTestCase {
         XCTAssertTrue(card.waitForExistence(timeout: 20), "the dashboard shows the slice's cards")
         app.assertNoProblem("dashboard")
 
-        // A metric: resting heart rate over a month, with yesterday's value (the real catalogue's code; the fake calls it heart_rate_resting).
+        // A metric: resting heart rate over a month, with yesterday's value.
         app.openLink("vitamux://explore/resting_heart_rate?range=1M")
-        let row = app.buttons["valueRow-\(ExploreUITests.day(-1))"]
+        let row = app.buttons["valueRow-\(Fake.day(-1))"]
         // The list loads its rows lazily, after the values arrive: scroll again until the row shows.
         for _ in 0 ..< 4 where !row.exists { _ = app.scrollTo(row).waitForExistence(timeout: 5) }
         XCTAssertTrue(row.exists, "yesterday has a resolved value")

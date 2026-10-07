@@ -100,7 +100,7 @@ struct MoreView: View {
         case .devices: model.devices.map { $0 == 1 ? "1 device" : "\($0) devices" }
         case .security: model.totpEnabled.map { $0 ? "Two-factor on" : "Two-factor off" }
         case .ai: model.aiEnabled.map { $0 ? "On" : "Off" }
-        case .backups: model.lastBackup.map { $0.map(SettingsFormat.ago) ?? "No backup" }
+        case .backups: model.lastBackup.map { $0.map(Format.ago) ?? "No backup" }
         case .system: model.issues.map { $0 == 0 ? "Healthy" : $0 == 1 ? "1 issue" : "\($0) issues" }
         default: nil
         }

@@ -27,14 +27,6 @@ final class SpecialisedUITests: XCTestCase {
         for _ in 0..<times { button.tap() }
     }
 
-    /// Today in the fake's timezone.
-    private var today: String {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "Europe/Berlin")!
-        let parts = calendar.dateComponents([.year, .month, .day], from: .now)
-        return String(format: "%04d-%02d-%02d", parts.year!, parts.month!, parts.day!)
-    }
-
     private func checkProvenance(_ app: XCUIApplication) {
         // The first match can already sit under the navigation bar (an earlier scroll passed it),
         // so tap the first one that is actually on screen.
@@ -135,7 +127,7 @@ final class SpecialisedUITests: XCTestCase {
         app.swipeDown()
         app.swipeDown()
 
-        let day = app.buttons["day-\(today)"]
+        let day = app.buttons["day-\(Fake.day())"]
         XCTAssertTrue(day.exists)
         XCTAssertTrue(day.label.hasSuffix("2 workouts"), day.label)
         day.tap()

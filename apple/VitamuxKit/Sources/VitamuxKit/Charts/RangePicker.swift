@@ -59,7 +59,7 @@ public struct RangePicker: View {
                 Button("Later", systemImage: "chevron.forward") { end = min(latest, end.adding(days: range.days ?? 0)) }
                     .disabled(range == .all || end >= latest)
             }
-            .labelStyle(.iconOnly)
+            .labelStyle(.iconTapTarget)
         }
     }
 

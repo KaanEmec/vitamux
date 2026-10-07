@@ -217,8 +217,8 @@ private struct ServerSection: View {
                 case .loaded(nil):
                     Text("This server does not list this iPhone.").foregroundStyle(.secondary)
                 case .loaded(let device?):
-                    LabeledContent("Last seen", value: device.lastSeenAt.map(relative) ?? "Never")
-                    LabeledContent("Last batch", value: device.lastSyncAt.map(relative) ?? "None yet")
+                    LabeledContent("Last seen", value: device.lastSeenAt.map(Format.ago) ?? "Never")
+                    LabeledContent("Last batch", value: device.lastSyncAt.map(Format.ago) ?? "None yet")
                     LabeledContent("Types reported") {
                         Text("\(device.types.count)").accessibilityIdentifier("serverTypes")
                     }
@@ -234,9 +234,5 @@ private struct ServerSection: View {
                 Text("A type that stays silent for 7 days is flagged \"possibly denied\": iOS may have denied it, or there was nothing new. Check Settings › Health › Data Access & Devices.")
             }
         }
-    }
-
-    private func relative(_ date: Date) -> String {
-        date.formatted(.relative(presentation: .named))
     }
 }

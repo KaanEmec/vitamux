@@ -32,9 +32,9 @@ final class ShellUITests: XCTestCase {
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["result-Go to-Dashboard"].waitForExistence(timeout: 5), "sections show without a query")
         field.typeText("resting")
-        XCTAssertTrue(app.buttons["result-Rules-heart_rate_resting"].waitForExistence(timeout: 10))
-        app.buttons["result-Metrics-heart_rate_resting"].tap()
-        XCTAssertTrue(app.navigationBars["Heart rate resting"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["result-Rules-resting_heart_rate"].waitForExistence(timeout: 10))
+        app.buttons["result-Metrics-resting_heart_rate"].tap()
+        XCTAssertTrue(app.navigationBars["Resting heart rate"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.tabBars.buttons["Explore"].isSelected)
     }
 

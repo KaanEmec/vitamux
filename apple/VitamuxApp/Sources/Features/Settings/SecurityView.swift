@@ -215,7 +215,7 @@ private struct SessionRow: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(SecurityModel.device(session))
-                Text("Signed in \(SettingsFormat.when(session.createdAt)) · active \(SettingsFormat.when(session.lastSeenAt))")
+                Text("Signed in \(Format.instant(session.createdAt)) · active \(Format.instant(session.lastSeenAt))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

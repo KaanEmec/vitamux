@@ -78,6 +78,7 @@ private struct StepBar: View {
                                 Image(systemName: "exclamationmark.circle.fill").font(.caption).foregroundStyle(Color.feedbackError)
                             }
                         }
+                        .tapTarget()
                     }
                     .buttonStyle(.plain)
                     .disabled(i > 0 && model.form == nil && model.metric.isEmpty)

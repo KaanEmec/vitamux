@@ -51,7 +51,7 @@ final class SourcesModel {
         guard !list.isEmpty else { return "Sources send Vitamux your health data. Connect your first one below." }
         let attention = list.filter(\.health.needsAttention).count
         let healthy = list.filter { $0.health == .ok }.count
-        var out = "\(SourcesCopy.plural(list.count, "source")) · \(healthy) healthy"
+        var out = "\(Format.plural(list.count, "source")) · \(healthy) healthy"
         if attention > 0 { out += " · \(attention) need\(attention == 1 ? "s" : "") attention" }
         return out
     }

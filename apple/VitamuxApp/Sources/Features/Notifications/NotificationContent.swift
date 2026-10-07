@@ -20,7 +20,7 @@ enum NotificationContent {
         case .failing:
             ("\(name) syncs are failing", "The last \(c.consecutiveFailures) runs failed. Open its history to see why.", base + "?tab=history")
         case .stale:
-            ("\(name) has not synced recently", c.lastSuccessAt.map { "No successful sync since \(day($0)). Open the connection to check it." }
+            ("\(name) has not synced recently", c.lastSuccessAt.map { "No successful sync since \(Format.date($0)). Open the connection to check it." }
                 ?? "It has not synced successfully yet. Open the connection to check it.", base)
         default:
             ("\(name) is degraded", "Some of its streams have problems. Open its streams to see which.", base + "?tab=streams")
@@ -57,7 +57,7 @@ enum NotificationContent {
         guard let lastBackup, now.timeIntervalSince(lastBackup) > DashboardAlert.backupMaxAge else { return nil }
         return Item(id: "backup", category: Category.staleBackup.rawValue, state: DashboardAlert.instant(lastBackup),
                     title: "The last backup is old",
-                    body: "The last backup finished on \(day(lastBackup)). Run vitamux backup on the server; Backups shows when it last ran.",
+                    body: "The last backup finished on \(Format.date(lastBackup)). Run vitamux backup on the server; Backups shows when it last ran.",
                     link: "vitamux://settings/backups")
     }
 
@@ -72,17 +72,12 @@ enum NotificationContent {
         } else if !device.waiting.isEmpty {
             ("failing", "Apple Health upload stalled", "Some types could not upload. Open Apple Health in Vitamux to see which and sync again.")
         } else if let last = device.lastUpload, now.timeIntervalSince(last) > uploadMaxSilence {
-            ("silent", "Apple Health upload stalled", "Nothing has uploaded since \(day(last)). Open Apple Health in Vitamux to sync now.")
+            ("silent", "Apple Health upload stalled", "Nothing has uploaded since \(Format.date(last)). Open Apple Health in Vitamux to sync now.")
         } else {
             nil
         }
         guard let found else { return nil }
         return Item(id: "apple-health", category: Category.uploadStalled.rawValue, state: found.state, title: found.title, body: found.body,
                     link: "vitamux://apple-health")
-    }
-
-    /// "3 Oct 2026".
-    private static func day(_ date: Date) -> String {
-        date.formatted(date: .abbreviated, time: .omitted)
     }
 }

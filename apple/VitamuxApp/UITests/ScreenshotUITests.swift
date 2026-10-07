@@ -24,7 +24,7 @@ final class ScreenshotUITests: XCTestCase {
 
         let screens: [(name: String, link: String, title: String)] = [
             ("explore", "vitamux://explore", "Explore"),
-            ("metric", "vitamux://explore/heart_rate_resting?range=3M", "Heart rate resting"),
+            ("metric", "vitamux://explore/resting_heart_rate?range=3M", "Resting heart rate"),
             ("sleep", "vitamux://explore/sleep", "Sleep"),
             ("ecg", "vitamux://explore/ecg/00000000-0000-4000-8000-000000000103", "ECG recording"),
             ("sources", "vitamux://connections", "Sources"),

@@ -50,10 +50,3 @@ final class SearchModel {
         return Array(all.filter { "\($0.label) \($0.detail ?? "") \($0.group)".lowercased().contains(q) }.prefix(50))
     }
 }
-
-/// The provider's name, else the code made readable (as the panel's `providerLabel`).
-func providerLabel(_ code: String) -> String {
-    let known = ["withings": "Withings", "apple_health": "Apple Health", "manual": "Manual entries",
-                 "garmin": "Garmin Connect", "whoop": "WHOOP"]
-    return known[code] ?? metricLabel(code)
-}

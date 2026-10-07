@@ -99,7 +99,7 @@ struct BackupsView: View {
                 case .loading:
                     ProgressView()
                 case .loaded(let date?):
-                    Label("Last backup: \(SettingsFormat.when(date)) (\(SettingsFormat.ago(date)))", systemImage: "checkmark.circle")
+                    Label("Last backup: \(Format.instant(date)) (\(Format.ago(date)))", systemImage: "checkmark.circle")
                         .accessibilityIdentifier("lastBackup")
                 case .loaded(nil):
                     Label("No backup is recorded.", systemImage: "exclamationmark.triangle")
@@ -200,8 +200,8 @@ private struct JobSection: View {
             }
         } footer: {
             Text(job.status == .done
-                 ? "The link works once and expires 10 minutes after it was issued. Start a new export if it has expired. Started \(SettingsFormat.when(job.createdAt))."
-                 : "Started \(SettingsFormat.when(job.createdAt)).")
+                 ? "The link works once and expires 10 minutes after it was issued. Start a new export if it has expired. Started \(Format.instant(job.createdAt))."
+                 : "Started \(Format.instant(job.createdAt)).")
         }
     }
 }

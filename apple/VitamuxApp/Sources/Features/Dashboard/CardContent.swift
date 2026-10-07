@@ -100,17 +100,6 @@ struct CardContent: Equatable {
         }
     }
 
-    /// The panel's `groupLabel`: devices and `<brand>_apple` relays by name, else the code made readable.
-    private static func groupLabel(_ group: String) -> String {
-        switch group {
-        case "apple_watch": return "Apple Watch"
-        case "iphone": return "iPhone"
-        default:
-            if group.hasSuffix("_apple") { return "\(providerLabel(String(group.dropLast(6)))) via Apple Health" }
-            return metricLabel(group)
-        }
-    }
-
     // MARK: - Values and formatting
 
     static func number(_ value: (any Sendable)?) -> Double? {

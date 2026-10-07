@@ -77,7 +77,6 @@ func unitLabel(_ unit: String) -> String {
 extension LabResult {
     /// The value as printed, with its comparator when the text lacks it: "< 0.5".
     var printedValue: String {
-        guard let comparator, !valueText.trimmingCharacters(in: .whitespaces).hasPrefix(comparator) else { return valueText }
-        return "\(comparator) \(valueText)"
+        LabText.printed(valueText, comparator: comparator)
     }
 }

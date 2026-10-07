@@ -70,7 +70,7 @@ private struct StorageSection: View {
             LabeledContent("Database", value: SettingsFormat.bytes(status.databaseSizeBytes))
                 .accessibilityIdentifier("databaseSize")
             LabeledContent("Blobs (PDFs, raw files, exports)", value: SettingsFormat.bytes(status.blobSizeBytes))
-            LabeledContent("Last backup", value: status.lastBackupAt.map(SettingsFormat.when) ?? "None recorded")
+            LabeledContent("Last backup", value: status.lastBackupAt.map(Format.instant) ?? "None recorded")
         }
     }
 }
@@ -87,7 +87,7 @@ private struct DegradedSection: View {
             ForEach(connections, id: \.id) { connection in
                 NavigationLink(value: Route.connection(id: connection.id)) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Label(SettingsFormat.provider(connection.provider), systemImage: "exclamationmark.triangle")
+                        Label(providerLabel(connection.provider), systemImage: "exclamationmark.triangle")
                         Text([connection.health.rawValue, connection.stream, connection.healthReason].compactMap(\.self).joined(separator: " · "))
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -110,7 +110,7 @@ private struct FailingSection: View {
             ForEach(jobs, id: \.id) { job in
                 VStack(alignment: .leading, spacing: 2) {
                     Label(job.kind, systemImage: "xmark.octagon").foregroundStyle(Color.feedbackError)
-                    Text(["\(job.attempts) attempts", job.errorClass, job.finishedAt.map(SettingsFormat.when)].compactMap(\.self).joined(separator: " · "))
+                    Text(["\(job.attempts) attempts", job.errorClass, job.finishedAt.map(Format.instant)].compactMap(\.self).joined(separator: " · "))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

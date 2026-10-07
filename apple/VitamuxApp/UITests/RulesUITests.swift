@@ -32,7 +32,7 @@ final class RulesUITests: XCTestCase {
     func testCatalogueListsEveryMetricWithItsRule() {
         let app = signedIn()
         app.openLink("vitamux://rules")
-        let sentence = app.staticTexts["ruleSentence-heart_rate_resting"]
+        let sentence = app.staticTexts["ruleSentence-resting_heart_rate"]
         XCTAssertTrue(sentence.waitForExistence(timeout: 10))
         XCTAssertEqual(sentence.label, "For each day, use the first source in order with data; if none has, the day has no value. 1 excluded source is never used.")
         XCTAssertTrue(app.staticTexts["Built-in default"].firstMatch.exists)
@@ -40,19 +40,19 @@ final class RulesUITests: XCTestCase {
 
         app.buttons["Default 1"].tap()
         XCTAssertTrue(app.staticTexts["ruleSentence-spo2"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.staticTexts["ruleSentence-heart_rate_resting"].exists, "the filter hides built-ins")
+        XCTAssertFalse(app.staticTexts["ruleSentence-resting_heart_rate"].exists, "the filter hides built-ins")
         app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'All '")).firstMatch.tap()
 
-        app.buttons["ruleEntry-heart_rate_resting"].tap()
-        XCTAssertTrue(app.navigationBars["heart_rate_resting"].waitForExistence(timeout: 10))
+        app.buttons["ruleEntry-resting_heart_rate"].tap()
+        XCTAssertTrue(app.navigationBars["resting_heart_rate"].waitForExistence(timeout: 10))
         waitForLabel(app.staticTexts["inEffect"], "IN EFFECT: BUILT-IN DEFAULT")
         XCTAssertTrue(app.element("inEffectGroup-0").label.contains("whoop"), app.element("inEffectGroup-0").label)
     }
 
     func testLensReorderPreviewSaveAndActivateThenRevert() {
         let app = signedIn()
-        app.openLink("vitamux://explore/heart_rate_resting?range=1M")
-        XCTAssertTrue(app.navigationBars["Heart rate resting"].waitForExistence(timeout: 10))
+        app.openLink("vitamux://explore/resting_heart_rate?range=1M")
+        XCTAssertTrue(app.navigationBars["Resting heart rate"].waitForExistence(timeout: 10))
         app.scrollTo(app.buttons["editRule"]).tap()
         XCTAssertTrue(app.navigationBars["How it's calculated"].waitForExistence(timeout: 10))
         let sentence = app.staticTexts["lensSentence"]
@@ -109,7 +109,7 @@ final class RulesUITests: XCTestCase {
 
     func testAFieldErrorPointsToItsControl() {
         let app = signedIn()
-        builder(app, metric: "heart_rate_resting")
+        builder(app, metric: "resting_heart_rate")
         app.textFields["groupID-0"].replaceText("Bad Id")
         step(app, 4)
         app.buttons["saveRule"].tap()

@@ -122,12 +122,12 @@ private struct DocumentRow: View {
         VStack(alignment: .leading, spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(document.name).font(.body.weight(.semibold)).lineLimit(2)
-                Text("\(Format.instant(document.uploadedAt)) · \(LabText.plural(document.pageCount, "page")) · \(LabText.size(document.sizeBytes))")
+                Text("\(Format.instant(document.uploadedAt)) · \(Format.plural(document.pageCount, "page")) · \(LabText.size(document.sizeBytes))")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             .accessibilityElement(children: .combine)
             HStack {
-                LabStatus(document.status).accessibilityIdentifier("status-\(document.id)")
+                LabStatus(document.status).tapTarget().accessibilityIdentifier("status-\(document.id)")
                 Spacer()
                 actions
             }
@@ -158,7 +158,7 @@ private struct DocumentRow: View {
         }
         if document.status != .deleted {
             Button("Delete", systemImage: "trash", role: .destructive) { deleting = document }
-                .labelStyle(.iconOnly)
+                .labelStyle(.iconTapTarget)
                 .buttonStyle(.borderless)
                 .accessibilityLabel("Delete \(document.name)")
                 .accessibilityIdentifier("delete-\(document.id)")

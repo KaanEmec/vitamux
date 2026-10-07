@@ -124,7 +124,7 @@ extension FakeServer {
 
     static var metrics: [[String: Any]] { exploreMetrics + [
         metric("heart_rate", section: "heart", unit: "bpm", kind: "sample", aggregation: "intensive"),
-        metric("heart_rate_resting", section: "heart", unit: "bpm", kind: "daily_value", aggregation: "intensive"),
+        metric("resting_heart_rate", section: "heart", unit: "bpm", kind: "daily_value", aggregation: "intensive"),
         metric("steps", section: "activity", unit: "count", kind: "cumulative", aggregation: "additive"),
         metric("body_mass", section: "body", unit: "kg", kind: "sample", aggregation: "latest"),
     ] }

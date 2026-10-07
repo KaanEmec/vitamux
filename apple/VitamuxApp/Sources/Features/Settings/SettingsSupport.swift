@@ -25,17 +25,8 @@ struct SettingsPageView: View {
     }
 }
 
-/// Dates, sizes and HealthKit names as the panel's settings pages print them (web/src/lib/settings/format.ts).
+/// Sizes and HealthKit names as the panel's settings pages print them (web/src/lib/settings/format.ts).
 enum SettingsFormat {
-    static func when(_ date: Date) -> String {
-        date.formatted(date: .abbreviated, time: .shortened)
-    }
-
-    /// "5 minutes ago".
-    static func ago(_ date: Date) -> String {
-        date.formatted(.relative(presentation: .named, unitsStyle: .wide))
-    }
-
     static func bytes(_ count: Int64) -> String {
         count == 0 ? "Empty" : count.formatted(.byteCount(style: .file))
     }
@@ -45,15 +36,6 @@ enum SettingsFormat {
         guard let match = id.wholeMatch(of: /HK(?:Quantity|Category|Correlation|Data|Characteristic)?TypeIdentifier(.+)/) else { return id }
         let words = String(match.1).replacing(/([a-z0-9])([A-Z])/) { "\($0.1) \($0.2)" }.lowercased()
         return words.prefix(1).uppercased() + words.dropFirst()
-    }
-
-    /// The panel's provider names for the codes Settings lists.
-    static func provider(_ code: String) -> String {
-        let names = [
-            "withings": "Withings", "garmin": "Garmin Connect", "whoop": "WHOOP", "apple_health": "Apple Health",
-            "manual": "Manual entries", "ultrahuman": "Ultrahuman", "oura": "Oura",
-        ]
-        return names[code] ?? code.replacingOccurrences(of: "_", with: " ").capitalized
     }
 }
 

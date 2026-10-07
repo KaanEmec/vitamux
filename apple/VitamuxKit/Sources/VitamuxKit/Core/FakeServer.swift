@@ -82,6 +82,9 @@ public final class FakeServer: Sendable {
         FakeServer(host: "other.vitamux.test", handshake: .notVitamux),
     ]
 
+    /// The owner's timezone in every fixture: their local dates, and "today", are this zone's.
+    public static let timeZone = TimeZone(identifier: "Europe/Berlin")!
+
     public static var isUITestRun: Bool {
         ProcessInfo.processInfo.arguments.contains("-uitest")
     }

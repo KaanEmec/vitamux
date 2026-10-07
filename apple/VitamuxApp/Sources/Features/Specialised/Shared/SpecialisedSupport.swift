@@ -199,8 +199,10 @@ struct ProvenanceButton: View {
     @Binding var request: ProvenanceRequest?
 
     var body: some View {
-        Button("Provenance", systemImage: "point.3.connected.trianglepath.dotted") {
+        Button {
             request = ProvenanceRequest(entity: entity, recordID: id)
+        } label: {
+            Label("Provenance", systemImage: "point.3.connected.trianglepath.dotted").tapTarget()
         }
         .font(.footnote)
         .buttonStyle(.borderless)

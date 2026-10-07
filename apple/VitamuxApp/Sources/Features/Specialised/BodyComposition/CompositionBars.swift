@@ -39,9 +39,11 @@ struct CompositionBars: View {
             } else {
                 chart
             }
-            Button(showsTable ? "Show as chart" : "Show as table") { showsTable.toggle() }
-                .font(.footnote)
-                .buttonStyle(.borderless)
+            Button { showsTable.toggle() } label: {
+                Text(showsTable ? "Show as chart" : "Show as table").tapTarget()
+            }
+            .font(.footnote)
+            .buttonStyle(.borderless)
         }
     }
 

@@ -16,14 +16,18 @@ final class PerformanceUITests: XCTestCase {
             app.signInToDashboard()
             XCTAssertTrue(app.buttons["card-steps"].waitForExistence(timeout: 10), "the dashboard is ready")
 
-            app.openLink("vitamux://explore/heart_rate?range=1D&end=\(ExploreUITests.day(-1))")
+            app.openLink("vitamux://explore/heart_rate?range=1D&end=\(Fake.day(-1))")
             XCTAssertTrue(app.staticTexts["dayStep"].waitForExistence(timeout: 10), "heart rate opens the Day view")
             waitForStep(app, "1-minute buckets")
+            // The source toggles sit below the chart. One swipe each way: a scroll loop's repeated
+            // queries of this many chart elements flood the log and push out the signposts.
+            app.swipeUp()
             for provider in ["apple_health", "garmin"] {
                 let toggle = app.descendants(matching: .any)["toggleSource-\(provider)"].firstMatch
                 XCTAssertTrue(toggle.waitForExistence(timeout: 10), provider)
                 toggle.tap()
             }
+            app.swipeDown()
             app.buttons["dayZoomIn"].tap()
             waitForStep(app, "30-second buckets")
             app.buttons["dayZoomIn"].tap()

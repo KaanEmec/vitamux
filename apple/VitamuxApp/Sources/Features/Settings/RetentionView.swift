@@ -209,7 +209,7 @@ struct RetentionView: View {
             ForEach($model.rawRows) { $row in
                 VStack(alignment: .leading) {
                     HStack {
-                        Text(SettingsFormat.provider(row.provider))
+                        Text(providerLabel(row.provider))
                         Spacer()
                         TextField("Days", text: $row.days)
                             .keyboardType(.numberPad)

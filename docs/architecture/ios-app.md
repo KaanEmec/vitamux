@@ -71,46 +71,47 @@ The app is plain SwiftUI. A contributor who knows SwiftUI should find any screen
 
 ## Navigation
 
-Tab bar: **Dashboard · Explore · Sources · Lab · More**. More holds Rules, Settings and Apple Health; Sources opens with a "This iPhone" card for Apple Health. Global search (the ⌘K palette's job) is a search field over sections, settings pages, connections, metrics and their rules. Deep links use `vitamux://` and match panel paths (`vitamux://explore/heart_rate_resting?range=3M`), so widgets, notifications and the OAuth return share one router. Every screen, sheet and link: [ios-app-screens](ios-app-screens.md).
+Tab bar: **Dashboard · Explore · Sources · Lab · More**. More holds Rules, Settings and Apple Health; Sources opens with a "This iPhone" card for Apple Health. Global search (the ⌘K palette's job) is a search field over sections, settings pages, connections, metrics and their rules. Deep links use `vitamux://` and match panel paths (`vitamux://explore/resting_heart_rate?range=3M`), so widgets, notifications and the OAuth return share one router. Every screen, sheet and link: [ios-app-screens](ios-app-screens.md).
 
 ## Parity matrix
 
 Every panel route and every owner endpoint the panel calls has an app screen. "Same" means the same behaviour, endpoints and confirmations.
 
-| Panel | App | Notes | Job |
-| --- | --- | --- | --- |
-| Login (password, TOTP or recovery code, rate limit, expired) | Server + sign-in | App session; Face ID lock | J22.5 |
-| Shell: nav, ⌘K palette, sync pill, theme, sign-out | Tab bar, search, sync status, theme, sign-out | Theme is an app preference | J22.5 |
-| Dashboard: day picker, alerts, cards, edit mode, add metric, sources | Same | Reorder by drag or move up/down | J22.7 |
-| Explore inventory, filters, pins | Same | | J22.8 |
-| Metric detail: range, brush, baseline, sources, coverage, stats, values table | Same | Pinch or drag to zoom | J22.8 |
-| PointPanel, overrides (exclude, force, set value), provenance | Same | Sheet | J22.8 |
-| All-sources day view, overrides list, revoke | Same | | J22.8 |
-| Sleep, blood pressure, body composition, workouts, events, lab analyte views | Same | | J22.9 |
-| Rules catalogue, coverage heatmap, rule page, versions, diff, activate | Same | | J22.10 |
-| Rule lens (draft overlay, save, activate, revert) | Bottom sheet over the chart | | J22.10 |
-| Rule builder (5 steps, live preview, field errors) | Same, one step per screen | | J22.10 |
-| Connections list, run strip, banners | Sources | | J22.11 |
-| Connection detail: overview, streams, devices (type, name, merge), backfills, history, settings and schedules, delete | Same | | J22.11 |
-| Connect wizard: OAuth, prompt steps, E20 setup states and wizards | Same | `ASWebAuthenticationSession` | J22.11 |
-| Lab documents: upload, extract with consent, delete | Same, plus camera scan, Files, share sheet | | J22.12 |
-| Lab review: PDF with row outline, row editor, accept/reject, confirm, unconfirm | Same | PDFKit, no pdf.js | J22.12 |
-| Lab results by analyte, history | Same | | J22.12 |
-| Settings › Profile, timezone periods, Withings notifications | Same | | J22.13 |
-| Settings › Devices: pairing code, devices, resync, revoke, origins | Same, plus "This iPhone" | QR shown for other phones | J22.13, J22.14 |
-| Apple Health source filter (take or ignore per app and type) | Apple Health › Sources | New in both clients | J22.25 |
-| Intraday Day view with zoom to buckets and raw samples | Day range on metric detail | New in both clients | J22.26 |
-| Settings › AI providers, API keys (shown once), Security (password, TOTP, sessions) | Same | TOTP: `otpauth://` link and copy | J22.13 |
-| Settings › Sources: source order, provider apps (write-only secrets, verify), sidecars (add, remove, secret shown once) | Same | Reuses J22.11's app wizard | J22.13 |
-| Settings › Retention, Backups and export, System status | Same | Export saved to Files | J22.13 |
-| Bridge app: pairing, groups, per-type status, sync now, anchor reset, privacy | Apple Health | Pairing is one tap when signed in | J22.14 |
+| Panel | App | Notes | Job | Status |
+| --- | --- | --- | --- | --- |
+| Login (password, TOTP or recovery code, rate limit, expired) | Server + sign-in | App session; Face ID lock | J22.5 | Done |
+| Shell: nav, ⌘K palette, sync pill, theme, sign-out | Tab bar, search, sync status, theme, sign-out | Theme is an app preference | J22.5 | Done |
+| Dashboard: day picker, alerts, cards, edit mode, add metric, sources | Same | Reorder by drag or move up/down | J22.7 | Done |
+| Explore inventory, filters, pins | Same | | J22.8 | Done |
+| Metric detail: range, brush, baseline, sources, coverage, stats, values table | Same | Pinch or drag to zoom | J22.8 | Done |
+| PointPanel, overrides (exclude, force, set value), provenance | Same | Sheet | J22.8 | Done |
+| All-sources day view, overrides list, revoke | Same | | J22.8 | Done |
+| Sleep, blood pressure, body composition, workouts, events, lab analyte views | Same | | J22.9 | Done |
+| Apple Watch views: ECG list and recording, beat-to-beat, activity rings, workout route and segments | Same | Routes on MapKit | J22.18 | Done |
+| Rules catalogue, coverage heatmap, rule page, versions, diff, activate | Same | | J22.10 | Done |
+| Rule lens (draft overlay, save, activate, revert) | Bottom sheet over the chart | | J22.10 | Done |
+| Rule builder (5 steps, live preview, field errors) | Same, one step per screen | | J22.10 | Done |
+| Sources' own series when nothing resolved, Source-per-day strip toggle, opt-in quality gates (J24.5) | Same | | J22.8, J22.10 | Done |
+| Connections list, run strip, banners | Sources | | J22.11 | Done |
+| Connection detail: overview, streams, devices (type, name, merge), backfills, history, settings and schedules, delete | Same | | J22.11 | Done |
+| Connect wizard: OAuth, prompt steps, E20 setup states and wizards | Same | `ASWebAuthenticationSession` | J22.11 | Done |
+| Lab documents: upload, extract with consent, delete | Same, plus camera scan, Files, share sheet | | J22.12 | Done |
+| Lab review: PDF with row outline, row editor, accept/reject, confirm, unconfirm | Same | PDFKit, no pdf.js | J22.12 | Done |
+| Lab results by analyte, history | Same | | J22.12 | Done |
+| Lab row editor: analyte-code suggestions (`GET /analytes/aliases`) | The code is typed | A typing aid only; the server checks the code and its field error shows | J22.12 | Out of scope |
+| Settings › Profile, timezone periods, Withings notifications | Same | | J22.13 | Done |
+| Settings › Devices: pairing code, devices, resync, revoke, origins | Same, plus "This iPhone" | QR shown for other phones | J22.13, J22.14 | Done |
+| Apple Health source filter (take or ignore per app and type) | Apple Health › Sources | New in both clients | J22.25 | Done |
+| Intraday Day view with zoom to buckets and raw samples | Day range on metric detail | New in both clients | J22.26 | Done |
+| Settings › AI providers, API keys (shown once), Security (password, TOTP, sessions) | Same | TOTP: `otpauth://` link and copy | J22.13 | Done |
+| Settings › Sources: source order, provider apps (write-only secrets, verify), sidecars (add, remove, secret shown once) | Same | A credentials sheet, as the panel's `AppCredentials` | J22.13 | Done |
+| Settings › Retention, Backups and export, System status | Same | Export saved to Files | J22.13 | Done |
+| Bridge app: pairing, groups, per-type status, sync now, anchor reset, privacy | Apple Health | Pairing is one tap when signed in | J22.14 | Done |
 
-New in both clients: the Apple Watch views ([J22.18](../plan/E22-ios-app/J22.18-watch-views.md)).
-
-Checked against `web/src/routes` and `api/authz.yaml` (2026-10-05). Out of scope, with the reason:
+Checked row by row against the app and `web/src/routes` and `api/authz.yaml` ([J22.22](../plan/E22-ios-app/J22.22-quality-gates.md), 2026-10-07). Out of scope, with the reason:
 
 - `/data/*`: redirects that keep old panel bookmarks working; the app has no old links.
-- Operations the panel does not call: `POST /measurements/manual`, `POST /connections` (push connections), `POST`/`DELETE /analytes/aliases`, `GET /event-types`, `GET /workouts`, `GET /workouts/{id}` and `GET /sleep/{id}` (the panel uses the resolved views). They join when a panel job adds them.
+- Operations the panel does not call: `POST /measurements/manual`, `POST /connections` (push connections), `POST`/`DELETE /analytes/aliases`, `GET /event-types`, `GET /workouts` and `GET /sleep/{id}` (the panel uses the resolved views). They join when a panel job adds them.
 - `/api/ingest/v1/*`: the device API, called by HealthBridgeKit, not by screens (J22.14).
 - `GET /oauth/{provider}/callback` and `/webhooks/withings/*`: reached by the provider, not by a client.
 
@@ -164,7 +165,7 @@ Gates ([J22.22](../plan/E22-ios-app/J22.22-quality-gates.md)); each runs on a si
 
 - **CI `swift` job** (`macos-26`, Xcode 26.6, iPhone 17 Pro on iOS 26.5): `swift test` for both packages, the pinned package list, then [`ui-gates.sh`](../../apple/VitamuxApp/scripts/ui-gates.sh) (`make test-ios`): an `xcodebuild` of the app and widget (resolving no package beyond VitamuxKit's), the privacy-manifest check ([`privacy-manifest.sh`](../../apple/VitamuxApp/scripts/privacy-manifest.sh)), the UI suite on the fake server and the widget tests into an `.xcresult` artifact, the privacy log scan and the performance budgets.
 - **Stack smoke** ([`scripts/ios-stack.sh`](../../scripts/ios-stack.sh), `make test-ios-stack`, CI job `ios-stack`): a real server on a throwaway database with a synthetic week, an owner with TOTP and a paused fake Withings connection; `StackSmokeUITests` runs the shipped app (no `-uitest`) pointed at it by the launch argument `-server` (the stored server, through the argument domain): server step, TOTP sign-in, dashboard, a metric, an override, the connection, sign-out.
-- **Accessibility:** `AccessibilityAuditUITests` runs `performAccessibilityAudit()` per screen. Element description, trait and attributable element-detection issues fail; hit region (until J22.24 resizes the small controls), contrast, clipped text and Dynamic Type are printed as `a11y:` lines (`TEST_RUNNER_VITAMUX_A11Y_SURVEY=1` lists everything without failing).
+- **Accessibility:** `AccessibilityAuditUITests` runs `performAccessibilityAudit()` per screen. Element description, trait, attributable element-detection and a control's hit region under 44 pt fail; contrast, clipped text and Dynamic Type are printed as `a11y:` lines (`TEST_RUNNER_VITAMUX_A11Y_SURVEY=1` lists everything without failing).
 - **Performance:** `os_signpost` intervals in Points of Interest (`Sources/Shared/Signposts.swift`): `dashboardReady` (a dashboard load until every card has its summary) and `chartRender` (a Day-view layer from the model to its committed frame). `PerformanceUITests` drives them on the fake's 14,400-row heart-rate day at every zoom rung; [`perf-signposts.sh`](../../apple/VitamuxApp/scripts/perf-signposts.sh) reads them with `log show --signpost` and checks dashboard < 1 s and each chart render < 500 ms on the simulator.
 - **Privacy:** [`log-scan.sh`](../../apple/VitamuxApp/scripts/log-scan.sh) streams the app's and widget's unified log at debug level during a run and fails on any marker (the fake's synthetic secrets; the stack's sentinel password, TOTP secret, recovery codes, override value and note) or `vmx_` token.
 - A physical-device campaign repeats the [Bridge checklist](../apple-health-device-checklist.md) and adds widgets, notifications, app lock and the upgrade from Bridge ([J22.23](../plan/E22-ios-app/J22.23-device-campaign-release.md)).

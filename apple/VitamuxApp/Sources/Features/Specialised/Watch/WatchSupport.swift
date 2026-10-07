@@ -159,8 +159,10 @@ struct PushButton: View {
     let route: Route
 
     var body: some View {
-        Button(title, systemImage: systemImage) {
+        Button {
             state.paths[state.tab, default: []].append(route)
+        } label: {
+            Label(title, systemImage: systemImage).tapTarget()
         }
         .font(.footnote)
         .buttonStyle(.borderless)
@@ -175,13 +177,13 @@ struct DayStepper: View {
     var body: some View {
         HStack {
             Button("Earlier day", systemImage: "chevron.left") { date = date.adding(days: -1) }
-                .labelStyle(.iconOnly)
+                .labelStyle(.iconTapTarget)
                 .accessibilityIdentifier("earlierDay")
             Spacer()
             Text(Format.day(date)).font(.headline).accessibilityIdentifier("shownDay")
             Spacer()
             Button("Later day", systemImage: "chevron.right") { date = date.adding(days: 1) }
-                .labelStyle(.iconOnly)
+                .labelStyle(.iconTapTarget)
                 .disabled(date >= latest)
                 .accessibilityIdentifier("laterDay")
         }

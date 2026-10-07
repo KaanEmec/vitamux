@@ -7,14 +7,14 @@ import XCTest
 final class AccessibilityAuditUITests: XCTestCase {
     override func setUp() async throws { continueAfterFailure = true }
 
-    /// Missing or useless labels, wrong traits, and text VoiceOver cannot reach.
-    static let serious: XCUIAccessibilityAuditType = [.sufficientElementDescription, .trait, .elementDetection]
-    /// Reported, not failing yet: hit regions under 44 pt (range arrows, "Show as table", calendar
-    /// days; the design pass J22.24 resizes them, then `.hitRegion` moves to `serious`), and
-    /// contrast, clipped text and Dynamic Type, which the simulator's audit over-reports on
-    /// system materials and charts. Element detection without an element (text the audit sees in
-    /// a chart's axes or behind a sheet but cannot attribute) is reported too.
-    static let reported: XCUIAccessibilityAuditType = [.hitRegion, .contrast, .textClipped, .dynamicType]
+    /// Missing or useless labels, wrong traits, text VoiceOver cannot reach, and controls whose hit
+    /// area is under 44 pt (the shared `tapTarget()` and `.iconTapTarget` size them).
+    static let serious: XCUIAccessibilityAuditType = [.sufficientElementDescription, .trait, .elementDetection, .hitRegion]
+    /// Reported, not failing: contrast, clipped text and Dynamic Type, which the simulator's audit
+    /// over-reports on system materials and charts. Element detection without an element (text the
+    /// audit sees in a chart's axes or behind a sheet but cannot attribute) and small hit regions
+    /// that are not controls (a chart's hour column, a static rule tag) are reported too.
+    static let reported: XCUIAccessibilityAuditType = [.contrast, .textClipped, .dynamicType]
 
     private var survey: Bool { ProcessInfo.processInfo.environment["VITAMUX_A11Y_SURVEY"] == "1" }
 
@@ -35,16 +35,16 @@ final class AccessibilityAuditUITests: XCTestCase {
 
     func testDashboard() throws { try open(nil, "dashboard") }
     func testExplore() throws { try open("vitamux://explore", "explore") }
-    func testMetricDetail() throws { try open("vitamux://explore/heart_rate_resting?range=1M", "metric detail") }
-    func testDayView() throws { try open("vitamux://explore/heart_rate?range=1D&end=\(ExploreUITests.day(-1))", "day view") }
-    func testAllSourcesDay() throws { try open("vitamux://explore/heart_rate/day/\(ExploreUITests.day(-1))", "all-sources day") }
+    func testMetricDetail() throws { try open("vitamux://explore/resting_heart_rate?range=1M", "metric detail") }
+    func testDayView() throws { try open("vitamux://explore/heart_rate?range=1D&end=\(Fake.day(-1))", "day view") }
+    func testAllSourcesDay() throws { try open("vitamux://explore/heart_rate/day/\(Fake.day(-1))", "all-sources day") }
     func testSleep() throws { try open("vitamux://explore/sleep", "sleep") }
     func testBloodPressure() throws { try open("vitamux://explore/blood-pressure", "blood pressure") }
     func testBodyComposition() throws { try open("vitamux://explore/body-composition", "body composition") }
     func testWorkouts() throws { try open("vitamux://explore/workouts", "workouts") }
     func testEvents() throws { try open("vitamux://explore/events?code=ecg_recording", "events") }
     func testECG() throws { try open("vitamux://explore/ecg", "ecg") }
-    func testBeats() throws { try open("vitamux://explore/beats?date=\(ExploreUITests.day(-2))", "beats") }
+    func testBeats() throws { try open("vitamux://explore/beats?date=\(Fake.day(-2))", "beats") }
     func testActivityRings() throws { try open("vitamux://explore/activity-rings", "activity rings") }
     func testSources() throws { try open("vitamux://connections", "sources") }
     func testConnectionDetail() throws { try open("vitamux://connections/\(ConnectionDetailUITests.withings)", "connection detail") }
@@ -54,8 +54,8 @@ final class AccessibilityAuditUITests: XCTestCase {
     }
     func testLabResults() throws { try open("vitamux://lab/results", "lab results") }
     func testRules() throws { try open("vitamux://rules", "rules") }
-    func testRule() throws { try open("vitamux://rules/heart_rate_resting", "rule") }
-    func testRuleBuilder() throws { try open("vitamux://rules/new?metric=heart_rate_resting", "rule builder") }
+    func testRule() throws { try open("vitamux://rules/resting_heart_rate", "rule") }
+    func testRuleBuilder() throws { try open("vitamux://rules/new?metric=resting_heart_rate", "rule builder") }
     func testSettings() throws { try open("vitamux://settings", "settings") }
     func testSettingsSources() throws { try open("vitamux://settings/sources", "settings sources") }
     func testSettingsDevices() throws { try open("vitamux://settings/devices", "settings devices") }
@@ -78,8 +78,8 @@ final class AccessibilityAuditUITests: XCTestCase {
 
     func testPointSheet() throws {
         let app = signedIn()
-        app.openLink("vitamux://explore/heart_rate_resting?range=1M")
-        let row = app.buttons["valueRow-\(ExploreUITests.day(-1))"]
+        app.openLink("vitamux://explore/resting_heart_rate?range=1M")
+        let row = app.buttons["valueRow-\(Fake.day(-1))"]
         XCTAssertTrue(app.scrollTo(row).waitForExistence(timeout: 10))
         row.tap()
         XCTAssertTrue(app.staticTexts["pointSource"].waitForExistence(timeout: 10))
@@ -112,11 +112,20 @@ final class AccessibilityAuditUITests: XCTestCase {
         sleep(1)
     }
 
+    /// Element detection counts with an element; a hit region only on a control.
+    private static func attributable(_ issue: XCUIAccessibilityAuditIssue) -> Bool {
+        switch issue.auditType {
+        case .elementDetection: issue.element != nil
+        case .hitRegion: issue.element.map { $0.elementType != .other } ?? false
+        default: true
+        }
+    }
+
     private func audit(_ app: XCUIApplication, _ screen: String) throws {
         let types: XCUIAccessibilityAuditType = Self.serious.union(Self.reported)
         try app.performAccessibilityAudit(for: types) { issue in
             let element = issue.element.map { "\($0.elementType.rawValue) id=\($0.identifier) label=\($0.label) frame=\($0.frame)" } ?? "none: \(issue.detailedDescription)"
-            let serious = Self.serious.contains(issue.auditType) && (issue.auditType != .elementDetection || issue.element != nil)
+            let serious = Self.serious.contains(issue.auditType) && Self.attributable(issue)
             print("a11y: [\(screen)] \(serious ? "SERIOUS" : "reported") type=\(issue.auditType.rawValue) \(issue.compactDescription) | \(element)")
             return self.survey || !serious
         }
