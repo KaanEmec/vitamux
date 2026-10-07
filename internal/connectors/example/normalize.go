@@ -44,7 +44,7 @@ func (Normalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ norma
 	}
 	var out normalize.Output
 	if s.BPM == nil || s.Time.IsZero() {
-		out.Warnings = append(out.Warnings, normalize.Warning{Code: "sample_skipped", Detail: "sample without bpm or time"})
+		out.Warn("sample_skipped", "sample without bpm or time")
 		return out, nil
 	}
 	if s.Device != "" {

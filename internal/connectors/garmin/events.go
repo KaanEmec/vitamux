@@ -87,7 +87,7 @@ func sleep(b *builder, resp []byte) error {
 			case !l.EndGMT.After(l.StartGMT.Time):
 				continue
 			case !ok:
-				b.warn("unknown_sleep_level", strconv.FormatFloat(*l.Level, 'f', -1, 64))
+				b.out.Warn("unknown_sleep_level", strconv.FormatFloat(*l.Level, 'f', -1, 64))
 				continue
 			case !rem && stage == "rem":
 				stage = "awake"
@@ -97,7 +97,7 @@ func sleep(b *builder, resp []byte) error {
 		if end.After(start) {
 			b.out.Sleep = append(b.out.Sleep, s)
 		} else {
-			b.warn("empty_sleep_window", d.CalendarDate)
+			b.out.Warn("empty_sleep_window", d.CalendarDate)
 		}
 		var score *float64
 		if d.Scores != nil && d.Scores.Overall != nil {
@@ -321,7 +321,7 @@ func activity(b *builder, resp []byte) error {
 	}
 	end := a.StartGMT.Add(time.Duration(min(secs, maxActivitySecs) * float64(time.Second))).Truncate(time.Millisecond)
 	if !end.After(a.StartGMT.Time) || secs > maxActivitySecs {
-		b.warn("bad_activity_duration", strconv.FormatInt(*a.ID, 10))
+		b.out.Warn("bad_activity_duration", strconv.FormatInt(*a.ID, 10))
 		return nil
 	}
 	w := normalize.Workout{Start: a.StartGMT.Time, End: end, Zone: zoneAt(a.StartGMT.Time, a.StartLocal.Time),

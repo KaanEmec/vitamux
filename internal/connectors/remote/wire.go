@@ -7,9 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/KaanEmec/vitamux/internal/connectors"
@@ -197,31 +195,7 @@ type Problem struct {
 	Fingerprint string `json:"fingerprint,omitempty"`
 }
 
-// seconds rounds up, so a positive duration never becomes 0.
-func seconds(d time.Duration) int64 { return int64((d + time.Second - 1) / time.Second) }
-
 func duration(s int64) time.Duration { return time.Duration(s) * time.Second }
-
-// DescribeOf is the describe response for d.
-func DescribeOf(d connectors.Descriptor) Describe {
-	w := Describe{
-		Protocol: Protocol, Provider: d.Provider, Name: d.Name, Version: d.Version, Official: d.Official,
-		AuthKind: string(d.AuthKind), Capabilities: Capabilities(d.Capabilities),
-	}
-	for _, s := range d.Streams {
-		w.Streams = append(w.Streams, Stream{
-			Name: s.Name, IntervalS: seconds(s.Interval), LookbackS: seconds(s.Lookback),
-			CorrectionEveryS: seconds(s.CorrectionEvery), MaxBackfillS: seconds(s.MaxBackfill), UnitSizeS: seconds(s.UnitSize),
-		})
-	}
-	for _, r := range d.RateLimits {
-		w.RateLimits = append(w.RateLimits, RateLimit{Requests: r.Requests, PerS: seconds(r.Per)})
-	}
-	if d.Upstream != nil {
-		w.Upstream = &Upstream{Package: d.Upstream.Package, Version: d.Upstream.Version, SourceURL: d.Upstream.SourceURL}
-	}
-	return w
-}
 
 // Descriptor converts a describe response; Remote is always set. The registry validates the rest.
 func (w Describe) Descriptor() connectors.Descriptor {
@@ -254,18 +228,6 @@ func ContinueRequest(in connectors.AuthInput, config json.RawMessage) AuthContin
 	return AuthContinueRequest{RedirectURL: in.RedirectURL, Callback: in.Callback, Values: in.Values, Session: in.Session, Config: config}
 }
 
-// StepOf is the wire form of s.
-func StepOf(s connectors.AuthStep) Step {
-	w := Step{RedirectURL: s.RedirectURL, Session: s.Session}
-	if s.Prompt != nil {
-		w.Prompt = &Prompt{Message: s.Prompt.Message, Fields: make([]Field, 0, len(s.Prompt.Fields))}
-		for _, f := range s.Prompt.Fields {
-			w.Prompt.Fields = append(w.Prompt.Fields, Field(f))
-		}
-	}
-	return w
-}
-
 // AuthStep converts a step.
 func (w Step) AuthStep() connectors.AuthStep {
 	s := connectors.AuthStep{RedirectURL: w.RedirectURL, Session: w.Session}
@@ -276,15 +238,6 @@ func (w Step) AuthStep() connectors.AuthStep {
 		}
 	}
 	return s
-}
-
-// AuthResponseOf is the continue response for a: its Next step, or the authorization.
-func AuthResponseOf(a connectors.Authorized) AuthResponse {
-	if a.Next != nil {
-		s := StepOf(*a.Next)
-		return AuthResponse{Step: &s}
-	}
-	return AuthResponse{Authorized: &Authorized{AccountID: a.AccountID, Credentials: a.Credentials}}
 }
 
 // Result converts a begin or continue response.
@@ -302,14 +255,6 @@ func (w AuthResponse) Result() connectors.Authorized {
 // FetchRequestOf is the fetch body for one page of u. mode is the planning run's mode.
 func FetchRequestOf(u connectors.WorkUnit, mode string, cred connectors.Credentials, config json.RawMessage) FetchRequest {
 	return FetchRequest{Stream: u.Stream, Mode: mode, Cursor: u.Cursor, From: u.From, To: u.To, Credentials: cred, Config: config}
-}
-
-// ResultOf is the result line for r.
-func ResultOf(r connectors.FetchResult) ResultLine {
-	return ResultLine{
-		Type: LineResult, NextCursor: r.NextCursor, HighWatermark: r.HighWatermark, Done: r.Done,
-		RetryAfterS: seconds(r.RetryAfter), Credentials: r.Credentials,
-	}
 }
 
 // FetchResult converts a result line.
@@ -349,25 +294,6 @@ func (w RawLine) Item() (ingest.RawItem, error) {
 	}
 	it.Body = w.BodyBase64
 	return it, nil
-}
-
-// ProblemOf is the typed error err as a problem; untyped errors are transient.
-func ProblemOf(err error) Problem {
-	p := Problem{Code: connectors.ClassTransient, Status: http.StatusServiceUnavailable}
-	var rl *connectors.RateLimitedError
-	var drift *connectors.SchemaDriftError
-	switch {
-	case errors.As(err, &rl):
-		p.Code, p.Status, p.RetryAfterS = connectors.ClassRateLimited, http.StatusTooManyRequests, seconds(rl.RetryAfter)
-	case errors.As(err, &drift):
-		p.Code, p.Status, p.Endpoint, p.Fingerprint = connectors.ClassSchemaDrift, http.StatusBadGateway, drift.Endpoint, drift.Fingerprint
-	case errors.Is(err, connectors.ErrReauthRequired):
-		p.Code, p.Status = connectors.ClassReauthRequired, http.StatusUnauthorized
-	case errors.Is(err, connectors.ErrPermanent):
-		p.Code, p.Status = connectors.ClassPermanent, http.StatusUnprocessableEntity
-	}
-	p.Title = p.Code
-	return p
 }
 
 // Err is the typed error p stands for. Unknown codes (a newer v1 sidecar) are transient.

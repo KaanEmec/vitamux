@@ -68,15 +68,6 @@ var unitByCode = func() map[string]Unit {
 	return m
 }()
 
-// Units returns all units in seed order.
-func Units() []Unit { return append([]Unit(nil), units...) }
-
-// LookupUnit finds a unit by code.
-func LookupUnit(code string) (Unit, bool) {
-	u, ok := unitByCode[code]
-	return u, ok
-}
-
 // Convert converts v from one unit to another of the same base. Identity (from == to) returns v
 // unchanged, so callers can tell from the unit codes whether source_value must be kept.
 func Convert(v float64, from, to string) (float64, error) {

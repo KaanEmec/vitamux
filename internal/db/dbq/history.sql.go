@@ -7,13 +7,13 @@ package dbq
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 const countJobsByKindStatus = `-- name: CountJobsByKindStatus :many
+
 SELECT kind, status, count(*) AS n,
        coalesce(extract(epoch FROM now() - min(run_at) FILTER (WHERE status = 'queued' AND run_at <= now())), 0)::float8 AS oldest_due_seconds
 FROM jobs
@@ -28,6 +28,7 @@ type CountJobsByKindStatusRow struct {
 	OldestDueSeconds float64
 }
 
+// Sync observability (J06.7); see docs/architecture/reliability.md#health-logs-metrics.
 // Scrape-time gauge source: queue depth per kind and status, and the age of the oldest due job.
 func (q *Queries) CountJobsByKindStatus(ctx context.Context) ([]CountJobsByKindStatusRow, error) {
 	rows, err := q.db.Query(ctx, countJobsByKindStatus)
@@ -81,71 +82,6 @@ func (q *Queries) ListConnectionMetrics(ctx context.Context) ([]ListConnectionMe
 			&i.Provider,
 			&i.Status,
 			&i.LastSuccessAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listRecentJobRuns = `-- name: ListRecentJobRuns :many
-
-SELECT r.id, r.job_id, j.kind, j.connection_id, r.attempt, r.started_at, r.finished_at,
-       r.outcome, r.error_class, r.error_message, r.stats
-FROM job_runs r JOIN jobs j ON j.id = r.job_id
-WHERE ($1::uuid IS NULL OR j.connection_id = $1)
-  AND ($2::text IS NULL OR j.kind = $2)
-ORDER BY r.id DESC
-LIMIT $3
-`
-
-type ListRecentJobRunsParams struct {
-	ConnectionID *uuid.UUID
-	Kind         *string
-	RowLimit     int32
-}
-
-type ListRecentJobRunsRow struct {
-	ID           int64
-	JobID        uuid.UUID
-	Kind         string
-	ConnectionID *uuid.UUID
-	Attempt      int32
-	StartedAt    time.Time
-	FinishedAt   *time.Time
-	Outcome      *string
-	ErrorClass   *string
-	ErrorMessage *string
-	Stats        json.RawMessage
-}
-
-// Sync observability (J06.7); see docs/architecture/reliability.md#health-logs-metrics.
-// Newest runs first, optionally of one connection and/or job kind. error_message is already sanitized.
-func (q *Queries) ListRecentJobRuns(ctx context.Context, arg ListRecentJobRunsParams) ([]ListRecentJobRunsRow, error) {
-	rows, err := q.db.Query(ctx, listRecentJobRuns, arg.ConnectionID, arg.Kind, arg.RowLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListRecentJobRunsRow
-	for rows.Next() {
-		var i ListRecentJobRunsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.JobID,
-			&i.Kind,
-			&i.ConnectionID,
-			&i.Attempt,
-			&i.StartedAt,
-			&i.FinishedAt,
-			&i.Outcome,
-			&i.ErrorClass,
-			&i.ErrorMessage,
-			&i.Stats,
 		); err != nil {
 			return nil, err
 		}

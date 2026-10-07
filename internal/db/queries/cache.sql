@@ -120,11 +120,5 @@ FROM (
   FROM hour GROUP BY connection_id, device_id, origin_id, i
 ) a, h;
 
--- name: ListHourlyAggregates :many
-SELECT * FROM source_hourly_aggregates
-WHERE user_id = @user_id AND metric_id = (SELECT id FROM metric_catalog WHERE code = @metric::text)
-  AND hour_start >= @from_at AND hour_start < @to_at
-ORDER BY hour_start, source_key;
-
 -- name: ListResolveUsers :many
 SELECT id FROM users ORDER BY id;

@@ -317,20 +317,6 @@ func (s *Store) History(ctx context.Context, userID uuid.UUID, metric string) ([
 	return out, nil
 }
 
-// Diff compares two of the owner's versions of a metric field by field (audit.Diff on the
-// top-level spec fields). db.ErrNotFound when either version does not exist.
-func (s *Store) Diff(ctx context.Context, userID uuid.UUID, metric string, from, to int) (map[string]any, error) {
-	specs := make([]json.RawMessage, 2)
-	for i, v := range []int{from, to} {
-		row, err := s.db.Q().GetRuleVersion(ctx, dbq.GetRuleVersionParams{UserID: userID, Metric: metric, Version: int32(v)}) //nolint:gosec // rule versions are small
-		if err != nil {
-			return nil, db.MapErr(err)
-		}
-		specs[i] = row.Spec
-	}
-	return specDiff(specs[0], specs[1])
-}
-
 func versionOf(row dbq.ResolutionRule) (Version, error) {
 	r, err := ParseRule(row.Spec)
 	if r == nil { // undecodable; a validation error alone is tolerated (see Version)

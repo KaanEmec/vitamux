@@ -31,8 +31,8 @@ func TestRegistry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if all := r.All(); all[0].ID() != "a.two" {
-		t.Errorf("All not sorted: %v", all)
+	if r.list[0].ID() != "a.two" {
+		t.Errorf("registry not sorted: %v", r.list)
 	}
 	if n, err := r.For("s1", ""); err != nil || n.ID() != "b.one" {
 		t.Errorf("For(s1) = %v, %v", n, err)

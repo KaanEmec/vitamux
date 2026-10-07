@@ -35,7 +35,7 @@ func TestSeedMatchesCatalogue(t *testing.T) {
 	}
 
 	var n int
-	if err := app.QueryRow(ctx, `SELECT count(*) FROM units`).Scan(&n); err != nil || n != len(catalog.Units()) {
-		t.Fatalf("units: %d of %d (err %v)", n, len(catalog.Units()), err)
+	if err := app.QueryRow(ctx, `SELECT count(*) FROM units`).Scan(&n); err != nil || n != catalog.UnitCount {
+		t.Fatalf("units: %d of %d (err %v)", n, catalog.UnitCount, err)
 	}
 }

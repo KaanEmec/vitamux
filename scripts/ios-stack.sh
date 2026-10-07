@@ -20,7 +20,6 @@ trap 'sim_cleanup; stack_cleanup' EXIT
 bundle=${RESULT_BUNDLE:-$root/tmp/ios/stack-smoke.xcresult}
 mkdir -p "$(dirname "$bundle")"
 
-sentinel() { printf 'vtmxsentinel%s%s' "$1" "$(od -An -N6 -tx1 /dev/urandom | tr -d ' \n')"; }
 user=synthetic-owner # tools/fixtureload's owner
 password=$(sentinel password)
 note=$(sentinel note)

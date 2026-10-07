@@ -32,8 +32,13 @@ func newOvFixture() ovFixture {
 	return f
 }
 
+// scopeOf is the scope of window w of the rule metric.
+func scopeOf(metric string, w Window) Scope {
+	return Scope{Metric: metric, Kind: w.Kind, Key: w.Key, LocalDate: w.Date}
+}
+
 func ovMake(w Window, a OverrideAction, edit func(*Override)) Override {
-	o := Override{ID: uuid.New(), Scope: ScopeOf(ovMetric, w), Action: a, CreatedBy: "owner", CreatedAt: time.Unix(1_700_000_000, 0)}
+	o := Override{ID: uuid.New(), Scope: scopeOf(ovMetric, w), Action: a, CreatedBy: "owner", CreatedAt: time.Unix(1_700_000_000, 0)}
 	edit(&o)
 	return o
 }
@@ -193,7 +198,7 @@ func TestOverrideExcludeDropsWholeReading(t *testing.T) {
 
 func TestValidateOverride(t *testing.T) {
 	w := agHourWindow("2026-06-15T10:00:00Z")
-	ok := NewOverride{Scope: ScopeOf(ovMetric, w), Action: SetValue, Value: 66, Unit: "bpm", Note: "n"}
+	ok := NewOverride{Scope: scopeOf(ovMetric, w), Action: SetValue, Value: 66, Unit: "bpm", Note: "n"}
 	if err := validateOverride(ok); err != nil {
 		t.Fatal(err)
 	}

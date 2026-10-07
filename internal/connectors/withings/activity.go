@@ -275,7 +275,7 @@ func normalizeIntraday(body []byte, out *normalize.Output) error {
 				Device: dev, Origin: origin, Key: normalize.Key{RecordType: "intraday", ExternalID: strconv.FormatInt(ts, 10), Component: f.metric}}
 			if f.interval {
 				if e.Duration == nil || *e.Duration <= 0 {
-					out.Warnings = append(out.Warnings, normalize.Warning{Code: "intraday_without_duration", Detail: f.field})
+					out.Warn("intraday_without_duration", f.field)
 					continue
 				}
 				end := at.Add(time.Duration(*e.Duration) * time.Second)

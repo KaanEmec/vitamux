@@ -2,8 +2,6 @@ package api
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/base64"
 	"errors"
 	"io/fs"
 	"net/http"
@@ -15,10 +13,7 @@ import (
 // baseCSP applies when the built page carries no CSP meta tag (placeholder builds).
 const baseCSP = "default-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; script-src 'self'; style-src 'self'; base-uri 'self'; form-action 'self'"
 
-var (
-	cspMeta      = regexp.MustCompile(`(?i)<meta http-equiv="content-security-policy" content="([^"]+)"`)
-	inlineScript = regexp.MustCompile(`(?is)<script>(.*?)</script>`)
-)
+var cspMeta = regexp.MustCompile(`(?i)<meta http-equiv="content-security-policy" content="([^"]+)"`)
 
 // uiHandler serves the SPA: real files directly, any other non-API path as index.html.
 type uiHandler struct {
@@ -43,16 +38,6 @@ func pageCSP(index []byte) string {
 		policy = string(m[1])
 	}
 	return policy + "; frame-ancestors 'none'"
-}
-
-// inlineScriptHashes returns CSP source expressions for every inline script in a page.
-func inlineScriptHashes(page []byte) []string {
-	var out []string
-	for _, m := range inlineScript.FindAllSubmatch(page, -1) {
-		sum := sha256.Sum256(m[1])
-		out = append(out, "'sha256-"+base64.StdEncoding.EncodeToString(sum[:])+"'")
-	}
-	return out
 }
 
 func (h *uiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

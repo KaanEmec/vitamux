@@ -140,30 +140,6 @@ func rebuildDays(ctx context.Context, q *dbq.Queries, userID uuid.UUID, metricID
 	return nil
 }
 
-// HourlyAggregate is one source_hourly_aggregates row: one source's active sample and interval
-// rows of a metric in one local hour (daily values excluded). Buckets counts the UTC-aligned
-// 5-minute buckets holding a sample or part of an interval, BucketMeanSum adds each bucket's
-// sample mean, IntervalSum the intervals pro-rated linearly to the hour; First and Last bound the
-// contributing instants. The JSON names are the columns.
-type HourlyAggregate struct {
-	UserID        uuid.UUID  `json:"user_id"`
-	MetricID      int16      `json:"metric_id"`
-	SourceKey     string     `json:"source_key"` // connection/device/origin ids, - when missing
-	HourStart     time.Time  `json:"hour_start"`
-	LocalDate     string     `json:"local_date"`
-	ConnectionID  uuid.UUID  `json:"connection_id"`
-	DeviceID      *uuid.UUID `json:"device_id"`
-	OriginID      *uuid.UUID `json:"origin_id"`
-	Samples       int        `json:"samples"`
-	Buckets       int        `json:"buckets"`
-	BucketMeanSum float64    `json:"bucket_mean_sum"`
-	MinValue      float64    `json:"min_value"`
-	MaxValue      float64    `json:"max_value"`
-	IntervalSum   float64    `json:"interval_sum"`
-	FirstAt       time.Time  `json:"first_at"`
-	LastAt        time.Time  `json:"last_at"`
-}
-
 // rebuildHours replaces the aggregates of the owner's local hours on the dates from through to.
 // The database aggregates the rows (RebuildHourlyAggregates): those starting from a day before
 // the first hour, so intervals crossing into it count. Go only lists the hours, which follow the
@@ -189,22 +165,4 @@ func rebuildHours(ctx context.Context, q *dbq.Queries, userID uuid.UUID, metricI
 	p.FromAt, p.ToAt = start.Add(-24*time.Hour), end
 	_, err := q.RebuildHourlyAggregates(ctx, p)
 	return err
-}
-
-// HourlyAggregates returns the stored hourly aggregates of metric whose hour starts in
-// [from, to), for coverage and range views. Dirty marks the rebuild job has not consumed yet are
-// not reflected. Explained results never read them: they list the rows behind a value.
-func HourlyAggregates(ctx context.Context, d *db.DB, userID uuid.UUID, metric string, from, to time.Time) ([]HourlyAggregate, error) {
-	rows, err := d.Q().ListHourlyAggregates(ctx, dbq.ListHourlyAggregatesParams{UserID: userID, Metric: metric, FromAt: from, ToAt: to})
-	if err != nil {
-		return nil, db.MapErr(err)
-	}
-	out := make([]HourlyAggregate, len(rows))
-	for i, r := range rows {
-		out[i] = HourlyAggregate{UserID: r.UserID, MetricID: r.MetricID, SourceKey: r.SourceKey, HourStart: r.HourStart,
-			LocalDate: r.LocalDate.Format(dateLayout), ConnectionID: r.ConnectionID, DeviceID: r.DeviceID, OriginID: r.OriginID,
-			Samples: int(r.Samples), Buckets: int(r.Buckets), BucketMeanSum: r.BucketMeanSum, MinValue: r.MinValue,
-			MaxValue: r.MaxValue, IntervalSum: r.IntervalSum, FirstAt: r.FirstAt, LastAt: r.LastAt}
-	}
-	return out, nil
 }

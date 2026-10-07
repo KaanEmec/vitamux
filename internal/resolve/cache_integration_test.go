@@ -244,10 +244,6 @@ func TestCacheTruncate(t *testing.T) {
 	if samples != rows || lo != wlo || hi != whi || math.Abs(sum-want) > 1e-6*want {
 		t.Errorf("aggregates: %d samples for %d rows, range %v..%v for %v..%v, steps %v for %v", samples, rows, lo, hi, wlo, whi, sum, want)
 	}
-	got, err := HourlyAggregates(s.ctx, s.d, s.user, "steps", instant("2025-03-30T00:00:00Z"), instant("2025-03-31T00:00:00Z"))
-	if err != nil || len(got) == 0 {
-		t.Fatalf("HourlyAggregates: %d rows, %v", len(got), err)
-	}
 	var marks int
 	if err := s.scan([]any{&marks}, `SELECT count(*) FROM resolution_dirty`); err != nil || marks != 0 {
 		t.Errorf("%d marks left (%v)", marks, err)

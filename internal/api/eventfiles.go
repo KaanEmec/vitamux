@@ -59,8 +59,8 @@ func (o *owner) document(sum []byte) (blobDoc, error) {
 
 // GetEventWaveform returns the waveform of an ecg_recording event, any version.
 func (o *owner) GetEventWaveform(ctx context.Context, req oapi.GetEventWaveformRequestObject) (oapi.GetEventWaveformResponseObject, error) {
-	if o.opts.DB == nil {
-		return nil, problemErr(CodeUnavailable, "the database is not ready")
+	if _, err := o.ownerDB(); err != nil {
+		return nil, err
 	}
 	id, err := uuid.Parse(req.ID)
 	if err != nil {
@@ -83,8 +83,8 @@ func (o *owner) GetEventWaveform(ctx context.Context, req oapi.GetEventWaveformR
 // GetWorkoutRoute returns the route of a workout: the workout_route event naming it, else one
 // of its connection and origin inside it (dbq GetWorkoutRouteFile).
 func (o *owner) GetWorkoutRoute(ctx context.Context, req oapi.GetWorkoutRouteRequestObject) (oapi.GetWorkoutRouteResponseObject, error) {
-	if o.opts.DB == nil {
-		return nil, problemErr(CodeUnavailable, "the database is not ready")
+	if _, err := o.ownerDB(); err != nil {
+		return nil, err
 	}
 	id, err := uuid.Parse(req.ID)
 	if err != nil {

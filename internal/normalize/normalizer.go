@@ -236,6 +236,11 @@ type Warning struct {
 	Detail string `json:"detail,omitempty"`
 }
 
+// Warn appends a warning.
+func (o *Output) Warn(code, detail string) {
+	o.Warnings = append(o.Warnings, Warning{Code: code, Detail: detail})
+}
+
 // ErrInvalidOutput means a normalizer produced records the canonical schema rejects: a bug in
 // the normalizer, not in the data.
 var ErrInvalidOutput = errors.New("normalize: invalid output")
@@ -489,6 +494,3 @@ func (r *Registry) For(stream, shapeFingerprint string) (Normalizer, error) {
 	}
 	return found, nil
 }
-
-// All returns the normalizers sorted by ID.
-func (r *Registry) All() []Normalizer { return slices.Clone(r.list) }

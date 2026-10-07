@@ -181,12 +181,12 @@ func normalizePage(p page) normalize.Output {
 		}
 	default:
 		if len(p.Samples) > 0 {
-			b.warn("unmapped_type", p.Type)
+			b.out.Warn("unmapped_type", p.Type)
 		}
 	}
 	for _, d := range p.Deleted {
 		if d.UUID == "" {
-			b.warn("deleted_without_uuid", p.Type)
+			b.out.Warn("deleted_without_uuid", p.Type)
 			continue
 		}
 		id := strings.ToUpper(d.UUID)
@@ -205,10 +205,6 @@ func normalizePage(p page) normalize.Output {
 	return b.out
 }
 
-func (b *builder) warn(code, detail string) {
-	b.out.Warnings = append(b.out.Warnings, normalize.Warning{Code: code, Detail: detail})
-}
-
 // key is the record's identity: its HealthKit type and UUID, which deletions name too.
 func (b *builder) key(s sample) normalize.Key {
 	return normalize.Key{RecordType: b.typ, ExternalID: strings.ToUpper(s.UUID)}
@@ -218,9 +214,9 @@ func (b *builder) key(s sample) normalize.Key {
 func (b *builder) valid(s sample) bool {
 	switch {
 	case s.UUID == "":
-		b.warn("sample_without_uuid", b.typ)
+		b.out.Warn("sample_without_uuid", b.typ)
 	case s.Start.IsZero() || s.End.Before(s.Start):
-		b.warn("bad_interval", s.UUID)
+		b.out.Warn("bad_interval", s.UUID)
 	default:
 		return true
 	}
@@ -261,7 +257,7 @@ func (b *builder) zone(s sample) normalize.Zone {
 		if _, err := time.LoadLocation(tz); err == nil && tz != "Local" {
 			return normalize.Zone{TZ: tz}
 		}
-		b.warn("bad_timezone", s.UUID)
+		b.out.Warn("bad_timezone", s.UUID)
 	}
 	return normalize.Zone{}
 }
@@ -297,7 +293,7 @@ func (b *builder) quantity(s sample, q quantity) {
 		return
 	}
 	if s.Value == nil || !finite(*s.Value) || s.Unit != q.hkUnit {
-		b.warn("unexpected_value_or_unit", s.UUID)
+		b.out.Warn("unexpected_value_or_unit", s.UUID)
 		return
 	}
 	m := normalize.Measurement{Metric: q.metric, Kind: q.kind, Start: s.Start, Value: *s.Value, Unit: q.unit}
@@ -318,7 +314,7 @@ func (b *builder) insulin(s sample) {
 		code = insulinReasons[int(reason)]
 	}
 	if code == "" {
-		b.warn("unknown_insulin_reason", s.UUID)
+		b.out.Warn("unknown_insulin_reason", s.UUID)
 		return
 	}
 	b.quantity(s, q(code, catalog.Interval, "IU", "IU"))
@@ -339,7 +335,7 @@ func (b *builder) standHour(s sample) {
 	c, ok := category(s)
 	v, known := standHour[c]
 	if !ok || !known {
-		b.warn("unknown_category_value", s.UUID)
+		b.out.Warn("unknown_category_value", s.UUID)
 		return
 	}
 	b.measurement(s, normalize.Measurement{Metric: "stand_hours", Kind: catalog.Interval, Start: s.Start, End: &s.End, Value: v, Unit: "count"})
@@ -353,7 +349,7 @@ func (b *builder) event(s sample, ev event) {
 	if ev.levels != nil {
 		c, ok := category(s)
 		if level = ev.levels[c]; !ok || level == "" {
-			b.warn("unknown_category_value", s.UUID)
+			b.out.Warn("unknown_category_value", s.UUID)
 			return
 		}
 	}
@@ -396,7 +392,7 @@ func (b *builder) bp(s sample) {
 			add("bp_pulse", *m.Value, "bpm")
 			continue
 		}
-		b.warn("unexpected_member", s.UUID)
+		b.out.Warn("unexpected_member", s.UUID)
 		return
 	}
 	switch len(pressures) {
@@ -405,7 +401,7 @@ func (b *builder) bp(s sample) {
 		add("bp_systolic", max(pressures[0], pressures[1]), "mmHg")
 		add("bp_diastolic", min(pressures[0], pressures[1]), "mmHg")
 	default:
-		b.warn("unexpected_member", s.UUID)
+		b.out.Warn("unexpected_member", s.UUID)
 		return
 	}
 	n := map[string]int{}
@@ -413,7 +409,7 @@ func (b *builder) bp(s sample) {
 		n[c.Metric]++
 	}
 	if n["bp_systolic"] != 1 || n["bp_diastolic"] != 1 || n["bp_pulse"] > 1 {
-		b.warn("unexpected_member", s.UUID)
+		b.out.Warn("unexpected_member", s.UUID)
 		return
 	}
 	slices.SortFunc(comps, func(x, y normalize.Measurement) int { return cmp.Compare(x.Metric, y.Metric) })
@@ -431,12 +427,12 @@ func (b *builder) workout(s sample) {
 		return
 	}
 	if s.Workout == nil || !s.End.After(s.Start) {
-		b.warn("bad_workout", s.UUID)
+		b.out.Warn("bad_workout", s.UUID)
 		return
 	}
 	sp, provider, known := sport(s.Workout.ActivityType)
 	if !known {
-		b.warn("unknown_activity_type", provider)
+		b.out.Warn("unknown_activity_type", provider)
 	}
 	w := normalize.Workout{Start: s.Start, End: s.End, Zone: b.zone(s), Sport: sp, ProviderSport: provider, Key: b.key(s)}
 	for _, id := range workoutDistances {
@@ -467,7 +463,7 @@ func (b *builder) sleep(samples []sample) {
 		}
 		c, ok := category(s)
 		if _, known := sleepStages[c]; !ok || !known || !s.End.After(s.Start) {
-			b.warn("unknown_category_value", s.UUID)
+			b.out.Warn("unknown_category_value", s.UUID)
 			continue
 		}
 		byOrigin[s.Source.BundleID] = append(byOrigin[s.Source.BundleID], s)

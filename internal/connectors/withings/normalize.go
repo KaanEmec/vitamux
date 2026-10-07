@@ -163,7 +163,7 @@ func (Normalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ norma
 	}
 	var out normalize.Output
 	if g.Category != 1 {
-		out.Warnings = append(out.Warnings, normalize.Warning{Code: "category_skipped", Detail: "category " + strconv.Itoa(g.Category)})
+		out.Warn("category_skipped", "category "+strconv.Itoa(g.Category))
 		return out, nil
 	}
 	at := time.Unix(g.Date, 0).UTC()
@@ -182,7 +182,7 @@ func (Normalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ norma
 	for _, m := range g.Measures {
 		t, ok := meastypes[m.Type]
 		warn := func(code string) {
-			out.Warnings = append(out.Warnings, normalize.Warning{Code: code, Detail: "type " + strconv.Itoa(m.Type)})
+			out.Warn(code, "type "+strconv.Itoa(m.Type))
 		}
 		switch {
 		case afibEvents[m.Type] != "":
@@ -217,7 +217,7 @@ func (Normalizer) Normalize(_ context.Context, raw normalize.RawPayload, _ norma
 			t.metric += seg
 		}
 		if seen[t.metric] {
-			out.Warnings = append(out.Warnings, normalize.Warning{Code: "duplicate_meastype", Detail: "type " + strconv.Itoa(m.Type)})
+			out.Warn("duplicate_meastype", "type "+strconv.Itoa(m.Type))
 			continue
 		}
 		seen[t.metric] = true

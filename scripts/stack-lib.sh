@@ -1,4 +1,4 @@
-# Shared by e2e-stack.sh and redaction-audit.sh (source it): a real `vitamux serve` on a
+# Shared by e2e-stack.sh, ios-stack.sh and redaction-audit.sh (source it): a real `vitamux serve` on a
 # throwaway database. Needs VITAMUX_DATABASE_URL (superuser, as in .env.example and CI), psql,
 # curl and go. Set `db` and `addr` first, then: stack_setup [BUILD_TAGS]; stack_owner USER PASS;
 # stack_serve. Every CLI and server line lands in $work/*.log; the EXIT trap cleans up.
@@ -49,3 +49,6 @@ stack_cleanup() {
 	psql "$admin" -qc "DROP DATABASE IF EXISTS $db WITH (FORCE)" >/dev/null 2>&1 || true
 	rm -rf "$work"
 }
+
+# sentinel LABEL prints a unique, greppable fake secret for the leak audits.
+sentinel() { printf 'vtmxsentinel%s%s' "$1" "$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')"; }

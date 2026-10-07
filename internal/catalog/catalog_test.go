@@ -18,7 +18,7 @@ func TestMetricsWellFormed(t *testing.T) {
 			t.Errorf("%s: bad or duplicate code", m.Code)
 		}
 		seen[m.Code] = true
-		if _, ok := LookupUnit(m.Unit); !ok {
+		if _, err := Convert(1, m.Unit, m.Unit); err != nil {
 			t.Errorf("%s: unknown unit %q", m.Code, m.Unit)
 		}
 		if !(m.Min < m.Max) {
@@ -62,14 +62,6 @@ func TestSDNNAndRMSSDAreDistinct(t *testing.T) {
 	rmssd, ok2 := Lookup("hrv_rmssd")
 	if !ok1 || !ok2 || sdnn.Code == rmssd.Code {
 		t.Fatal("hrv_sdnn and hrv_rmssd must both exist as separate codes")
-	}
-	for _, p := range [][2]string{{"hrv_sdnn", "hrv_rmssd"}, {"hrv_rmssd", "hrv_rmssd_nightly"}, {"hrv_sdnn", "hrv_rmssd_nightly"}} {
-		if Combinable(p[0], p[1]) || Combinable(p[1], p[0]) {
-			t.Errorf("%s and %s must not share a rule", p[0], p[1])
-		}
-	}
-	if !Combinable("hrv_sdnn", "hrv_sdnn") || Combinable("nope", "nope") {
-		t.Error("a known code combines with itself; an unknown code with nothing")
 	}
 }
 
@@ -194,7 +186,7 @@ func TestEveryConversionIsTested(t *testing.T) {
 		}
 	}
 	for code := range wantBase {
-		if _, ok := LookupUnit(code); !ok {
+		if _, err := Convert(1, code, code); err != nil {
 			t.Errorf("test case for unknown unit %s", code)
 		}
 	}

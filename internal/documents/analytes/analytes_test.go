@@ -64,28 +64,6 @@ func TestConversions(t *testing.T) {
 	}
 }
 
-func TestConvertRoundTrip(t *testing.T) {
-	mmol, err := Convert("glucose", 100, "mg/dL", "mmol/L")
-	if err != nil || !near(mmol, 5.551) {
-		t.Fatalf("glucose mg/dL -> mmol/L = %v, %v", mmol, err)
-	}
-	back, err := Convert("glucose", mmol, "mmol/L", "mg/dL")
-	if err != nil || !near(back, 100) {
-		t.Fatalf("glucose mmol/L -> mg/dL = %v, %v", back, err)
-	}
-	ngsp, err := Convert("hba1c", 53, "mmol/mol", "%")
-	if err != nil || math.Abs(ngsp-7.0) > 0.01 {
-		t.Fatalf("hba1c 53 mmol/mol -> %% = %v, %v", ngsp, err)
-	}
-	ifcc, err := Convert("hba1c", ngsp, "%", "mmol/mol")
-	if err != nil || !near(ifcc, 53) {
-		t.Fatalf("hba1c round trip = %v, %v", ifcc, err)
-	}
-	if hba1c.Offset != -2.15*hba1c.Factor && !near(hba1c.Offset, -2.15*hba1c.Factor) {
-		t.Fatalf("hba1c offset %v is not -2.15 * factor", hba1c.Offset)
-	}
-}
-
 func TestRefusedAndUnknown(t *testing.T) {
 	for _, tc := range []struct {
 		code, unit string
@@ -106,9 +84,6 @@ func TestRefusedAndUnknown(t *testing.T) {
 		if _, _, err := Canonical(tc.code, 1, tc.unit); !errors.Is(err, tc.want) {
 			t.Errorf("%s from %q: err %v, want %v", tc.code, tc.unit, err, tc.want)
 		}
-	}
-	if _, err := Convert("lpa_mass", 30, "mg/dL", "nmol/L"); !errors.Is(err, ErrNoConversion) {
-		t.Errorf("lpa mg/dL -> nmol/L: %v", err)
 	}
 }
 

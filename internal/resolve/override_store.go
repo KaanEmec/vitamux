@@ -119,12 +119,6 @@ func (s *Overrides) Active(ctx context.Context, userID uuid.UUID, metric string,
 	return overridesOf(rows), db.MapErr(err)
 }
 
-// History returns up to limit overrides of metric, revoked ones included, newest first.
-func (s *Overrides) History(ctx context.Context, userID uuid.UUID, metric string, limit int) ([]Override, error) {
-	rows, err := s.db.Q().ListOverrideHistory(ctx, dbq.ListOverrideHistoryParams{UserID: userID, Metric: metric, MaxRows: int32(min(max(limit, 1), 1000))})
-	return overridesOf(rows), db.MapErr(err)
-}
-
 // metricCodes lists the catalogue codes a rule metric resolves: the code itself, the blood
 // pressure components, or every sleep-derived code.
 func metricCodes(metric string) []string {

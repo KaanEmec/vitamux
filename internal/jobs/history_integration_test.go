@@ -13,8 +13,8 @@ import (
 	"github.com/KaanEmec/vitamux/internal/metrics"
 )
 
-// A succeeded and a dead run feed the history queries and the job metrics.
-func TestHistoryAndMetrics(t *testing.T) {
+// A succeeded and a dead run feed the job metrics.
+func TestJobMetrics(t *testing.T) {
 	d, pool := setup(t)
 	conn, other := newConnection(t, pool, "active"), newConnection(t, pool, "active")
 	boom := errors.New("provider said no")
@@ -36,28 +36,6 @@ func TestHistoryAndMetrics(t *testing.T) {
 			job(t, d, otherJob).Status == "succeeded"
 	})
 	stop()
-
-	ctx := t.Context()
-	all, err := RecentRuns(ctx, d, RunFilter{ConnectionID: &conn})
-	if err != nil || len(all) != 2 {
-		t.Fatalf("runs of the connection: %d, %v", len(all), err)
-	}
-	if all[0].ID < all[1].ID {
-		t.Error("runs must be newest first")
-	}
-	dead, err := RecentRuns(ctx, d, RunFilter{ConnectionID: &conn, Kind: "export"})
-	if err != nil || len(dead) != 1 {
-		t.Fatalf("export runs: %d, %v", len(dead), err)
-	}
-	if got := dead[0]; got.Outcome != "failed" || got.ErrorClass != "permanent" || got.ErrorMessage != boom.Error() || got.FinishedAt == nil {
-		t.Errorf("unexpected run %+v", got)
-	}
-	if n, _ := RecentRuns(ctx, d, RunFilter{Limit: 2}); len(n) != 2 {
-		t.Errorf("limit: got %d runs", len(n))
-	}
-	if n, _ := RecentRuns(ctx, d, RunFilter{}); len(n) != 3 {
-		t.Errorf("unfiltered: got %d runs, want 3", len(n))
-	}
 
 	if got := testutil.ToFloat64(metrics.JobRuns.WithLabelValues("sweep_blobs", "succeeded")) - okBefore; got != 2 {
 		t.Errorf("succeeded runs counted %v, want 2", got)

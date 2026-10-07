@@ -20,7 +20,6 @@ stack_setup
 go build -o "$work/redactaudit" ./tools/redactaudit
 go run ./tools/fixturegen labpdf -out "$work/lab" -truth "$work/lab-truth" >/dev/null
 
-sentinel() { printf 'vtmxsentinel%s%s' "$1" "$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')"; }
 mkdir -p "$work/secrets" "$work/scan/db"
 password=$(sentinel password)
 for name in withings gemini openai; do sentinel "$name" >"$work/secrets/$name"; done

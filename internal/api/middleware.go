@@ -86,8 +86,6 @@ func bodyClassOf(path string) bodyClass {
 	return bodyClasses[len(bodyClasses)-1]
 }
 
-func bodyLimit(path string) int64 { return bodyClassOf(path).max }
-
 // middleware wraps h, outermost first: request state and id, access log, security headers,
 // panic recovery, body limits, authentication.
 func middleware(log *slog.Logger, o Options, mux *http.ServeMux) http.Handler {

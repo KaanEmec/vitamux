@@ -182,7 +182,7 @@ func (b *builder) beats(s sample) {
 	}
 	bt := s.Beats
 	if bt == nil || bt.Count != len(bt.OffsetsS) || bt.Count != len(bt.PrecededByGap) {
-		b.warn("bad_beats", s.UUID)
+		b.out.Warn("bad_beats", s.UUID)
 		return
 	}
 	id := strings.ToUpper(s.UUID)
@@ -194,7 +194,7 @@ func (b *builder) beats(s sample) {
 			continue
 		}
 		if !finite(rr) || rr <= 0 {
-			b.warn("bad_beats", s.UUID)
+			b.out.Warn("bad_beats", s.UUID)
 			continue
 		}
 		b.out.Measurements = append(b.out.Measurements, normalize.Measurement{Metric: metricRR, Kind: catalog.Sample,
@@ -245,13 +245,13 @@ func (b *builder) ecg(s sample) {
 	g := s.ECG
 	if g == nil || g.VoltageUnit != "mcV" || g.VoltageCount != len(g.Voltages) ||
 		(len(g.OffsetsS) > 0 && len(g.OffsetsS) != len(g.Voltages)) {
-		b.warn("bad_ecg", s.UUID)
+		b.out.Warn("bad_ecg", s.UUID)
 		return
 	}
 	e := b.newEvent(s, "ecg_recording")
 	level, ok := word(ecgClassifications, g.Classification)
 	if !ok {
-		b.warn("unknown_ecg_classification", s.UUID)
+		b.out.Warn("unknown_ecg_classification", s.UUID)
 		level = ""
 	}
 	e.Level, e.Value = level, finitePtr(g.AverageHeartRate)
@@ -291,19 +291,19 @@ func (b *builder) route(s sample) {
 	}
 	r := s.Route
 	if r == nil || r.Count == 0 {
-		b.warn("bad_route", s.UUID)
+		b.out.Warn("bad_route", s.UUID)
 		return
 	}
 	for _, a := range [][]float64{r.OffsetsS, r.Latitude, r.Longitude} {
 		if len(a) != r.Count {
-			b.warn("bad_route", s.UUID)
+			b.out.Warn("bad_route", s.UUID)
 			return
 		}
 	}
 	for _, a := range [][]float64{r.AltitudeM, r.EllipsoidalAltitudeM, r.HorizontalAccuracyM, r.VerticalAccuracyM,
 		r.SpeedMps, r.SpeedAccuracyMps, r.CourseDeg, r.CourseAccuracyDeg} {
 		if a != nil && len(a) != r.Count {
-			b.warn("bad_route", s.UUID)
+			b.out.Warn("bad_route", s.UUID)
 			return
 		}
 	}
@@ -324,12 +324,12 @@ func (b *builder) stateOfMind(s sample) {
 	}
 	m := s.StateOfMind
 	if m == nil {
-		b.warn("bad_state_of_mind", s.UUID)
+		b.out.Warn("bad_state_of_mind", s.UUID)
 		return
 	}
 	kind, ok := moodKinds[m.Kind]
 	if !ok || !finite(m.Valence) || m.Valence < -1 || m.Valence > 1 {
-		b.warn("bad_state_of_mind", s.UUID)
+		b.out.Warn("bad_state_of_mind", s.UUID)
 		return
 	}
 	e := b.newEvent(s, "state_of_mind")
@@ -358,7 +358,7 @@ func (b *builder) words(m map[int]string, vs []int, uuid string) []string {
 	for i, v := range vs {
 		var ok bool
 		if out[i], ok = word(m, v); !ok && !warned {
-			b.warn("unknown_enum_value", uuid)
+			b.out.Warn("unknown_enum_value", uuid)
 			warned = true
 		}
 	}
@@ -374,13 +374,13 @@ func (b *builder) activitySummary(s sample) {
 	}
 	a := s.ActivitySummary
 	if a == nil || !s.End.After(s.Start) {
-		b.warn("bad_activity_summary", s.UUID)
+		b.out.Warn("bad_activity_summary", s.UUID)
 		return
 	}
 	// start is the local midnight of the summary's day, so its own offset gives local_date = date.
 	zone := startOffset(s)
 	if s.Start.Format(time.DateOnly) != a.Date {
-		b.warn("bad_activity_summary", s.UUID)
+		b.out.Warn("bad_activity_summary", s.UUID)
 		return
 	}
 	common := map[string]any{}
@@ -426,12 +426,12 @@ func (b *builder) segments(s sample) []normalize.Segment {
 	segs := b.eventSegments(s, w.Events, "")
 	for _, a := range w.Activities {
 		if a.Start.IsZero() || (a.End != nil && a.End.Before(a.Start)) {
-			b.warn("bad_workout_activity", s.UUID)
+			b.out.Warn("bad_workout_activity", s.UUID)
 			continue
 		}
 		sp, provider, known := sport(a.ActivityType)
 		if !known {
-			b.warn("unknown_activity_type", provider)
+			b.out.Warn("unknown_activity_type", provider)
 		}
 		data := map[string]any{"uuid": strings.ToUpper(a.UUID), "sport": sp, "provider_sport": provider, "duration_s": a.DurationS}
 		if a.LocationType != nil {
@@ -492,7 +492,7 @@ func (b *builder) eventSegments(s sample, evs []workoutEvent, activity string) [
 	}
 	for _, ev := range evs {
 		if ev.Start.IsZero() || ev.End.Before(ev.Start) {
-			b.warn("bad_workout_event", s.UUID)
+			b.out.Warn("bad_workout_event", s.UUID)
 			continue
 		}
 		var end *time.Time
@@ -520,7 +520,7 @@ func (b *builder) eventSegments(s sample, evs []workoutEvent, activity string) [
 				delete(open, from)
 			}
 		default:
-			b.warn("unknown_workout_event", s.UUID)
+			b.out.Warn("unknown_workout_event", s.UUID)
 		}
 	}
 	// A pause the workout ended in lasts until its end.

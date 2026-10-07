@@ -28,8 +28,8 @@ func apiAlias(a analytes.Alias) oapi.AnalyteAlias {
 }
 
 func (o *owner) ListAnalyteAliases(ctx context.Context, _ oapi.ListAnalyteAliasesRequestObject) (oapi.ListAnalyteAliasesResponseObject, error) {
-	if o.opts.DB == nil {
-		return nil, problemErr(CodeUnavailable, "the database is not ready")
+	if _, err := o.ownerDB(); err != nil {
+		return nil, err
 	}
 	as, err := analytes.ListAliases(ctx, o.opts.DB, auth.PrincipalFrom(ctx).UserID)
 	if err != nil {
@@ -43,8 +43,8 @@ func (o *owner) ListAnalyteAliases(ctx context.Context, _ oapi.ListAnalyteAliase
 }
 
 func (o *owner) CreateAnalyteAlias(ctx context.Context, req oapi.CreateAnalyteAliasRequestObject) (oapi.CreateAnalyteAliasResponseObject, error) {
-	if o.opts.DB == nil {
-		return nil, problemErr(CodeUnavailable, "the database is not ready")
+	if _, err := o.ownerDB(); err != nil {
+		return nil, err
 	}
 	p := auth.PrincipalFrom(ctx)
 	a, err := analytes.AddAlias(ctx, o.opts.DB, p.UserID, p.Actor(), req.Body.Label, req.Body.Analyte)
@@ -62,8 +62,8 @@ func (o *owner) CreateAnalyteAlias(ctx context.Context, req oapi.CreateAnalyteAl
 }
 
 func (o *owner) DeleteAnalyteAlias(ctx context.Context, req oapi.DeleteAnalyteAliasRequestObject) (oapi.DeleteAnalyteAliasResponseObject, error) {
-	if o.opts.DB == nil {
-		return nil, problemErr(CodeUnavailable, "the database is not ready")
+	if _, err := o.ownerDB(); err != nil {
+		return nil, err
 	}
 	id, err := strconv.ParseInt(req.ID, 10, 64)
 	if err != nil {

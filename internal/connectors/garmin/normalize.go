@@ -156,10 +156,6 @@ func (b *builder) decode(resp []byte, v any) error {
 	return nil
 }
 
-func (b *builder) warn(code, detail string) {
-	b.out.Warnings = append(b.out.Warnings, normalize.Warning{Code: code, Detail: detail})
-}
-
 func (b *builder) device(id *int64) string {
 	if id == nil || *id == 0 {
 		return ""
@@ -539,7 +535,7 @@ func hrv(b *builder, resp []byte) error {
 // offset (local fields shifted twice) the day is unknown, so the value stays raw with a warning.
 func (b *builder) nightly(metric, record, date string, z normalize.Zone, v float64, unit string) error {
 	if z.OffsetMin == nil {
-		b.warn("implausible_local_offset", metric+" "+date)
+		b.out.Warn("implausible_local_offset", metric+" "+date)
 		return nil
 	}
 	start, end, ok := localDay(date, z)

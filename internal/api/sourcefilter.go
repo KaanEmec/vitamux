@@ -259,13 +259,13 @@ func sourceFilterView(ctx context.Context, q *dbq.Queries, row dbq.LockDeviceSou
 			o.ReasonProvider, o.ReasonProviderName = &dec.Provider, &dec.ProviderName
 		}
 		if s, ok := byBundle[b]; ok {
-			o.Name = nonEmpty(s.Name)
+			o.Name = optString(s.Name)
 			for _, t := range s.Types {
 				o.Writes = append(o.Writes, oapi.SourceType{Type: t.Type, LastSampleAt: t.LastSampleAt})
 			}
 		}
 		if i := slices.IndexFunc(f.Choices, func(c sourcefilter.Choice) bool { return c.BundleID == b }); i >= 0 && o.Name == nil {
-			o.Name = nonEmpty(f.Choices[i].Name)
+			o.Name = optString(f.Choices[i].Name)
 		}
 		if r, ok := byKey[b]; ok {
 			id := r.ID

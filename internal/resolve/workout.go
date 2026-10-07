@@ -100,7 +100,7 @@ func ClusterWorkouts(in []WorkoutInput) []WorkoutCluster {
 			out = append(out, WorkoutCluster{Start: w.Start, End: w.End})
 		}
 		c := &out[n]
-		c.End = later(c.End, w.End)
+		c.End = timeMax(c.End, w.End)
 		c.Workouts = append(c.Workouts, w)
 	}
 	return out
