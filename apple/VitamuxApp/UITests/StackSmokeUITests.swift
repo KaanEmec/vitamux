@@ -60,7 +60,7 @@ final class StackSmokeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["pointSource"].waitForExistence(timeout: 15))
         app.scrollTo(app.buttons["setValue"]).tap()
         let value = app.textFields["valueField"]
-        XCTAssertTrue(value.waitForExistence(timeout: 5))
+        XCTAssertTrue(value.waitForExistence(timeout: Wait.ui))
         value.tap()
         // Typed as the simulator's locale writes decimals (the field parses locale-aware).
         value.typeText(stack.value.replacingOccurrences(of: ".", with: Locale.current.decimalSeparator ?? "."))
@@ -89,7 +89,7 @@ final class StackSmokeUITests: XCTestCase {
         // Sign-out revokes the session on the server.
         app.tabBars.buttons["More"].tap()
         app.scrollTo(app.buttons["signOutButton"]).tap()
-        XCTAssertTrue(app.buttons["confirmSignOut"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["confirmSignOut"].waitForExistence(timeout: Wait.ui))
         app.buttons["confirmSignOut"].tap()
         XCTAssertTrue(app.element("signedOut").waitForExistence(timeout: 15))
     }

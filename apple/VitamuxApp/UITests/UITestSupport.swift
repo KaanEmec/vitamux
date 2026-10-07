@@ -20,6 +20,17 @@ enum Fake {
     }
 }
 
+/// How long a test waits for what a slow machine shows late. GitHub's hosted macOS runners are two
+/// to three times slower than a laptop, so nothing that appears after a load, a presentation or a
+/// request may be read or tapped without waiting for it. A wait ends as soon as the element shows,
+/// so a generous bound costs nothing when the app is fast.
+enum Wait {
+    /// A sheet, dialog, menu, pushed screen or a link's screen being presented.
+    static let ui: TimeInterval = 10
+    /// What the fake server provides: a list's rows, a loaded value, the answer to an action.
+    static let server: TimeInterval = 30
+}
+
 extension XCUIApplication {
     static func launch(_ arguments: String...) -> XCUIApplication {
         let app = XCUIApplication()
@@ -31,7 +42,7 @@ extension XCUIApplication {
     /// Fills the sign-in screen and taps Sign in.
     func signIn(server: String = Fake.server, username: String = Fake.username, password: String = Fake.password) {
         let field = textFields["serverField"]
-        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        XCTAssertTrue(field.waitForExistence(timeout: Wait.server))
         field.replaceText(server)
         textFields["usernameField"].replaceText(username)
         let secure = secureTextFields["passwordField"]
@@ -43,7 +54,7 @@ extension XCUIApplication {
     /// Signs in to the fake and waits for the tab bar.
     func signInToDashboard() {
         signIn()
-        XCTAssertTrue(tabBars.buttons["Dashboard"].waitForExistence(timeout: 10), "the shell shows after sign-in")
+        XCTAssertTrue(tabBars.buttons["Dashboard"].waitForExistence(timeout: Wait.server), "the shell shows after sign-in")
     }
 
     func element(_ identifier: String) -> XCUIElement {
@@ -56,17 +67,33 @@ extension XCUIApplication {
         XCUIDevice.shared.system.open(URL(string: link)!)
     }
 
-    /// Swipes up until `element` can be tapped (lists load rows lazily).
+    /// Swipes up until `element` can be tapped (lists load rows lazily). The screen's spinners clear
+    /// first (up to `timeout`): swipes would run past a list that has no rows yet, and a section
+    /// that finishes loading above `element` moves it after it was found.
     @discardableResult
-    func scrollTo(_ element: XCUIElement) -> XCUIElement {
+    func scrollTo(_ element: XCUIElement, timeout: TimeInterval = Wait.server) -> XCUIElement {
+        _ = element.waitForExistence(timeout: 1)
+        _ = activityIndicators.firstMatch.waitForNonExistence(timeout: timeout)
         for _ in 0..<6 where !(element.exists && element.isHittable) {
             swipeUp()
         }
         return element
     }
+
+    /// A confirmation dialog's button: iOS lists it more than once, so take the first.
+    func dialogButton(_ label: String) -> XCUIElement {
+        buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
+    }
 }
 
 extension XCUIElement {
+    /// Waits for the element (a sheet's or dialog's control, a menu item, a row a request brings),
+    /// then taps it: a bare `tap()` fails at once on an element a slow machine has not shown yet.
+    func tapWhenReady(timeout: TimeInterval = Wait.ui, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(waitForExistence(timeout: timeout), "\(self) shows", file: file, line: line)
+        tap()
+    }
+
     /// Clears the field and types `text`.
     func replaceText(_ text: String) {
         // Tap at the trailing edge, so the cursor sits after the current text.

@@ -14,17 +14,17 @@ final class PerformanceUITests: XCTestCase {
         for _ in 0 ..< 2 {
             let app = XCUIApplication.launch()
             app.signInToDashboard()
-            XCTAssertTrue(app.buttons["card-steps"].waitForExistence(timeout: 10), "the dashboard is ready")
+            XCTAssertTrue(app.buttons["card-steps"].waitForExistence(timeout: Wait.server), "the dashboard is ready")
 
             app.openLink("vitamux://explore/heart_rate?range=1D&end=\(Fake.day(-1))")
-            XCTAssertTrue(app.staticTexts["dayStep"].waitForExistence(timeout: 10), "heart rate opens the Day view")
+            XCTAssertTrue(app.staticTexts["dayStep"].waitForExistence(timeout: Wait.server), "heart rate opens the Day view")
             waitForStep(app, "1-minute buckets")
             // The source toggles sit below the chart. One swipe each way: a scroll loop's repeated
             // queries of this many chart elements flood the log and push out the signposts.
             app.swipeUp()
             for provider in ["apple_health", "garmin"] {
                 let toggle = app.descendants(matching: .any)["toggleSource-\(provider)"].firstMatch
-                XCTAssertTrue(toggle.waitForExistence(timeout: 10), provider)
+                XCTAssertTrue(toggle.waitForExistence(timeout: Wait.server), provider)
                 toggle.tap()
             }
             app.swipeDown()
@@ -33,7 +33,7 @@ final class PerformanceUITests: XCTestCase {
             app.buttons["dayZoomIn"].tap()
             waitForStep(app, "Raw readings")
             let raw = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'raw readings'")).firstMatch
-            XCTAssertTrue(raw.waitForExistence(timeout: 10))
+            XCTAssertTrue(raw.waitForExistence(timeout: Wait.server))
             app.buttons["dayZoomOut"].tap()
             app.buttons["dayZoomOut"].tap()
             waitForStep(app, "1-minute buckets")
@@ -44,6 +44,6 @@ final class PerformanceUITests: XCTestCase {
     private func waitForStep(_ app: XCUIApplication, _ label: String, file: StaticString = #filePath, line: UInt = #line) {
         let step = app.staticTexts["dayStep"]
         let matched = NSPredicate(format: "label == %@", label)
-        XCTAssertEqual(XCTWaiter.wait(for: [expectation(for: matched, evaluatedWith: step)], timeout: 10), .completed, "step is \(label), not \(step.label)", file: file, line: line)
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation(for: matched, evaluatedWith: step)], timeout: Wait.server), .completed, "step is \(label), not \(step.label)", file: file, line: line)
     }
 }

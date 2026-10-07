@@ -10,12 +10,12 @@ final class WidgetsUITests: XCTestCase {
     func testDashboardHandsValuesToWidgets() {
         let app = XCUIApplication.launch()
         app.signInToDashboard()
-        XCTAssertTrue(app.buttons["card-steps"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["card-steps"].waitForExistence(timeout: Wait.server))
 
         app.openLink("vitamux://settings/app")
-        XCTAssertTrue(app.navigationBars["This app"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["This app"].waitForExistence(timeout: Wait.ui))
         let asOf = app.element("widgetsAsOf")
-        XCTAssertTrue(app.scrollTo(asOf).waitForExistence(timeout: 5))
+        XCTAssertTrue(app.scrollTo(asOf).waitForExistence(timeout: Wait.ui))
         let asOfText = "\(asOf.label) \(asOf.value as? String ?? "")"
         XCTAssertTrue(asOfText.contains("Values from"), asOfText)
         XCTAssertFalse(asOfText.contains("Not yet"), "the dashboard wrote the widgets' values: \(asOfText)")
@@ -35,7 +35,7 @@ final class WidgetsUITests: XCTestCase {
             ("vitamux://explore/blood-pressure", "Blood pressure"),
         ] {
             app.openLink(link)
-            XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: 10), link)
+            XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: Wait.ui), link)
             XCTAssertTrue(app.tabBars.buttons["Explore"].isSelected, link)
         }
     }
@@ -46,6 +46,6 @@ final class WidgetsUITests: XCTestCase {
         app.openLink("vitamux://dashboard")
         XCTAssertTrue(app.textFields["serverField"].waitForExistence(timeout: 10))
         app.signInToDashboard()
-        XCTAssertTrue(app.buttons["card-steps"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["card-steps"].waitForExistence(timeout: Wait.server))
     }
 }

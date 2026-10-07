@@ -52,7 +52,7 @@ final class DeepLinkUITests: XCTestCase {
         app.signInToDashboard()
         for (link, tab, title, detail) in links {
             app.openLink(link)
-            XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: 5), "\(link) shows \(title)")
+            XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: Wait.server), "\(link) shows \(title)")
             XCTAssertTrue(app.tabBars.buttons[tab].isSelected, "\(link) is on \(tab)")
             if let detail {
                 XCTAssertEqual(app.staticTexts["placeholderDetail"].label, detail, link)
@@ -64,9 +64,9 @@ final class DeepLinkUITests: XCTestCase {
         let app = XCUIApplication.launch()
         XCTAssertTrue(app.textFields["serverField"].waitForExistence(timeout: 10))
         app.openLink("vitamux://explore/resting_heart_rate?range=3M")
-        XCTAssertTrue(app.textFields["serverField"].waitForExistence(timeout: 5), "the link waits for sign-in")
+        XCTAssertTrue(app.textFields["serverField"].waitForExistence(timeout: Wait.ui), "the link waits for sign-in")
         app.signIn()
-        XCTAssertTrue(app.navigationBars["Resting heart rate"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars["Resting heart rate"].waitForExistence(timeout: Wait.server))
         XCTAssertTrue(app.tabBars.buttons["Explore"].isSelected)
     }
 }

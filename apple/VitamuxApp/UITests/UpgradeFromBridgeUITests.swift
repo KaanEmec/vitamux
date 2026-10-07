@@ -14,11 +14,11 @@ final class UpgradeFromBridgeUITests: XCTestCase {
         app.tabBars.buttons["More"].tap()
         app.scrollTo(app.buttons["signOutButton"]).tap()
         let toggle = app.switches["unpairToggle"]
-        XCTAssertTrue(toggle.waitForExistence(timeout: 5), "the device token Bridge saved is still there")
+        XCTAssertTrue(toggle.waitForExistence(timeout: Wait.ui), "the device token Bridge saved is still there")
         if ProcessInfo.processInfo.environment["VITAMUX_UPGRADE_UNPAIR"] == "1" {
             toggle.switches.firstMatch.tap()
             app.buttons["confirmSignOut"].tap()
-            XCTAssertTrue(app.element("signedOut").waitForExistence(timeout: 10))
+            XCTAssertTrue(app.element("signedOut").waitForExistence(timeout: Wait.server))
         }
     }
 }

@@ -29,7 +29,7 @@ final class AccessibilityAuditUITests: XCTestCase {
     func testTwoFactorStep() throws {
         let app = XCUIApplication.launch("-uitest-totp")
         app.signIn()
-        XCTAssertTrue(app.textFields["codeField"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.textFields["codeField"].waitForExistence(timeout: Wait.server))
         try audit(app, "two-factor")
     }
 
@@ -79,10 +79,11 @@ final class AccessibilityAuditUITests: XCTestCase {
     func testPointSheet() throws {
         let app = signedIn()
         app.openLink("vitamux://explore/resting_heart_rate?range=1M")
+        XCTAssertTrue(app.navigationBars["Resting heart rate"].waitForExistence(timeout: Wait.ui))
         let row = app.buttons["valueRow-\(Fake.day(-1))"]
-        XCTAssertTrue(app.scrollTo(row).waitForExistence(timeout: 10))
+        XCTAssertTrue(app.scrollTo(row).waitForExistence(timeout: Wait.server))
         row.tap()
-        XCTAssertTrue(app.staticTexts["pointSource"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["pointSource"].waitForExistence(timeout: Wait.server))
         settle(app)
         try audit(app, "point sheet")
     }

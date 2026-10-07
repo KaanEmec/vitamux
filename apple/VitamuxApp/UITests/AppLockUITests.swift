@@ -11,7 +11,7 @@ final class AppLockUITests: XCTestCase {
         app.signInToDashboard()
         app.openLink("vitamux://settings/app")
         let toggle = app.switches["appLockToggle"]
-        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+        XCTAssertTrue(toggle.waitForExistence(timeout: Wait.ui))
         toggle.switches.firstMatch.tap()
         XCTAssertEqual(toggle.value as? String, "1")
 
@@ -23,7 +23,7 @@ final class AppLockUITests: XCTestCase {
         // A link while locked opens after unlocking.
         app.openLink("vitamux://lab/results")
         app.buttons["unlockButton"].tap()
-        XCTAssertTrue(app.navigationBars["Results"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Results"].waitForExistence(timeout: Wait.ui))
     }
 
     func testNoLockWhenOff() {

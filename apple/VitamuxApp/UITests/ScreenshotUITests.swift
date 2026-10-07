@@ -19,7 +19,7 @@ final class ScreenshotUITests: XCTestCase {
         try shoot("sign-in", to: dir)
 
         app.signInToDashboard()
-        XCTAssertTrue(app.buttons["card-sleep"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["card-sleep"].waitForExistence(timeout: Wait.server))
         try shoot("dashboard", to: dir)
 
         let screens: [(name: String, link: String, title: String)] = [
@@ -41,17 +41,17 @@ final class ScreenshotUITests: XCTestCase {
         // More, then the light theme on the dashboard's Customize sheet (artboard DashboardEdit).
         app.tabBars.buttons["More"].tap()
         app.tabBars.buttons["More"].tap()
-        XCTAssertTrue(app.navigationBars["More"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["More"].waitForExistence(timeout: Wait.ui))
         settle()
         try shoot("more", to: dir)
         app.buttons["themePicker"].tap()
-        app.buttons["Light"].tap()
+        app.buttons["Light"].tapWhenReady()
         app.tabBars.buttons["Dashboard"].tap()
-        XCTAssertTrue(app.buttons["card-sleep"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["card-sleep"].waitForExistence(timeout: Wait.server))
         settle()
         try shoot("dashboard-light", to: dir)
         app.buttons["customizeButton"].tap()
-        XCTAssertTrue(app.navigationBars["Customize"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Customize"].waitForExistence(timeout: Wait.ui))
         settle()
         try shoot("customize-light", to: dir)
     }

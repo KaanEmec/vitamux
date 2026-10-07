@@ -16,7 +16,7 @@ final class WatchUITests: XCTestCase {
         let app = XCUIApplication.launch()
         app.signInToDashboard()
         app.openLink(link)
-        XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: 10), link)
+        XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: Wait.ui), link)
         return app
     }
 
@@ -26,7 +26,7 @@ final class WatchUITests: XCTestCase {
 
     private func earlier(_ app: XCUIApplication, times: Int) {
         let button = app.buttons["Earlier"]
-        XCTAssertTrue(button.waitForExistence(timeout: 5))
+        XCTAssertTrue(button.waitForExistence(timeout: Wait.ui))
         for _ in 0..<times { button.tap() }
     }
 
@@ -34,34 +34,34 @@ final class WatchUITests: XCTestCase {
 
     func testECGRecordingShowsAppleLabelStripAndTable() {
         let app = open("vitamux://explore/ecg", title: "ECG")
-        XCTAssertTrue(app.element("ecgCount").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.element("ecgCount").waitForExistence(timeout: Wait.server))
         XCTAssertEqual(app.element("ecgCount").label, "3 recordings")
         app.buttons["ecg-\(latestECG)"].tap()
-        XCTAssertTrue(app.navigationBars["ECG recording"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars["ECG recording"].waitForExistence(timeout: Wait.ui))
         let label = app.element("ecgClassification")
-        XCTAssertTrue(label.waitForExistence(timeout: 10))
+        XCTAssertTrue(label.waitForExistence(timeout: Wait.server))
         XCTAssertTrue(label.label.hasPrefix("Sinus rhythm"), label.label)
         XCTAssertTrue(any(app, "label CONTAINS %@", "Classification recorded by Apple’s ECG app, shown as recorded").exists)
         XCTAssertTrue(app.element("ecgHeartRate").label.hasSuffix("64 bpm"), app.element("ecgHeartRate").label)
         let strip = app.element("ecgStrip")
-        XCTAssertTrue(strip.waitForExistence(timeout: 10))
+        XCTAssertTrue(strip.waitForExistence(timeout: Wait.server))
         XCTAssertTrue((strip.value as? String ?? "").hasPrefix("30 s at 512 Hz"), "\(strip.value ?? "")")
         strip.swipeLeft()
-        XCTAssertTrue(app.scrollTo(any(app, "label CONTAINS %@", "25 mm/s and 10 mm/mV")).exists, "the paper scale is named")
+        XCTAssertTrue(app.scrollTo(any(app, "label CONTAINS %@", "25 mm/s and 10 mm/mV")).waitForExistence(timeout: Wait.ui), "the paper scale is named")
         app.scrollTo(app.switches["ecgTableToggle"]).switches.firstMatch.tap()
-        XCTAssertTrue(app.scrollTo(app.element("ecgSecond-0")).waitForExistence(timeout: 5), "the strip as a table")
+        XCTAssertTrue(app.scrollTo(app.element("ecgSecond-0")).waitForExistence(timeout: Wait.ui), "the strip as a table")
     }
 
     func testECGWithoutWaveformAndEmptyRange() {
         let app = open("vitamux://explore/ecg/\(poorECG)", title: "ECG recording")
-        XCTAssertTrue(app.element("noWaveform").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.element("noWaveform").waitForExistence(timeout: Wait.server))
         XCTAssertTrue(app.element("ecgClassification").label.hasPrefix("Inconclusive: poor reading"))
         XCTAssertTrue(app.element("ecgHeartRate").label.hasSuffix("Not recorded"), app.element("ecgHeartRate").label)
 
         app.openLink("vitamux://explore/ecg")
-        XCTAssertTrue(app.element("ecgCount").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.element("ecgCount").waitForExistence(timeout: Wait.server))
         earlier(app, times: 1)
-        XCTAssertTrue(app.element("emptyRange").waitForExistence(timeout: 10), "no recordings a year back")
+        XCTAssertTrue(app.element("emptyRange").waitForExistence(timeout: Wait.server), "no recordings a year back")
     }
 
     // MARK: Beat-to-beat
@@ -69,58 +69,58 @@ final class WatchUITests: XCTestCase {
     func testBeatsOpenFromAnHRVReading() {
         let app = open("vitamux://explore/hrv_rmssd_nightly", title: "Hrv rmssd nightly")
         let row = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'valueRow-'")).firstMatch
-        XCTAssertTrue(app.scrollTo(row).waitForExistence(timeout: 10))
+        XCTAssertTrue(app.scrollTo(row).waitForExistence(timeout: Wait.server))
         row.tap()
         let link = app.buttons["openBeats"]
-        XCTAssertTrue(app.scrollTo(link).waitForExistence(timeout: 10), "the point sheet links the day's beats")
+        XCTAssertTrue(app.scrollTo(link).waitForExistence(timeout: Wait.server), "the point sheet links the day's beats")
         link.tap()
-        XCTAssertTrue(app.navigationBars["Beat-to-beat"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.element("beatsChart-0").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars["Beat-to-beat"].waitForExistence(timeout: Wait.ui))
+        XCTAssertTrue(app.element("beatsChart-0").waitForExistence(timeout: Wait.server))
     }
 
     func testBeatsSeriesPerDayAndEmptyDay() {
         let app = open("vitamux://explore/beats?date=\(Fake.day(-1))", title: "Beat-to-beat")
-        XCTAssertTrue(app.element("beatsChart-0").waitForExistence(timeout: 10))
-        XCTAssertTrue(app.scrollTo(app.element("beatsChart-1")).exists, "two series on the day")
+        XCTAssertTrue(app.element("beatsChart-0").waitForExistence(timeout: Wait.server))
+        XCTAssertTrue(app.scrollTo(app.element("beatsChart-1")).waitForExistence(timeout: Wait.server), "two series on the day")
         let count = app.scrollTo(app.element("beatsCount-1"))
-        XCTAssertTrue(count.exists && count.label.hasPrefix("89 intervals"), count.debugDescription)
+        XCTAssertTrue(count.waitForExistence(timeout: Wait.server) && count.label.hasPrefix("89 intervals"), count.debugDescription)
 
         app.openLink("vitamux://explore/beats?date=\(Fake.day(-2))")
-        XCTAssertTrue(app.element("beatsChart-0").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.element("beatsChart-0").waitForExistence(timeout: Wait.server))
         for _ in 0..<4 { app.swipeDown() }
         app.buttons["earlierDay"].tap()
-        XCTAssertTrue(app.element("emptyRange").waitForExistence(timeout: 10), "no beats on the gap day")
+        XCTAssertTrue(app.element("emptyRange").waitForExistence(timeout: Wait.server), "no beats on the gap day")
     }
 
     // MARK: Activity rings
 
     func testActivityRingsAgainstApplesGoals() {
         let app = open("vitamux://explore/activity-rings", title: "Activity rings")
-        XCTAssertTrue(app.element("ring-move-\(Fake.day(-1))").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.element("ring-move-\(Fake.day(-1))").waitForExistence(timeout: Wait.server))
         XCTAssertTrue(any(app, "value ENDSWITH %@", "of 500 kcal, Apple’s goal").exists, "the value against Apple's goal")
-        XCTAssertTrue(app.scrollTo(app.element("ring-exercise-\(Fake.day(-1))")).exists)
-        XCTAssertTrue(app.scrollTo(any(app, "label BEGINSWITH %@", "Apple’s rings were paused on this day.")).exists, "the paused day says so")
+        XCTAssertTrue(app.scrollTo(app.element("ring-exercise-\(Fake.day(-1))")).waitForExistence(timeout: Wait.server))
+        XCTAssertTrue(app.scrollTo(any(app, "label BEGINSWITH %@", "Apple’s rings were paused on this day.")).waitForExistence(timeout: Wait.server), "the paused day says so")
 
         for _ in 0..<6 where !app.buttons["1M"].isHittable { app.swipeDown() }
         app.buttons["1M"].tap()
         earlier(app, times: 2)
-        XCTAssertTrue(app.element("emptyRange").waitForExistence(timeout: 10), "no summaries 60 days back")
+        XCTAssertTrue(app.element("emptyRange").waitForExistence(timeout: Wait.server), "no summaries 60 days back")
     }
 
     // MARK: State of Mind
 
     func testStateOfMindEntriesAsLoggedAndEmptyRange() {
         let app = open("vitamux://explore/state-of-mind", title: "State of Mind")
-        XCTAssertTrue(app.element("mindCount").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.element("mindCount").waitForExistence(timeout: Wait.server))
         XCTAssertEqual(app.element("mindCount").label, "5 entries")
         XCTAssertTrue(app.element("valenceChart").exists)
-        XCTAssertTrue(app.scrollTo(any(app, "label CONTAINS %@", "Slightly pleasant")).exists, "Apple's word, as logged")
+        XCTAssertTrue(app.scrollTo(any(app, "label CONTAINS %@", "Slightly pleasant")).waitForExistence(timeout: Wait.server), "Apple's word, as logged")
         XCTAssertTrue(any(app, "label CONTAINS %@", "Labels: Calm, Content").exists)
-        XCTAssertTrue(app.scrollTo(any(app, "label CONTAINS %@", "Mindful session")).exists)
+        XCTAssertTrue(app.scrollTo(any(app, "label CONTAINS %@", "Mindful session")).waitForExistence(timeout: Wait.server))
 
         for _ in 0..<6 { app.swipeDown() }
         earlier(app, times: 1)
-        XCTAssertTrue(app.element("emptyRange").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.element("emptyRange").waitForExistence(timeout: Wait.server))
     }
 
     // MARK: Workout route and segments
@@ -128,12 +128,12 @@ final class WatchUITests: XCTestCase {
     func testWorkoutRouteLapsAndAWorkoutWithoutRoute() {
         let app = open("vitamux://explore/workouts", title: "Workouts")
         let run = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'workoutDetail-913'")).firstMatch
-        XCTAssertTrue(app.scrollTo(run).waitForExistence(timeout: 10))
+        XCTAssertTrue(app.scrollTo(run).waitForExistence(timeout: Wait.server))
         run.tap()
-        XCTAssertTrue(app.navigationBars["Running"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.element("routeMap").waitForExistence(timeout: 10), "the route on the map")
-        XCTAssertTrue(app.scrollTo(any(app, "label CONTAINS %@", "locations as recorded. The map loads Apple map tiles")).exists, "the map's tiles are named")
-        XCTAssertTrue(app.scrollTo(app.element("segmentLanes")).exists, "laps, pauses and markers on the workout's axis")
+        XCTAssertTrue(app.navigationBars["Running"].waitForExistence(timeout: Wait.ui))
+        XCTAssertTrue(app.element("routeMap").waitForExistence(timeout: Wait.server), "the route on the map")
+        XCTAssertTrue(app.scrollTo(any(app, "label CONTAINS %@", "locations as recorded. The map loads Apple map tiles")).waitForExistence(timeout: Wait.server), "the map's tiles are named")
+        XCTAssertTrue(app.scrollTo(app.element("segmentLanes")).waitForExistence(timeout: Wait.server), "laps, pauses and markers on the workout's axis")
         // The lanes name each segment's kind: five laps, a pause and a marker.
         for (kind, count) in [("Laps", 5), ("Pauses", 1), ("Markers", 1)] {
             let marks = app.descendants(matching: .any).matching(NSPredicate(format: "label ENDSWITH %@", ", \(kind)"))
@@ -146,9 +146,9 @@ final class WatchUITests: XCTestCase {
         utc.timeZone = .gmt
         let days = Int(utc.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))!.timeIntervalSince1970 / 86_400)
         app.openLink("vitamux://explore/workouts/914\(days)")
-        XCTAssertTrue(app.navigationBars["Cycling"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.element("noRoute").waitForExistence(timeout: 10), "no route recorded")
-        XCTAssertTrue(app.scrollTo(app.element("segmentLanes")).exists)
+        XCTAssertTrue(app.navigationBars["Cycling"].waitForExistence(timeout: Wait.server))
+        XCTAssertTrue(app.element("noRoute").waitForExistence(timeout: Wait.server), "no route recorded")
+        XCTAssertTrue(app.scrollTo(app.element("segmentLanes")).waitForExistence(timeout: Wait.server))
         let activities = app.descendants(matching: .any).matching(NSPredicate(format: "label ENDSWITH %@", ", Activities"))
         XCTAssertEqual(activities.count, 2, "the multisport workout's two activities")
     }
@@ -159,24 +159,25 @@ final class WatchUITests: XCTestCase {
         let app = XCUIApplication.launch()
         app.signInToDashboard()
         app.tabBars.buttons["Explore"].tap()
+        XCTAssertTrue(app.buttons["exploreRow-resting_heart_rate"].waitForExistence(timeout: Wait.server), "the list has loaded")
         for (code, title) in [("rr_interval", "Beat-to-beat"), ("ecg_recording", "ECG"), ("state_of_mind", "State of Mind")] {
             let row = app.scrollTo(app.buttons["exploreRow-\(code)"])
-            XCTAssertTrue(row.waitForExistence(timeout: 10), code)
+            XCTAssertTrue(row.waitForExistence(timeout: Wait.server), code)
             row.tap()
-            XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: 10), code)
+            XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: Wait.ui), code)
             app.navigationBars.buttons.element(boundBy: 0).tap()
-            XCTAssertTrue(app.navigationBars["Explore"].waitForExistence(timeout: 5))
+            XCTAssertTrue(app.navigationBars["Explore"].waitForExistence(timeout: Wait.ui))
         }
 
         app.openLink("vitamux://explore/stand_hours")
-        XCTAssertTrue(app.navigationBars["Stand hours"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars["Stand hours"].waitForExistence(timeout: Wait.ui))
         app.scrollTo(app.buttons["ringsLink"]).tap()
-        XCTAssertTrue(app.navigationBars["Activity rings"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars["Activity rings"].waitForExistence(timeout: Wait.ui))
 
         app.openLink("vitamux://explore/events?code=ecg_recording")
-        XCTAssertTrue(any(app, "label == %@", "3 events in 1 type").waitForExistence(timeout: 10), "ECG recordings are a lane too")
+        XCTAssertTrue(any(app, "label == %@", "3 events in 1 type").waitForExistence(timeout: Wait.server), "ECG recordings are a lane too")
         app.buttons["eventTypeView"].tap()
-        XCTAssertTrue(app.navigationBars["ECG"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars["ECG"].waitForExistence(timeout: Wait.ui))
     }
 
     // MARK: Apple Health
@@ -187,49 +188,49 @@ final class WatchUITests: XCTestCase {
         app.launch()
         app.signInToDashboard()
         app.openLink("vitamux://apple-health")
-        XCTAssertTrue(app.navigationBars["Apple Health"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.element("pairedState").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars["Apple Health"].waitForExistence(timeout: Wait.ui))
+        XCTAssertTrue(app.element("pairedState").waitForExistence(timeout: Wait.server))
         return app
     }
 
     func testSensitiveGroupsAskFirstAndRoutesNeedWorkouts() {
         let app = openAppleHealth()
         let ecg = app.scrollTo(app.switches["group-ecg"])
-        XCTAssertTrue(ecg.waitForExistence(timeout: 5))
+        XCTAssertTrue(ecg.waitForExistence(timeout: Wait.ui))
         ecg.switches.firstMatch.tap()
-        XCTAssertTrue(app.buttons["confirmOptIn"].waitForExistence(timeout: 5), "turning a sensitive group on asks first")
+        XCTAssertTrue(app.buttons["confirmOptIn"].waitForExistence(timeout: Wait.ui), "turning a sensitive group on asks first")
         XCTAssertTrue(any(app, "label CONTAINS %@", "without extra encryption by the app").exists)
         app.buttons["cancelOptIn"].tap()
         XCTAssertFalse(app.staticTexts["requested-ecg"].waitForExistence(timeout: 2), "cancel leaves it off")
         app.scrollTo(app.switches["group-ecg"]).switches.firstMatch.tap()
-        app.buttons["confirmOptIn"].tap()
-        XCTAssertTrue(app.staticTexts["requested-ecg"].waitForExistence(timeout: 10))
+        app.buttons["confirmOptIn"].tapWhenReady()
+        XCTAssertTrue(app.staticTexts["requested-ecg"].waitForExistence(timeout: Wait.server))
 
         let routes = app.scrollTo(app.switches["group-routes"])
         XCTAssertFalse(routes.isEnabled, "routes need workouts")
         XCTAssertTrue(app.staticTexts["requires-routes"].exists)
         for _ in 0..<6 where !app.switches["group-workouts"].isHittable { app.swipeDown() }
         app.switches["group-workouts"].switches.firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["requested-workouts"].waitForExistence(timeout: 10), "a non-sensitive group turns on at once")
+        XCTAssertTrue(app.staticTexts["requested-workouts"].waitForExistence(timeout: Wait.server), "a non-sensitive group turns on at once")
         let enabled = app.scrollTo(app.switches["group-routes"])
         XCTAssertTrue(enabled.isEnabled)
         enabled.switches.firstMatch.tap()
-        XCTAssertTrue(app.buttons["confirmOptIn"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["confirmOptIn"].waitForExistence(timeout: Wait.ui))
         XCTAssertTrue(any(app, "label CONTAINS %@", "loads Apple map tiles").exists, "the routes sheet names the map tiles")
         app.buttons["confirmOptIn"].tap()
-        XCTAssertTrue(app.staticTexts["requested-routes"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["requested-routes"].waitForExistence(timeout: Wait.server))
     }
 
     func testWatchCardListsGroupsAndWatchTypes() {
         let app = openAppleHealth()
         let groups = app.scrollTo(app.staticTexts["watchGroups"])
-        XCTAssertTrue(groups.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(groups.waitForExistence(timeout: Wait.server), app.debugDescription)
         XCTAssertTrue(groups.label.hasSuffix("None"), groups.label)
         // The type rows arrive with the inventory, which a hosted runner serves slowly: keep the
         // card on screen so its rows are built, and wait for them before scrolling to them.
-        XCTAssertTrue(app.element("watchType-rr_interval").waitForExistence(timeout: 30), "a type the Watch contributed")
-        XCTAssertTrue(app.scrollTo(app.element("watchType-rr_interval")).exists)
-        XCTAssertTrue(app.scrollTo(app.element("watchType-ecg_recording")).exists)
+        XCTAssertTrue(app.element("watchType-rr_interval").waitForExistence(timeout: Wait.server), "a type the Watch contributed")
+        XCTAssertTrue(app.scrollTo(app.element("watchType-rr_interval")).waitForExistence(timeout: Wait.ui))
+        XCTAssertTrue(app.scrollTo(app.element("watchType-ecg_recording")).waitForExistence(timeout: Wait.ui))
     }
 
     // MARK: Copy review
@@ -248,8 +249,8 @@ final class WatchUITests: XCTestCase {
         ]
         for (link, title, ready) in views {
             app.openLink(link)
-            XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: 10), link)
-            XCTAssertTrue(app.element(ready).waitForExistence(timeout: 10), link)
+            XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: Wait.ui), link)
+            XCTAssertTrue(app.element(ready).waitForExistence(timeout: Wait.server), link)
             for _ in 0..<3 {
                 for text in app.staticTexts.allElementsBoundByIndex.map(\.label) {
                     var checked = text

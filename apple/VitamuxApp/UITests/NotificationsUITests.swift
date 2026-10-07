@@ -20,13 +20,13 @@ final class NotificationsUITests: XCTestCase {
 
     private func openAppSettings(_ app: XCUIApplication) {
         app.openLink("vitamux://settings/app")
-        XCTAssertTrue(app.navigationBars["This app"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars["This app"].waitForExistence(timeout: Wait.ui))
     }
 
     private func waitForPosted(_ count: Int, in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
         let label = reveal(app.staticTexts["notificationsPosted"], in: app)
         let posted = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "\(count) posted"), object: label)
-        XCTAssertEqual(XCTWaiter.wait(for: [posted], timeout: 10), .completed, "\(count) posted", file: file, line: line)
+        XCTAssertEqual(XCTWaiter.wait(for: [posted], timeout: Wait.server), .completed, "\(count) posted", file: file, line: line)
     }
 
     /// Scrolls the form until `element` can be tapped: down the form first, then back up.
@@ -44,9 +44,9 @@ final class NotificationsUITests: XCTestCase {
     private func allow(_ app: XCUIApplication) {
         XCTAssertEqual(app.scrollTo(app.staticTexts["notificationsPosted"]).label, "0 posted", "nothing is posted before it is allowed")
         let allow = reveal(app.buttons["allowNotifications"], in: app)
-        XCTAssertTrue(allow.waitForExistence(timeout: 5), "the permission waits to be asked in context")
+        XCTAssertTrue(allow.waitForExistence(timeout: Wait.ui), "the permission waits to be asked in context")
         allow.tap()
-        XCTAssertTrue(app.element("notificationPermission").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.element("notificationPermission").waitForExistence(timeout: Wait.ui))
     }
 
     /// Category, the screen its tap opens, and that screen's tab.
@@ -65,9 +65,9 @@ final class NotificationsUITests: XCTestCase {
         for (category, title, tab) in links {
             openAppSettings(app)
             let notice = reveal(app.buttons["notice-\(category)"], in: app)
-            XCTAssertTrue(notice.waitForExistence(timeout: 5), category)
+            XCTAssertTrue(notice.waitForExistence(timeout: Wait.ui), category)
             notice.tap()
-            XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: 10), "\(category) opens \(title)")
+            XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: Wait.server), "\(category) opens \(title)")
             XCTAssertTrue(app.tabBars.buttons[tab].isSelected, "\(category) is on \(tab)")
         }
     }
@@ -84,7 +84,7 @@ final class NotificationsUITests: XCTestCase {
 
         reveal(app.switches["notifications.staleBackup"], in: app).switches.firstMatch.tap()
         XCTAssertTrue(reveal(app.buttons["notice-notifications.connectionAttention"], in: app).exists)
-        XCTAssertTrue(app.buttons["notice-notifications.staleBackup"].waitForNonExistence(timeout: 5), "turned off, withdrawn")
+        XCTAssertTrue(app.buttons["notice-notifications.staleBackup"].waitForNonExistence(timeout: Wait.ui), "turned off, withdrawn")
         waitForPosted(3, in: app)
 
         reveal(app.switches["notifications.staleBackup"], in: app).switches.firstMatch.tap()

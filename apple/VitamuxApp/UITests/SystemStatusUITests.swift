@@ -10,7 +10,7 @@ final class SystemStatusUITests: XCTestCase {
         let app = XCUIApplication.launch()
         app.signInToDashboard()
         app.openLink("vitamux://settings/system")
-        XCTAssertTrue(app.navigationBars["System status"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.element("appVersion").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["System status"].waitForExistence(timeout: Wait.ui))
+        XCTAssertTrue(app.element("appVersion").waitForExistence(timeout: Wait.ui))
     }
 }

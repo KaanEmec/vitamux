@@ -10,7 +10,7 @@ final class DashboardUITests: XCTestCase {
         let app = XCUIApplication.launch()
         app.signInToDashboard()
         let sleep = app.card("sleep")
-        XCTAssertTrue(sleep.waitForExistence(timeout: 10))
+        XCTAssertTrue(sleep.waitForExistence(timeout: Wait.server))
         XCTAssertEqual(app.staticTexts["dayTitle"].label, "Today")
         XCTAssertTrue(app.staticTexts["dayLabel"].label.contains("Resolved values for Europe/Berlin"), app.staticTexts["dayLabel"].label)
         XCTAssertFalse(app.buttons["nextDay"].isEnabled, "no future days")
@@ -29,48 +29,49 @@ final class DashboardUITests: XCTestCase {
         XCTAssertTrue(app.card("blood_pressure").label.contains("pulse 58 bpm"), app.card("blood_pressure").label)
         XCTAssertTrue(app.card("sleep").label.contains("asleep"), app.card("sleep").label)
 
-        XCTAssertTrue(app.staticTexts["Garmin Connect needs reauthorization."].exists)
+        // The alerts follow the cards: they need the connections, jobs and status answers too.
+        XCTAssertTrue(app.staticTexts["Garmin Connect needs reauthorization."].waitForExistence(timeout: Wait.server))
         XCTAssertEqual(app.texts(beginningWith: "Job sync failed permanently").count, 1, "only this week's failed jobs")
         XCTAssertEqual(app.texts(beginningWith: "The last backup is from").count, 1)
         XCTAssertTrue(app.buttons["source-withings"].exists)
         XCTAssertTrue(app.buttons["source-garmin"].exists)
 
         app.card("resting_heart_rate").tap()
-        XCTAssertTrue(app.navigationBars["Resting heart rate"].waitForExistence(timeout: 5), "a card opens Explore")
+        XCTAssertTrue(app.navigationBars["Resting heart rate"].waitForExistence(timeout: Wait.ui), "a card opens Explore")
         XCTAssertTrue(app.tabBars.buttons["Explore"].isSelected)
     }
 
     func testEditSaveAndReload() {
         let app = XCUIApplication.launch()
         app.signInToDashboard()
-        XCTAssertTrue(app.card("steps").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.card("steps").waitForExistence(timeout: Wait.server))
         app.buttons["customizeButton"].tap()
-        XCTAssertTrue(app.navigationBars["Customize"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Customize"].waitForExistence(timeout: Wait.ui))
 
         for _ in 0..<2 {
-            app.buttons["move-steps"].tap()
-            app.buttons["Move up"].tap()
+            app.buttons["move-steps"].tapWhenReady()
+            app.buttons["Move up"].tapWhenReady()
         }
         app.scrollTo(app.segmentedControls["size-weight"]).buttons["L"].tap()
         app.scrollTo(app.buttons["hide-vo2max"]).tap()
-        XCTAssertTrue(app.scrollTo(app.buttons["show-vo2max"]).exists, "hidden cards wait below")
+        XCTAssertTrue(app.scrollTo(app.buttons["show-vo2max"]).waitForExistence(timeout: Wait.ui), "hidden cards wait below")
         app.scrollTo(app.buttons["addMetric"]).tap()
         let search = app.searchFields.firstMatch
-        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        XCTAssertTrue(search.waitForExistence(timeout: Wait.ui))
         search.tap()
         search.typeText("sleep")
-        XCTAssertTrue(app.buttons["pin-sleep"].waitForExistence(timeout: 5), "sleep stages are one entry")
+        XCTAssertTrue(app.buttons["pin-sleep"].waitForExistence(timeout: Wait.server), "sleep stages are one entry")
         XCTAssertFalse(app.buttons["pin-sleep_deep"].exists)
         XCTAssertEqual(app.buttons["pin-sleep"].label, "Unpin Sleep", "on the layout")
         search.buttons["Clear text"].tap()
         search.typeText("body")
-        app.buttons["pin-body_fat_ratio"].tap()
+        app.buttons["pin-body_fat_ratio"].tapWhenReady()
         XCTAssertEqual(app.buttons["pin-body_fat_ratio"].label, "Unpin Body fat ratio")
         if app.buttons["Close"].exists { app.buttons["Close"].tap() } // ends the search
-        XCTAssertTrue(app.buttons["addMetricDone"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["addMetricDone"].waitForExistence(timeout: Wait.ui))
         app.buttons["addMetricDone"].tap()
         app.buttons["editSave"].tap()
-        XCTAssertTrue(app.navigationBars["Customize"].waitForNonExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars["Customize"].waitForNonExistence(timeout: Wait.server))
 
         let saved = ["sleep", "resting_heart_rate", "steps", "hrv_rmssd_nightly", "weight", "blood_pressure"]
         app.assertOrder(saved)
@@ -81,33 +82,36 @@ final class DashboardUITests: XCTestCase {
         app.openLink("vitamux://uitest/expire-sessions")
         app.buttons["previousDay"].tap()
         app.signIn()
-        XCTAssertTrue(app.card("steps").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.card("steps").waitForExistence(timeout: Wait.server))
         app.assertOrder(saved)
         XCTAssertFalse(app.card("vo2max").exists)
         XCTAssertGreaterThan(app.card("weight").frame.width, app.card("blood_pressure").frame.width * 1.5, "weight is L")
 
         app.buttons["customizeButton"].tap()
-        XCTAssertTrue(app.scrollTo(app.element("edit-body_fat_ratio")).exists, "the pinned metric was saved")
+        XCTAssertTrue(app.navigationBars["Customize"].waitForExistence(timeout: Wait.ui))
+        XCTAssertTrue(app.scrollTo(app.element("edit-body_fat_ratio")).waitForExistence(timeout: Wait.ui), "the pinned metric was saved")
         XCTAssertTrue(app.scrollTo(app.segmentedControls["size-weight"]).buttons["L"].isSelected)
         app.buttons["editCancel"].tap()
-        XCTAssertTrue(app.navigationBars["Customize"].waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Customize"].waitForNonExistence(timeout: Wait.ui))
     }
 
     func testResetAndCancel() {
         let app = XCUIApplication.launch("-uitest-panel-layout")
         app.signInToDashboard()
-        XCTAssertTrue(app.card("steps").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.card("steps").waitForExistence(timeout: Wait.server))
         app.buttons["customizeButton"].tap()
+        XCTAssertTrue(app.navigationBars["Customize"].waitForExistence(timeout: Wait.ui))
         app.scrollTo(app.buttons["resetLayout"]).tap()
         app.buttons["editCancel"].tap()
-        XCTAssertTrue(app.navigationBars["Customize"].waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Customize"].waitForNonExistence(timeout: Wait.ui))
         XCTAssertFalse(app.card("resting_heart_rate").exists, "cancel keeps the saved layout")
 
         app.buttons["customizeButton"].tap()
+        XCTAssertTrue(app.navigationBars["Customize"].waitForExistence(timeout: Wait.ui))
         app.scrollTo(app.buttons["resetLayout"]).tap()
         app.buttons["editSave"].tap()
-        XCTAssertTrue(app.navigationBars["Customize"].waitForNonExistence(timeout: 10))
-        XCTAssertTrue(app.card("resting_heart_rate").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars["Customize"].waitForNonExistence(timeout: Wait.server))
+        XCTAssertTrue(app.card("resting_heart_rate").waitForExistence(timeout: Wait.server))
         app.assertOrder(["sleep", "resting_heart_rate", "steps", "vo2max"])
     }
 
@@ -115,14 +119,14 @@ final class DashboardUITests: XCTestCase {
         let app = XCUIApplication.launch()
         app.signInToDashboard()
         let steps = app.card("steps")
-        XCTAssertTrue(steps.waitForExistence(timeout: 10))
+        XCTAssertTrue(steps.waitForExistence(timeout: Wait.server))
         XCTAssertTrue(steps.label.contains("Partial"))
 
         app.buttons["previousDay"].tap()
         app.waitForLabel(of: app.staticTexts["dayTitle"], "Yesterday")
         XCTAssertTrue(app.buttons["todayButton"].exists)
         XCTAssertTrue(app.buttons["nextDay"].isEnabled)
-        XCTAssertTrue(app.card("steps").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.card("steps").waitForExistence(timeout: Wait.server))
         XCTAssertFalse(app.card("steps").label.contains("Partial"), "a past day is final")
 
         app.buttons["nextDay"].tap()
@@ -132,7 +136,7 @@ final class DashboardUITests: XCTestCase {
         app.openLink("vitamux://dashboard?date=2026-01-31")
         app.waitForLabel(of: app.staticTexts["dayTitle"], "Saturday")
         XCTAssertEqual(app.staticTexts["dayLabel"].value as? String, "2026-01-31")
-        XCTAssertTrue(app.card("weight").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.card("weight").waitForExistence(timeout: Wait.server))
         app.buttons["todayButton"].tap()
         app.waitForLabel(of: app.staticTexts["dayTitle"], "Today")
     }
@@ -140,24 +144,24 @@ final class DashboardUITests: XCTestCase {
     func testAnEmptyInstall() {
         let app = XCUIApplication.launch("-uitest-empty-install")
         app.signInToDashboard()
-        XCTAssertTrue(app.staticTexts["No data yet"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.staticTexts["Nothing needs your attention."].exists)
-        XCTAssertTrue(app.buttons["connectSource"].exists, "the sources section offers to connect one")
+        XCTAssertTrue(app.staticTexts["No data yet"].waitForExistence(timeout: Wait.server))
+        XCTAssertTrue(app.staticTexts["Nothing needs your attention."].waitForExistence(timeout: Wait.server))
+        XCTAssertTrue(app.buttons["connectSource"].waitForExistence(timeout: Wait.server), "the sources section offers to connect one")
         XCTAssertFalse(app.card("sleep").exists)
         app.buttons["emptyCardsAction"].tap()
-        XCTAssertTrue(app.navigationBars["Sources"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Sources"].waitForExistence(timeout: Wait.ui))
     }
 
     func testALayoutSavedInThePanel() {
         let app = XCUIApplication.launch("-uitest-panel-layout")
         app.signInToDashboard()
-        XCTAssertTrue(app.card("steps").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.card("steps").waitForExistence(timeout: Wait.server))
         app.assertOrder(["steps", "weight", "sleep", "vo2max"])
         XCTAssertEqual(app.card("weight").frame.minY, app.card("blood_pressure").frame.minY, accuracy: 1)
         XCTAssertGreaterThan(app.card("sleep").frame.width, app.card("weight").frame.width * 1.5, "sleep is M")
         XCTAssertFalse(app.card("resting_heart_rate").exists, "hidden in the panel")
         XCTAssertFalse(app.card("hrv_rmssd_nightly").exists, "not on the panel's layout")
-        XCTAssertTrue(app.staticTexts["Garmin Connect needs reauthorization."].exists)
+        XCTAssertTrue(app.staticTexts["Garmin Connect needs reauthorization."].waitForExistence(timeout: Wait.server))
         XCTAssertEqual(app.texts(beginningWith: "The last backup is from").count, 0, "dismissed in the panel")
     }
 }
@@ -183,7 +187,7 @@ private extension XCUIApplication {
 
     func waitForLabel(of element: XCUIElement, _ label: String, file: StaticString = #filePath, line: UInt = #line) {
         let match = NSPredicate(format: "label == %@", label)
-        let found = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: match, object: element)], timeout: 10)
+        let found = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: match, object: element)], timeout: Wait.ui)
         XCTAssertEqual(found, .completed, "\(element.label) is \(label)", file: file, line: line)
     }
 }

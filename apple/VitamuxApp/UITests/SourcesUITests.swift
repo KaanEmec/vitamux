@@ -16,20 +16,20 @@ final class SourcesUITests: XCTestCase {
         app.launch()
         app.signInToDashboard()
         app.tabBars.buttons["Sources"].tap()
-        XCTAssertTrue(app.buttons["connection-withings"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["connection-withings"].waitForExistence(timeout: Wait.server))
         return app
     }
 
     private func waitForLabel(_ element: XCUIElement, containing text: String, file: StaticString = #filePath, line: UInt = #line) {
         let matched = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", text), object: element)
-        XCTAssertEqual(XCTWaiter.wait(for: [matched], timeout: 15), .completed, "\(element) says \(element.label), not \(text)", file: file, line: line)
+        XCTAssertEqual(XCTWaiter.wait(for: [matched], timeout: Wait.server), .completed, "\(element) says \(element.label), not \(text)", file: file, line: line)
     }
 
     /// Answers a prompt step: types each value into its field and continues.
     private func answer(_ app: XCUIApplication, _ values: [(String, String)]) {
         for (name, value) in values {
             let field = app.descendants(matching: .any)["promptField-\(name)"].firstMatch
-            XCTAssertTrue(field.waitForExistence(timeout: 10), "the prompt asks for \(name)")
+            XCTAssertTrue(field.waitForExistence(timeout: Wait.server), "the prompt asks for \(name)")
             field.tap()
             field.typeText(value)
         }
@@ -40,21 +40,21 @@ final class SourcesUITests: XCTestCase {
         let app = openSources()
         XCTAssertEqual(app.staticTexts["sourcesSummary"].label, "2 sources · 1 healthy · 1 needs attention")
         XCTAssertTrue(app.buttons["thisIPhone"].exists)
-        XCTAssertTrue(app.element("runStrip").exists)
+        XCTAssertTrue(app.element("runStrip").waitForExistence(timeout: Wait.server))
         XCTAssertTrue(app.buttons["syncNow-withings"].exists)
         XCTAssertTrue(app.buttons["reauthorize-garmin"].exists, "Garmin's fix-it action")
         XCTAssertFalse(app.buttons["syncNow-garmin"].exists, "a card that needs reauthorization offers only that")
 
         app.buttons["syncNow-withings"].tap()
         let queued = app.element("syncQueued")
-        XCTAssertTrue(queued.waitForExistence(timeout: 10))
+        XCTAssertTrue(queued.waitForExistence(timeout: Wait.server))
         XCTAssertTrue(queued.label.contains("withings.measures (queued)"), queued.label)
 
         let running = app.scrollTo(app.buttons["runningBackfill-withings.measures"])
-        XCTAssertTrue(running.exists, "the running backfill is listed")
-        XCTAssertTrue(app.scrollTo(app.staticTexts["Recent sync runs"]).exists)
+        XCTAssertTrue(running.waitForExistence(timeout: Wait.server), "the running backfill is listed")
+        XCTAssertTrue(app.scrollTo(app.staticTexts["Recent sync runs"]).waitForExistence(timeout: Wait.server))
         running.tap()
-        XCTAssertTrue(app.navigationBars["Withings"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars["Withings"].waitForExistence(timeout: Wait.ui))
         XCTAssertTrue(app.buttons["tab-backfills"].isSelected, "the backfill opens its connection's Backfills tab")
     }
 
@@ -71,23 +71,23 @@ final class SourcesUITests: XCTestCase {
         for (code, text) in errors {
             app.openLink("vitamux://connections?auth_error=\(code)&provider=withings")
             let banner = app.element("bannerAuthError")
-            XCTAssertTrue(banner.waitForExistence(timeout: 10), code)
+            XCTAssertTrue(banner.waitForExistence(timeout: Wait.ui), code)
             waitForLabel(banner, containing: "Connecting Withings failed: \(text)")
             XCTAssertEqual(app.buttons["bannerRetry"].label, "Try again", "Withings has no app credentials of its own here")
         }
         app.buttons["bannerRetry"].tap()
-        XCTAssertTrue(app.buttons["provider-withings"].waitForExistence(timeout: 10), "Try again opens Connect a source")
+        XCTAssertTrue(app.buttons["provider-withings"].waitForExistence(timeout: Wait.server), "Try again opens Connect a source")
         app.buttons["Cancel"].tap()
 
         app.openLink("vitamux://connections?connected=withings")
         let connected = app.element("bannerConnected")
-        XCTAssertTrue(connected.waitForExistence(timeout: 10))
+        XCTAssertTrue(connected.waitForExistence(timeout: Wait.ui))
         XCTAssertTrue(connected.label.contains("Withings is connected. A first sync has been queued."))
         app.buttons["bannerDismiss"].tap()
-        XCTAssertTrue(connected.waitForNonExistence(timeout: 10))
+        XCTAssertTrue(connected.waitForNonExistence(timeout: Wait.ui))
 
         app.openLink("vitamux://connections?removed=garmin")
-        XCTAssertTrue(app.element("bannerRemoved").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.element("bannerRemoved").waitForExistence(timeout: Wait.ui))
         XCTAssertTrue(app.element("bannerRemoved").label.contains("The Garmin Connect connection was removed."))
     }
 
@@ -96,38 +96,38 @@ final class SourcesUITests: XCTestCase {
     func testConnectWithingsThroughTheAppWizard() {
         let app = openSources()
         app.buttons["connection-withings"].tap()
-        XCTAssertTrue(app.buttons["tab-settings"].waitForExistence(timeout: 10), "the connection opens")
+        XCTAssertTrue(app.buttons["tab-settings"].waitForExistence(timeout: Wait.server), "the connection opens")
         app.buttons["tab-settings"].tap()
         app.scrollTo(app.buttons["removeConnection"]).tap()
         // The removal sheet presents slowly on hosted runners.
         let deleteData = app.buttons["delete-delete"]
-        XCTAssertTrue(deleteData.waitForExistence(timeout: 10), "the removal sheet offers deleting the data")
+        XCTAssertTrue(deleteData.waitForExistence(timeout: Wait.ui), "the removal sheet offers deleting the data")
         deleteData.tap()
         let confirm = app.switches["confirmDelete"].switches.firstMatch
-        XCTAssertTrue(confirm.waitForExistence(timeout: 10))
+        XCTAssertTrue(confirm.waitForExistence(timeout: Wait.ui))
         confirm.tap()
         app.buttons["submitDelete"].tap()
         let removed = app.element("bannerRemoved")
-        XCTAssertTrue(removed.waitForExistence(timeout: 10))
+        XCTAssertTrue(removed.waitForExistence(timeout: Wait.server))
         XCTAssertTrue(removed.label.contains("The Withings connection was removed."))
         XCTAssertFalse(app.buttons["connection-withings"].exists)
 
         app.scrollTo(app.buttons["connectSource"]).tap()
         let state = app.element("setupState-withings")
-        XCTAssertTrue(state.waitForExistence(timeout: 10))
+        XCTAssertTrue(state.waitForExistence(timeout: Wait.server))
         XCTAssertTrue(state.label.contains("Needs its app credentials"))
         XCTAssertTrue(app.element("setupState-whoop").label.contains("Not available: its sidecar is not running"))
         XCTAssertTrue(app.element("setupState-garmin").label.contains("Connected"))
         XCTAssertEqual(app.scrollTo(app.buttons["connectNext"]).label, "Set up Withings")
         app.buttons["connectNext"].tap()
 
-        XCTAssertTrue(app.staticTexts["wizardStep"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["wizardStep"].waitForExistence(timeout: Wait.ui))
         XCTAssertEqual(app.staticTexts["wizardStep"].label, "Step 1 of 3 · Create the app")
         XCTAssertEqual(app.staticTexts["value-Callback URL"].label, "https://fake.vitamux.test/oauth/withings/callback")
         app.scrollTo(app.buttons["wizardNext"]).tap()
 
         let id = app.textFields["clientIdField"]
-        XCTAssertTrue(id.waitForExistence(timeout: 5))
+        XCTAssertTrue(id.waitForExistence(timeout: Wait.ui))
         id.tap()
         id.typeText("synthetic-client-id")
         let secret = app.secureTextFields["clientSecretField"]
@@ -135,56 +135,57 @@ final class SourcesUITests: XCTestCase {
         secret.typeText("synthetic-wrong-secret")
         app.buttons["saveAppCredentials"].tap()
         let check = app.element("appCheck")
-        XCTAssertTrue(check.waitForExistence(timeout: 10))
+        XCTAssertTrue(check.waitForExistence(timeout: Wait.server))
         XCTAssertTrue(check.label.contains("refused"), check.label)
         XCTAssertEqual(secret.value as? String, "Client secret", "the secret is cleared once sent")
 
         app.scrollTo(secret).tap()
         secret.typeText("synthetic-client-secret\n") // Return saves too
-        XCTAssertTrue(app.buttons["wizardConnect"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["wizardConnect"].waitForExistence(timeout: Wait.server))
         XCTAssertEqual(app.staticTexts["wizardStep"].label, "Step 3 of 3 · Connect your account")
         XCTAssertTrue(app.element("appCheck").label.contains("accepted"))
         app.buttons["wizardConnect"].tap()
 
         let connected = app.element("bannerConnected")
-        XCTAssertTrue(connected.waitForExistence(timeout: 10), "the auth browser returns to vitamux://connections?connected=withings")
+        XCTAssertTrue(connected.waitForExistence(timeout: Wait.server), "the auth browser returns to vitamux://connections?connected=withings")
         XCTAssertTrue(connected.label.contains("Withings is connected."))
-        XCTAssertTrue(app.buttons["connection-withings"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["connection-withings"].waitForExistence(timeout: Wait.server))
 
         // A refused exchange with the owner's own app points at its setup.
         app.openLink("vitamux://connections?auth_error=exchange_failed&provider=withings")
         let review = app.buttons["bannerRetry"]
-        XCTAssertTrue(review.waitForExistence(timeout: 10))
+        XCTAssertTrue(review.waitForExistence(timeout: Wait.ui))
         waitForLabel(review, containing: "Review the app setup")
         review.tap()
-        XCTAssertTrue(app.staticTexts["wizardStep"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["wizardStep"].waitForExistence(timeout: Wait.ui))
         XCTAssertEqual(app.staticTexts["wizardStep"].label, "Step 1 of 3 · Create the app")
     }
 
     func testAppCredentialsManagedByTheEnvironment() {
         let app = openSources("-uitest-withings-env")
         app.openLink("vitamux://connections/conn_00000000000000000000000000000001?tab=settings")
+        XCTAssertTrue(app.element("detailHealth").waitForExistence(timeout: Wait.server))
         app.scrollTo(app.buttons["removeConnection"]).tap()
         let deleteData = app.buttons["delete-delete"]
-        XCTAssertTrue(deleteData.waitForExistence(timeout: 10), "the removal sheet offers deleting the data")
+        XCTAssertTrue(deleteData.waitForExistence(timeout: Wait.ui), "the removal sheet offers deleting the data")
         deleteData.tap()
         let confirm = app.switches["confirmDelete"].switches.firstMatch
-        XCTAssertTrue(confirm.waitForExistence(timeout: 10))
+        XCTAssertTrue(confirm.waitForExistence(timeout: Wait.ui))
         confirm.tap()
         app.buttons["submitDelete"].tap()
-        XCTAssertTrue(app.element("bannerRemoved").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.element("bannerRemoved").waitForExistence(timeout: Wait.server))
 
         app.scrollTo(app.buttons["connectSource"]).tap()
         let state = app.element("setupState-withings")
-        XCTAssertTrue(state.waitForExistence(timeout: 10))
+        XCTAssertTrue(state.waitForExistence(timeout: Wait.server))
         XCTAssertTrue(state.label.contains("Ready to connect"), state.label)
         XCTAssertEqual(app.scrollTo(app.buttons["connectNext"]).label, "Continue to Withings")
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'It uses the app credentials set by the environment.'")).firstMatch.exists)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'It uses the app credentials set by the environment.'")).firstMatch.waitForExistence(timeout: Wait.ui))
         app.buttons["connectNext"].tap()
-        XCTAssertTrue(app.element("bannerConnected").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.element("bannerConnected").waitForExistence(timeout: Wait.server))
 
         app.openLink("vitamux://connections?auth_error=exchange_failed&provider=withings")
-        XCTAssertTrue(app.buttons["bannerRetry"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["bannerRetry"].waitForExistence(timeout: Wait.ui))
         XCTAssertEqual(app.buttons["bannerRetry"].label, "Try again", "credentials of the environment are not the app's to review")
     }
 
@@ -194,7 +195,7 @@ final class SourcesUITests: XCTestCase {
         let app = openSources()
         app.scrollTo(app.buttons["connectSource"]).tap()
         let whoop = app.buttons["provider-whoop"]
-        XCTAssertTrue(whoop.waitForExistence(timeout: 10))
+        XCTAssertTrue(whoop.waitForExistence(timeout: Wait.server))
         XCTAssertFalse(whoop.isEnabled, "a provider whose sidecar is off cannot be chosen")
         XCTAssertEqual(app.staticTexts["value-Add this line to .env"].label, "COMPOSE_PROFILES=whoop")
 
@@ -209,39 +210,39 @@ final class SourcesUITests: XCTestCase {
         answer(app, [("email", Self.login.email), ("password", Self.login.password)])
         answer(app, [("code", "111111")])
         let problem = app.element("problem")
-        XCTAssertTrue(problem.waitForExistence(timeout: 10))
+        XCTAssertTrue(problem.waitForExistence(timeout: Wait.server))
         XCTAssertTrue(problem.label.contains("WHOOP did not accept the verification code"), problem.label)
         app.buttons["promptRestart"].tap()
 
-        XCTAssertTrue(app.buttons["provider-whoop"].waitForExistence(timeout: 10), "start again goes back to the choice")
+        XCTAssertTrue(app.buttons["provider-whoop"].waitForExistence(timeout: Wait.server), "start again goes back to the choice")
         app.scrollTo(app.buttons["connectNext"]).tap()
         answer(app, [("email", Self.login.email), ("password", Self.login.password)])
-        XCTAssertTrue(app.descendants(matching: .any)["promptField-code"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["promptField-code"].waitForExistence(timeout: Wait.server))
         XCTAssertEqual(app.descendants(matching: .any)["promptField-email"].exists, false, "each step clears the last one's fields")
         answer(app, [("code", Self.login.code)])
 
-        XCTAssertTrue(app.navigationBars["WHOOP"].waitForExistence(timeout: 10), "a finished sign-in opens the connection")
+        XCTAssertTrue(app.navigationBars["WHOOP"].waitForExistence(timeout: Wait.server), "a finished sign-in opens the connection")
         waitForLabel(app.element("detailHealth"), containing: "Paused")
     }
 
     func testReauthorizeGarminWithItsPrompts() {
         let app = openSources()
         app.buttons["reauthorize-garmin"].tap()
-        XCTAssertTrue(app.element("promptMessage").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.element("promptMessage").waitForExistence(timeout: Wait.server))
         answer(app, [("email", Self.login.email), ("password", Self.login.password)])
         answer(app, [("code", Self.login.code)])
-        XCTAssertTrue(app.buttons["promptContinue"].waitForNonExistence(timeout: 10), "the sheet closes once reauthorized")
+        XCTAssertTrue(app.buttons["promptContinue"].waitForNonExistence(timeout: Wait.server), "the sheet closes once reauthorized")
         waitForLabel(app.buttons["connection-garmin"], containing: "Healthy")
-        XCTAssertTrue(app.buttons["syncNow-garmin"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["syncNow-garmin"].waitForExistence(timeout: Wait.server))
     }
 
     func testReauthorizeWithingsReturnsThroughTheAuthBrowser() {
         let app = openSources("-uitest-withings-env")
         app.openLink("vitamux://connections/conn_00000000000000000000000000000001")
         let reauthorize = app.buttons["reauthorize-withings"]
-        XCTAssertTrue(reauthorize.waitForExistence(timeout: 10))
+        XCTAssertTrue(reauthorize.waitForExistence(timeout: Wait.server))
         reauthorize.tap()
-        XCTAssertTrue(app.element("bannerConnected").waitForExistence(timeout: 10), "the return opens Sources with its banner")
+        XCTAssertTrue(app.element("bannerConnected").waitForExistence(timeout: Wait.server), "the return opens Sources with its banner")
         XCTAssertTrue(app.navigationBars["Sources"].exists)
     }
 }
