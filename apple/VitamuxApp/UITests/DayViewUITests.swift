@@ -58,7 +58,9 @@ final class DayViewUITests: XCTestCase {
         app.buttons["dayZoomIn"].tap()
         waitForStep(app, "Raw readings")
         XCTAssertFalse(app.buttons["dayZoomIn"].isEnabled, "raw is the finest step")
-        // Let the raw layer load, then open the bucket under the middle of the plot.
+        // The chart keeps the 30-second layer until every raw page has arrived (14,400 rows on a
+        // hosted runner take a while): wait for the loading indicator to clear before tapping.
+        XCTAssertTrue(app.activityIndicators.firstMatch.waitForNonExistence(timeout: 120), "the raw layer finished loading")
         XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'raw readings'")).firstMatch.waitForExistence(timeout: 10))
         sleep(1)
         plot(app).tap()
