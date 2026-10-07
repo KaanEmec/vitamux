@@ -44,7 +44,8 @@ final class StackSmokeUITests: XCTestCase {
 
         // Dashboard: cards from the synthetic slice.
         let card = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'card-'")).firstMatch
-        XCTAssertTrue(card.waitForExistence(timeout: 20), "the dashboard shows the slice's cards")
+        // A real server resolves the week cold on first load, slowly on a hosted runner.
+        XCTAssertTrue(card.waitForExistence(timeout: 2 * Wait.server), "the dashboard shows the slice's cards")
         app.assertNoProblem("dashboard")
 
         // A metric: resting heart rate over a month, with yesterday's value.
