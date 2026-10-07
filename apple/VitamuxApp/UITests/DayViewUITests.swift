@@ -68,6 +68,10 @@ final class DayViewUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["bucketSpan"].label.contains("30-second bucket"))
         XCTAssertTrue(app.staticTexts["bucketSource"].label.hasPrefix("From "))
         XCTAssertTrue(app.staticTexts["bucketExplanation"].label.contains("readings"))
+        // The readings follow the bucket's summary: at the half-height detent the list has not
+        // laid their rows out (on a hosted runner the "Readings" header sits on the sheet's edge),
+        // so raise the sheet to full height first.
+        app.staticTexts["bucketExplanation"].swipeUp()
         XCTAssertTrue(app.descendants(matching: .any)["reading"].firstMatch.waitForExistence(timeout: 15), "raw zoom lists the readings with time, device and origin")
         app.buttons["closeBucket"].tap()
 

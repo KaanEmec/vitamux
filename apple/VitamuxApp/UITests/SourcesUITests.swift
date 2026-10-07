@@ -96,10 +96,16 @@ final class SourcesUITests: XCTestCase {
     func testConnectWithingsThroughTheAppWizard() {
         let app = openSources()
         app.buttons["connection-withings"].tap()
+        XCTAssertTrue(app.buttons["tab-settings"].waitForExistence(timeout: 10), "the connection opens")
         app.buttons["tab-settings"].tap()
         app.scrollTo(app.buttons["removeConnection"]).tap()
-        app.buttons["delete-delete"].tap()
-        app.switches["confirmDelete"].switches.firstMatch.tap()
+        // The removal sheet presents slowly on hosted runners.
+        let deleteData = app.buttons["delete-delete"]
+        XCTAssertTrue(deleteData.waitForExistence(timeout: 10), "the removal sheet offers deleting the data")
+        deleteData.tap()
+        let confirm = app.switches["confirmDelete"].switches.firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 10))
+        confirm.tap()
         app.buttons["submitDelete"].tap()
         let removed = app.element("bannerRemoved")
         XCTAssertTrue(removed.waitForExistence(timeout: 10))
@@ -159,8 +165,12 @@ final class SourcesUITests: XCTestCase {
         let app = openSources("-uitest-withings-env")
         app.openLink("vitamux://connections/conn_00000000000000000000000000000001?tab=settings")
         app.scrollTo(app.buttons["removeConnection"]).tap()
-        app.buttons["delete-delete"].tap()
-        app.switches["confirmDelete"].switches.firstMatch.tap()
+        let deleteData = app.buttons["delete-delete"]
+        XCTAssertTrue(deleteData.waitForExistence(timeout: 10), "the removal sheet offers deleting the data")
+        deleteData.tap()
+        let confirm = app.switches["confirmDelete"].switches.firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 10))
+        confirm.tap()
         app.buttons["submitDelete"].tap()
         XCTAssertTrue(app.element("bannerRemoved").waitForExistence(timeout: 10))
 
