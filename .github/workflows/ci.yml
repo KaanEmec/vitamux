@@ -104,19 +104,52 @@ jobs:
           yams https://github.com/jpsim/Yams
           EOF
       - run: swift test --package-path apple/VitamuxKit
+
+
+  # The app's simulator gates (apple/VitamuxApp/scripts/ui-gates.sh, as `make test-ios` runs them
+  # in one go), sharded by UI test class so each hosted runner finishes well inside an hour: app and
+  # widget build, package allowlist, privacy manifests, the shard's classes on the fake server with
+  # their accessibility audits, and the unified-log privacy scan. The first shard also runs the
+  # widget tests and the performance budgets (ui-gates.sh runs the performance class on its own
+  # when it is named). ScreenshotUITests (docs) and StackSmokeUITests (the ios-stack job) stay out.
+  ios-ui:
+    runs-on: macos-26
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: a11y-widgets-perf
+            classes: AccessibilityAuditUITests WidgetsUITests OfflineCacheUITests NotificationsUITests
+            extra: -only-testing:VitamuxWidgetsTests -skip-testing:VitamuxUITests/PerformanceUITests
+          - shard: settings-specialised-watch
+            classes: SettingsUITests SpecialisedUITests WatchUITests DeepLinkUITests AppLockUITests SystemStatusUITests UpgradeFromBridgeUITests
+            extra: ""
+          - shard: signin-sources-lab-health
+            classes: SignInUITests ConnectionDetailUITests LabUITests AppleHealthUITests AppleHealthSourcesUITests
+            extra: ""
+          - shard: shell-explore-dashboard-rules
+            classes: ShellUITests SourcesUITests ExploreUITests OverrideUITests DayViewUITests DashboardUITests RulesUITests
+            extra: ""
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      SIM_DEVICE: iPhone 17 Pro
+      SIM_RUNTIME: com.apple.CoreSimulator.SimRuntime.iOS-26-5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: brew install xcodegen
-      # Builds the app and the widget for the simulator (and checks the app resolves no package
-      # beyond VitamuxKit's), validates both privacy manifests, runs the UI suite on the fake
-      # server with an accessibility audit per screen and the widget tests, scans the app's
-      # unified log for the fake's secrets and `vmx_` tokens, and checks the signpost budgets.
-      - name: App gates (apple/VitamuxApp/scripts/ui-gates.sh)
-        run: apple/VitamuxApp/scripts/ui-gates.sh
+      - name: App gates, shard ${{ matrix.shard }}
+        run: |
+          args=()
+          for c in ${{ matrix.classes }}; do args+=("-only-testing:VitamuxUITests/$c"); done
+          for a in ${{ matrix.extra }}; do args+=("$a"); done
+          apple/VitamuxApp/scripts/ui-gates.sh "${args[@]}"
         env:
           RESULT_BUNDLE: ${{ runner.temp }}/ios/ui-tests.xcresult
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
-          name: ios-ui-tests
+          name: ios-ui-tests-${{ matrix.shard }}
           path: ${{ runner.temp }}/ios
           retention-days: 7
           if-no-files-found: ignore
