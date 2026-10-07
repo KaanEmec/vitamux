@@ -1,6 +1,6 @@
 # E22 Vitamux iOS app (v0.4.0)
 
-Release: v0.4.0 · Depends on: E15, E20, E21 (read-only screens can start now) · [Plan index](../README.md)
+Release: v0.4.0 · Status: shipped (2026-10-07; the device campaign [J22.23](J22.23-device-campaign-release.md) and gate G8 stay open) · Depends on: E15, E20, E21 (read-only screens can start now) · [Plan index](../README.md)
 Read first: [ios-app](../../architecture/ios-app.md), [apple-health](../../architecture/apple-health.md), [frontend](../../architecture/frontend.md)
 
 **Objective:** A native iPhone app that signs in to any Vitamux server like the panel, offers every panel feature with metric visualisation first, and is the device that syncs Apple Health, including everything Apple Watch records. It replaces the Vitamux Bridge app, reuses HealthBridgeKit, and stays small enough for one contributor to understand.

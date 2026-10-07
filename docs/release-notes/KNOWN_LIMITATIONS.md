@@ -12,3 +12,4 @@ Appended to every release's notes by `scripts/release-notes.sh`. Remove an item 
 - **PDFs with Type0/CMap fonts** count as having no text layer, so evidence checks are skipped for them ([lab documents](../architecture/lab-documents.md)).
 - **Manual blood pressure** cannot be entered as one reading; the manual entry form takes single values, not systolic, diastolic and pulse together.
 - **Interactive-MFA sign-in** (`POST …/auth/continue`) is not wired up; no v0.1 connector needs it.
+- **iOS app on a physical iPhone and Apple Watch** is not yet verified: HealthKit authorization, background delivery, the Bridge upgrade in place, widgets on the lock screen and notification delivery were tested on the simulator only ([J22.23](../plan/E22-ios-app/J22.23-device-campaign-release.md)). The app is built from source; there is no App Store or TestFlight build.

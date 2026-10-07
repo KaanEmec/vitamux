@@ -2,9 +2,9 @@
 
 Newest first. Before a final release, `scripts/release-notes.sh --changelog vX.Y.Z` adds its section from the Conventional Commits since the previous final tag; edit it and add upgrade notes under "Breaking changes" before tagging. The release workflow refuses a final tag without its section and uses it as the release notes. Release candidates are described on their GitHub releases only.
 
-## Unreleased (v0.4.0)
+## v0.4.0 (2026-10-07)
 
-The Vitamux iOS app ([E22](docs/plan/E22-ios-app/README.md), [ADR-0023](docs/adr/0023-ios-app.md)) and Apple Watch data ([ADR-0024](docs/adr/0024-watch-data.md)). Not released yet: the device campaign and the release are [J22.23](docs/plan/E22-ios-app/J22.23-device-campaign-release.md).
+The Vitamux iOS app ([E22](docs/plan/E22-ios-app/README.md), [ADR-0023](docs/adr/0023-ios-app.md)) and Apple Watch data ([ADR-0024](docs/adr/0024-watch-data.md)). The app is built from source (no App Store or TestFlight build yet) and has not been through its device campaign ([J22.23](docs/plan/E22-ios-app/J22.23-device-campaign-release.md)).
 
 ### iOS app
 
