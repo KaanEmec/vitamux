@@ -64,7 +64,7 @@ UI tests launch the app with `-uitest`: the kit's fake server (`FakeServer.uiTes
 | --- | --- |
 | `Sources/App/` | `VitamuxApp` (entry), `AppState` (the one shared object: server, session, client, router, theme, app lock), `Route` (every linkable screen, `vitamux://` parsing), `RootView` (sign-in, lock or shell; app-switcher blur), `ShellView` (tabs and stacks), `RouteView` (the screen per route) |
 | `Sources/Features/<Feature>/` | A feature's views and, where a screen loads or changes data, its `@Observable` model (`SignIn`, `Shell` for search and sync status, `Lock`, `More`, `Settings`, `AppleHealth`, …) |
-| `Sources/Shared/` | Components used by more than one feature (`ProblemView`, `PlaceholderView`, `AppMark`), the app-wide formats and labels (`Format`, `metricLabel`, `providerLabel`, `groupLabel`), the design tokens (`Tokens.swift`, `Tokens.xcassets`) and the shared styles (`Card`: card surface, ground, section header, `ValueText`; `MetricTile`; `StatusChips`: status and source cues), per [ios-design](../../docs/architecture/ios-design.md) |
+| `Sources/Shared/` | Components used by more than one feature (`ProblemView`, `AppMark`), the app-wide formats and labels (`Format`, `metricLabel`, `providerLabel`, `groupLabel`), the design tokens (`Tokens.swift`, `Tokens.xcassets`) and the shared styles (`Card`: card surface, ground, section header, `ValueText`; `MetricTile`; `StatusChips`: status and source cues), per [ios-design](../../docs/architecture/ios-design.md) |
 | `Sources/Assets.xcassets` | The app icon and the global accent colour |
 | `Widgets/` | The widget extension (see [Widgets](#widgets)); `Shared/` is compiled into the app too, `Tests/` is `VitamuxWidgetsTests` |
 | `UITests/` | UI tests, one file per screen |
@@ -78,5 +78,5 @@ System status (`vitamux://settings/system`) is the pattern every screen copies:
 
 1. **Model** `Features/Settings/SystemStatusModel.swift`: an `@Observable` class holding one `Loadable<Value>` with `private(set)`, and an `async` `load()` that assigns `await Loadable { … }`. Later models call the generated client inside that closure.
 2. **Screen** `Features/Settings/SystemStatusView.swift`: owns the model as `@State`, loads in `.task`, switches on the `Loadable`, shows failures with `ProblemView`, and splits sections into small private views.
-3. **Route**: `Route.settings(.system)`: a case in `Route`, its path in `Route.init?(url:)` (the panel path, listed in [ios-app-screens](../../docs/architecture/ios-app-screens.md)), its tab in `Route.tab`, and its screen in `RouteView` (replacing the route's `PlaceholderView`).
+3. **Route**: `Route.settings(.system)`: a case in `Route`, its path in `Route.init?(url:)` (the panel path, listed in [ios-app-screens](../../docs/architecture/ios-app-screens.md)), its tab in `Route.tab`, and its screen in `RouteView`.
 4. **UI test** `UITests/SystemStatusUITests.swift`: sign in to the fake server, open the deep link, and check the screen by accessibility identifier.

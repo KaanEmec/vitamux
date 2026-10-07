@@ -138,6 +138,32 @@ struct Reply {
     var status: Int
     var headers: [String: String] = [:]
     var body: Data?
+
+    static func json(_ status: Int, _ object: [String: Any]) -> Reply {
+        Reply(status: status, body: try! JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]))
+    }
+
+    /// The server's problem+json, with its registry's titles.
+    static func problem(
+        _ status: Int, _ code: String, _ detail: String,
+        errors: [(String, String)] = [], headers: [String: String] = [:]
+    ) -> Reply {
+        let titles = [
+            "validation_failed": "Validation failed", "unauthenticated": "Authentication required",
+            "totp_required": "TOTP code required", "not_found": "Not found", "rate_limited": "Rate limited",
+            "conflict": "Conflict", "forbidden": "Forbidden", "unavailable": "Service unavailable",
+            "auth_rejected": "Sign-in refused", "consent_required": "Consent required",
+            "payload_too_large": "Payload too large",
+        ]
+        var object: [String: Any] = [
+            "type": "urn:vitamux:problem:\(code)", "title": titles[code] ?? code, "status": status,
+            "code": code, "detail": detail, "request_id": "req-fake",
+        ]
+        if !errors.isEmpty { object["errors"] = errors.map { ["pointer": $0.0, "detail": $0.1] } }
+        var reply = Reply.json(status, object)
+        reply.headers = headers.merging(["Content-Type": "application/problem+json"]) { $1 }
+        return reply
+    }
 }
 
 /// Routes requests to their `FakeServer` by host.

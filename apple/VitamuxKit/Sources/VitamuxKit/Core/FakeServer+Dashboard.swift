@@ -112,16 +112,16 @@ extension FakeServer {
             case ("GET", "/api/v1/resolved/summary"):
                 let metrics = query.filter { $0.name == "metrics" }.flatMap { ($0.value ?? "").split(separator: ",").map(String.init) }
                 guard (1...20).contains(metrics.count) else {
-                    return reply(422, problemBody("validation_failed", "metrics: 1 to 20 codes"), problem: true)
+                    return Reply.problem(422, "validation_failed", "metrics: 1 to 20 codes")
                 }
                 state.summaryDates.append(value("date"))
                 return summary(metrics, date: value("date").flatMap(LocalDate.init), empty: empty, compare: value("compare") == "true")
             case ("GET", "/api/v1/jobs"):
-                return reply(200, ["jobs": value("status") == "dead" && !empty ? deadJobs : [], "has_more": false])
+                return Reply.json(200, ["jobs": value("status") == "dead" && !empty ? deadJobs : [], "has_more": false])
             case ("GET", "/api/v1/system/status"):
-                return reply(200, systemStatus(empty: empty))
+                return Reply.json(200, systemStatus(empty: empty))
             case ("GET", "/api/v1/connections") where empty:
-                return reply(200, ["connections": []])
+                return Reply.json(200, ["connections": []])
             default:
                 return nil
             }
@@ -131,7 +131,7 @@ extension FakeServer {
     // MARK: - Layout
 
     private static func layout(_ state: Dashboard, isDefault: Bool) -> Reply {
-        reply(200, [
+        Reply.json(200, [
             "version": 1, "cards": (state.stored ?? defaultDashboard).map(object), "hero": state.hero ?? defaultHero,
             "dismissed": state.dismissed, "is_default": isDefault,
         ])
@@ -140,14 +140,14 @@ extension FakeServer {
     private static func putLayout(_ body: Data, state: inout Dashboard) -> Reply {
         guard let input = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any],
               input["version"] as? Int == 1, let raw = input["cards"] as? [[String: Any]]
-        else { return reply(422, problemBody("validation_failed", "invalid dashboard layout"), problem: true) }
+        else { return Reply.problem(422, "validation_failed", "invalid dashboard layout") }
         let cards = raw.compactMap { card -> DashboardCard? in
             guard let metric = card["metric"] as? String, let size = card["size"] as? String, ["S", "M", "L"].contains(size),
                   let hidden = card["hidden"] as? Bool else { return nil }
             return DashboardCard(metric, size, hidden: hidden)
         }
         guard cards.count == raw.count, cards.count <= 50, Set(cards.map(\.metric)).count == cards.count else {
-            return reply(422, problemBody("validation_failed", "cards: a metric at most once, at most 50"), problem: true)
+            return Reply.problem(422, "validation_failed", "cards: a metric at most once, at most 50")
         }
         state.stored = cards
         if let hero = input["hero"] as? [String] { state.hero = hero }
@@ -221,7 +221,7 @@ extension FakeServer {
         let on = date ?? today
         var out: [String: Any] = [:]
         for code in metrics { out[code] = metricSummary(code, on: on, today: today, empty: empty, compare: compare) }
-        return reply(200, ["date": on.description, "timezone": dashboardTimeZone, "metrics": out])
+        return Reply.json(200, ["date": on.description, "timezone": dashboardTimeZone, "metrics": out])
     }
 
     private static func hasData(_ code: String, empty: Bool) -> Bool {
@@ -342,16 +342,5 @@ extension FakeServer {
 
     // MARK: - Responses
 
-    private static func problemBody(_ code: String, _ detail: String) -> [String: Any] {
-        ["type": "urn:vitamux:problem:\(code)", "title": "Validation failed", "status": 422, "code": code, "detail": detail, "request_id": "req-fake"]
-    }
-
-    private static func reply(_ status: Int, _ object: [String: Any], problem: Bool = false) -> Reply {
-        Reply(
-            status: status,
-            headers: problem ? ["Content-Type": "application/problem+json"] : [:],
-            body: try! JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
-        )
-    }
 }
 #endif

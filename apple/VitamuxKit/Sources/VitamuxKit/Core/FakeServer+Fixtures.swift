@@ -15,14 +15,14 @@ extension FakeServer {
             return login(body, state: &state)
         case ("GET", "/api/v1/system/version") where token == nil && state.handshake == .current:
             // Public: the app checks a server before sign-in (internal/api/system.go).
-            return json(200, handshakeBody)
+            return Reply.json(200, handshakeBody)
         default:
             break
         }
-        guard url.path.hasPrefix("/api/") else { return problem(404, "not_found", "not stubbed in the fake server") }
+        guard url.path.hasPrefix("/api/") else { return Reply.problem(404, "not_found", "not stubbed in the fake server") }
         if let reply = appleHealth(method: method, url: url, token: token, signedIn: token.map { state.sessions[$0] != nil } ?? false, body: body) { return reply } // FakeServer+AppleHealth.swift, before the session check: device tokens
         guard let token, state.sessions[token] != nil else {
-            return problem(401, "unauthenticated", token == nil ? "sign in or send a bearer token" : "invalid, revoked or expired token")
+            return Reply.problem(401, "unauthenticated", token == nil ? "sign in or send a bearer token" : "invalid, revoked or expired token")
         }
         if let reply = watch(method: method, url: url) { return reply } // FakeServer+Watch.swift, before Explore: it extends the inventory
         if let reply = intraday(method: method, url: url) { return reply } // FakeServer+Intraday.swift
@@ -38,16 +38,16 @@ extension FakeServer {
             state.sessions[token] = nil
             return Reply(status: 204)
         case ("GET", "/api/v1/auth/session"):
-            return json(200, ["user": user(state), "csrf_token": ""])
+            return Reply.json(200, ["user": user(state), "csrf_token": ""])
         case ("GET", "/api/v1/system/version"):
-            guard state.handshake == .current else { return json(200, ["version": "0.3.1-fake", "commit": "fake"]) }
-            return json(200, handshakeBody.merging(["version": "0.0.0-fake", "commit": "fake"]) { $1 })
+            guard state.handshake == .current else { return Reply.json(200, ["version": "0.3.1-fake", "commit": "fake"]) }
+            return Reply.json(200, handshakeBody.merging(["version": "0.0.0-fake", "commit": "fake"]) { $1 })
         case ("GET", "/api/v1/metrics"):
-            return json(200, ["metrics": allMetrics])
+            return Reply.json(200, ["metrics": allMetrics])
         case ("GET", "/api/v1/measurements"):
             return measurements(url)
         default:
-            return problem(404, "not_found", "not stubbed in the fake server")
+            return Reply.problem(404, "not_found", "not stubbed in the fake server")
         }
     }
 
@@ -55,55 +55,55 @@ extension FakeServer {
 
     private static func login(_ body: Data, state: inout State) -> Reply {
         guard let input = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any] else {
-            return problem(422, "validation_failed", "request body is not valid JSON")
+            return Reply.problem(422, "validation_failed", "request body is not valid JSON")
         }
         let field = { (name: String) in input[name] as? String }
         if state.failedLogins >= lockoutAfter {
-            return problem(429, "rate_limited", "too many failed sign-in attempts; try again later",
+            return Reply.problem(429, "rate_limited", "too many failed sign-in attempts; try again later",
                            headers: ["Retry-After": String(lockoutSeconds)])
         }
         if field("username") == "bad name" {
-            return problem(422, "validation_failed", "invalid sign-in request",
+            return Reply.problem(422, "validation_failed", "invalid sign-in request",
                            errors: [("/username", "must not contain spaces")])
         }
         let app: Bool
         switch field("client") {
         case nil, "browser":
             guard field("device_name") == nil else {
-                return problem(422, "validation_failed", "invalid sign-in request", errors: [("/device_name", "only with client app")])
+                return Reply.problem(422, "validation_failed", "invalid sign-in request", errors: [("/device_name", "only with client app")])
             }
             app = false
         case "app":
             let name = field("device_name")?.trimmingCharacters(in: .whitespaces) ?? ""
             guard (1...100).contains(name.count) else {
-                return problem(422, "validation_failed", "invalid sign-in request",
+                return Reply.problem(422, "validation_failed", "invalid sign-in request",
                                errors: [("/device_name", "must be 1 to 100 characters without control characters")])
             }
             app = true
         default:
-            return problem(422, "validation_failed", "invalid sign-in request", errors: [("/client", "must be browser or app")])
+            return Reply.problem(422, "validation_failed", "invalid sign-in request", errors: [("/client", "must be browser or app")])
         }
         let invalid = "invalid username, password or code"
         guard field("username") == Owner.username, field("password") == Owner.password else {
             state.failedLogins += 1
-            return problem(401, "unauthenticated", invalid)
+            return Reply.problem(401, "unauthenticated", invalid)
         }
         if state.totpEnabled {
             let totp = field("totp_code"), recovery = field("recovery_code")
             if totp == nil, recovery == nil {
-                return problem(401, "totp_required", "enter the code from your authenticator app or a recovery code")
+                return Reply.problem(401, "totp_required", "enter the code from your authenticator app or a recovery code")
             }
             guard totp == Owner.totp || recovery == Owner.recovery else {
                 state.failedLogins += 1
-                return problem(401, "unauthenticated", invalid)
+                return Reply.problem(401, "unauthenticated", invalid)
             }
         }
         state.failedLogins = 0
-        guard app else { return json(200, ["user": user(state), "csrf_token": "synthetic-csrf"]) }
+        guard app else { return Reply.json(200, ["user": user(state), "csrf_token": "synthetic-csrf"]) }
         let id = UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
         let token = "vmx_ses_\(id)_synthetic-secret"
         state.sessions[token] = field("device_name")
-        return json(200, ["user": user(state), "token": token, "expires_at": "2099-01-01T00:00:00Z"])
+        return Reply.json(200, ["user": user(state), "token": token, "expires_at": "2099-01-01T00:00:00Z"])
     }
 
     private static func user(_ state: State) -> [String: Any] {
@@ -147,14 +147,14 @@ extension FakeServer {
         var offset = 0
         if let cursor = value("cursor") {
             guard cursor.hasPrefix("fake-"), let parsed = Int(cursor.dropFirst(5)), (0..<measurementCount).contains(parsed) else {
-                return problem(422, "validation_failed", "invalid cursor", errors: [("/cursor", "invalid or expired cursor")])
+                return Reply.problem(422, "validation_failed", "invalid cursor", errors: [("/cursor", "invalid or expired cursor")])
             }
             offset = parsed
         }
         let end = min(offset + max(limit, 1), measurementCount)
         var page: [String: Any] = ["measurements": (offset..<end).map(measurement), "has_more": end < measurementCount]
         if end < measurementCount { page["next_cursor"] = "fake-\(end)" }
-        return json(200, page)
+        return Reply.json(200, page)
     }
 
     private static func measurement(_ index: Int) -> [String: Any] {
@@ -181,27 +181,5 @@ extension FakeServer {
 
     // MARK: - Responses
 
-    private static func json(_ status: Int, _ object: [String: Any]) -> Reply {
-        Reply(status: status, body: try! JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]))
-    }
-
-    /// The server's problem+json, with its registry's titles.
-    private static func problem(
-        _ status: Int, _ code: String, _ detail: String,
-        errors: [(pointer: String, detail: String)] = [], headers: [String: String] = [:]
-    ) -> Reply {
-        let titles = [
-            "validation_failed": "Validation failed", "unauthenticated": "Authentication required",
-            "totp_required": "TOTP code required", "not_found": "Not found", "rate_limited": "Rate limited",
-        ]
-        var object: [String: Any] = [
-            "type": "urn:vitamux:problem:\(code)", "title": titles[code] ?? code, "status": status,
-            "code": code, "detail": detail, "request_id": "req-fake",
-        ]
-        if !errors.isEmpty { object["errors"] = errors.map { ["pointer": $0.pointer, "detail": $0.detail] } }
-        var reply = json(status, object)
-        reply.headers = headers.merging(["Content-Type": "application/problem+json"]) { $1 }
-        return reply
-    }
 }
 #endif

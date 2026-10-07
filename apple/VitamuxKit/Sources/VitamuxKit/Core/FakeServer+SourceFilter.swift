@@ -162,18 +162,18 @@ struct SourceFilterFixture {
         mutating func replace(_ body: Data) -> (problem: Reply?, pulled: [String]) {
             guard let input = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any],
                   let origins = input["origins"] as? [[String: Any]]
-            else { return (AppleHealthFixture.problem(422, "validation_failed", "origins is required"), []) }
+            else { return (Reply.problem(422, "validation_failed", "origins is required"), []) }
             if let expected = input["version"] as? Int, expected != version {
-                return (AppleHealthFixture.problem(409, "conflict", "the source filter changed; reload it"), [])
+                return (Reply.problem(409, "conflict", "the source filter changed; reload it"), [])
             }
             var next: [Choice] = []
             for (i, origin) in origins.enumerated() {
                 guard let bundle = origin["bundle_id"] as? String, !bundle.isEmpty, !next.contains(where: { $0.bundleID == bundle }),
                       let mode = origin["mode"] as? String, ["take", "ignore", "per_type"].contains(mode)
-                else { return (AppleHealthFixture.problem(422, "validation_failed", "/origins/\(i) is invalid"), []) }
+                else { return (Reply.problem(422, "validation_failed", "/origins/\(i) is invalid"), []) }
                 let types = (origin["types"] as? [String] ?? []).sorted()
                 if mode == "per_type", types.isEmpty {
-                    return (AppleHealthFixture.problem(422, "validation_failed", "/origins/\(i)/types: 1 to 64 HealthKit types"), [])
+                    return (Reply.problem(422, "validation_failed", "/origins/\(i)/types: 1 to 64 HealthKit types"), [])
                 }
                 next.append(Choice(bundleID: bundle, name: origin["name"] as? String, mode: mode, types: mode == "per_type" ? types : []))
             }
@@ -197,11 +197,11 @@ struct SourceFilterFixture {
         mutating func report(_ body: Data) -> Reply {
             guard let input = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any],
                   let sources = input["sources"] as? [[String: Any]], sources.count <= 500
-            else { return AppleHealthFixture.problem(422, "validation_failed", "sources: at most 500") }
+            else { return Reply.problem(422, "validation_failed", "sources: at most 500") }
             var next: [Reported] = []
             for source in sources {
                 guard let bundle = source["bundle_id"] as? String, !bundle.isEmpty, let types = source["types"] as? [[String: Any]] else {
-                    return AppleHealthFixture.problem(422, "validation_failed", "bundle_id and types are required")
+                    return Reply.problem(422, "validation_failed", "bundle_id and types are required")
                 }
                 let writes = types.compactMap { type -> (String, Date?)? in
                     guard let id = type["type"] as? String else { return nil }
@@ -248,7 +248,7 @@ struct SourceFilterFixture {
     }
 
     static func view(_ host: String, deviceID: String) -> Reply {
-        AppleHealthFixture.json(200, update(host, deviceID) { $0.view(deviceID) })
+        Reply.json(200, update(host, deviceID) { $0.view(deviceID) })
     }
 
     /// The reply, and the anchor-reset types an ignore-to-take change asks of the device.
@@ -256,7 +256,7 @@ struct SourceFilterFixture {
         update(host, deviceID) { device in
             let (problem, pulled) = device.replace(body)
             if let problem { return (problem, []) }
-            return (AppleHealthFixture.json(200, device.view(deviceID)), pulled)
+            return (Reply.json(200, device.view(deviceID)), pulled)
         }
     }
 

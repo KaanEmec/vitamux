@@ -130,7 +130,7 @@ struct OverrideSheet: View {
                 TextField("Record id", text: $model.recordID)
                     .keyboardType(.numberPad)
                     .accessibilityIdentifier("recordField")
-                FieldError(text: model.error("input_id"))
+                FieldMessage(text: model.error("input_id"))
             } header: {
                 Text("Record id")
             } footer: {
@@ -144,7 +144,7 @@ struct OverrideSheet: View {
                 .pickerStyle(.inline)
                 .labelsHidden()
                 .accessibilityIdentifier("groupPicker")
-                FieldError(text: model.error("group"))
+                FieldMessage(text: model.error("group"))
             } header: {
                 Text("Source group")
             } footer: {
@@ -155,12 +155,12 @@ struct OverrideSheet: View {
                 TextField("Value", text: $model.value)
                     .keyboardType(.decimalPad)
                     .accessibilityIdentifier("valueField")
-                FieldError(text: model.error("value"))
+                FieldMessage(text: model.error("value"))
                 TextField("Unit", text: $model.unit)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .accessibilityIdentifier("unitField")
-                FieldError(text: model.error("unit"))
+                FieldMessage(text: model.error("unit"))
             } header: {
                 Text("Value")
             }
@@ -168,20 +168,12 @@ struct OverrideSheet: View {
                 TextField("Why this value is set", text: $model.note, axis: .vertical)
                     .lineLimit(2...5)
                     .accessibilityIdentifier("noteField")
-                FieldError(text: model.error("note"))
+                FieldMessage(text: model.error("note"))
             } header: {
                 Text("Note")
             } footer: {
                 Text("Stored with the override.")
             }
         }
-    }
-}
-
-private struct FieldError: View {
-    let text: String?
-
-    var body: some View {
-        if let text { Text(text).font(.footnote).foregroundStyle(Color.feedbackError) }
     }
 }

@@ -1,7 +1,6 @@
 import Foundation
 import SwiftUI
 import Testing
-import UIKit
 import WidgetKit
 
 /// The widgets without a home screen: the snapshot file, the session and stale rules, the

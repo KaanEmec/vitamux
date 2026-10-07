@@ -371,21 +371,21 @@ struct ExploreFixture {
         ]
         var body: [String: Any] = ["items": items, "aggregates_pending": true]
         if let ignored { body["ignored"] = ignored }
-        return Self.json(200, body)
+        return Reply.json(200, body)
     }
 
     func metric(_ code: String) -> Reply {
-        guard let entry = Self.catalogue(code) else { return Self.problem(404, "not_found", "no metric with the code \(code)") }
-        return Self.json(200, entry)
+        guard let entry = Self.catalogue(code) else { return Reply.problem(404, "not_found", "no metric with the code \(code)") }
+        return Reply.json(200, entry)
     }
 
     func daily(_ query: Query) -> Reply {
-        guard let range = query.dates(max: 366) else { return Self.problem(422, "validation_failed", "start_date and end_date must span at most 366 dates") }
+        guard let range = query.dates(max: 366) else { return Reply.problem(422, "validation_failed", "start_date and end_date must span at most 366 dates") }
         let codes = query.list("metrics")
         let days = range.map { date in
             ["local_date": date.description, "metrics": Dictionary(uniqueKeysWithValues: codes.map { ($0, resolve($0, on: date)) })] as [String: Any]
         }
-        return Self.json(200, ["timezone": Self.timezone, "days": days])
+        return Reply.json(200, ["timezone": Self.timezone, "days": days])
     }
 
     /// Plain statistics of the resolved values from `from` through `to`, as the server's rollups.
@@ -412,7 +412,7 @@ struct ExploreFixture {
 
     func trend(_ query: Query) -> Reply {
         guard let code = query.value("metric"), let range = query.dates(max: 3660), let start = range.first, let end = range.last else {
-            return Self.problem(422, "validation_failed", "metric, start_date and end_date are required")
+            return Reply.problem(422, "validation_failed", "metric, start_date and end_date are required")
         }
         let grain = query.value("grain") ?? "week"
         var calendar = Calendar(identifier: .iso8601)
@@ -439,15 +439,15 @@ struct ExploreFixture {
             out["unit"] = spec.unit
             out["rule"] = ["ref": "builtin:\(code):1", "version": 1, "strategy": spec.strategy]
         }
-        return Self.json(200, out)
+        return Reply.json(200, out)
     }
 
     func sourceSeries(_ query: Query) -> Reply {
         guard let code = query.value("metric"), let start = query.value("start").flatMap(Self.date), let end = query.value("end").flatMap(Self.date) else {
-            return Self.problem(422, "validation_failed", "metric, start and end are required")
+            return Reply.problem(422, "validation_failed", "metric, start and end are required")
         }
         guard let spec = Self.spec(code), let meta = Self.catalogue(code) else {
-            return Self.json(200, ["metric": code, "unit": "", "aggregation": "intensive", "grain": "day", "timezone": Self.timezone, "behind": false, "sources": [Any]()])
+            return Reply.json(200, ["metric": code, "unit": "", "aggregation": "intensive", "grain": "day", "timezone": Self.timezone, "behind": false, "sources": [Any]()])
         }
         var sources: [[String: Any]] = []
         for (i, source) in spec.sources.enumerated() where source.degraded == nil {
@@ -470,7 +470,7 @@ struct ExploreFixture {
             sources.append(entry)
         }
         let aggregation = (meta["aggregation"] as? String).map { $0 == "sleep_derived" ? "daily_summary" : $0 } ?? "intensive"
-        return Self.json(200, [
+        return Reply.json(200, [
             "metric": code, "unit": spec.unit, "aggregation": aggregation, "grain": "day", "timezone": Self.timezone,
             "behind": false, "sources": sources, "rule": ["ref": "builtin:\(code):1", "version": 1],
         ])
@@ -478,7 +478,7 @@ struct ExploreFixture {
 
     func coverage(_ query: Query) -> Reply {
         guard let range = query.dates(max: 366), let start = range.first, let end = range.last else {
-            return Self.problem(422, "validation_failed", "start_date and end_date must span at most 366 dates")
+            return Reply.problem(422, "validation_failed", "start_date and end_date must span at most 366 dates")
         }
         var rows: [[String: Any]] = []
         for code in query.list("metric") {
@@ -487,17 +487,17 @@ struct ExploreFixture {
                 rows.append(["metric": code, "source": source.provider, "days": range.map { value(spec, source: i, on: $0) == nil ? 0 : 0.9 }])
             }
         }
-        return Self.json(200, ["start_date": start.description, "end_date": end.description, "rows": rows])
+        return Reply.json(200, ["start_date": start.description, "end_date": end.description, "rows": rows])
     }
 
     /// Every source of one metric and day, including one excluded and one outside the rule.
     func drilldown(metric code: String, key: String) -> Reply {
-        guard let date = LocalDate(key) else { return Self.problem(422, "validation_failed", "window key must be a local date") }
+        guard let date = LocalDate(key) else { return Reply.problem(422, "validation_failed", "window key must be a local date") }
         let window: [String: Any] = ["kind": "local_day", "local_date": key, "key": key]
         guard let spec = Self.spec(code) else {
             // A catalogue metric without data: its default rule and no sources.
-            guard Self.catalogue(code) != nil else { return Self.problem(404, "not_found", "no metric with the code \(code)") }
-            return Self.json(200, ["metric": code, "window": window, "rule": ["ref": "default:\(code):fake", "version": 1], "sources": [Any]()])
+            guard Self.catalogue(code) != nil else { return Reply.problem(404, "not_found", "no metric with the code \(code)") }
+            return Reply.json(200, ["metric": code, "window": window, "rule": ["ref": "default:\(code):fake", "version": 1], "sources": [Any]()])
         }
         let records = { (provider: String, origin: String?) in
             "/api/v1/measurements?metric=\(code)&provider=\(provider)\(origin.map { "&origin=\($0)" } ?? "")&start_date=\(key)&end_date=\(key)"
@@ -531,7 +531,7 @@ struct ExploreFixture {
             "group": NSNull(), "rule_status": "not_in_rule", "provider": "manual", "connection_id": Self.connection("manual"),
             "values": [String: Double](), "reason": "manual entries are outside the rule",
         ])
-        return Self.json(200, [
+        return Reply.json(200, [
             "metric": code, "window": window,
             "rule": ["ref": "builtin:\(code):1", "version": 1, "strategy": spec.strategy], "sources": sources,
         ])
@@ -540,7 +540,7 @@ struct ExploreFixture {
     /// The drilldown's records: one row per source and day, or a sample every 5 minutes for
     /// sampled metrics, paged by an opaque cursor.
     func measurements(_ query: Query) -> Reply {
-        guard let range = query.dates(max: 366) else { return Self.problem(422, "validation_failed", "invalid dates") }
+        guard let range = query.dates(max: 366) else { return Reply.problem(422, "validation_failed", "invalid dates") }
         let codes = query.list("metric")
         let providers = query.list("provider")
         let origins = query.list("origin")
@@ -560,14 +560,14 @@ struct ExploreFixture {
         var offset = 0
         if let cursor = query.value("cursor") {
             guard cursor.hasPrefix("x"), let parsed = Int(cursor.dropFirst()), (0..<rows.count).contains(parsed) else {
-                return Self.problem(422, "validation_failed", "invalid or expired cursor")
+                return Reply.problem(422, "validation_failed", "invalid or expired cursor")
             }
             offset = parsed
         }
         let end = min(offset + max(limit, 1), rows.count)
         var page: [String: Any] = ["measurements": Array(rows[offset..<end]), "has_more": end < rows.count]
         if end < rows.count { page["next_cursor"] = "x\(end)" }
-        return Self.json(200, page)
+        return Reply.json(200, page)
     }
 
     private func rowsFor(_ spec: Series, source i: Int, date: LocalDate, provider: String, idPrefix: String) -> [[String: Any]] {
@@ -604,13 +604,13 @@ struct ExploreFixture {
     func listOverrides(_ query: Query) -> Reply {
         let codes = query.list("metric")
         let overrides = state.overrides.filter { codes.isEmpty || codes.contains($0.metric) }.map(\.json)
-        return Self.json(200, ["overrides": overrides, "has_more": false])
+        return Reply.json(200, ["overrides": overrides, "has_more": false])
     }
 
     /// The chain of a record: one earlier version it replaced, the record, nothing later.
     func provenance(entity: String, id: String) -> Reply {
-        guard ["measurement", "group", "sleep", "workout"].contains(entity) else { return Self.problem(422, "validation_failed", "unknown entity") }
-        guard id.allSatisfy(\.isNumber) else { return Self.problem(404, "not_found", "no \(entity) \(id)") }
+        guard ["measurement", "group", "sleep", "workout"].contains(entity) else { return Reply.problem(422, "validation_failed", "unknown entity") }
+        guard id.allSatisfy(\.isNumber) else { return Reply.problem(404, "not_found", "no \(entity) \(id)") }
         let version = { (vid: String, superseded: Bool) -> [String: Any] in
             [
                 "id": vid, "superseded_by": superseded ? id : NSNull(), "record": ["id": vid, "value": superseded ? 53 : 52],
@@ -627,7 +627,7 @@ struct ExploreFixture {
                 "deleted_at": NSNull(), "deleted_by": NSNull(),
             ]
         }
-        return Self.json(200, ["entity": entity, "row": version(id, false), "earlier": [version("9182000", true)], "later": [Any]()])
+        return Reply.json(200, ["entity": entity, "row": version(id, false), "earlier": [version("9182000", true)], "later": [Any]()])
     }
 
     // MARK: Helpers
@@ -704,21 +704,6 @@ struct ExploreFixture {
         date.formatted(Date.ISO8601FormatStyle())
     }
 
-    static func json(_ status: Int, _ object: [String: Any]) -> Reply {
-        Reply(status: status, body: try! JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]))
-    }
-
-    static func problem(_ status: Int, _ code: String, _ detail: String, errors: [(String, String)] = []) -> Reply {
-        let titles = ["validation_failed": "Validation failed", "not_found": "Not found", "conflict": "Conflict"]
-        var object: [String: Any] = [
-            "type": "urn:vitamux:problem:\(code)", "title": titles[code] ?? code, "status": status,
-            "code": code, "detail": detail, "request_id": "req-fake",
-        ]
-        if !errors.isEmpty { object["errors"] = errors.map { ["pointer": $0.0, "detail": $0.1] } }
-        var reply = json(status, object)
-        reply.headers = ["Content-Type": "application/problem+json"]
-        return reply
-    }
 }
 
 // MARK: Writes
@@ -732,18 +717,18 @@ extension ExploreFixture.State {
               let metric = input["metric"] as? String, let window = input["window"] as? [String: Any],
               let action = input["action"] as? String, let kind = window["kind"] as? String,
               let key = window["key"] as? String, let date = window["local_date"] as? String
-        else { return F.problem(422, "validation_failed", "invalid override", errors: [("/window", "is required")]) }
+        else { return Reply.problem(422, "validation_failed", "invalid override", errors: [("/window", "is required")]) }
         let field = { (name: String) in (input[name] as? String).flatMap { $0.isEmpty ? nil : $0 } }
         var override = ExploreFixture.Override(id: "", metric: metric, kind: kind, key: key, date: date, action: action)
         switch action {
         case "exclude_input":
             guard let id = field("input_id"), id.allSatisfy(\.isNumber) else {
-                return F.problem(422, "validation_failed", "invalid override", errors: [("/input_id", "is required for exclude_input and must be a measurement id")])
+                return Reply.problem(422, "validation_failed", "invalid override", errors: [("/input_id", "is required for exclude_input and must be a measurement id")])
             }
             override.inputID = id
         case "force_source":
             guard let group = field("group") else {
-                return F.problem(422, "validation_failed", "invalid override", errors: [("/group", "is required for force_source")])
+                return Reply.problem(422, "validation_failed", "invalid override", errors: [("/group", "is required for force_source")])
             }
             override.group = group
         case "set_value":
@@ -751,30 +736,30 @@ extension ExploreFixture.State {
             if !(input["value"] is NSNumber) { errors.append(("/value", "is required for set_value")) }
             if field("unit") == nil { errors.append(("/unit", "is required for set_value")) }
             if field("note") == nil { errors.append(("/note", "is required for set_value")) }
-            guard errors.isEmpty else { return F.problem(422, "validation_failed", "invalid override", errors: errors) }
+            guard errors.isEmpty else { return Reply.problem(422, "validation_failed", "invalid override", errors: errors) }
             override.value = (input["value"] as! NSNumber).doubleValue
             override.unit = field("unit")
             override.note = field("note")
         default:
-            return F.problem(422, "validation_failed", "invalid override", errors: [("/action", "must be exclude_input, force_source or set_value")])
+            return Reply.problem(422, "validation_failed", "invalid override", errors: [("/action", "must be exclude_input, force_source or set_value")])
         }
         if action != "exclude_input", overrides.contains(where: { $0.active && $0.metric == metric && $0.key == key && $0.action == action }) {
-            return F.problem(409, "conflict", "an active \(action) override exists for this window; revoke it first")
+            return Reply.problem(409, "conflict", "an active \(action) override exists for this window; revoke it first")
         }
         override.id = String(format: "00000000-0000-4000-8000-%012d", nextOverride)
         nextOverride += 1
         overrides.append(override)
-        return F.json(201, override.json)
+        return Reply.json(201, override.json)
     }
 
     mutating func revoke(_ id: String) -> Reply {
         guard let index = overrides.firstIndex(where: { $0.id == id }) else {
-            return ExploreFixture.problem(404, "not_found", "no such override")
+            return Reply.problem(404, "not_found", "no such override")
         }
-        guard overrides[index].active else { return ExploreFixture.problem(409, "conflict", "the override is already revoked") }
+        guard overrides[index].active else { return Reply.problem(409, "conflict", "the override is already revoked") }
         overrides[index].active = false
         overrides[index].revokedAt = "2026-01-02T08:00:00Z"
-        return ExploreFixture.json(200, overrides[index].json)
+        return Reply.json(200, overrides[index].json)
     }
 }
 #endif
