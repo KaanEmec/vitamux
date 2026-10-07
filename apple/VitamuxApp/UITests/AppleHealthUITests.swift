@@ -36,7 +36,11 @@ final class AppleHealthUITests: XCTestCase {
         let heart = reveal(app.switches["group-heart"], in: app)
         XCTAssertTrue(heart.waitForExistence(timeout: Wait.ui))
         XCTAssertFalse(app.staticTexts["requested-heart"].exists)
-        heart.switches.firstMatch.tap()
+        let toggle = heart.switches.firstMatch
+        toggle.tap()
+        // A tap that lands while the list is still decelerating from the reveal only stops the
+        // scroll (seen on hosted runners: the switch stayed at 0). Tap once more in that case.
+        if !app.staticTexts["requested-heart"].waitForExistence(timeout: 5), (toggle.value as? String) == "0" { toggle.tap() }
         XCTAssertTrue(app.staticTexts["requested-heart"].waitForExistence(timeout: Wait.server))
     }
 
