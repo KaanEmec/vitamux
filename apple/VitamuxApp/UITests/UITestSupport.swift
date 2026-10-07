@@ -94,6 +94,12 @@ extension XCUIElement {
         tap()
     }
 
+    /// Swipes the row left until `action` (a swipe action's button) shows; a swipe during a list's
+    /// deceleration on a slow machine only stops the scroll.
+    func revealAction(_ action: XCUIElement) {
+        for _ in 0 ..< 3 where !action.waitForExistence(timeout: 3) { swipeLeft() }
+    }
+
     /// Clears the field and types `text`.
     func replaceText(_ text: String) {
         // Tap at the trailing edge, so the cursor sits after the current text.

@@ -51,7 +51,7 @@ final class SettingsUITests: XCTestCase {
         let app = open("", title: "Profile")
         let row = app.buttons["period-America/New_York"]
         XCTAssertTrue(row.waitForExistence(timeout: Wait.server))
-        row.swipeLeft()
+        row.revealAction(app.buttons["Remove"])
         app.buttons["Remove"].tapWhenReady()
         let confirm = app.dialogButton("Remove America/New_York")
         XCTAssertTrue(confirm.waitForExistence(timeout: Wait.ui))
@@ -130,7 +130,8 @@ final class SettingsUITests: XCTestCase {
         XCTAssertTrue(app.element("apiKey-test key").waitForExistence(timeout: Wait.server))
         XCTAssertFalse(app.staticTexts["secretValue"].exists, "the secret is gone once saved")
 
-        app.element("apiKey-test key").swipeLeft()
+        app.element("apiKey-test key").revealAction(app.buttons["Revoke"])
+
         app.buttons["Revoke"].tapWhenReady()
         let confirm = app.dialogButton("Revoke key")
         XCTAssertTrue(confirm.waitForExistence(timeout: Wait.ui), "revoking asks first")
@@ -348,9 +349,11 @@ final class SettingsUITests: XCTestCase {
 }
 
 extension XCUIElement {
-    /// Replaces a short right-aligned number: a double tap on it selects it, typing replaces it.
+    /// Replaces a short right-aligned number. Deleting by length is reliable where a double tap's
+    /// selection is not (a slow machine turns it into two taps and the text is appended); one
+    /// more pass covers a keyboard that came up late.
     func retype(_ text: String) {
-        coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.5)).doubleTap()
-        typeText(text)
+        replaceText(text)
+        if (value as? String) != text { replaceText(text) }
     }
 }
