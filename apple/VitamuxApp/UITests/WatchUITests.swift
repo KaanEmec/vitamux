@@ -225,8 +225,11 @@ final class WatchUITests: XCTestCase {
         let groups = app.scrollTo(app.staticTexts["watchGroups"])
         XCTAssertTrue(groups.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertTrue(groups.label.hasSuffix("None"), groups.label)
-        XCTAssertTrue(app.scrollTo(app.element("watchType-rr_interval")).waitForExistence(timeout: 10), "a type the Watch contributed")
-        XCTAssertTrue(app.element("watchType-ecg_recording").exists)
+        // The type rows arrive with the inventory, which a hosted runner serves slowly: keep the
+        // card on screen so its rows are built, and wait for them before scrolling to them.
+        XCTAssertTrue(app.element("watchType-rr_interval").waitForExistence(timeout: 30), "a type the Watch contributed")
+        XCTAssertTrue(app.scrollTo(app.element("watchType-rr_interval")).exists)
+        XCTAssertTrue(app.scrollTo(app.element("watchType-ecg_recording")).exists)
     }
 
     // MARK: Copy review
