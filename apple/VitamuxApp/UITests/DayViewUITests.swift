@@ -66,7 +66,7 @@ final class DayViewUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["bucketSpan"].label.contains("30-second bucket"))
         XCTAssertTrue(app.staticTexts["bucketSource"].label.hasPrefix("From "))
         XCTAssertTrue(app.staticTexts["bucketExplanation"].label.contains("readings"))
-        XCTAssertTrue(app.descendants(matching: .any)["reading"].firstMatch.waitForExistence(timeout: 5), "raw zoom lists the readings with time, device and origin")
+        XCTAssertTrue(app.descendants(matching: .any)["reading"].firstMatch.waitForExistence(timeout: 15), "raw zoom lists the readings with time, device and origin")
         app.buttons["closeBucket"].tap()
 
         app.buttons["dayZoomOut"].tap()

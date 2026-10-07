@@ -85,7 +85,9 @@ final class ConnectionDetailUITests: XCTestCase {
     func testDeletingNeedsItsConfirmation() {
         let app = open(Self.garmin, tab: "settings")
         app.scrollTo(app.buttons["removeConnection"]).tap()
-        app.buttons["delete-delete"].tap()
+        let deleteData = app.buttons["delete-delete"]
+        XCTAssertTrue(deleteData.waitForExistence(timeout: 10), "the removal sheet offers deleting the data")
+        deleteData.tap()
         XCTAssertFalse(app.buttons["submitDelete"].isEnabled, "deleting the data asks for a confirmation")
         app.switches["confirmDelete"].switches.firstMatch.tap()
         app.buttons["submitDelete"].tap()

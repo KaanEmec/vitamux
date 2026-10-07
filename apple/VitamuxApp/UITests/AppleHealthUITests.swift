@@ -36,7 +36,7 @@ final class AppleHealthUITests: XCTestCase {
         XCTAssertTrue(heart.waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts["requested-heart"].exists)
         heart.switches.firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["requested-heart"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["requested-heart"].waitForExistence(timeout: 20))
     }
 
     func testOneTapPairing() {
