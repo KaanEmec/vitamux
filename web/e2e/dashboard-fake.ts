@@ -21,7 +21,7 @@ export interface Card {
 	hidden: boolean;
 }
 
-export const defaultHero = ['steps', 'resting_heart_rate', 'hrv_rmssd_nightly', 'weight'];
+const defaultHero = ['steps', 'resting_heart_rate', 'hrv_rmssd_nightly', 'weight'];
 
 export const defaultLayout: Card[] = (
 	[
@@ -43,7 +43,7 @@ export const defaultLayout: Card[] = (
 const pad = (n: number) => String(n).padStart(2, '0');
 const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 /** The browser's local date, which the page treats as today. */
-export const today = () => iso(new Date());
+const today = () => iso(new Date());
 export const daysAgo = (n: number) => {
 	const d = new Date();
 	d.setDate(d.getDate() - n);

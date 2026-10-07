@@ -12,14 +12,25 @@
 	import type { Problem } from '#lib/api/client.ts';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import StatusIcon from '#lib/components/StatusIcon.svelte';
-	import * as lab from '#lib/lab/api.ts';
-	import type { Document, Extraction, Row } from '#lib/lab/api.ts';
+	import {
+		confirmRun,
+		documentFile,
+		getDocument,
+		getRun,
+		listAliases,
+		listRuns,
+		unconfirmRun,
+		type Document,
+		type Extraction,
+		type Row
+	} from '#lib/lab/api.ts';
 	import DeleteDialog from '#lib/lab/DeleteDialog.svelte';
 	import ExtractDialog from '#lib/lab/ExtractDialog.svelte';
-	import { documentStatus, errorClasses, providerName, rowOfPointer, runStatus, warningText, when } from '#lib/lab/format.ts';
+	import { documentStatus, errorClasses, providerName, rowOfPointer, runStatus, warningText } from '#lib/lab/format.ts';
 	import PdfViewer from '#lib/lab/PdfViewer.svelte';
 	import RowEditor from '#lib/lab/RowEditor.svelte';
 	import RowList from '#lib/lab/RowList.svelte';
+	import { when } from '#lib/settings/format.ts';
 
 	const id = $derived(page.params.id ?? '');
 
@@ -48,8 +59,8 @@
 	const bbox = $derived(row?.bbox && row.page === viewPage ? (row.bbox as { x0: number; y0: number; x1: number; y1: number }) : null);
 
 	async function loadRuns() {
-		const r = await lab.listRuns(id);
-		const d = await lab.getDocument(id); // after the runs, so its status reflects them
+		const r = await listRuns(id);
+		const d = await getDocument(id); // after the runs, so its status reflects them
 		problem = d.problem ?? r.problem;
 		if (d.data) doc = d.data;
 		if (!r.data) return;
@@ -65,7 +76,7 @@
 			run = null;
 			return;
 		}
-		const res = await lab.getRun(runId);
+		const res = await getRun(runId);
 		if (res.problem) problem = res.problem;
 		else run = res.data;
 	}
@@ -74,10 +85,10 @@
 		void (async () => {
 			await loadRuns();
 			if (doc && doc.status !== 'deleted') {
-				const f = await lab.documentFile(id);
+				const f = await documentFile(id);
 				if (f.data) pdf = f.data;
 			}
-			const a = await lab.listAliases();
+			const a = await listAliases();
 			if (a.data) codes = [...new Set(a.data.map((x) => x.analyte))].sort();
 		})();
 		// While a run is queued or running, check again every two seconds.
@@ -130,7 +141,7 @@
 		busy = true;
 		confirmProblem = null;
 		notice = '';
-		const res = await lab.confirmRun(run.id);
+		const res = await confirmRun(run.id);
 		busy = false;
 		if (res.problem) {
 			confirmProblem = res.problem;
@@ -145,7 +156,7 @@
 		if (!run) return;
 		busy = true;
 		notice = '';
-		const res = await lab.unconfirmRun(run.id);
+		const res = await unconfirmRun(run.id);
 		busy = false;
 		if (res.problem) confirmProblem = res.problem;
 		else {

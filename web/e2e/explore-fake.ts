@@ -17,7 +17,7 @@ const metric = (code: string, section: string, unit: string, aggregation: string
 	plausible_range: [0, 1000], provider_scoped: false, selection_only: false, intraday
 });
 
-export const catalogue = [
+const catalogue = [
 	metric('steps', 'Activity', 'count', 'additive', undefined, { default: '30m', finest: '1m' }),
 	metric('heart_rate', 'Heart and circulation', 'bpm', 'intensive', undefined, { default: '1m', finest: 'raw' }),
 	metric('resting_heart_rate', 'Heart and circulation', 'bpm', 'daily_summary'),
@@ -50,7 +50,7 @@ const inventory = [
 
 const bandApp = { key: 'com.example.synthetic.band', name: 'Synthetic Band' };
 /** Records held raw because a source filter ignores their origin (GET /inventory?include_ignored=true). */
-export const ignoredItems = [
+const ignoredItems = [
 	{ kind: 'metric', code: 'heart_rate', origin: bandApp, records: 1440, first_at: '2026-09-10T00:00:00Z', last_at: '2026-09-16T06:00:00Z' },
 	{ kind: 'sleep', code: 'sleep', origin: bandApp, records: 6, first_at: '2026-09-10T22:00:00Z', last_at: '2026-09-16T05:30:00Z' }
 ];

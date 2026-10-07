@@ -26,7 +26,7 @@ const nouns: Record<string, string> = {
 };
 
 /** What one window is called: "night", "5-minute bucket". */
-export function windowNoun(w: Rule['window']): string {
+function windowNoun(w: Rule['window']): string {
 	if (w.kind === 'bucket') return `${parseInt(w.size ?? '', 10) || '?'}-minute bucket`;
 	return nouns[w.kind] ?? w.kind;
 }

@@ -4,7 +4,7 @@
 import type { Status } from '#lib/components/StatusIcon.svelte';
 import type { Document, Extraction, Row } from './api.ts';
 
-export const providerNames: Record<string, string> = {
+const providerNames: Record<string, string> = {
 	fake: 'Built-in test extractor',
 	gemini: 'Google Gemini',
 	openai: 'OpenAI',
@@ -62,7 +62,7 @@ export const uploadReasons: Record<string, string> = {
 };
 
 /** Deterministic checks (lab-documents.md#validation): what to compare with the PDF. */
-export const validationText: Record<string, string> = {
+const validationText: Record<string, string> = {
 	value_mismatch: 'The value and the printed value text read differently.',
 	comparator_mismatch: 'The comparator and the printed value text read differently.',
 	range_mismatch: 'The range limits and the printed range text read differently.',
@@ -81,7 +81,7 @@ export const validationText: Record<string, string> = {
 };
 
 /** Extractor warnings (schemas/lab-extraction.v1.json). */
-export const extractorText: Record<string, string> = {
+const extractorText: Record<string, string> = {
 	unreadable_label: 'The extractor could not read the label.',
 	unreadable_value: 'The extractor could not read the value.',
 	unreadable_unit: 'The extractor could not read the unit.',
@@ -107,19 +107,6 @@ export const warningText = (code: string) => validationText[code] ?? extractorTe
 export function printedValue(r: { comparator: string | null; value_text: string | null }): string {
 	if (r.value_text === null) return '–';
 	return r.comparator && !r.value_text.trim().startsWith(r.comparator) ? `${r.comparator} ${r.value_text}` : r.value_text;
-}
-
-/** Local date and time of an RFC 3339 instant; an en dash when missing. */
-export function when(iso: string | null | undefined): string {
-	const t = iso ? new Date(iso) : null;
-	return t && !Number.isNaN(t.getTime()) ? t.toLocaleString() : '–';
-}
-
-/** "1.2 MiB" for a byte count. */
-export function size(n: number): string {
-	if (n < 1024) return `${n} B`;
-	if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KiB`;
-	return `${(n / 1024 / 1024).toFixed(1)} MiB`;
 }
 
 /** "Row 3 · Glucose" from a problem pointer such as /rows/2/value_text, given the rows. */

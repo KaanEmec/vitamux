@@ -254,9 +254,6 @@ export function toSpec(f: Form): Rule {
 	return JSON.parse(JSON.stringify(r)); // drops undefined keys
 }
 
-/** "a › b › c": the group ids in ladder order. */
-export const ladder = (r: Rule) => r.groups.map((g) => g.id).join(' › ');
-
 /** A company name without its legal suffix: "Apple Inc." is "Apple". */
 export const brandName = (m: string) => m.replace(/(?:[\s,]+(?:inc|ltd|llc|gmbh|corp|corporation|co|limited)\.?)+$/i, '').trim() || m;
 
@@ -278,6 +275,12 @@ export function selectorText(s: Selector, choices: { label: string; selector: Se
 			return `${selectorLabels[k as SelectorField]?.toLowerCase() ?? k} ${v}`;
 		})
 		.join(', ');
+}
+
+/** The provider a group names, for its colour; the group id when it names none. */
+export function groupProvider(g: { id: string; match: Selector[] }): string {
+	const p = g.match.find((s) => typeof s.provider === 'string' && s.provider)?.provider;
+	return typeof p === 'string' ? p : g.id;
 }
 
 const brandNames: Record<string, string> = { whoop: 'WHOOP' };

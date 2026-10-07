@@ -9,7 +9,7 @@
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import RuleDiff from '#lib/rules/RuleDiff.svelte';
 	import RuleLens from '#lib/rules/RuleLens.svelte';
-	import { groupLabel, lastDays, selectorText, type Rule } from '#lib/rules/rule.ts';
+	import { groupLabel, groupProvider, lastDays, selectorText, type Rule } from '#lib/rules/rule.ts';
 	import { ruleSentence } from '#lib/rules/sentence.ts';
 	import { getCoverage, type Coverage } from '#lib/rules/stubs.ts';
 	import Notice from '#lib/settings/Notice.svelte';
@@ -85,10 +85,6 @@
 	const current = $derived(versions?.find((v) => v.active) ?? null);
 	const byVersion = (n: number) => versions?.find((v) => v.version === n);
 	const name = (v: Version | undefined) => (!v ? '' : v.default ? 'Default rule' : v.builtin ? 'Built-in' : `Version ${v.version}`);
-	const provider = (g: Rule['groups'][number]) => {
-		const p = g.match.find((s) => typeof s.provider === 'string' && s.provider)?.provider;
-		return typeof p === 'string' ? p : g.id;
-	};
 	const rows = $derived(
 		(coverage?.rows ?? []).filter((r) => r.metric === metric).map((r) => ({ label: r.source, days: r.days }))
 	);
@@ -116,7 +112,7 @@
 					<p class="sentence">{ruleSentence(r)}</p>
 					<ol class="groups" aria-label="Source order">
 						{#each r.groups as g, i (i)}
-							<li><Chip source={provider(g)}>{groupLabel(g.id)}</Chip> <span class="muted">{g.match.map((s) => selectorText(s)).join(' or ')}</span></li>
+							<li><Chip source={groupProvider(g)}>{groupLabel(g.id)}</Chip> <span class="muted">{g.match.map((s) => selectorText(s)).join(' or ')}</span></li>
 						{/each}
 					</ol>
 					{#if r.exclude?.length}

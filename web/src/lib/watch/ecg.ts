@@ -6,8 +6,8 @@ import type { Schemas } from '../api/client.ts';
 import { formatNumber } from '../charts/scale.ts';
 
 export const pxPerMM = 4;
-export const mmPerSecond = 25;
-export const mmPerMillivolt = 10;
+const mmPerSecond = 25;
+const mmPerMillivolt = 10;
 export const pxPerSecond = pxPerMM * mmPerSecond;
 export const pxPerMillivolt = pxPerMM * mmPerMillivolt;
 

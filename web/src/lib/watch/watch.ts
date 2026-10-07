@@ -11,7 +11,7 @@ import { recordLabel } from '../views/format.ts';
 type Measurement = Schemas['Measurement'];
 
 /** A `context` or segment `data` object as a plain record (the client types it as opaque). */
-export const ctx = (o: unknown): Record<string, unknown> => (o && typeof o === 'object' ? (o as Record<string, unknown>) : {});
+const ctx = (o: unknown): Record<string, unknown> => (o && typeof o === 'object' ? (o as Record<string, unknown>) : {});
 export const num = (o: unknown, key: string): number | null => {
 	const v = ctx(o)[key];
 	return typeof v === 'number' && Number.isFinite(v) ? v : null;
@@ -31,7 +31,7 @@ export function offsetZone(min: number | null | undefined): string | undefined {
 // ---- event families ------------------------------------------------------------------------
 
 /** The families the Events lanes and their type picker group codes by, in order. */
-export const families = ['heart', 'mind', 'cycle', 'symptoms', 'alerts', 'other'] as const;
+const families = ['heart', 'mind', 'cycle', 'symptoms', 'alerts', 'other'] as const;
 export type Family = (typeof families)[number];
 
 export const familyTitle: Record<Family, string> = {
@@ -75,7 +75,7 @@ const cycleCodes = new Set([
 	'persistent_intermenstrual_bleeding_alert'
 ]);
 
-export function familyOf(code: string): Family {
+function familyOf(code: string): Family {
 	if (heartCodes.has(code)) return 'heart';
 	if (code === 'state_of_mind' || code === 'mindful_session') return 'mind';
 	if (cycleCodes.has(code)) return 'cycle';
@@ -221,7 +221,7 @@ export interface RoutePoint {
 }
 
 /** At most this many points are drawn; the table lists the same points. */
-export const routeMax = 1000;
+const routeMax = 1000;
 
 /**
  * A route reduced for drawing: valid fixes only (CoreLocation marks an invalid one with a negative

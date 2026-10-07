@@ -3,6 +3,8 @@
 import type { Schemas } from '../api/client.ts';
 import { known } from './providers.svelte.ts';
 
+export { when } from '../settings/format.ts';
+
 export type Connection = Schemas['Connection'];
 export type Health = Schemas['Health'];
 
@@ -89,11 +91,6 @@ export function ago(iso: string | null | undefined, now = Date.now()): string {
 		if (Math.abs(s) >= size) return rtf.format(Math.round(s / size), unit);
 	}
 	return 'just now';
-}
-
-/** Local date and time of an instant, or an en dash. */
-export function when(iso: string | null | undefined): string {
-	return iso ? new Date(iso).toLocaleString() : '–';
 }
 
 /** Local date of an instant. */

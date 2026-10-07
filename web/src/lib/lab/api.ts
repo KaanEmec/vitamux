@@ -8,7 +8,7 @@ export type Row = Schemas['ExtractionRow'];
 export type RowPatch = Schemas['ExtractionRowPatch'];
 export type LabResult = Schemas['LabResult'];
 export type Extractor = Schemas['Extractor'];
-export type Alias = Schemas['AnalyteAlias'];
+type Alias = Schemas['AnalyteAlias'];
 
 type Result<T> = { data: T; problem: null } | { data: null; problem: Problem };
 

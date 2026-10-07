@@ -11,8 +11,9 @@
 	import { listDocuments, type Document } from '#lib/lab/api.ts';
 	import DeleteDialog from '#lib/lab/DeleteDialog.svelte';
 	import ExtractDialog from '#lib/lab/ExtractDialog.svelte';
-	import { documentStatus, size, when } from '#lib/lab/format.ts';
+	import { documentStatus } from '#lib/lab/format.ts';
 	import UploadZone from '#lib/lab/UploadZone.svelte';
+	import { bytes, when } from '#lib/settings/format.ts';
 	import EmptyState from '#lib/ui/EmptyState.svelte';
 	import { icons } from '#lib/ui/icons.ts';
 
@@ -73,7 +74,7 @@
 							</th>
 							<td>{when(d.uploaded_at)}</td>
 							<td>{d.page_count}</td>
-							<td>{size(d.size_bytes)}</td>
+							<td>{bytes(d.size_bytes)}</td>
 							<td><span class="status"><StatusIcon status={st.status} /> {st.label}</span></td>
 							<td>
 								<div class="actions">
