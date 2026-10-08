@@ -71,10 +71,6 @@ func (b *builder) decode(raw []byte, v any) error {
 	return b.drift("undecodable response")
 }
 
-func (b *builder) warn(code, detail string) {
-	b.out.Warnings = append(b.out.Warnings, normalize.Warning{Code: code, Detail: detail})
-}
-
 // rawUnit is a raw's unit. A whoop.sleep raw has the sleep's activity id, plus its nap flag and
 // offset, which the sidecar copies from the cycle's sleeps[] because the stage events lack them.
 // A window raw has start and end; for the strain deep dive they bound the owner's local day and
@@ -163,7 +159,7 @@ func (b *builder) dailySteps(u rawUnit, resp json.RawMessage) error {
 				}, strings.TrimSpace(text))
 				n, err := strconv.Atoi(digits)
 				if err != nil {
-					b.warn("steps_unreadable", "CONTRIBUTORS_TILE_STEPS status is not a count")
+					b.out.Warn("steps_unreadable", "CONTRIBUTORS_TILE_STEPS status is not a count")
 					return nil
 				}
 				if u.Start == nil || u.End == nil {
@@ -386,7 +382,7 @@ func (b *builder) cycle(c cycleRecord) error {
 	}
 	if main < 0 {
 		if c.Cycle.DayStrain != nil || c.Recovery != nil {
-			b.warn("cycle_without_main_sleep", id)
+			b.out.Warn("cycle_without_main_sleep", id)
 		}
 		return nil
 	}
@@ -445,7 +441,7 @@ func (b *builder) sleep(u rawUnit, resp json.RawMessage) error {
 		return err
 	}
 	if u.IsNap == nil {
-		b.warn("sleep_unit_without_is_nap", "fetched by an older sidecar: sync whoop.sleep again")
+		b.out.Warn("sleep_unit_without_is_nap", "fetched by an older sidecar: sync whoop.sleep again")
 		return nil
 	}
 	zone, err := b.zone(u.TimezoneOffset)
@@ -477,7 +473,7 @@ func (b *builder) sleep(u rawUnit, resp json.RawMessage) error {
 			latency += int32(z.Sub(a) / time.Second) //nolint:gosec // an event is shorter than 68 years
 		case !known && !warned[*e.Type]:
 			warned[*e.Type] = true
-			b.warn("unknown_stage", *e.Type)
+			b.out.Warn("unknown_stage", *e.Type)
 		case kind != "":
 			sess.Stages = append(sess.Stages, normalize.SleepStage{Stage: kind, Start: a, End: z})
 		}
@@ -631,7 +627,7 @@ func (b *builder) workout(raw json.RawMessage) error {
 	sport, ok := sports[strings.ToLower(w.SportName)]
 	if !ok {
 		sport = "other"
-		b.warn("unmapped_sport", provider)
+		b.out.Warn("unmapped_sport", provider)
 	}
 	x := normalize.Workout{Start: w.Start.UTC(), End: w.End.UTC(), Zone: zone, Sport: sport, ProviderSport: provider,
 		Device: strap.Fingerprint, Key: normalize.Key{RecordType: "workout", ExternalID: w.ID}}

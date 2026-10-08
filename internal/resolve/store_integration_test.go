@@ -101,10 +101,6 @@ func TestFirstEditCopiesBuiltin(t *testing.T) {
 	if len(hist[1].Rule.Groups) != len(b.Rule.Groups) {
 		t.Error("version 1 is a copy of the built-in")
 	}
-	diff, err := s.Diff(ctx, by.UserID, "steps", 1, 2)
-	if _, ok := diff["groups"]; err != nil || len(diff) != 1 || !ok {
-		t.Fatalf("diff = %v %v", diff, err)
-	}
 	if active, _ := s.Active(ctx, by.UserID, "steps"); active.Ref != "rule:steps:2" {
 		t.Errorf("active = %s", active.Ref)
 	}

@@ -55,7 +55,7 @@
 //   - E3: quality.require_wear gates rows per base bucket by the wear series in the same Series
 //     (load WearLookback of it and of Series[Reporting], the sources that report the metric);
 //     GroupValue.WearExempt, WornBuckets, Gated; reasons not_worn, not_reported.
-//   - E5: Options.Leader (LeaderSelections of the leader's results) by window key.
+//   - E5: Options.Leader (the groups the leader rule selected, built by load) by window key.
 //   - E9: a compose rule's local_day sums its hours; WindowResult.Hours keeps them. A daily-only
 //     group ranked above every hour's group gives the day its daily value instead.
 //

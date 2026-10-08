@@ -16,21 +16,12 @@ extension OpenAPIObjectContainer {
     }
 
     func number(_ key: String) -> Double? {
-        Self.double(value[key] ?? nil)
+        OpenAPIValueContainer.double(value[key] ?? nil)
     }
 
     /// A number inside an object member (`totals.distance_m`).
     func number(_ key: String, in parent: String) -> Double? {
-        Self.double(((value[parent] ?? nil) as? [String: (any Sendable)?])?[key] ?? nil)
-    }
-
-    private static func double(_ value: (any Sendable)?) -> Double? {
-        switch value {
-        case let number as Double: number
-        case let number as Int: Double(number)
-        case let number as Int64: Double(number)
-        default: nil
-        }
+        OpenAPIValueContainer.double(((value[parent] ?? nil) as? [String: (any Sendable)?])?[key] ?? nil)
     }
 
     func flag(_ key: String) -> Bool? {

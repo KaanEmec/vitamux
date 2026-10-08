@@ -26,7 +26,7 @@ export async function getCoverage(start: string, end: string, metric?: string, o
 
 /** POST /resolution/preview (J10.3): the draft rule and the rule in effect, per local date. */
 export type PreviewDay = Schemas['PreviewDay'];
-export type Preview = Schemas['ResolutionPreview'];
+type Preview = Schemas['ResolutionPreview'];
 
 export type PreviewOutcome = { preview: Preview } | { unavailable: true } | { problem: Problem };
 

@@ -4,8 +4,9 @@
 	import type { Problem } from '#lib/api/client.ts';
 	import Modal from '#lib/components/Modal.svelte';
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
+	import { when } from '#lib/settings/format.ts';
 	import { resultHistory, type LabResult } from './api.ts';
-	import { printedValue, providerName, when } from './format.ts';
+	import { printedValue, providerName } from './format.ts';
 
 	let { result, onclose }: { result: LabResult; onclose: () => void } = $props();
 

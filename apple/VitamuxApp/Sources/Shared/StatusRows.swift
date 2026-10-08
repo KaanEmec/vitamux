@@ -38,3 +38,14 @@ struct ProblemRow: View {
         .accessibilityIdentifier("problem")
     }
 }
+
+/// A field's message from the server, matched by JSON pointer, shown under the input.
+struct FieldMessage: View {
+    let text: String?
+
+    var body: some View {
+        if let text {
+            Text(text).font(.footnote).foregroundStyle(Color.feedbackError)
+        }
+    }
+}

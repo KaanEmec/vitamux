@@ -69,7 +69,7 @@ export async function explain(error: Problem, response: Response, code: string, 
  * true when the step asked for a verification code; `sidecarDown` when the provider's sidecar no
  * longer answers. The server's own wording stays below it (ProblemAlert `lead`).
  */
-export function signInError(problem: Problem, name: string, opts: { codeStep?: boolean; retryAfter?: number | null; sidecarDown?: boolean } = {}): string {
+function signInError(problem: Problem, name: string, opts: { codeStep?: boolean; retryAfter?: number | null; sidecarDown?: boolean } = {}): string {
 	if (opts.sidecarDown) return `The ${name} sidecar is not running, so Vitamux cannot reach ${name}. Turn it on under Connect a source, then start again.`;
 	if (problem.status === 429) return `${name} is limiting sign-in attempts. Wait ${wait(opts.retryAfter ?? null)}, then start again.`;
 	if (problem.status === 409) return `You signed in to a different ${name} account than this connection uses. Nothing changed.`;

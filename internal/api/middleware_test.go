@@ -166,7 +166,7 @@ func TestBodyLimitClasses(t *testing.T) {
 		"/oauth/withings/callback":          64 * kiB,
 		"/api/ingest/v1/batches/blobs/more": 10 * miB,
 	} {
-		if got := bodyLimit(path); got != want {
+		if got := bodyClassOf(path).max; got != want {
 			t.Errorf("%s: limit %d, want %d", path, got, want)
 		}
 	}

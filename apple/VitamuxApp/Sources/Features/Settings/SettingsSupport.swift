@@ -39,17 +39,6 @@ enum SettingsFormat {
     }
 }
 
-/// A field's message from the server, matched by JSON pointer, shown under the input.
-struct FieldMessage: View {
-    let text: String?
-
-    var body: some View {
-        if let text {
-            Text(text).font(.footnote).foregroundStyle(Color.feedbackError)
-        }
-    }
-}
-
 /// A secret the server shows once (an API key, a sidecar secret, a TOTP key, recovery codes): on
 /// screen only while its sheet is open, never cached or logged, redacted in snapshots, and copied
 /// to this iPhone's pasteboard only, for two minutes.

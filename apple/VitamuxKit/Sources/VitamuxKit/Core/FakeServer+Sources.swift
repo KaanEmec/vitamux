@@ -44,13 +44,6 @@ extension FakeServer {
         }
         return URL(string: answer)!
     }
-
-    /// Every request body the Sources endpoints received, as "METHOD /path" and JSON, for checks
-    /// that secrets are sent once and nothing else.
-    public var sourcesSent: [(route: String, body: [String: String])] {
-        let host = profile.baseURL.host() ?? ""
-        return SourcesFixture.states.withLock { $0[host]?.sent ?? [] }
-    }
 }
 
 /// The synthetic Sources dataset and the state the owner's actions change, per fake host.
@@ -283,7 +276,6 @@ struct SourcesFixture {
         var providers: [Provider]
         var pending: [String: Pending] = [:]
         var tickets: [String: Pending] = [:]
-        var sent: [(route: String, body: [String: String])] = []
         var probesUntilUp = 1
         var next = 0x100
 
@@ -370,46 +362,41 @@ struct SourcesFixture {
 
         mutating func route(method: String, parts: [String], query: [URLQueryItem], body: [String: Any]) -> Reply {
             let value = { (name: String) in query.first { $0.name == name }?.value }
-            if method != "GET" {
-                let fields = body.compactMapValues { $0 as? String }.merging(
-                    (body["values"] as? [String: String]) ?? [:]) { $1 }
-                sent.append(("\(method) /" + parts.joined(separator: "/"), fields))
-            }
             switch (method, parts.count, parts.first) {
             case ("GET", 1, "connections"):
-                return json(200, ["connections": connections.map(\.json)])
+                return Reply.json(200, ["connections": connections.map(\.json)])
             case (_, _, "connections"):
                 guard let index = connections.firstIndex(where: { $0.id == parts[1] }) else {
-                    return problem(404, "not_found", "no such connection")
+                    return Reply.problem(404, "not_found", "no such connection")
                 }
                 return connection(index, method: method, sub: Array(parts.dropFirst(2)), value: value, body: body)
             case ("GET", 1, "providers"):
-                return json(200, ["providers": providers.map(providerJSON)])
+                return Reply.json(200, ["providers": providers.map(providerJSON)])
             case (_, _, "providers") where parts.count >= 3:
                 guard let index = providers.firstIndex(where: { $0.code == parts[1] }) else {
-                    return problem(404, "not_found", "no such provider")
+                    return Reply.problem(404, "not_found", "no such provider")
                 }
                 return provider(index, method: method, sub: parts.dropFirst(2).joined(separator: "/"), body: body, confirmed: value("confirm") == "true")
             case ("GET", 1, "schedules"):
                 let only = value("connection")
-                return json(200, ["schedules": schedules.filter { only == nil || $0.connection == only }.map(\.json)])
+                return Reply.json(200, ["schedules": schedules.filter { only == nil || $0.connection == only }.map(\.json)])
             case ("PATCH", 2, "schedules"):
                 guard let index = schedules.firstIndex(where: { $0.id == parts[1] }) else {
-                    return problem(404, "not_found", "no such schedule")
+                    return Reply.problem(404, "not_found", "no such schedule")
                 }
                 if let interval = body["interval_seconds"] as? Int {
-                    guard interval >= 60 else { return problem(422, "validation_failed", "invalid schedule", errors: [("/interval_seconds", "must be at least 60")]) }
+                    guard interval >= 60 else { return Reply.problem(422, "validation_failed", "invalid schedule", errors: [("/interval_seconds", "must be at least 60")]) }
                     schedules[index].interval = interval
                 }
                 if let enabled = body["enabled"] as? Bool { schedules[index].enabled = enabled }
-                return json(200, schedules[index].json)
+                return Reply.json(200, schedules[index].json)
             case ("GET", 1, "source-devices"):
                 let records = (value("include") ?? "").split(separator: ",").contains("records")
-                return json(200, ["devices": devices.map { $0.json(records: records) }, "device_types": deviceTypes])
+                return Reply.json(200, ["devices": devices.map { $0.json(records: records) }, "device_types": deviceTypes])
             case (_, _, "source-devices") where parts.count >= 2:
                 return device(method: method, id: parts[1], merge: parts.count == 3 && parts[2] == "merge", body: body)
             default:
-                return problem(404, "not_found", "not stubbed in the fake server")
+                return Reply.problem(404, "not_found", "not stubbed in the fake server")
             }
         }
 
@@ -419,15 +406,15 @@ struct SourcesFixture {
             let c = connections[index]
             switch (method, sub.first, sub.count) {
             case ("GET", nil, _):
-                return json(200, c.json)
+                return Reply.json(200, c.json)
             case ("PATCH", nil, _):
                 guard let status = body["status"] as? String, ["active", "paused"].contains(status) else {
-                    return problem(422, "validation_failed", "invalid connection update", errors: [("/status", "must be active or paused")])
+                    return Reply.problem(422, "validation_failed", "invalid connection update", errors: [("/status", "must be active or paused")])
                 }
-                guard ["active", "degraded", "paused"].contains(c.status) else { return problem(409, "conflict", "the connection is \(c.status)") }
+                guard ["active", "degraded", "paused"].contains(c.status) else { return Reply.problem(409, "conflict", "the connection is \(c.status)") }
                 connections[index].status = status
                 connections[index].health = status == "paused" ? "paused" : "ok"
-                return json(200, connections[index].json)
+                return Reply.json(200, connections[index].json)
             case ("DELETE", nil, _):
                 switch value("data") {
                 case "keep":
@@ -440,13 +427,13 @@ struct SourcesFixture {
                     schedules.removeAll { $0.connection == c.id }
                     devices.removeAll { $0.connection == c.id }
                 default:
-                    return problem(422, "validation_failed", "invalid request", errors: [("/data", "must be keep or delete")])
+                    return Reply.problem(422, "validation_failed", "invalid request", errors: [("/data", "must be keep or delete")])
                 }
                 return Reply(status: 204)
             case ("POST", "auth", 2) where sub[1] == "begin":
                 return begin(provider: c.provider, connection: c.id, body: body)
             case ("POST", "sync", 1):
-                guard ["active", "degraded", "needs_reauth"].contains(c.status) else { return problem(409, "conflict", "the connection is \(c.status)") }
+                guard ["active", "degraded", "needs_reauth"].contains(c.status) else { return Reply.problem(409, "conflict", "the connection is \(c.status)") }
                 let jobs = (streams[c.provider] ?? []).map { stream -> [String: Any] in
                     next += 1
                     let now = SourcesFixture.time(.now)
@@ -462,35 +449,35 @@ struct SourcesFixture {
                     runs[c.id, default: []].insert(Run(id: String(next), started: .now, outcome: "succeeded"), at: 0)
                     connections[index].lastSuccess = .now
                 }
-                return json(202, ["jobs": jobs])
+                return Reply.json(202, ["jobs": jobs])
             case ("GET", "runs", 1):
                 let all = runs[c.id] ?? []
                 let limit = max(1, value("limit").flatMap(Int.init) ?? 50)
                 let offset = value("cursor").flatMap { $0.hasPrefix("runs-") ? Int($0.dropFirst(5)) : nil } ?? 0
-                guard offset <= all.count else { return problem(422, "validation_failed", "invalid cursor", errors: [("/cursor", "invalid or expired cursor")]) }
+                guard offset <= all.count else { return Reply.problem(422, "validation_failed", "invalid cursor", errors: [("/cursor", "invalid or expired cursor")]) }
                 let end = min(offset + limit, all.count)
                 var page: [String: Any] = ["runs": all[offset..<end].map(\.json), "has_more": end < all.count]
                 if end < all.count { page["next_cursor"] = "runs-\(end)" }
-                return json(200, page)
+                return Reply.json(200, page)
             case ("GET", "streams", 1):
-                return json(200, ["streams": (streams[c.provider] ?? []).map { stream(c, $0) }])
+                return Reply.json(200, ["streams": (streams[c.provider] ?? []).map { stream(c, $0) }])
             case ("POST", "streams", 3) where sub[2] == "reset-cursor":
-                guard c.mode == "in_process" else { return problem(409, "conflict", "only in-process connections have a cursor to reset") }
-                guard (streams[c.provider] ?? []).contains(sub[1]) else { return problem(404, "not_found", "no such stream") }
+                guard c.mode == "in_process" else { return Reply.problem(409, "conflict", "only in-process connections have a cursor to reset") }
+                guard (streams[c.provider] ?? []).contains(sub[1]) else { return Reply.problem(404, "not_found", "no such stream") }
                 cursors["\(c.id)/\(sub[1])"] = false
-                return json(200, stream(c, sub[1]))
+                return Reply.json(200, stream(c, sub[1]))
             case ("GET", "backfills", 1):
                 for i in backfills.indices where backfills[i].connection == c.id { backfills[i].advance() }
-                return json(200, ["backfills": backfills.filter { $0.connection == c.id }.map { $0.json(units: false) }])
+                return Reply.json(200, ["backfills": backfills.filter { $0.connection == c.id }.map { $0.json(units: false) }])
             case ("POST", "backfills", 1):
                 return createBackfill(c, body: body)
             case (_, "backfills", _) where sub.count >= 2:
                 guard let b = backfills.firstIndex(where: { $0.id == sub[1] && $0.connection == c.id }) else {
-                    return problem(404, "not_found", "no such backfill")
+                    return Reply.problem(404, "not_found", "no such backfill")
                 }
                 return backfill(b, method: method, action: sub.count == 3 ? sub[2] : nil, body: body)
             default:
-                return problem(404, "not_found", "not stubbed in the fake server")
+                return Reply.problem(404, "not_found", "not stubbed in the fake server")
             }
         }
 
@@ -507,33 +494,33 @@ struct SourcesFixture {
         }
 
         private mutating func createBackfill(_ c: Connection, body: [String: Any]) -> Reply {
-            guard c.mode != "push" else { return problem(409, "conflict", "push sources upload their own history") }
+            guard c.mode != "push" else { return Reply.problem(409, "conflict", "push sources upload their own history") }
             guard let stream = body["stream"] as? String, (streams[c.provider] ?? []).contains(stream) else {
-                return problem(422, "validation_failed", "invalid backfill", errors: [("/stream", "unknown stream")])
+                return Reply.problem(422, "validation_failed", "invalid backfill", errors: [("/stream", "unknown stream")])
             }
             let parse = { (key: String) in (body[key] as? String).flatMap { try? Date($0, strategy: .iso8601) } }
             guard let start = parse("start") else {
-                return problem(422, "validation_failed", "invalid backfill", errors: [("/start", "must be an RFC 3339 time")])
+                return Reply.problem(422, "validation_failed", "invalid backfill", errors: [("/start", "must be an RFC 3339 time")])
             }
             let end = parse("end") ?? .now
-            guard end > start else { return problem(422, "validation_failed", "invalid backfill", errors: [("/end", "must be after the start")]) }
+            guard end > start else { return Reply.problem(422, "validation_failed", "invalid backfill", errors: [("/end", "must be after the start")]) }
             next += 1
             let days = (body["daily_limit"] as? Int) != nil ? 1 : 30
             let backfill = Backfill(id: String(format: "44444444-4444-4444-8444-%012d", next), connection: c.id, stream: stream,
                                     status: "running", created: .now, dailyLimit: body["daily_limit"] as? Int,
                                     units: Backfill.units(from: start, to: end, days: days) { _ in "pending" })
             backfills.insert(backfill, at: 0)
-            return json(202, backfill.json(units: false))
+            return Reply.json(202, backfill.json(units: false))
         }
 
         private mutating func backfill(_ index: Int, method: String, action: String?, body: [String: Any]) -> Reply {
             switch (method, action) {
             case ("GET", nil):
-                return json(200, backfills[index].json(units: true))
+                return Reply.json(200, backfills[index].json(units: true))
             case ("POST", "cancel"):
-                guard ["running", "failed"].contains(backfills[index].status) else { return problem(409, "conflict", "backfill is not running") }
+                guard ["running", "failed"].contains(backfills[index].status) else { return Reply.problem(409, "conflict", "backfill is not running") }
                 backfills[index].status = "cancelled"
-                return json(200, backfills[index].json(units: false))
+                return Reply.json(200, backfills[index].json(units: false))
             case ("POST", "retry"):
                 let only = (body["unit_start"] as? String).flatMap { try? Date($0, strategy: .iso8601) }
                 let failed = backfills[index].units.indices.filter {
@@ -541,34 +528,34 @@ struct SourcesFixture {
                     return unit.status == "failed" && (only == nil || abs(unit.start.timeIntervalSince(only!)) < 1)
                 }
                 guard !failed.isEmpty, backfills[index].status != "cancelled" else {
-                    return problem(409, "conflict", "no failed or unfinished unit to retry")
+                    return Reply.problem(409, "conflict", "no failed or unfinished unit to retry")
                 }
                 for unit in failed {
                     backfills[index].units[unit].status = "pending"
                     backfills[index].units[unit].error = nil
                 }
                 backfills[index].status = "running"
-                return json(200, backfills[index].json(units: false))
+                return Reply.json(200, backfills[index].json(units: false))
             default:
-                return problem(404, "not_found", "not stubbed in the fake server")
+                return Reply.problem(404, "not_found", "not stubbed in the fake server")
             }
         }
 
         // MARK: Devices
 
         private mutating func device(method: String, id: String, merge: Bool, body: [String: Any]) -> Reply {
-            guard let index = devices.firstIndex(where: { $0.id == id }) else { return problem(404, "not_found", "no such device") }
-            if let into = devices[index].mergedInto { return problem(409, "conflict", "\(id) is merged into \(into); use that device") }
+            guard let index = devices.firstIndex(where: { $0.id == id }) else { return Reply.problem(404, "not_found", "no such device") }
+            if let into = devices[index].mergedInto { return Reply.problem(409, "conflict", "\(id) is merged into \(into); use that device") }
             switch (method, merge) {
             case ("PATCH", false):
                 if let type = body["device_type"] as? String {
-                    guard deviceTypes.contains(type) else { return problem(422, "validation_failed", "invalid device", errors: [("/device_type", "unknown device type")]) }
+                    guard deviceTypes.contains(type) else { return Reply.problem(422, "validation_failed", "invalid device", errors: [("/device_type", "unknown device type")]) }
                     devices[index].type = type
                 } else if body.keys.contains("device_type") {
                     devices[index].type = nil
                 }
                 if let name = body["name"] as? String {
-                    guard (1...100).contains(name.count) else { return problem(422, "validation_failed", "invalid device", errors: [("/name", "must be 1 to 100 characters")]) }
+                    guard (1...100).contains(name.count) else { return Reply.problem(422, "validation_failed", "invalid device", errors: [("/name", "must be 1 to 100 characters")]) }
                     devices[index].name = name
                 } else if body.keys.contains("name") {
                     devices[index].name = nil
@@ -576,20 +563,20 @@ struct SourcesFixture {
                 return Reply(status: 204)
             case ("POST", true):
                 guard let into = body["into"] as? String, let target = devices.firstIndex(where: { $0.id == into }) else {
-                    return problem(404, "not_found", "no such device")
+                    return Reply.problem(404, "not_found", "no such device")
                 }
                 guard target != index, devices[target].provider == devices[index].provider else {
-                    return problem(422, "validation_failed", "invalid merge", errors: [("/into", "must be another device of the same provider")])
+                    return Reply.problem(422, "validation_failed", "invalid merge", errors: [("/into", "must be another device of the same provider")])
                 }
-                guard devices[target].mergedInto == nil else { return problem(409, "conflict", "\(into) is merged") }
+                guard devices[target].mergedInto == nil else { return Reply.problem(409, "conflict", "\(into) is merged") }
                 let moved = devices[index].records
                 devices[target].records.merge(moved) { $0 + $1 }
                 devices[index].mergedInto = into
                 devices[index].records = [:]
                 let all = ["measurements", "groups", "sleep_sessions", "workouts", "events"]
-                return json(200, ["moved": Dictionary(uniqueKeysWithValues: all.map { ($0, moved[$0] ?? 0) })])
+                return Reply.json(200, ["moved": Dictionary(uniqueKeysWithValues: all.map { ($0, moved[$0] ?? 0) })])
             default:
-                return problem(404, "not_found", "not stubbed in the fake server")
+                return Reply.problem(404, "not_found", "not stubbed in the fake server")
             }
         }
 
@@ -621,30 +608,30 @@ struct SourcesFixture {
             let p = providers[index]
             switch (method, sub) {
             case ("PUT", "app-credentials"):
-                guard let app = p.app else { return problem(404, "not_found", "\(p.code) needs no app credentials") }
-                guard !app.environment else { return problem(409, "conflict", "set by the environment") }
+                guard let app = p.app else { return Reply.problem(404, "not_found", "\(p.code) needs no app credentials") }
+                guard !app.environment else { return Reply.problem(409, "conflict", "set by the environment") }
                 let id = (body["client_id"] as? String) ?? "", secret = (body["client_secret"] as? String) ?? ""
                 var errors: [(String, String)] = []
                 if id.isEmpty { errors.append(("/client_id", "must not be empty")) }
                 if secret.isEmpty { errors.append(("/client_secret", "must not be empty")) }
-                guard errors.isEmpty else { return problem(422, "validation_failed", "invalid app credentials", errors: errors) }
+                guard errors.isEmpty else { return Reply.problem(422, "validation_failed", "invalid app credentials", errors: errors) }
                 providers[index].app = (true, false, id)
                 appSecret = secret
-                return json(200, providerJSON(providers[index]))
+                return Reply.json(200, providerJSON(providers[index]))
             case ("DELETE", "app-credentials"):
-                guard let app = p.app, app.set else { return problem(404, "not_found", "no app credentials are set") }
-                guard !app.environment else { return problem(409, "conflict", "set by the environment") }
+                guard let app = p.app, app.set else { return Reply.problem(404, "not_found", "no app credentials are set") }
+                guard !app.environment else { return Reply.problem(409, "conflict", "set by the environment") }
                 let using = connections.filter { $0.provider == p.code && $0.status != "disabled" }.count
-                if using > 0, !confirmed { return problem(409, "conflict", "\(using) connection uses these app credentials") }
+                if using > 0, !confirmed { return Reply.problem(409, "conflict", "\(using) connection uses these app credentials") }
                 providers[index].app = (false, false, nil)
                 appSecret = ""
                 return Reply(status: 204)
             case ("POST", "app-credentials/verify"):
-                guard p.app?.set == true else { return problem(404, "not_found", "no app credentials are set") }
+                guard p.app?.set == true else { return Reply.problem(404, "not_found", "no app credentials are set") }
                 if p.app?.environment == true || appSecret == SourcesFixture.appSecret {
-                    return json(200, ["result": "valid", "message": "Withings accepted the client id and secret."])
+                    return Reply.json(200, ["result": "valid", "message": "Withings accepted the client id and secret."])
                 }
-                return json(200, ["result": "invalid", "message": "Withings refused the client id and secret. Copy both again from its developer dashboard."])
+                return Reply.json(200, ["result": "invalid", "message": "Withings refused the client id and secret. Copy both again from its developer dashboard."])
             case ("POST", "probe"):
                 if !p.available, probesUntilUp <= 0 {
                     providers[index].available = true
@@ -654,13 +641,13 @@ struct SourcesFixture {
                     providers[index].sidecar?["enable"] = [[String: String]]()
                 }
                 probesUntilUp -= 1
-                return json(200, providerJSON(providers[index]))
+                return Reply.json(200, providerJSON(providers[index]))
             case ("POST", "auth/begin"):
                 return begin(provider: p.code, connection: nil, body: body)
             case ("POST", "auth/continue"):
                 return continueAuth(p, body: body)
             default:
-                return problem(404, "not_found", "not stubbed in the fake server")
+                return Reply.problem(404, "not_found", "not stubbed in the fake server")
             }
         }
 
@@ -671,18 +658,18 @@ struct SourcesFixture {
 
         private mutating func begin(provider code: String, connection: String?, body: [String: Any]) -> Reply {
             guard let p = providers.first(where: { $0.code == code }), p.available else {
-                return problem(503, "unavailable", "authorization is not available for this provider")
+                return Reply.problem(503, "unavailable", "authorization is not available for this provider")
             }
-            if p.authKind == "interactive_mfa" { return json(200, prompt(provider: code, step: "login", connection: connection)) }
-            if let app = p.app, !app.set { return problem(503, "unavailable", "the app credentials of \(code) are not set") }
+            if p.authKind == "interactive_mfa" { return Reply.json(200, prompt(provider: code, step: "login", connection: connection)) }
+            if let app = p.app, !app.set { return Reply.problem(503, "unavailable", "the app credentials of \(code) are not set") }
             next += 1
             guard body["return"] as? String == "app" else {
                 // A browser return would go to the provider and back to the panel, never to the app.
-                return json(200, ["redirect_url": "https://provider.example.test/authorize?state=browser-\(next)"])
+                return Reply.json(200, ["redirect_url": "https://provider.example.test/authorize?state=browser-\(next)"])
             }
             let ticket = "ticket-\(next)"
             tickets[ticket] = Pending(provider: code, step: "redirect", connection: connection)
-            return json(200, ["redirect_url": "https://\(p.callback.flatMap { URL(string: $0)?.host() } ?? "fake.vitamux.test")/oauth/\(code)/start?ticket=\(ticket)"])
+            return Reply.json(200, ["redirect_url": "https://\(p.callback.flatMap { URL(string: $0)?.host() } ?? "fake.vitamux.test")/oauth/\(code)/start?ticket=\(ticket)"])
         }
 
         private mutating func prompt(provider: String, step: String, connection: String?) -> [String: Any] {
@@ -699,27 +686,27 @@ struct SourcesFixture {
 
         private mutating func continueAuth(_ p: Provider, body: [String: Any]) -> Reply {
             guard let state = body["state"] as? String, let values = body["values"] as? [String: String] else {
-                return problem(422, "validation_failed", "invalid request", errors: [("/state", "required")])
+                return Reply.problem(422, "validation_failed", "invalid request", errors: [("/state", "required")])
             }
             guard let step = pending.removeValue(forKey: state), step.provider == p.code else {
-                return problem(422, "validation_failed", "invalid authorization step",
+                return Reply.problem(422, "validation_failed", "invalid authorization step",
                                errors: [("/state", "the authorization step expired or was already used")])
             }
-            guard p.available else { return problem(503, "unavailable", "the sidecar is unavailable") }
+            guard p.available else { return Reply.problem(503, "unavailable", "the sidecar is unavailable") }
             if step.step == "login" {
                 if values["password"] == Login.limited {
-                    var reply = problem(429, "rate_limited", "the provider is limiting sign-ins")
+                    var reply = Reply.problem(429, "rate_limited", "the provider is limiting sign-ins")
                     reply.headers["Retry-After"] = "120"
                     return reply
                 }
                 guard values["email"] == Login.email, values["password"] == Login.password else {
-                    return problem(422, "auth_rejected", "the connector did not accept the sign-in details")
+                    return Reply.problem(422, "auth_rejected", "the connector did not accept the sign-in details")
                 }
-                return json(200, prompt(provider: p.code, step: "code", connection: step.connection))
+                return Reply.json(200, prompt(provider: p.code, step: "code", connection: step.connection))
             }
-            if values["code"] == Login.gone { return problem(503, "unavailable", "the sidecar did not answer") }
-            guard values["code"] == Login.code else { return problem(422, "auth_rejected", "the code was not accepted") }
-            return json(200, ["connection_id": connect(p.code, connection: step.connection)])
+            if values["code"] == Login.gone { return Reply.problem(503, "unavailable", "the sidecar did not answer") }
+            guard values["code"] == Login.code else { return Reply.problem(422, "auth_rejected", "the code was not accepted") }
+            return Reply.json(200, ["connection_id": connect(p.code, connection: step.connection)])
         }
 
         /// What a finished authorization does: reauthorizes the connection, revives the provider's
@@ -760,22 +747,6 @@ struct SourcesFixture {
 
         // MARK: Responses
 
-        private func json(_ status: Int, _ object: [String: Any]) -> Reply {
-            Reply(status: status, body: try! JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]))
-        }
-
-        private func problem(_ status: Int, _ code: String, _ detail: String, errors: [(String, String)] = []) -> Reply {
-            let titles = ["validation_failed": "Validation failed", "not_found": "Not found", "conflict": "Conflict",
-                          "unavailable": "Service unavailable", "rate_limited": "Rate limited", "auth_rejected": "Sign-in refused"]
-            var object: [String: Any] = [
-                "type": "urn:vitamux:problem:\(code)", "title": titles[code] ?? code, "status": status, "code": code,
-                "detail": detail, "request_id": "req-fake",
-            ]
-            if !errors.isEmpty { object["errors"] = errors.map { ["pointer": $0.0, "detail": $0.1] } }
-            var reply = json(status, object)
-            reply.headers = ["Content-Type": "application/problem+json"]
-            return reply
-        }
     }
 }
 #endif

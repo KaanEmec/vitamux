@@ -158,17 +158,6 @@ public enum DataStatus: String, Sendable, CaseIterable {
         }
     }
 
-    public var meaning: String {
-        switch self {
-        case .direct: "From the rule’s first-choice source"
-        case .fallback: "A lower-priority source filled this window"
-        case .calculated: "Combined from several sources"
-        case .overridden: "You set, forced or excluded an input"
-        case .partial: "Window still open or below coverage"
-        case .noData: "Nothing stored for this window"
-        }
-    }
-
     public var color: Color {
         switch self {
         case .direct: Color(light: 0x0F766E, dark: 0x2DD4BF)

@@ -107,7 +107,7 @@ func apiExtractionRow(r review.Row) oapi.ExtractionRow {
 		Comparator: r.Comparator, UnitText: r.UnitText, ReferenceRangeText: r.ReferenceRangeText, RefLow: r.RefLow, RefHigh: r.RefHigh,
 		PrintedFlag: r.PrintedFlag, SpecimenType: r.SpecimenType, CollectedAt: r.CollectedAt, ReportedAt: r.ReportedAt,
 		Laboratory: r.Laboratory, EvidenceText: r.EvidenceText, Confidence: r.Confidence, ReviewStatus: oapi.ExtractionRowReviewStatus(r.Status),
-		ReviewedAt: r.ReviewedAt, Analyte: nonEmpty(r.Analyte), SuggestedAnalyte: nonEmpty(r.Suggested), Warnings: r.Warnings,
+		ReviewedAt: r.ReviewedAt, Analyte: optString(r.Analyte), SuggestedAnalyte: optString(r.Suggested), Warnings: r.Warnings,
 		Validation: r.Validation, Edits: make([]oapi.ExtractionRowEdit, len(r.Edits))}
 	if r.Page > 0 {
 		out.Page = &r.Page

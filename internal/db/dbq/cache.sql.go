@@ -177,62 +177,6 @@ func (q *Queries) GetResolvedCache(ctx context.Context, arg GetResolvedCachePara
 	return items, nil
 }
 
-const listHourlyAggregates = `-- name: ListHourlyAggregates :many
-SELECT user_id, metric_id, source_key, hour_start, local_date, connection_id, device_id, origin_id, samples, buckets, bucket_mean_sum, min_value, max_value, interval_sum, first_at, last_at FROM source_hourly_aggregates
-WHERE user_id = $1 AND metric_id = (SELECT id FROM metric_catalog WHERE code = $2::text)
-  AND hour_start >= $3 AND hour_start < $4
-ORDER BY hour_start, source_key
-`
-
-type ListHourlyAggregatesParams struct {
-	UserID uuid.UUID
-	Metric string
-	FromAt time.Time
-	ToAt   time.Time
-}
-
-func (q *Queries) ListHourlyAggregates(ctx context.Context, arg ListHourlyAggregatesParams) ([]SourceHourlyAggregate, error) {
-	rows, err := q.db.Query(ctx, listHourlyAggregates,
-		arg.UserID,
-		arg.Metric,
-		arg.FromAt,
-		arg.ToAt,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []SourceHourlyAggregate
-	for rows.Next() {
-		var i SourceHourlyAggregate
-		if err := rows.Scan(
-			&i.UserID,
-			&i.MetricID,
-			&i.SourceKey,
-			&i.HourStart,
-			&i.LocalDate,
-			&i.ConnectionID,
-			&i.DeviceID,
-			&i.OriginID,
-			&i.Samples,
-			&i.Buckets,
-			&i.BucketMeanSum,
-			&i.MinValue,
-			&i.MaxValue,
-			&i.IntervalSum,
-			&i.FirstAt,
-			&i.LastAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listResolveUsers = `-- name: ListResolveUsers :many
 SELECT id FROM users ORDER BY id
 `

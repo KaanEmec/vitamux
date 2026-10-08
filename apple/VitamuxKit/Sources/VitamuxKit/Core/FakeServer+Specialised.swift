@@ -113,7 +113,7 @@ struct SpecialisedFixture {
     }
 
     func sleep() -> Reply {
-        guard let dates = query.dates() else { return Self.problem(422, "start_date and end_date are required here") }
+        guard let dates = query.dates() else { return Reply.problem(422, "validation_failed", "start_date and end_date are required here") }
         let staged = query.list("include").contains("stages")
         let rows = dates.flatMap(sessions(on:)).map { session -> JSON in
             let has = !session.stages.isEmpty
@@ -135,7 +135,7 @@ struct SpecialisedFixture {
 
     func resolvedSleep() -> Reply {
         guard let dates = query.dates(), dates.count <= 366 else {
-            return Self.problem(422, "start_date and end_date must span at most 366 dates")
+            return Reply.problem(422, "validation_failed", "start_date and end_date must span at most 366 dates")
         }
         let nights = dates.compactMap { date -> JSON? in
             let back = today.number - date.number
@@ -177,7 +177,7 @@ struct SpecialisedFixture {
                 ],
             ]
         }
-        return Self.json(200, ["timezone": Self.timezone, "nights": nights])
+        return Reply.json(200, ["timezone": Self.timezone, "nights": nights])
     }
 
     // MARK: Blood pressure
@@ -244,7 +244,7 @@ struct SpecialisedFixture {
 
     func resolvedWorkouts() -> Reply {
         guard let dates = query.dates(), dates.count <= 366 else {
-            return Self.problem(422, "start_date and end_date must span at most 366 dates")
+            return Reply.problem(422, "validation_failed", "start_date and end_date must span at most 366 dates")
         }
         let clusters = dates.flatMap { date -> [JSON] in
             let back = today.number - date.number
@@ -290,7 +290,7 @@ struct SpecialisedFixture {
             }
             return out
         }
-        return Self.json(200, ["timezone": Self.timezone, "rule": ["ref": "builtin:workouts:1", "version": 1, "strategy": "event_priority"], "workouts": clusters])
+        return Reply.json(200, ["timezone": Self.timezone, "rule": ["ref": "builtin:workouts:1", "version": 1, "strategy": "event_priority"], "workouts": clusters])
     }
 
     // MARK: Events
@@ -397,14 +397,14 @@ struct SpecialisedFixture {
         var offset = 0
         if let cursor = query.value("cursor") {
             guard cursor.hasPrefix("sp-"), let parsed = Int(cursor.dropFirst(3)), (0..<rows.count).contains(parsed) else {
-                return problem(422, "invalid or expired cursor")
+                return Reply.problem(422, "validation_failed", "invalid or expired cursor")
             }
             offset = parsed
         }
         let end = min(offset + limit, rows.count)
         var body: JSON = [key: Array(rows[offset..<end]), "has_more": end < rows.count]
         if end < rows.count { body["next_cursor"] = "sp-\(end)" }
-        return json(200, body)
+        return Reply.json(200, body)
     }
 
     static func source(_ provider: String, key: Int, device: String? = nil, origin: String? = nil) -> JSON {
@@ -446,19 +446,6 @@ struct SpecialisedFixture {
         (value * 10).rounded() / 10
     }
 
-    static func json(_ status: Int, _ object: JSON) -> Reply {
-        Reply(status: status, body: try! JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]))
-    }
-
-    static func problem(_ status: Int, _ detail: String) -> Reply {
-        let object: JSON = [
-            "type": "urn:vitamux:problem:validation_failed", "title": "Validation failed", "status": status,
-            "code": "validation_failed", "detail": detail, "request_id": "req-fake",
-        ]
-        var reply = json(status, object)
-        reply.headers = ["Content-Type": "application/problem+json"]
-        return reply
-    }
 }
 
 private extension LocalDate {

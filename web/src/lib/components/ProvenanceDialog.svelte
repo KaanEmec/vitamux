@@ -10,6 +10,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { api, type Problem, type Schemas } from '../api/client.ts';
+	import { when } from '../settings/format.ts';
 	import Modal from './Modal.svelte';
 	import ProblemAlert from './ProblemAlert.svelte';
 
@@ -36,7 +37,6 @@
 			: []
 	);
 
-	const when = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString() : '–');
 	const short = (sha: string) => sha.slice(0, 12);
 
 	function versionState(v: Version): string {

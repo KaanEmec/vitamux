@@ -1,6 +1,5 @@
 #if DEBUG
 import Foundation
-import OpenAPIRuntime
 
 // The Day view (J22.26) for the fake server, mirroring the server's intraday answers
 // (internal/api/explore.go and resolved.go): GET /resolved/series with a bucket size as `window`
@@ -24,7 +23,7 @@ extension FakeServer {
         let parts = url.path.split(separator: "/").map(String.init)
         switch url.path {
         case "/api/v1/metrics":
-            return ExploreFixture.json(200, ["metrics": allMetrics.map(IntradayFixture.withIntraday)])
+            return Reply.json(200, ["metrics": allMetrics.map(IntradayFixture.withIntraday)])
         case "/api/v1/resolved/series":
             return IntradayFixture(query: query)?.resolvedSeries()
         case "/api/v1/sources/series":
@@ -32,7 +31,7 @@ extension FakeServer {
         default:
             guard parts.count == 4, parts[2] == "metrics", IntradayFixture.ladders[parts[3]] != nil,
                   let entry = ExploreFixture.catalogue(parts[3]) else { return nil }
-            return ExploreFixture.json(200, IntradayFixture.withIntraday(entry))
+            return Reply.json(200, IntradayFixture.withIntraday(entry))
         }
     }
 }
@@ -239,7 +238,7 @@ struct IntradayFixture {
     func sourceSeries() -> Reply? {
         guard let grain = query.value("grain"), let step = IntradayStep(rawValue: grain) else { return nil }
         guard end > start, end.timeIntervalSince(start) <= 25 * 3_600 else {
-            return F.problem(422, "validation_failed", "invalid range", errors: [("/end", "at most a day for \(grain)")])
+            return Reply.problem(422, "validation_failed", "invalid range", errors: [("/end", "at most a day for \(grain)")])
         }
         let plan = Plan(from: start, to: end)
         var sources: [JSON] = []
@@ -254,7 +253,7 @@ struct IntradayFixture {
             var offset = 0
             if let cursor = query.value("cursor") {
                 guard cursor.hasPrefix("ir-"), let parsed = Int(cursor.dropFirst(3)), (0 ..< all.count).contains(parsed) else {
-                    return F.problem(422, "validation_failed", "invalid or expired cursor")
+                    return Reply.problem(422, "validation_failed", "invalid or expired cursor")
                 }
                 offset = parsed
             }
@@ -284,7 +283,7 @@ struct IntradayFixture {
             "rule": ["ref": "builtin:\(spec.code):1", "version": 1, "strategy": spec.strategy],
         ]
         if let next { body["next_cursor"] = next }
-        return F.json(200, body)
+        return Reply.json(200, body)
     }
 
     private func entry(_ index: Int, points: [JSON]) -> JSON {
@@ -351,7 +350,7 @@ struct IntradayFixture {
         guard let window = query.value("window"), let step = IntradayStep(rawValue: window), step != .raw else { return nil }
         let most: TimeInterval = step.seconds <= 60 ? 25 * 3_600 : (7 * 24 + 1) * 3_600
         guard end > start, end.timeIntervalSince(start) <= most else {
-            return F.problem(422, "validation_failed", "invalid range", errors: [("/end", "at most \(step.seconds <= 60 ? "a day" : "7 days") for \(window) buckets")])
+            return Reply.problem(422, "validation_failed", "invalid range", errors: [("/end", "at most \(step.seconds <= 60 ? "a day" : "7 days") for \(window) buckets")])
         }
         let size = step.seconds
         let plan = Plan(from: start, to: end)
@@ -393,7 +392,7 @@ struct IntradayFixture {
         var offset = 0
         if let cursor = query.value("cursor") {
             guard cursor.hasPrefix("rp-"), let parsed = Int(cursor.dropFirst(3)), (0 ..< points.count).contains(parsed) else {
-                return F.problem(422, "validation_failed", "invalid or expired cursor")
+                return Reply.problem(422, "validation_failed", "invalid or expired cursor")
             }
             offset = parsed
         }
@@ -404,7 +403,7 @@ struct IntradayFixture {
             "points": Array(points[offset ..< stop]), "sources_used": used, "has_more": stop < points.count,
         ]
         if stop < points.count { body["next_cursor"] = "rp-\(stop)" }
-        return F.json(200, body)
+        return Reply.json(200, body)
     }
 }
 #endif

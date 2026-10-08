@@ -14,7 +14,7 @@ const names: Record<string, string> = {
 export const providerName = (provider: string) => names[provider] ?? metricLabel(provider);
 
 /** "Apple Health · com.apple.health": a provider and, when known, its origin app or device. */
-export function sourceLabel(provider: string, detail?: string | null): string {
+function sourceLabel(provider: string, detail?: string | null): string {
 	return detail ? `${providerName(provider)} · ${detail}` : providerName(provider);
 }
 

@@ -9,8 +9,9 @@
 	import ProblemAlert from '#lib/components/ProblemAlert.svelte';
 	import StatusIcon from '#lib/components/StatusIcon.svelte';
 	import TextField from '#lib/components/TextField.svelte';
+	import { when } from '#lib/settings/format.ts';
 	import { patchRow, type Row, type RowPatch } from './api.ts';
-	import { rowStatus, warningText, when } from './format.ts';
+	import { rowStatus, warningText } from './format.ts';
 
 	let { row, runId, onsaved }: { row: Row; runId: string; onsaved: (row: Row) => void } = $props();
 

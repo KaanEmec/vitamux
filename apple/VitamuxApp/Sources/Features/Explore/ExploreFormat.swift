@@ -20,7 +20,8 @@ extension OpenAPIValueContainer {
         ((value as? [String: (any Sendable)?]) ?? [:]).compactMapValues { Self.double($0) }
     }
 
-    private static func double(_ value: (any Sendable)?) -> Double? {
+    /// A JSON number as a Double, nil for anything else.
+    static func double(_ value: (any Sendable)?) -> Double? {
         switch value {
         case let number as Double: number
         case let number as Int: Double(number)

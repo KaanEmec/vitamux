@@ -94,7 +94,7 @@ type Options struct {
 	// Context (E1) forces the window's context; "" derives it from Events (Rule.ContextAt).
 	Context Context
 	Events  ContextEvents // E1: aligned sleep episodes and workout clusters
-	// Leader (E5) is the group the follow leader selected, by Window.Key (LeaderSelections).
+	// Leader (E5) is the group the follow leader selected, by Window.Key (only windows with one).
 	Leader map[string]string
 }
 

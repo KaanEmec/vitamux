@@ -162,13 +162,13 @@ struct LabFixture {
             let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
             switch (method, parts.dropFirst(2).first, parts.count) {
             case ("GET", "documents", 3):
-                return json(200, ["documents": docs, "has_more": false])
+                return Reply.json(200, ["documents": docs, "has_more": false])
             case ("POST", "documents", 3):
                 return upload(body)
             case (_, "documents", 4):
                 guard let index = docs.firstIndex(where: { $0["id"] as? String == parts[3] }) else { return notFound("no such document") }
                 if method == "DELETE" { return remove(at: index, derived: query.first { $0.name == "derived" }?.value ?? "") }
-                return json(200, docs[index])
+                return Reply.json(200, docs[index])
             case ("GET", "documents", 5) where parts[4] == "file":
                 guard let doc = docs.first(where: { $0["id"] as? String == parts[3] }), doc["status"] as? String != "deleted" else {
                     return notFound("no such document")
@@ -178,12 +178,12 @@ struct LabFixture {
                 guard let index = docs.firstIndex(where: { $0["id"] as? String == parts[3] }) else { return notFound("no such document") }
                 if method == "POST" { return start(docAt: index, body: body) }
                 let ids = runs.filter { $0.documentID == parts[3] }.map(\.id).reversed()
-                return json(200, ["extractions": ids.map { poll($0) }])
+                return Reply.json(200, ["extractions": ids.map { poll($0) }])
             case ("GET", "extractors", 3):
-                return json(200, ["extractors": LabFixture.extractors])
+                return Reply.json(200, ["extractors": LabFixture.extractors])
             case ("GET", "extractions", 4):
                 guard let run = runs.first(where: { $0.id == parts[3] }) else { return notFound("no such extraction") }
-                return json(200, withRows(run))
+                return Reply.json(200, withRows(run))
             case ("PATCH", "extractions", 6) where parts[4] == "rows":
                 return patch(run: parts[3], row: Int(parts[5]) ?? -1, body: body)
             case ("POST", "extractions", 5) where parts[4] == "confirm":
@@ -193,11 +193,11 @@ struct LabFixture {
             case ("GET", "lab-results", 5):
                 return history(parts[3])
             case ("GET", "analytes", 4):
-                return json(200, ["aliases": LabFixture.aliases.enumerated().map { i, code in
+                return Reply.json(200, ["aliases": LabFixture.aliases.enumerated().map { i, code in
                     ["id": String(i + 1), "label": code, "analyte": code, "source": "seed", "created_at": LabFixture.at]
                 }])
             default:
-                return problem(404, "not_found", "not stubbed in the fake server")
+                return Reply.problem(404, "not_found", "not stubbed in the fake server")
             }
         }
 
@@ -212,20 +212,20 @@ struct LabFixture {
 
         private mutating func upload(_ body: Data) -> Reply {
             guard let (pdf, filename) = Self.pdfPart(of: body) else {
-                return problem(422, "validation_failed", "the upload has no file part", errors: [("/file", "empty")])
+                return Reply.problem(422, "validation_failed", "the upload has no file part", errors: [("/file", "empty")])
             }
-            if pdf.count > LabFixture.maxBytes { return problem(413, "payload_too_large", "the PDF is larger than 20 MiB") }
-            if pdf.isEmpty { return problem(422, "validation_failed", "the upload is not an acceptable PDF", errors: [("/file", "empty")]) }
+            if pdf.count > LabFixture.maxBytes { return Reply.problem(413, "payload_too_large", "the PDF is larger than 20 MiB") }
+            if pdf.isEmpty { return Reply.problem(422, "validation_failed", "the upload is not an acceptable PDF", errors: [("/file", "empty")]) }
             guard pdf.starts(with: Data("%PDF-".utf8)) else {
-                return problem(422, "validation_failed", "the upload is not an acceptable PDF", errors: [("/file", "not_pdf")])
+                return Reply.problem(422, "validation_failed", "the upload is not an acceptable PDF", errors: [("/file", "not_pdf")])
             }
             let sha = SHA256.hash(data: pdf).map { String(format: "%02x", $0) }.joined()
-            if let existing = docs.first(where: { $0["sha256"] as? String == sha }) { return json(200, existing) }
+            if let existing = docs.first(where: { $0["sha256"] as? String == sha }) { return Reply.json(200, existing) }
             let id = "doc_\(LabFixture.hex(take()))"
             let uploaded = Date(timeIntervalSince1970: 1_790_000_000 + TimeInterval(next * 60)).formatted(Date.ISO8601FormatStyle())
             let doc = document(id: id, filename: filename, sha: sha, size: pdf.count, uploadedAt: uploaded, status: "uploaded")
             docs.append(doc)
-            return json(201, doc)
+            return Reply.json(201, doc)
         }
 
         /// The PDF of a raw `application/pdf` body or of the multipart form's first part, with its filename.
@@ -244,7 +244,7 @@ struct LabFixture {
 
         private mutating func remove(at index: Int, derived: String) -> Reply {
             guard derived == "keep" || derived == "delete" else {
-                return problem(422, "validation_failed", "derived must be keep or delete", errors: [("/derived", "must be keep or delete")])
+                return Reply.problem(422, "validation_failed", "derived must be keep or delete", errors: [("/derived", "must be keep or delete")])
             }
             let id = docs[index]["id"] as! String
             docs[index].merge(["status": "deleted", "sha256": NSNull(), "filename": NSNull(), "deleted_at": LabFixture.at, "retention_until": NSNull()]) { $1 }
@@ -276,26 +276,26 @@ struct LabFixture {
 
         private mutating func start(docAt index: Int, body: Data) -> Reply {
             guard let input = (try? JSONSerialization.jsonObject(with: body)) as? JSON, let provider = input["provider"] as? String else {
-                return problem(422, "validation_failed", "request body is not valid JSON")
+                return Reply.problem(422, "validation_failed", "request body is not valid JSON")
             }
             guard let extractor = LabFixture.extractors.first(where: { $0["id"] as? String == provider }) else {
-                return problem(403, "forbidden", "\(provider) is not configured on this server")
+                return Reply.problem(403, "forbidden", "\(provider) is not configured on this server")
             }
-            guard extractor["enabled"] as? Bool == true else { return problem(403, "forbidden", "\(provider) is disabled; enable it in settings") }
+            guard extractor["enabled"] as? Bool == true else { return Reply.problem(403, "forbidden", "\(provider) is disabled; enable it in settings") }
             let consent = input["consent"] as? JSON
             let external = extractor["external"] as! Bool
             if external, consent?["provider"] as? String != provider || consent?["model"] as? String != extractor["model"] as? String
                 || consent?["acknowledged_at"] as? String == nil {
-                return problem(409, "consent_required", "consent must name provider \(provider) and model \(extractor["model"] as? String ?? "")")
+                return Reply.problem(409, "consent_required", "consent must name provider \(provider) and model \(extractor["model"] as? String ?? "")")
             }
             let docID = docs[index]["id"] as! String
             if runs.contains(where: { $0.documentID == docID && ["queued", "running"].contains($0.status) }) {
-                return problem(409, "conflict", "an extraction of this document is already queued or running")
+                return Reply.problem(409, "conflict", "an extraction of this document is already queued or running")
             }
             let run = Run(json: runJSON(id: "ext_\(LabFixture.hex(take()))", doc: docID, extractor: extractor, consent: external ? consent : nil), rows: [])
             runs.append(run)
             docs[index]["status"] = "extracting"
-            return json(202, run.json)
+            return Reply.json(202, run.json)
         }
 
         /// A queued run starts on the first poll and finishes on the next: rows stored, document in review.
@@ -340,20 +340,20 @@ struct LabFixture {
             guard let r = runs.firstIndex(where: { $0.id == id }), let i = runs[r].rows.firstIndex(where: { $0["index"] as? Int == index }) else {
                 return notFound("no such row")
             }
-            guard ["succeeded", "confirmed"].contains(runs[r].status) else { return problem(409, "conflict", "this extraction has no rows to review") }
+            guard ["succeeded", "confirmed"].contains(runs[r].status) else { return Reply.problem(409, "conflict", "this extraction has no rows to review") }
             guard var set = (try? JSONSerialization.jsonObject(with: body)) as? JSON else {
-                return problem(422, "validation_failed", "request body is not valid JSON")
+                return Reply.problem(422, "validation_failed", "request body is not valid JSON")
             }
             let review = set.removeValue(forKey: "review") as? String
             if let date = set["collected_at"] as? String, date.wholeMatch(of: /\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?/) == nil {
-                return problem(422, "validation_failed", "the review is incomplete or the edit is invalid",
+                return Reply.problem(422, "validation_failed", "the review is incomplete or the edit is invalid",
                                errors: [("/collected_at", "must be an ISO 8601 local date or date-time without offset")])
             }
             var row = runs[r].rows[i]
             var changes: JSON = [:]
             for (key, value) in set.sorted(by: { $0.key < $1.key }) {
                 guard LabFixture.editable.contains(key) else {
-                    return problem(422, "validation_failed", "invalid edit", errors: [("/\(key)", "is not an editable field")])
+                    return Reply.problem(422, "validation_failed", "invalid edit", errors: [("/\(key)", "is not an editable field")])
                 }
                 let old = row[key] ?? NSNull()
                 if !(old as AnyObject).isEqual(value) { changes[key] = ["from": old, "to": value] }
@@ -375,12 +375,12 @@ struct LabFixture {
             }
             row["edits"] = edits
             runs[r].rows[i] = row
-            return json(200, validated(row))
+            return Reply.json(200, validated(row))
         }
 
         private mutating func confirm(_ id: String) -> Reply {
             guard let r = runs.firstIndex(where: { $0.id == id }) else { return notFound("no such extraction") }
-            guard ["succeeded", "confirmed"].contains(runs[r].status) else { return problem(409, "conflict", "this extraction is not ready to confirm") }
+            guard ["succeeded", "confirmed"].contains(runs[r].status) else { return Reply.problem(409, "conflict", "this extraction is not ready to confirm") }
             var errors: [(String, String)] = []
             for row in runs[r].rows {
                 let n = row["index"] as! Int
@@ -391,7 +391,7 @@ struct LabFixture {
                     if row["collected_at"] is NSNull { errors.append(("/rows/\(n)/collected_at", "is required: edit the row to add the collection date")) }
                 }
             }
-            if !errors.isEmpty { return problem(422, "validation_failed", "the review is incomplete or the edit is invalid", errors: errors) }
+            if !errors.isEmpty { return Reply.problem(422, "validation_failed", "the review is incomplete or the edit is invalid", errors: errors) }
             for i in runs[r].rows.indices where runs[r].rows[i]["review_status"] as? String != "rejected" {
                 let row = runs[r].rows[i]
                 let values: JSON = [
@@ -428,18 +428,18 @@ struct LabFixture {
             }
             runs[r].status = "confirmed"
             setStatus(of: runs[r].documentID, to: "confirmed")
-            return json(200, withRows(runs[r]))
+            return Reply.json(200, withRows(runs[r]))
         }
 
         private mutating func unconfirm(_ id: String) -> Reply {
             guard let r = runs.firstIndex(where: { $0.id == id }), runs[r].status == "confirmed" else {
-                return problem(409, "conflict", "this extraction is not the document's confirmed one")
+                return Reply.problem(409, "conflict", "this extraction is not the document's confirmed one")
             }
             results.removeAll { ($0["provenance"] as? JSON)?["extraction_id"] as? String == id }
             for i in runs[r].rows.indices { runs[r].rows[i]["lab_result_id"] = NSNull() }
             runs[r].status = "succeeded"
             setStatus(of: runs[r].documentID, to: "needs_review")
-            return json(200, withRows(runs[r]))
+            return Reply.json(200, withRows(runs[r]))
         }
 
         // MARK: Results
@@ -447,12 +447,12 @@ struct LabFixture {
         /// Revisions of a result confirmed here, or of one of the specialised fixture's results.
         private func history(_ id: String) -> Reply {
             if let current = results.first(where: { $0["id"] as? String == id }) {
-                return json(200, ["revisions": [current] + (revisions[id] ?? [])])
+                return Reply.json(200, ["revisions": [current] + (revisions[id] ?? [])])
             }
             let all = SpecialisedFixture(query: .init(URL(string: "https://fake.invalid/?limit=100")!)).labResults()
             let rows = all.body.flatMap { (try? JSONSerialization.jsonObject(with: $0)) as? JSON }?["lab_results"] as? [JSON] ?? []
             guard let current = rows.first(where: { $0["id"] as? String == id }) else { return notFound("no such result") }
-            return json(200, ["revisions": [current]])
+            return Reply.json(200, ["revisions": [current]])
         }
 
         // MARK: Helpers
@@ -462,28 +462,10 @@ struct LabFixture {
             return next
         }
 
-        private func json(_ status: Int, _ object: JSON) -> Reply {
-            Reply(status: status, body: try! JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]))
-        }
-
         private func notFound(_ detail: String) -> Reply {
-            problem(404, "not_found", detail)
+            Reply.problem(404, "not_found", detail)
         }
 
-        private func problem(_ status: Int, _ code: String, _ detail: String, errors: [(String, String)] = []) -> Reply {
-            let titles = [
-                "validation_failed": "Validation failed", "not_found": "Not found", "conflict": "Conflict", "forbidden": "Forbidden",
-                "consent_required": "Consent required", "payload_too_large": "Payload too large",
-            ]
-            var object: JSON = [
-                "type": "urn:vitamux:problem:\(code)", "title": titles[code] ?? code, "status": status,
-                "code": code, "detail": detail, "request_id": "req-fake",
-            ]
-            if !errors.isEmpty { object["errors"] = errors.map { ["pointer": $0.0, "detail": $0.1] } }
-            var reply = json(status, object)
-            reply.headers = ["Content-Type": "application/problem+json"]
-            return reply
-        }
     }
 }
 #endif

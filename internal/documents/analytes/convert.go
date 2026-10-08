@@ -35,23 +35,6 @@ func Canonical(code string, v float64, unit string) (float64, Conversion, error)
 	return v*c.Factor + c.Offset, c, nil
 }
 
-// Convert converts v between two units of one analyte, through the canonical unit.
-func Convert(code string, v float64, from, to string) (float64, error) {
-	an, ok := byCode[code]
-	if !ok {
-		return 0, fmt.Errorf("%w: %q", ErrUnknownAnalyte, code)
-	}
-	f, err := an.conversion(from)
-	if err != nil {
-		return 0, err
-	}
-	t, err := an.conversion(to)
-	if err != nil {
-		return 0, err
-	}
-	return (v*f.Factor + f.Offset - t.Offset) / t.Factor, nil
-}
-
 // conversion finds the conversion from a printed unit to the canonical one.
 func (an Analyte) conversion(unit string) (Conversion, error) {
 	if an.Unit == "" {

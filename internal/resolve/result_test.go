@@ -263,7 +263,7 @@ func TestExplanationTemplates(t *testing.T) {
 	out = append(out, mustResolve(t, lr, LatestWindow(exT(day, "15:00")), Series{"heart_rate": append(slices.Clone(s), exSample(exGarmin, exT(day, "14:30"), 71))}, Options{}))
 	// Overrides: set_value keeps the computed value in the explanation; force_source names both.
 	ov := func(a OverrideAction, edit func(*Override)) Override {
-		o := Override{ID: uuid.New(), Scope: ScopeOf("heart_rate", h10), Action: a, CreatedAt: instant("2026-09-14T12:00:00Z")}
+		o := Override{ID: uuid.New(), Scope: scopeOf("heart_rate", h10), Action: a, CreatedAt: instant("2026-09-14T12:00:00Z")}
 		edit(&o)
 		return o
 	}
@@ -293,9 +293,6 @@ func TestScenarioNeverPooled(t *testing.T) {
 	var ve *ValidationError
 	if err := Validate(r); !errors.As(err, &ve) || !strings.Contains(err.Error(), "/strategy/op") {
 		t.Fatalf("mean of a selection-only metric: %v", err)
-	}
-	if catalog.Combinable("hrv_sdnn", "hrv_rmssd") || catalog.Combinable("hrv_rmssd", "hrv_rmssd_nightly") {
-		t.Error("different heart rate variability methods combine")
 	}
 	r.Strategy = Strategy{Op: OpFirstAvailable}
 	if err := Validate(r); err != nil {

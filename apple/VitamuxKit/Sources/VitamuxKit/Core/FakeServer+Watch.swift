@@ -43,7 +43,7 @@ extension FakeServer {
         }
         switch parts.count {
         case 4 where parts[2] == "metrics":
-            return WatchFixture.metrics.first { $0["code"] as? String == parts[3] }.map { SpecialisedFixture.json(200, $0) }
+            return WatchFixture.metrics.first { $0["code"] as? String == parts[3] }.map { Reply.json(200, $0) }
         case 4 where parts[2] == "workouts":
             return fixture.workout(parts[3])
         case 5 where parts[2] == "workouts" && parts[4] == "route":
@@ -119,7 +119,7 @@ struct WatchFixture {
                  "latest": ["local_date": today.description, "level": "sinus_rhythm"]]),
             item("event", "state_of_mind", 3, today, 9 * 60, ["latest": ["local_date": today.description, "level": "momentary_emotion"]]),
         ]
-        return SpecialisedFixture.json(200, object)
+        return Reply.json(200, object)
     }
 
     // MARK: Events
@@ -194,7 +194,7 @@ struct WatchFixture {
             let microvolts = bump(-0.2, 0.025, 120) + bump(-0.03, 0.008, -90) + bump(0, 0.01, 950) + bump(0.03, 0.009, -230) + bump(0.28, 0.05, 280)
             return (microvolts + 12 * sin(t * 1.7)).rounded()
         }
-        return SpecialisedFixture.json(200, [
+        return Reply.json(200, [
             "format": "vitamux.waveform/1", "start": Self.iso(start), "sampling_frequency_hz": Self.ecgHz, "unit": "µV",
             "lead": "apple_watch_similar_to_lead_i", "values": values,
         ])
@@ -310,7 +310,7 @@ struct WatchFixture {
         }
         segments.sort { ($0["start_at"] as! String) < ($1["start_at"] as! String) }
         for i in segments.indices { segments[i]["seq"] = i }
-        return SpecialisedFixture.json(200, [
+        return Reply.json(200, [
             "id": id, "start_at": Self.iso(start), "end_at": Self.iso(end), "tz_offset_min": SpecialisedFixture.offset(start),
             "local_date": date.description, "sport": plan.sport, "provider_sport": plan.sport, "distance_m": 8_000,
             "energy_kcal": 395, "avg_hr_bpm": 147, "max_hr_bpm": 170, "file_sha256": NSNull(), "segments": segments,
@@ -324,7 +324,7 @@ struct WatchFixture {
         let count = Self.routePoints
         let turn = { (i: Int) in 2 * Double.pi * Double(i) / Double(count) }
         let course = (0..<count).map { (turn($0) * 180 / .pi + 90).truncatingRemainder(dividingBy: 360) }
-        return SpecialisedFixture.json(200, [
+        return Reply.json(200, [
             "format": "vitamux.route/1", "start": Self.iso(Self.at(date, minutes: plan.from)), "count": count,
             "offsets_s": (0..<count).map(Double.init),
             "latitude": (0..<count).map { 0.01 + 0.004 * sin(turn($0)) },
@@ -358,13 +358,7 @@ struct WatchFixture {
 
 extension SpecialisedFixture {
     static func notFound(_ detail: String) -> Reply {
-        let object: JSON = [
-            "type": "urn:vitamux:problem:not_found", "title": "Not found", "status": 404,
-            "code": "not_found", "detail": detail, "request_id": "req-fake",
-        ]
-        var reply = json(404, object)
-        reply.headers = ["Content-Type": "application/problem+json"]
-        return reply
+        Reply.problem(404, "not_found", detail)
     }
 }
 #endif

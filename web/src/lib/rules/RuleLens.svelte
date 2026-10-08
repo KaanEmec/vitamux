@@ -27,6 +27,7 @@
 		bucketSizes,
 		fromSpec,
 		groupLabel,
+		groupProvider,
 		needsSumAck,
 		ops,
 		selectorKey,
@@ -268,10 +269,6 @@
 	}
 
 	const when = (v: Version) => (v.builtin ? 'shipped default' : v.created_at ? new Date(v.created_at).toLocaleDateString() : '');
-	const groupSource = (g: Form['groups'][number]) => {
-		const p = g.match.find((s) => typeof s.provider === 'string' && s.provider)?.provider;
-		return sourceClass(typeof p === 'string' ? p : g.id);
-	};
 	const sheet = $derived(narrow.current && !inline);
 	const activeVersion = $derived(versions?.find((v) => v.active));
 	const previewDays = $derived(preview && preview !== 'loading' && 'preview' in preview ? preview.preview.days : []);
@@ -307,7 +304,7 @@
 				<ol class="groups" aria-labelledby="{uid}-order" aria-describedby={errorFor('spec.groups') ? `${uid}-groups-err` : undefined}>
 					{#each form.groups as g, i (g.key)}
 						<li
-							class={['group', groupSource(g), dragFrom === i && 'dragging']}
+							class={['group', sourceClass(groupProvider(g)), dragFrom === i && 'dragging']}
 							draggable="true"
 							ondragstart={(e) => {
 								dragFrom = i;

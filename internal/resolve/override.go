@@ -39,11 +39,6 @@ type Scope struct {
 	LocalDate time.Time
 }
 
-// ScopeOf is the scope of window w of the rule metric.
-func ScopeOf(metric string, w Window) Scope {
-	return Scope{Metric: metric, Kind: w.Kind, Key: w.Key, LocalDate: w.Date}
-}
-
 // Override is one stored override. Only the fields of its Action are set: InputID for
 // exclude_input, Group for force_source, Value (canonical unit), Unit and Note for set_value.
 type Override struct {

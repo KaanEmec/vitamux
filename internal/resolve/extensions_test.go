@@ -479,7 +479,13 @@ func TestScenarioFollowLeader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, err := follower.ResolveWindows(ws, basal, Options{Leader: LeaderSelections(lead)})
+	sel := map[string]string{}
+	for _, res := range lead {
+		if res.Selected != "" {
+			sel[res.Window.Key] = res.Selected
+		}
+	}
+	got, err := follower.ResolveWindows(ws, basal, Options{Leader: sel})
 	if err != nil {
 		t.Fatal(err)
 	}

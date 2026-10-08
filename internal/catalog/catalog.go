@@ -184,13 +184,6 @@ func Lookup(code string) (Metric, bool) {
 // Metrics returns all metrics in seed order.
 func Metrics() []Metric { return slices.Clone(metrics) }
 
-// Combinable reports whether two metric codes may feed one rule. Sources combine only when they
-// share a code, so SDNN and RMSSD (or any two methods of one quantity) never do.
-func Combinable(a, b string) bool {
-	_, ok := byCode[a]
-	return ok && a == b
-}
-
 var byCode = func() map[string]Metric {
 	m := make(map[string]Metric, len(metrics))
 	for _, x := range metrics {

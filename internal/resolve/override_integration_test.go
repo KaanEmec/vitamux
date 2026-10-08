@@ -113,6 +113,11 @@ func (e *ovEnv) resolveAll(t *testing.T) []resolve.Resolved {
 	return out
 }
 
+// scopeOf is the scope of window w of the rule metric.
+func scopeOf(metric string, w resolve.Window) resolve.Scope {
+	return resolve.Scope{Metric: metric, Kind: w.Kind, Key: w.Key, LocalDate: w.Date}
+}
+
 func (e *ovEnv) create(t *testing.T, n resolve.NewOverride) resolve.Override {
 	t.Helper()
 	o, err := e.ov.Create(e.ctx, e.by, n)
@@ -137,9 +142,9 @@ func TestOverridesLifecycle(t *testing.T) {
 		value   float64
 		changed int // the window index that changes: 0 = h1; h2 never does
 	}{
-		{"exclude", resolve.NewOverride{Scope: resolve.ScopeOf("heart_rate", e.h1), Action: resolve.ExcludeInput, InputID: e.ids["withings/h1"]}, resolve.ResultOverridden, 71, 0},
-		{"force", resolve.NewOverride{Scope: resolve.ScopeOf("heart_rate", e.h1), Action: resolve.ForceSource, Group: "garmin"}, resolve.ResultOverridden, 71, 0},
-		{"set", resolve.NewOverride{Scope: resolve.ScopeOf("heart_rate", e.h1), Action: resolve.SetValue, Value: 65, Unit: "bpm", Note: "strap"}, resolve.ResultOverridden, 65, 0},
+		{"exclude", resolve.NewOverride{Scope: scopeOf("heart_rate", e.h1), Action: resolve.ExcludeInput, InputID: e.ids["withings/h1"]}, resolve.ResultOverridden, 71, 0},
+		{"force", resolve.NewOverride{Scope: scopeOf("heart_rate", e.h1), Action: resolve.ForceSource, Group: "garmin"}, resolve.ResultOverridden, 71, 0},
+		{"set", resolve.NewOverride{Scope: scopeOf("heart_rate", e.h1), Action: resolve.SetValue, Value: 65, Unit: "bpm", Note: "strap"}, resolve.ResultOverridden, 65, 0},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -172,9 +177,9 @@ func TestOverridesLifecycle(t *testing.T) {
 		})
 	}
 
-	hist, err := e.ov.History(e.ctx, e.by.UserID, "heart_rate", 10)
-	if err != nil || len(hist) != 3 || hist[0].RevokedAt == nil {
-		t.Errorf("history %d rows, err %v", len(hist), err)
+	var kept int
+	if err := e.owner(`SELECT count(*) FROM manual_overrides WHERE metric = 'heart_rate' AND revoked_at IS NOT NULL`, &kept); err != nil || kept != 3 {
+		t.Errorf("%d revoked rows kept as history, err %v", kept, err)
 	}
 	if h := e.measurementsHash(t); h != hashBefore {
 		t.Error("source rows changed")
@@ -183,7 +188,7 @@ func TestOverridesLifecycle(t *testing.T) {
 
 func TestOverridesDirtyAuditAndConflict(t *testing.T) {
 	e := newOvEnv(t)
-	n := resolve.NewOverride{Scope: resolve.ScopeOf("heart_rate", e.h1), Action: resolve.SetValue, Value: 66.5, Unit: "bpm", Note: "private note"}
+	n := resolve.NewOverride{Scope: scopeOf("heart_rate", e.h1), Action: resolve.SetValue, Value: 66.5, Unit: "bpm", Note: "private note"}
 	count := func(q string) (c int) {
 		t.Helper()
 		if err := e.owner(q, &c); err != nil {
@@ -246,7 +251,7 @@ func TestOverridesDirtyAuditAndConflict(t *testing.T) {
 
 func TestOverridesAppRoleCannotDelete(t *testing.T) {
 	e := newOvEnv(t)
-	e.create(t, resolve.NewOverride{Scope: resolve.ScopeOf("heart_rate", e.h1), Action: resolve.ForceSource, Group: "garmin"})
+	e.create(t, resolve.NewOverride{Scope: scopeOf("heart_rate", e.h1), Action: resolve.ForceSource, Group: "garmin"})
 	for _, stmt := range []string{"DELETE FROM manual_overrides", "UPDATE manual_overrides SET value = 1", "UPDATE manual_overrides SET action = 'set_value'"} {
 		if err := e.appSQL(stmt); err == nil {
 			t.Errorf("%s succeeded for the app role", stmt)

@@ -16,7 +16,7 @@ import { events as baseEvents, expect, test as viewsTest } from './views-fake';
 
 type Json = Record<string, unknown>;
 
-export const today = '2026-09-14';
+const today = '2026-09-14';
 export const beatsGap = '2026-09-11';
 export const pausedDay = '2026-09-12';
 const offset = 120;

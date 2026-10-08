@@ -123,7 +123,7 @@ func normalizeSleep(body []byte, out *normalize.Output) error {
 		}
 		stage, ok := sleepStages[st.State]
 		if !ok {
-			out.Warnings = append(out.Warnings, normalize.Warning{Code: "unknown_sleep_state", Detail: "state " + strconv.Itoa(st.State)})
+			out.Warn("unknown_sleep_state", "state "+strconv.Itoa(st.State))
 			continue
 		}
 		if st.EndDate > st.StartDate && st.StartDate > 0 && st.EndDate <= maxMeasureDate {

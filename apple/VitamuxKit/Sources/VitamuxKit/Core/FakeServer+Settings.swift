@@ -194,21 +194,21 @@ extension SettingsFixture.State {
     private mutating func periods(_ request: F.Request) -> Reply? {
         switch (request.method, request.path.count) {
         case ("GET", 1):
-            return F.json(200, ["timezone_periods": periods.map(\.json)])
+            return Reply.json(200, ["timezone_periods": periods.map(\.json)])
         case ("POST", 1):
             guard let input = periodInput(request) else { return invalidPeriod(request) }
             if periods.contains(where: { $0.from == input.from }) {
-                return F.problem(409, "conflict", "a period already starts at this instant")
+                return Reply.problem(409, "conflict", "a period already starts at this instant")
             }
             var period = F.Period(id: id(), tz: input.tz, from: input.from)
             periods.append(period)
             periods.sort { $0.from < $1.from }
             relink()
             period = periods.first { $0.id == period.id }!
-            return F.json(201, period.json)
+            return Reply.json(201, period.json)
         case ("PATCH", 2):
             guard let index = periods.firstIndex(where: { $0.id == request.path[1] }) else {
-                return F.problem(404, "not_found", "no such timezone period")
+                return Reply.problem(404, "not_found", "no such timezone period")
             }
             guard let input = periodInput(request) else { return invalidPeriod(request) }
             periods[index].tz = input.tz
@@ -216,10 +216,10 @@ extension SettingsFixture.State {
             let id = periods[index].id
             periods.sort { $0.from < $1.from }
             relink()
-            return F.json(200, periods.first { $0.id == id }!.json)
+            return Reply.json(200, periods.first { $0.id == id }!.json)
         case ("DELETE", 2):
             guard let index = periods.firstIndex(where: { $0.id == request.path[1] }) else {
-                return F.problem(404, "not_found", "no such timezone period")
+                return Reply.problem(404, "not_found", "no such timezone period")
             }
             periods.remove(at: index)
             relink()
@@ -239,9 +239,9 @@ extension SettingsFixture.State {
     private func invalidPeriod(_ request: F.Request) -> Reply {
         let tz = request.object?["tz"] as? String
         if tz.flatMap(TimeZone.init(identifier:)) == nil {
-            return F.problem(422, "validation_failed", "invalid timezone period", errors: [("/tz", "unknown IANA timezone")])
+            return Reply.problem(422, "validation_failed", "invalid timezone period", errors: [("/tz", "unknown IANA timezone")])
         }
-        return F.problem(422, "validation_failed", "invalid timezone period", errors: [("/valid_from", "must be an RFC 3339 instant")])
+        return Reply.problem(422, "validation_failed", "invalid timezone period", errors: [("/valid_from", "must be an RFC 3339 instant")])
     }
 
     /// Each period ends where the next starts; the newest is current.
@@ -271,9 +271,9 @@ extension SettingsFixture.State {
     private mutating func settings(_ request: F.Request) -> Reply? {
         switch request.method {
         case "GET":
-            return F.json(200, settingsJSON)
+            return Reply.json(200, settingsJSON)
         case "PATCH":
-            guard let patch = request.object else { return F.problem(422, "validation_failed", "a JSON object is required") }
+            guard let patch = request.object else { return Reply.problem(422, "validation_failed", "a JSON object is required") }
             var errors: [(String, String)] = []
             let whole = { (key: String, min: Int) -> Int? in
                 guard let value = patch[key] else { return nil }
@@ -290,7 +290,7 @@ extension SettingsFixture.State {
             if let raw, raw.values.contains(where: { !(0...36500).contains($0) }) {
                 errors.append(("/retention.raw_days", "days must be from 0 to 36500"))
             }
-            guard errors.isEmpty else { return F.problem(422, "validation_failed", "invalid settings", errors: errors) }
+            guard errors.isEmpty else { return Reply.problem(422, "validation_failed", "invalid settings", errors: errors) }
             for (key, name) in [("gemini", "gemini"), ("openai", "openai"), ("openai_compatible", "openai_compatible")] {
                 if let on = patch["documents.external_ai.\(name).enabled"] as? Bool { ai[key] = on }
             }
@@ -301,7 +301,7 @@ extension SettingsFixture.State {
             if let superseded { supersededDays = superseded }
             if let idempotency { idempotencyDays = idempotency }
             if let order = patch["sources.priority"] as? [String] { priority = order }
-            return F.json(200, settingsJSON)
+            return Reply.json(200, settingsJSON)
         default:
             return nil
         }
@@ -314,14 +314,14 @@ extension SettingsFixture.State {
     private mutating func origins(_ request: F.Request) -> Reply? {
         switch (request.method, request.path.count) {
         case ("GET", 1):
-            return F.json(200, ["origins": origins.map(\.json), "relay_targets": Self.relayTargets])
+            return Reply.json(200, ["origins": origins.map(\.json), "relay_targets": Self.relayTargets])
         case ("PATCH", 2):
             guard let index = origins.firstIndex(where: { $0.id == request.path[1] }) else {
-                return F.problem(404, "not_found", "no such origin")
+                return Reply.problem(404, "not_found", "no such origin")
             }
             let target = request.object?["relayed_provider"] as? String
             if let target, !Self.relayTargets.contains(where: { $0["code"] == target }) {
-                return F.problem(422, "validation_failed", "unknown relay target", errors: [("/relayed_provider", "not one of relay_targets")])
+                return Reply.problem(422, "validation_failed", "unknown relay target", errors: [("/relayed_provider", "not one of relay_targets")])
             }
             origins[index].relays = target
             return Reply(status: 204)
@@ -335,7 +335,7 @@ extension SettingsFixture.State {
     private mutating func apiKeys(_ request: F.Request) -> Reply? {
         switch (request.method, request.path.count) {
         case ("GET", 1):
-            return F.json(200, ["api_keys": keys.map(\.json)])
+            return Reply.json(200, ["api_keys": keys.map(\.json)])
         case ("POST", 1):
             let input = request.object ?? [:]
             let name = (input["name"] as? String) ?? ""
@@ -347,13 +347,13 @@ extension SettingsFixture.State {
                 errors.append(("/expires_at", "must be in the future"))
             }
             if scopes.isEmpty { errors.append(("/scopes", "must be a non-empty list of known scopes")) }
-            guard errors.isEmpty else { return F.problem(422, "validation_failed", "invalid API key", errors: errors) }
+            guard errors.isEmpty else { return Reply.problem(422, "validation_failed", "invalid API key", errors: errors) }
             let key = F.Key(id: id(), name: name, scopes: scopes, created: Date.now.formatted(.iso8601), expires: expires)
             keys.append(key)
-            return F.json(201, key.json.merging(["token": F.apiKeyToken]) { $1 })
+            return Reply.json(201, key.json.merging(["token": F.apiKeyToken]) { $1 })
         case ("DELETE", 2):
             guard let index = keys.firstIndex(where: { $0.id == request.path[1] && $0.revoked == nil }) else {
-                return F.problem(404, "not_found", "no active API key with this id")
+                return Reply.problem(404, "not_found", "no active API key with this id")
             }
             keys[index].revoked = Date.now.formatted(.iso8601)
             return Reply(status: 204)
@@ -370,36 +370,36 @@ extension SettingsFixture.State {
         switch (request.method, path[1], path.count) {
         case ("POST", "password", 2):
             if input["current_password"] as? String != FakeServer.Owner.password {
-                return F.problem(422, "validation_failed", "the current password is wrong", errors: [("/current_password", "does not match")])
+                return Reply.problem(422, "validation_failed", "the current password is wrong", errors: [("/current_password", "does not match")])
             }
             guard ((input["new_password"] as? String) ?? "").count >= 12 else {
-                return F.problem(422, "validation_failed", "invalid password", errors: [("/new_password", "must be at least 12 characters")])
+                return Reply.problem(422, "validation_failed", "invalid password", errors: [("/new_password", "must be at least 12 characters")])
             }
             // Every other session ends; sign-in keeps the synthetic password, so tests can sign in again.
             others.removeAll()
             core.sessions = core.sessions.filter { $0.key == token }
             return Reply(status: 204)
         case ("POST", "totp", 3) where path[2] == "enroll":
-            guard !core.totpEnabled else { return F.problem(409, "conflict", "TOTP is already enabled; disable it first") }
+            guard !core.totpEnabled else { return Reply.problem(409, "conflict", "TOTP is already enabled; disable it first") }
             totpPending = true
-            return F.json(200, [
+            return Reply.json(200, [
                 "secret": F.totpSecret,
                 "otpauth_uri": "otpauth://totp/Vitamux:\(FakeServer.Owner.username)?secret=\(F.totpSecret)&issuer=Vitamux",
             ])
         case ("POST", "totp", 3) where path[2] == "confirm":
-            guard totpPending, !core.totpEnabled else { return F.problem(409, "conflict", "there is no pending TOTP enrolment") }
+            guard totpPending, !core.totpEnabled else { return Reply.problem(409, "conflict", "there is no pending TOTP enrolment") }
             guard input["code"] as? String == FakeServer.Owner.totp else {
-                return F.problem(422, "validation_failed", "the code does not match", errors: [("/code", "does not match")])
+                return Reply.problem(422, "validation_failed", "the code does not match", errors: [("/code", "does not match")])
             }
             totpPending = false
             core.totpEnabled = true
-            return F.json(200, ["recovery_codes": F.recoveryCodes])
+            return Reply.json(200, ["recovery_codes": F.recoveryCodes])
         case ("POST", "totp", 3) where path[2] == "disable":
-            guard core.totpEnabled else { return F.problem(409, "conflict", "TOTP is not enabled") }
+            guard core.totpEnabled else { return Reply.problem(409, "conflict", "TOTP is not enabled") }
             let code = input["totp_code"] as? String, recovery = input["recovery_code"] as? String
             guard input["password"] as? String == FakeServer.Owner.password,
                   code == FakeServer.Owner.totp || recovery == FakeServer.Owner.recovery || recovery.map(F.recoveryCodes.contains) == true
-            else { return F.problem(403, "forbidden", "wrong password or code") }
+            else { return Reply.problem(403, "forbidden", "wrong password or code") }
             core.totpEnabled = false
             return Reply(status: 204)
         case ("GET", "sessions", 2):
@@ -408,13 +408,13 @@ extension SettingsFixture.State {
                 "created_at": "2026-01-01T08:00:00Z", "last_seen_at": "2026-01-02T08:00:00.25Z",
                 "expires_at": "2099-01-01T00:00:00Z", "current": true,
             ]
-            return F.json(200, ["sessions": [current] + others.map(\.json)])
+            return Reply.json(200, ["sessions": [current] + others.map(\.json)])
         case ("DELETE", "sessions", 3):
             if path[2] == "00000000-0000-4000-8000-000000000002" {
                 core.sessions[token] = nil
                 return Reply(status: 204)
             }
-            guard others.contains(where: { $0.id == path[2] }) else { return F.problem(404, "not_found", "no session with this id") }
+            guard others.contains(where: { $0.id == path[2] }) else { return Reply.problem(404, "not_found", "no session with this id") }
             others.removeAll { $0.id == path[2] }
             return Reply(status: 204)
         default:
@@ -427,7 +427,7 @@ extension SettingsFixture.State {
     private mutating func sidecars(_ request: F.Request) -> Reply? {
         switch (request.method, request.path.count) {
         case ("GET", 1):
-            return F.json(200, ["sidecars": sidecars.map(\.json)])
+            return Reply.json(200, ["sidecars": sidecars.map(\.json)])
         case ("POST", 1):
             let input = request.object ?? [:]
             let name = (input["name"] as? String) ?? "", url = (input["url"] as? String) ?? ""
@@ -437,19 +437,19 @@ extension SettingsFixture.State {
             if !(host.hasSuffix("-sidecar") || host.hasPrefix("10.") || host.hasPrefix("192.168.") || host == "localhost") {
                 errors.append(("/url", "must resolve to a loopback, private or link-local address"))
             }
-            guard errors.isEmpty else { return F.problem(422, "validation_failed", "invalid sidecar", errors: errors) }
-            guard !sidecars.contains(where: { $0.name == name }) else { return F.problem(409, "conflict", "a sidecar with this name exists") }
+            guard errors.isEmpty else { return Reply.problem(422, "validation_failed", "invalid sidecar", errors: errors) }
+            guard !sidecars.contains(where: { $0.name == name }) else { return Reply.problem(409, "conflict", "a sidecar with this name exists") }
             let sidecar = F.Sidecar(name: name, url: url, source: "panel", bundled: false, available: false,
                                     created: Date.now.formatted(.iso8601), inUse: false)
             sidecars.append(sidecar)
-            return F.json(201, ["sidecar": sidecar.json, "secret": F.sidecarSecret])
+            return Reply.json(201, ["sidecar": sidecar.json, "secret": F.sidecarSecret])
         case ("DELETE", 2):
             guard let index = sidecars.firstIndex(where: { $0.name == request.path[1] }) else {
-                return F.problem(404, "not_found", "no such sidecar")
+                return Reply.problem(404, "not_found", "no such sidecar")
             }
-            guard sidecars[index].source == "panel" else { return F.problem(409, "conflict", "set by the environment; read-only here") }
+            guard sidecars[index].source == "panel" else { return Reply.problem(409, "conflict", "set by the environment; read-only here") }
             if sidecars[index].inUse, request.value("confirm") != "true" {
-                return F.problem(409, "conflict", "connections of \(sidecars[index].name) exist")
+                return Reply.problem(409, "conflict", "connections of \(sidecars[index].name) exist")
             }
             sidecars.remove(at: index)
             return Reply(status: 204)
@@ -466,15 +466,15 @@ extension SettingsFixture.State {
         case ("POST", 1):
             let input = request.object ?? [:]
             guard let format = input["format"] as? String, ["ndjson", "csv"].contains(format) else {
-                return F.problem(422, "validation_failed", "invalid export", errors: [("/format", "must be ndjson or csv")])
+                return Reply.problem(422, "validation_failed", "invalid export", errors: [("/format", "must be ndjson or csv")])
             }
             let id = "exp_\(next)"
             next += 1
             exportPolls[id] = 0
             exportFormats[id] = (format, input["include_raw"] as? Bool ?? false)
-            return F.json(202, ["id": id, "status": "queued", "format": format, "include_raw": exportFormats[id]!.raw, "created_at": Date.now.formatted(.iso8601)])
+            return Reply.json(202, ["id": id, "status": "queued", "format": format, "include_raw": exportFormats[id]!.raw, "created_at": Date.now.formatted(.iso8601)])
         case ("GET", 2):
-            guard let polls = exportPolls[path[1]], let spec = exportFormats[path[1]] else { return F.problem(404, "not_found", "no such export") }
+            guard let polls = exportPolls[path[1]], let spec = exportFormats[path[1]] else { return Reply.problem(404, "not_found", "no such export") }
             exportPolls[path[1]] = polls + 1
             var export: [String: Any] = [
                 "id": path[1], "status": polls < 1 ? "running" : "done", "format": spec.format, "include_raw": spec.raw,
@@ -485,10 +485,10 @@ extension SettingsFixture.State {
                 export["size_bytes"] = F.exportFile.count
                 export["download_url"] = "/api/v1/exports/\(path[1])/download?token=\(F.exportToken)"
             }
-            return F.json(200, export)
+            return Reply.json(200, export)
         case ("GET", 3) where path[2] == "download":
             guard exportPolls[path[1]] != nil, request.value("token") == F.exportToken else {
-                return F.problem(404, "not_found", "the download link has expired")
+                return Reply.problem(404, "not_found", "the download link has expired")
             }
             return Reply(status: 200, headers: ["Content-Type": "application/zip"], body: F.exportFile)
         default:
@@ -500,23 +500,5 @@ extension SettingsFixture.State {
 // MARK: - Responses
 
 extension SettingsFixture {
-    static func json(_ status: Int, _ object: [String: Any]) -> Reply {
-        Reply(status: status, body: try! JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]))
-    }
-
-    static func problem(_ status: Int, _ code: String, _ detail: String, errors: [(String, String)] = []) -> Reply {
-        let titles = [
-            "validation_failed": "Validation failed", "not_found": "Not found", "conflict": "Conflict",
-            "forbidden": "Forbidden", "rate_limited": "Rate limited",
-        ]
-        var object: [String: Any] = [
-            "type": "urn:vitamux:problem:\(code)", "title": titles[code] ?? code, "status": status,
-            "code": code, "detail": detail, "request_id": "req-fake",
-        ]
-        if !errors.isEmpty { object["errors"] = errors.map { ["pointer": $0.0, "detail": $0.1] } }
-        var reply = json(status, object)
-        reply.headers = ["Content-Type": "application/problem+json"]
-        return reply
-    }
 }
 #endif

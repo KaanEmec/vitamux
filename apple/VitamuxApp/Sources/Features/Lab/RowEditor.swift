@@ -227,12 +227,12 @@ struct RowEditor: View {
                     .accessibilityIdentifier("field-\(key)")
             }
             if let hint { Text(hint).font(.caption).foregroundStyle(.secondary) }
-            LabFieldError(text: message(key))
+            FieldMessage(text: message(key))
         }
     }
 
     private func error(_ key: String) -> some View {
-        LabFieldError(text: message(key))
+        FieldMessage(text: message(key))
     }
 
     private func message(_ key: String) -> String? {

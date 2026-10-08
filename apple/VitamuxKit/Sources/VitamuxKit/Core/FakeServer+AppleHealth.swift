@@ -55,7 +55,7 @@ extension FakeServer {
                 return state.withDevice(token) { device in
                     // The source filter (J22.25): FakeServer+SourceFilter.swift.
                     let filter = SourceFilterFixture.ingestBody(host, deviceID: device.id)
-                    return AppleHealthFixture.json(200, device.selfBody.merging(["source_filter": filter]) { $1 })
+                    return Reply.json(200, device.selfBody.merging(["source_filter": filter]) { $1 })
                 }
             case ("PUT", "/api/ingest/v1/devices/self/sources"):
                 return state.withDevice(token) { SourceFilterFixture.report(host, deviceID: $0.id, body: body) }
@@ -78,24 +78,24 @@ extension FakeServer {
             switch (method, parts.count) {
             case ("GET", 3):
                 let devices = state.devices.values.sorted { $0.createdAt > $1.createdAt }
-                return AppleHealthFixture.json(200, ["devices": devices.map(\.listBody)])
+                return Reply.json(200, ["devices": devices.map(\.listBody)])
             case ("POST", 4) where parts[3] == "pairing-codes":
                 return state.createCode()
             case ("POST", 5) where parts[4] == "request-anchor-reset":
-                guard state.devices[parts[3]] != nil else { return AppleHealthFixture.problem(404, "not_found", "device not found") }
+                guard state.devices[parts[3]] != nil else { return Reply.problem(404, "not_found", "device not found") }
                 let input = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any]
                 state.devices[parts[3]]?.request(input?["types"] as? [String] ?? [], at: Date())
                 return Reply(status: 204)
             case ("GET", 5) where parts[4] == "source-filter":
-                guard state.devices[parts[3]] != nil else { return AppleHealthFixture.problem(404, "not_found", "device not found") }
+                guard state.devices[parts[3]] != nil else { return Reply.problem(404, "not_found", "device not found") }
                 return SourceFilterFixture.view(host, deviceID: parts[3])
             case ("PUT", 5) where parts[4] == "source-filter":
-                guard state.devices[parts[3]] != nil else { return AppleHealthFixture.problem(404, "not_found", "device not found") }
+                guard state.devices[parts[3]] != nil else { return Reply.problem(404, "not_found", "device not found") }
                 let (reply, pulled) = SourceFilterFixture.replace(host, deviceID: parts[3], body: body)
                 if !pulled.isEmpty { state.devices[parts[3]]?.request(pulled.contains("*") ? [] : pulled, at: Date()) }
                 return reply
             case ("POST", 5) where parts[4] == "revoke":
-                guard let device = state.devices[parts[3]] else { return AppleHealthFixture.problem(404, "not_found", "device not found") }
+                guard let device = state.devices[parts[3]] else { return Reply.problem(404, "not_found", "device not found") }
                 state.devices[parts[3]]?.revokedAt = device.revokedAt ?? Date()
                 return Reply(status: 204)
             default:
@@ -171,7 +171,7 @@ struct AppleHealthFixture {
         /// The device a live token belongs to; 401 for a missing, unknown or revoked one.
         mutating func withDevice(_ token: String?, _ answer: (inout Device) -> Reply) -> Reply {
             guard let token, let id = devices.first(where: { $0.value.token == token })?.key, devices[id]?.revokedAt == nil else {
-                return AppleHealthFixture.problem(401, "unauthenticated", "invalid, revoked or expired token")
+                return Reply.problem(401, "unauthenticated", "invalid, revoked or expired token")
             }
             devices[id]?.lastSeenAt = Date()
             return answer(&devices[id]!)
@@ -183,24 +183,24 @@ struct AppleHealthFixture {
             let symbols = "SYN" + (0..<5).map { _ in String(AppleHealthFixture.alphabet.randomElement()!) }.joined()
             let code = symbols.prefix(4) + "-" + symbols.suffix(4)
             codes.insert(String(symbols))
-            return AppleHealthFixture.json(201, ["code": code, "expires_at": AppleHealthFixture.iso(Date().addingTimeInterval(600))])
+            return Reply.json(201, ["code": code, "expires_at": AppleHealthFixture.iso(Date().addingTimeInterval(600))])
         }
 
         /// `POST /api/ingest/v1/devices/pair`: an issued code works once, the manual code always.
         mutating func pair(_ body: Data) -> Reply {
             guard let input = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any],
                   let code = input["code"] as? String, let name = input["name"] as? String, !name.isEmpty
-            else { return AppleHealthFixture.problem(422, "validation_failed", "code and name are required") }
+            else { return Reply.problem(422, "validation_failed", "code and name are required") }
             let normalized = code.uppercased().filter { $0 != "-" && $0 != " " }
             let manual = FakeServer.AppleHealth.manualCode.filter { $0 != "-" }
             guard normalized == manual || codes.remove(normalized) != nil else {
-                return AppleHealthFixture.problem(422, "validation_failed", "invalid or expired pairing code")
+                return Reply.problem(422, "validation_failed", "invalid or expired pairing code")
             }
             let id = String(format: "00000000-0000-4000-8000-%012x", nextDevice)
             nextDevice += 1
             let token = "vmx_cli_" + String(format: "%032x", nextDevice) + "_" + String(repeating: "s", count: 43)
             devices[id] = Device(id: id, name: name, token: token, createdAt: Date())
-            return AppleHealthFixture.json(201, ["device_id": id, "connection_id": FakeServer.AppleHealth.connectionID, "token": token])
+            return Reply.json(201, ["device_id": id, "connection_id": FakeServer.AppleHealth.connectionID, "token": token])
         }
     }
 
@@ -221,9 +221,5 @@ struct AppleHealthFixture {
     }
 
     static func iso(_ date: Date) -> String { ExploreFixture.iso(date) }
-    static func json(_ status: Int, _ object: [String: Any]) -> Reply { ExploreFixture.json(status, object) }
-    static func problem(_ status: Int, _ code: String, _ detail: String) -> Reply {
-        ExploreFixture.problem(status, code, detail)
-    }
 }
 #endif

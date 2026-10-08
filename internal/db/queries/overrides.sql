@@ -21,12 +21,6 @@ WHERE user_id = @user_id AND metric = @metric AND revoked_at IS NULL
   AND local_date BETWEEN @from_date::date AND @to_date::date
 ORDER BY created_at, id;
 
--- name: ListOverrideHistory :many
-SELECT * FROM manual_overrides
-WHERE user_id = @user_id AND metric = @metric
-ORDER BY created_at DESC, id DESC
-LIMIT @max_rows::integer;
-
 -- name: MarkOverrideDirty :exec
 INSERT INTO resolution_dirty (user_id, metric_id, local_date)
 SELECT @user_id::uuid, id, @local_date::date FROM metric_catalog WHERE code = ANY(@codes::text[])

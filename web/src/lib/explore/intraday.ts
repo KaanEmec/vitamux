@@ -4,14 +4,14 @@
 import { api, type Problem, type Schemas } from '../api/client.ts';
 import { readAll } from '../data/paging.ts';
 
-export type Bucket = '30s' | '1m' | '5m' | '15m' | '30m';
+type Bucket = '30s' | '1m' | '5m' | '15m' | '30m';
 export type Step = Bucket | 'raw';
 type Source = Schemas['SourceSeriesSource'];
 
 const MIN = 60_000;
 const HOUR = 60 * MIN;
 const buckets: Bucket[] = ['30s', '1m', '5m', '15m', '30m'];
-export const stepSeconds: Record<Step, number> = { '30s': 30, '1m': 60, '5m': 300, '15m': 900, '30m': 1800, raw: 0 };
+const stepSeconds: Record<Step, number> = { '30s': 30, '1m': 60, '5m': 300, '15m': 900, '30m': 1800, raw: 0 };
 
 /** Per catalogue default: each step with the widest span it is used for. */
 const ladders: Record<Schemas['Intraday']['default'], [Step, number][]> = {
@@ -33,7 +33,7 @@ export function stepFor(steps: [Step, number][], span: number): Step {
 }
 
 /** The step a source is drawn at: the requested one, or the finest bucket not finer than its spacing (rows as sent beyond 30 min). */
-export function sourceStep(requested: Step, spacing?: number): Step {
+function sourceStep(requested: Step, spacing?: number): Step {
 	if (requested === 'raw' || spacing == null) return requested;
 	const fit = buckets.find((b) => stepSeconds[b] >= spacing * 0.9);
 	if (!fit) return 'raw';
@@ -41,7 +41,7 @@ export function sourceStep(requested: Step, spacing?: number): Step {
 }
 
 /** The resolved bucket for a step: raw resolves at the finest bucket; never finer than the densest used source. */
-export function resolvedBucket(steps: [Step, number][], step: Step, spacings: number[]): Bucket {
+function resolvedBucket(steps: [Step, number][], step: Step, spacings: number[]): Bucket {
 	const finest = [...steps].reverse().find(([s]) => s !== 'raw')?.[0] as Bucket;
 	const b = step === 'raw' ? finest : step;
 	if (!spacings.length) return b;
@@ -55,7 +55,7 @@ export function stepWord(s: Step): string {
 	return s === '30s' ? '30-second buckets' : `${s.slice(0, -1)}-minute buckets`;
 }
 
-export interface DaySource {
+interface DaySource {
 	source: Source;
 	step: Step;
 	points: Schemas['SourcePoint'][];

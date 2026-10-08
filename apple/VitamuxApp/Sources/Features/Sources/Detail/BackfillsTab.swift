@@ -237,7 +237,7 @@ private struct BackfillSheet: View {
                     ForEach(streams, id: \.self) { Text($0).tag($0) }
                 }
                 .accessibilityIdentifier("backfillStream")
-                if let error = problem?.detail(for: "/stream") { Text(error).font(.footnote).foregroundStyle(Color.feedbackError) }
+                FieldMessage(text: problem?.detail(for: "/stream"))
                 Section {
                     DatePicker("From", selection: $start, in: ...Date.now, displayedComponents: .date)
                         .accessibilityIdentifier("backfillFrom")

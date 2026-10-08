@@ -1,8 +1,10 @@
 package resolve
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"time"
 
@@ -492,7 +494,7 @@ func (gv *GroupValue) aggReadings(sp spec, s Series, w Window, stat Statistic) {
 		if c := a.at.Compare(b.at); c != 0 {
 			return c
 		}
-		return compareInt(a.id, b.id)
+		return cmp.Compare(a.id, b.id)
 	})
 	comps := map[string]float64{}
 	if w.Kind == catalog.WindowLocalDay && stat == StatMean {
@@ -533,23 +535,8 @@ func newerInput(a, b Input) bool {
 	return a.At().After(b.At()) || (a.At().Equal(b.At()) && a.ID > b.ID)
 }
 
-func compareInt(a, b int64) int {
-	switch {
-	case a < b:
-		return -1
-	case a > b:
-		return 1
-	}
-	return 0
-}
-
 func sortedKeys[V any](m map[int64]V) []int64 {
-	keys := make([]int64, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	slices.Sort(keys)
-	return keys
+	return slices.Sorted(maps.Keys(m))
 }
 
 func timeMax(a, b time.Time) time.Time {

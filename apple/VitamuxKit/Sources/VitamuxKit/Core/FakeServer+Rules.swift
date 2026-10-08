@@ -21,7 +21,7 @@ extension FakeServer {
             defer { states[host] = state }
             switch (method, url.path) {
             case ("GET", "/api/v1/rules"):
-                return RulesFixture.json(200, ["rules": state.activeSet.map(\.json)])
+                return Reply.json(200, ["rules": state.activeSet.map(\.json)])
             case ("POST", "/api/v1/resolution/preview"):
                 return state.preview(body)
             case ("GET", _) where parts.count == 5 && parts[2] == "rules" && parts[4] == "versions":
@@ -123,20 +123,20 @@ struct RulesFixture {
         }
 
         func versions(_ metric: String) -> Reply {
-            if let own = owned[metric], !own.isEmpty { return RulesFixture.json(200, ["versions": own.reversed().map(\.json)]) }
+            if let own = owned[metric], !own.isEmpty { return Reply.json(200, ["versions": own.reversed().map(\.json)]) }
             if let v = (RulesFixture.builtins + RulesFixture.defaults).first(where: { $0.metric == metric }) {
-                return RulesFixture.json(200, ["versions": [v.json]])
+                return Reply.json(200, ["versions": [v.json]])
             }
-            guard RulesFixture.known(metric) else { return RulesFixture.problem(404, "not_found", "no such metric") }
-            return RulesFixture.json(200, ["versions": [Any]()])
+            guard RulesFixture.known(metric) else { return Reply.problem(404, "not_found", "no such metric") }
+            return Reply.json(200, ["versions": [Any]()])
         }
 
         mutating func create(_ metric: String, _ body: Data) -> Reply {
             guard let input = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any], let spec = input["spec"] as? [String: Any] else {
-                return RulesFixture.problem(422, "validation_failed", "request body is not valid JSON")
+                return Reply.problem(422, "validation_failed", "request body is not valid JSON")
             }
             if spec["metric"] as? String != metric {
-                return RulesFixture.problem(422, "validation_failed", "invalid rule", errors: [("/spec/metric", "must be the metric in the path")])
+                return Reply.problem(422, "validation_failed", "invalid rule", errors: [("/spec/metric", "must be the metric in the path")])
             }
             if let problem = RulesFixture.validate(spec) { return problem }
             var own = owned[metric] ?? []
@@ -153,17 +153,17 @@ struct RulesFixture {
             }
             own.append(v)
             owned[metric] = own
-            return RulesFixture.json(201, v.json)
+            return Reply.json(201, v.json)
         }
 
         mutating func activate(_ metric: String, _ body: Data) -> Reply {
             let version = ((try? JSONSerialization.jsonObject(with: body)) as? [String: Any])?["version"] as? Int
             guard var own = owned[metric], let i = own.firstIndex(where: { $0.version == version }) else {
-                return RulesFixture.problem(404, "not_found", "no such rule version")
+                return Reply.problem(404, "not_found", "no such rule version")
             }
             for k in own.indices { own[k].active = k == i }
             owned[metric] = own
-            return RulesFixture.json(200, own[i].json)
+            return Reply.json(200, own[i].json)
         }
 
         private mutating func owner(_ metric: String, _ n: Int, _ spec: [String: Any], basedOn: String?, note: String?) -> Version {
@@ -179,7 +179,7 @@ struct RulesFixture {
                   let draft = input["spec"] as? [String: Any], let metric = draft["metric"] as? String,
                   let start = (input["start_date"] as? String).flatMap(LocalDate.init),
                   let end = (input["end_date"] as? String).flatMap(LocalDate.init), start <= end
-            else { return RulesFixture.problem(422, "validation_failed", "spec, start_date and end_date are required") }
+            else { return Reply.problem(422, "validation_failed", "spec, start_date and end_date are required") }
             if let problem = RulesFixture.validate(draft) { return problem }
             let active = activeSet.first { $0.metric == metric }
             let same = active.map { NSDictionary(dictionary: $0.spec).isEqual(to: draft) } ?? false
@@ -206,7 +206,7 @@ struct RulesFixture {
                 d = d.adding(days: 1)
                 i += 1
             }
-            return RulesFixture.json(200, [
+            return Reply.json(200, [
                 "metric": metric, "timezone": ExploreFixture.timezone, "window": "local_day",
                 "draft_rule": ["ref": "draft:\(metric)", "version": 0, "strategy": (draft["strategy"] as? [String: Any])?["op"] ?? ""],
                 "active_rule": active.map { ["ref": $0.ref, "version": $0.version] as [String: Any] } ?? NSNull(),
@@ -222,7 +222,7 @@ struct RulesFixture {
         let within = spec["within_source"] as? [String: Any]
         let sums = strategy?["op"] as? String == "sum_across_sources" || within?["intra_group"] as? String == "sum"
         if sums, !((spec["acknowledged_warnings"] as? [String]) ?? []).contains("cross_source_sum_duplicate_risk") {
-            return problem(409, "rule_warning_unacknowledged",
+            return Reply.problem(409, "rule_warning_unacknowledged",
                            "the rule sums across sources: acknowledge cross_source_sum_duplicate_risk in acknowledged_warnings",
                            errors: [("/spec/acknowledged_warnings", "sum_across_sources must be acknowledged")])
         }
@@ -232,9 +232,9 @@ struct RulesFixture {
             return id.wholeMatch(of: /[a-z][a-z0-9_]{0,31}/) == nil
                 ? ("/spec/groups/\(i)/id", "must start with a lowercase letter and use only a-z, 0-9 and _") : nil
         }
-        if !bad.isEmpty { return problem(422, "validation_failed", "invalid rule", errors: bad) }
+        if !bad.isEmpty { return Reply.problem(422, "validation_failed", "invalid rule", errors: bad) }
         if let coverage = (spec["quality"] as? [String: Any])?["min_coverage"] as? Double, coverage > 0.9 {
-            return problem(422, "validation_failed", "invalid rule", errors: [("/spec/quality/min_coverage", "must be at most 0.9")])
+            return Reply.problem(422, "validation_failed", "invalid rule", errors: [("/spec/quality/min_coverage", "must be at most 0.9")])
         }
         return nil
     }
@@ -247,12 +247,5 @@ struct RulesFixture {
         ["apple_watch": "Apple Watch", "garmin": "Garmin", "whoop": "WHOOP", "withings": "Withings"][group] ?? group
     }
 
-    static func json(_ status: Int, _ object: [String: Any]) -> Reply {
-        ExploreFixture.json(status, object)
-    }
-
-    static func problem(_ status: Int, _ code: String, _ detail: String, errors: [(String, String)] = []) -> Reply {
-        ExploreFixture.problem(status, code, detail, errors: errors)
-    }
 }
 #endif

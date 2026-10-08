@@ -150,7 +150,7 @@ func buildEpisodes(night time.Time, in []SleepInput, minOverlap float64) []Episo
 			eps = append(eps, Episode{Night: night, Start: s.Start, End: s.End})
 		}
 		e := &eps[n]
-		e.End = later(e.End, s.End)
+		e.End = timeMax(e.End, s.End)
 		e.Sessions = append(e.Sessions, s)
 	}
 	main := -1
@@ -184,7 +184,7 @@ func mergeFragments(in []SleepInput) []EpisodeSession {
 		for _, f := range frags {
 			if cur != nil && f.Start.Sub(cur.End) <= FragmentGap {
 				cur.IDs = append(cur.IDs, f.ID)
-				cur.End = later(cur.End, f.End)
+				cur.End = timeMax(cur.End, f.End)
 				cur.IsNap = cur.IsNap && f.IsNap
 				cur.HasStages = cur.HasStages && f.HasStages
 				continue
@@ -199,26 +199,12 @@ func mergeFragments(in []SleepInput) []EpisodeSession {
 
 // overlapRatio is the overlap of two spans divided by the shorter duration.
 func overlapRatio(aStart, aEnd, bStart, bEnd time.Time) float64 {
-	ov := earlier(aEnd, bEnd).Sub(later(aStart, bStart))
+	ov := timeMin(aEnd, bEnd).Sub(timeMax(aStart, bStart))
 	shorter := min(aEnd.Sub(aStart), bEnd.Sub(bStart))
 	if ov <= 0 || shorter <= 0 {
 		return 0
 	}
 	return float64(ov) / float64(shorter)
-}
-
-func later(a, b time.Time) time.Time {
-	if b.After(a) {
-		return b
-	}
-	return a
-}
-
-func earlier(a, b time.Time) time.Time {
-	if b.Before(a) {
-		return b
-	}
-	return a
 }
 
 // SleepPartialEpisode is the below_quality reason when the group covered less than min_episode_coverage of the episode.
@@ -337,7 +323,7 @@ func coverage(frags []SleepInput, start, end time.Time) float64 {
 	var covered time.Duration
 	cur := start
 	for _, f := range frags {
-		s, e := later(f.Start, cur), earlier(f.End, end)
+		s, e := timeMax(f.Start, cur), timeMin(f.End, end)
 		if e.After(s) {
 			covered += e.Sub(s)
 			cur = e
@@ -459,7 +445,7 @@ func fragValue(f SleepInput, code string) (float64, GroupStatus) {
 			var d time.Duration
 			for _, s := range f.Stages {
 				if s.Stage == "awake" {
-					d += max(earlier(s.End, last).Sub(later(s.Start, first)), 0)
+					d += max(timeMin(s.End, last).Sub(timeMax(s.Start, first)), 0)
 				}
 			}
 			return d.Seconds(), StatusValid
@@ -511,7 +497,7 @@ func (a SleepAlignment) ResolveEpisode(w Window, e Episode, codes []string, opt 
 			if gv.First.IsZero() || f.Start.Before(gv.First) {
 				gv.First = f.Start
 			}
-			gv.At = later(gv.At, f.End)
+			gv.At = timeMax(gv.At, f.End)
 		}
 		if gv.Count > 0 {
 			gv.Basis = BasisSessions
@@ -656,7 +642,7 @@ func (a SleepAlignment) sessionEntries(in []SleepInput, e Episode, st GroupStatu
 		if g.First.IsZero() || s.Start.Before(g.First) {
 			g.First = s.Start
 		}
-		g.At = later(g.At, s.End)
+		g.At = timeMax(g.At, s.End)
 	}
 	return out
 }

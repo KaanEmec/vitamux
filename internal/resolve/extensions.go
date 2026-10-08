@@ -55,7 +55,7 @@ func (r *Rule) ContextAt(w Window, ev ContextEvents) (Context, int) {
 	}
 	span := w.End.Sub(w.Start)
 	covers := func(start, end time.Time) bool {
-		return span > 0 && 2*earlier(end, w.End).Sub(later(start, w.Start)) >= span
+		return span > 0 && 2*timeMin(end, w.End).Sub(timeMax(start, w.Start)) >= span
 	}
 	for _, c := range ev.Workouts {
 		if covers(c.Start, c.End) {
@@ -341,18 +341,6 @@ func (r *Rule) coverageGated(sp spec, gv *GroupValue) bool {
 }
 
 // ---- E5 follow
-
-// LeaderSelections maps each window key to the group the leader selected there, for
-// Options.Leader. Windows without one selected group (no data, pooled) are left out.
-func LeaderSelections(results []WindowResult) map[string]string {
-	out := make(map[string]string, len(results))
-	for _, res := range results {
-		if res.Selected != "" {
-			out[res.Window.Key] = res.Selected
-		}
-	}
-	return out
-}
 
 // followPos returns the position of the valid group with the leader's id, or -1.
 func followPos(leader string, groups []GroupValue) int {

@@ -177,14 +177,3 @@ struct LabNotice: View {
             .accessibilityIdentifier("labNotice")
     }
 }
-
-/// A field's message from the server, matched by JSON pointer, under its input.
-struct LabFieldError: View {
-    let text: String?
-
-    var body: some View {
-        if let text {
-            Text(text).font(.footnote).foregroundStyle(Color.feedbackError)
-        }
-    }
-}

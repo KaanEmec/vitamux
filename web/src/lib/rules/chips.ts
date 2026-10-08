@@ -41,7 +41,7 @@ export function seenValues(origins: Schemas['DataOrigin'][], devices: Schemas['S
 const isApple = (manufacturer: string) => /^apple\b/i.test(manufacturer);
 
 /** A device's name as people say it: "Apple Watch", "iPhone", "Garmin Forerunner 965" (no doubled brand). */
-export function deviceLabel(manufacturer: string, model: string): string {
+function deviceLabel(manufacturer: string, model: string): string {
 	const brand = brandName(manufacturer);
 	if (model.toLowerCase().startsWith(brand.toLowerCase())) return model;
 	if (isApple(manufacturer) && /^iphone|^ipad|^ipod/i.test(model)) return model;

@@ -61,8 +61,8 @@ var includes = map[string]bool{"provenance": true, "stages": true, "segments": t
 func (o *owner) filter(ctx context.Context, p filterParams) (sourceFilter, error) {
 	f := sourceFilter{user: auth.PrincipalFrom(ctx).UserID, start: p.start, end: p.end,
 		providers: ptrVal(p.providers), origins: ptrVal(p.origins), include: map[string]bool{}}
-	if o.opts.DB == nil {
-		return f, problemErr(CodeUnavailable, "the database is not ready")
+	if _, err := o.ownerDB(); err != nil {
+		return f, err
 	}
 	if p.startDate != nil {
 		f.startDate = &p.startDate.Time
@@ -585,8 +585,8 @@ var provenanceEntities = map[oapi.GetProvenanceParamsEntity]provenance.Entity{
 
 // GetProvenance traces one row. A row of another user answers 404, like a missing one.
 func (o *owner) GetProvenance(ctx context.Context, req oapi.GetProvenanceRequestObject) (oapi.GetProvenanceResponseObject, error) {
-	if o.opts.DB == nil {
-		return nil, problemErr(CodeUnavailable, "the database is not ready")
+	if _, err := o.ownerDB(); err != nil {
+		return nil, err
 	}
 	entity, ok := provenanceEntities[req.Entity]
 	if !ok {
@@ -617,7 +617,7 @@ func (o *owner) GetProvenance(ctx context.Context, req oapi.GetProvenanceRequest
 }
 
 func provVersion(v provenance.Version) oapi.ProvenanceVersion {
-	out := oapi.ProvenanceVersion{ID: v.ID, SupersededBy: nonEmpty(v.SupersededBy), Record: v.Row, Provider: v.Provider,
+	out := oapi.ProvenanceVersion{ID: v.ID, SupersededBy: optString(v.SupersededBy), Record: v.Row, Provider: v.Provider,
 		ConnectionID: ingest.FormatConnectionID(v.ConnectionID), ConnectionMode: v.ConnectionMode,
 		Normalizer: oapi.ProvenanceNormalizer{Name: v.Normalizer.Name, Version: int(v.Normalizer.Version), GitSha: v.Normalizer.GitSHA},
 		FetchedAt:  v.FetchedAt, IngestedAt: v.IngestedAt, NormalizedAt: v.NormalizedAt, CorrectedAt: v.CorrectedAt,
@@ -626,7 +626,7 @@ func provVersion(v provenance.Version) oapi.ProvenanceVersion {
 		out.Client = &oapi.ProvenanceClient{ID: c.ID, Kind: c.Kind, Name: c.Name}
 	}
 	if b := v.Batch; b != nil {
-		out.Batch = &oapi.ProvenanceBatch{ID: b.ID, SourceKind: b.SourceKind, MigrationSource: nonEmpty(b.MigrationSource), ReceivedAt: b.ReceivedAt}
+		out.Batch = &oapi.ProvenanceBatch{ID: b.ID, SourceKind: b.SourceKind, MigrationSource: optString(b.MigrationSource), ReceivedAt: b.ReceivedAt}
 	}
 	if r := v.Raw; r != nil {
 		meta := r.RequestMeta
@@ -672,7 +672,7 @@ func (s srcCols) source() oapi.SourceRef {
 
 func (s srcCols) provenance(raws rawRefs) oapi.RecordProvenance {
 	out := oapi.RecordProvenance{RawPayloadID: idp(s.raw), Normalizer: s.normalizer + "@" + strconv.Itoa(int(s.normalizerVersion)),
-		IngestedAt: s.ingestedAt, NormalizedAt: s.normalizedAt, SupersededAt: s.supersededAt, SupersededBy: nonEmpty(s.supersededBy),
+		IngestedAt: s.ingestedAt, NormalizedAt: s.normalizedAt, SupersededAt: s.supersededAt, SupersededBy: optString(s.supersededBy),
 		DeletedAt: s.deletedAt, DeletedByRawID: idp(s.deletedBy)}
 	if s.raw != nil {
 		out.Raw = raws[*s.raw]
@@ -736,13 +736,6 @@ func idp(p *int64) *string {
 		return nil
 	}
 	s := strconv.FormatInt(*p, 10)
-	return &s
-}
-
-func nonEmpty(s string) *string {
-	if s == "" {
-		return nil
-	}
 	return &s
 }
 

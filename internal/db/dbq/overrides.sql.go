@@ -165,56 +165,6 @@ func (q *Queries) ListActiveOverrides(ctx context.Context, arg ListActiveOverrid
 	return items, nil
 }
 
-const listOverrideHistory = `-- name: ListOverrideHistory :many
-SELECT id, user_id, metric, window_kind, window_key, local_date, action, input_id, source_group, value, unit, note, created_by, created_at, revoked_at, revoked_by FROM manual_overrides
-WHERE user_id = $1 AND metric = $2
-ORDER BY created_at DESC, id DESC
-LIMIT $3::integer
-`
-
-type ListOverrideHistoryParams struct {
-	UserID  uuid.UUID
-	Metric  string
-	MaxRows int32
-}
-
-func (q *Queries) ListOverrideHistory(ctx context.Context, arg ListOverrideHistoryParams) ([]ManualOverride, error) {
-	rows, err := q.db.Query(ctx, listOverrideHistory, arg.UserID, arg.Metric, arg.MaxRows)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ManualOverride
-	for rows.Next() {
-		var i ManualOverride
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.Metric,
-			&i.WindowKind,
-			&i.WindowKey,
-			&i.LocalDate,
-			&i.Action,
-			&i.InputID,
-			&i.SourceGroup,
-			&i.Value,
-			&i.Unit,
-			&i.Note,
-			&i.CreatedBy,
-			&i.CreatedAt,
-			&i.RevokedAt,
-			&i.RevokedBy,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const markOverrideDirty = `-- name: MarkOverrideDirty :exec
 INSERT INTO resolution_dirty (user_id, metric_id, local_date)
 SELECT $1::uuid, id, $2::date FROM metric_catalog WHERE code = ANY($3::text[])

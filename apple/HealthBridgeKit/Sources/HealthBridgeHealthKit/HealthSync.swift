@@ -168,15 +168,6 @@ public actor HealthSync {
         return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
     }
 
-    /// Syncs each type in turn and returns the failures by type id.
-    public func syncAll(_ types: [HealthType]) async -> [String: any Error] {
-        var failures: [String: any Error] = [:]
-        for type in types {
-            do { try await sync(type) } catch { failures[type.id] = error }
-        }
-        return failures
-    }
-
     /// Registers observer queries with background delivery for every sample type (an activity summary
     /// has neither). Each callback syncs its type and always completes, even on failure, so iOS keeps
     /// delivering. A type whose background delivery iOS refuses keeps its observer and does not stop the

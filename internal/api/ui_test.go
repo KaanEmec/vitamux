@@ -1,10 +1,13 @@
 package api
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -17,6 +20,16 @@ const sampleIndex = `<!doctype html><html><head>
 </head><body><div id="app"><script>
 	boot();
 </script></div></body></html>`
+
+// inlineScriptHashes returns CSP source expressions for every inline script in a page.
+func inlineScriptHashes(page []byte) []string {
+	var out []string
+	for _, m := range regexp.MustCompile(`(?is)<script>(.*?)</script>`).FindAllSubmatch(page, -1) {
+		sum := sha256.Sum256(m[1])
+		out = append(out, "'sha256-"+base64.StdEncoding.EncodeToString(sum[:])+"'")
+	}
+	return out
+}
 
 func newTestHandler(t *testing.T) http.Handler {
 	t.Helper()

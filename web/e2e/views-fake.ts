@@ -10,8 +10,8 @@ import { test as base, expect } from './fake-api';
 
 type Json = Record<string, unknown>;
 
-export const lastNight = '2026-09-14';
-export const napNight = '2026-09-13';
+const lastNight = '2026-09-14';
+const napNight = '2026-09-13';
 const offset = 120;
 const nightCount = 30;
 
@@ -88,7 +88,7 @@ const member = (id: string, provider: string, over: Json) => {
 };
 
 /** The night with no episode in any source: a gap in every chart. */
-export const gapNight = dates[9];
+const gapNight = dates[9];
 
 function resolvedNight(date: string): Json {
 	if (date === gapNight) {
@@ -190,7 +190,7 @@ const result = (id: string, date: string, over: Json) => ({
 	provenance: { report_id: `rep_${id}`, document_id: `doc_${id}`, extraction_id: null, row_index: 0, laboratory: 'Synthetic Lab', reported_at: date, provider: 'fake', model: null, schema_version: '1', prompt_version: '1', confirmed_by: 'owner', confirmed_at: '2026-09-01T00:00:00Z' },
 	...over
 });
-export const labResults = [
+const labResults = [
 	result('lab_a1', '2025-03-10', { value_text: '4.9', value_numeric: 4.9 }),
 	result('lab_a2', '2025-09-12', { value_text: '5.3', value_numeric: 5.3 }),
 	result('lab_a3', '2026-03-05', { value_text: '< 0.5', value_numeric: 0.5, comparator: '<', printed_flag: 'L' }),
