@@ -174,7 +174,7 @@ struct DevicesView: View {
             if let notice = model.notice { NoticeRow(text: notice) }
             if let problem = model.problem { ProblemRow(problem: problem) }
             switch model.devices {
-            case .loading: ProgressView()
+            case .loading: ProgressView().accessibilityLabel("Loading")
             case .failed(let problem): ProblemRow(problem: problem)
             case .loaded(let devices) where devices.isEmpty:
                 Text("No devices paired yet.").foregroundStyle(.secondary)
@@ -409,7 +409,7 @@ private struct OriginsSection: View {
             if let notice = model.originNotice { NoticeRow(text: notice) }
             if let problem = model.originProblem { ProblemRow(problem: problem) }
             switch model.origins {
-            case .loading: ProgressView()
+            case .loading: ProgressView().accessibilityLabel("Loading")
             case .failed(let problem): ProblemRow(problem: problem)
             case .loaded(let origins) where origins.isEmpty:
                 Text("No origins yet. They appear once a device has synced.").foregroundStyle(.secondary)

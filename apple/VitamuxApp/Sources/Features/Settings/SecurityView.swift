@@ -162,7 +162,7 @@ struct SecurityView: View {
         Section("Two-factor authentication") {
             switch model.totpEnabled {
             case nil:
-                ProgressView()
+                ProgressView().accessibilityLabel("Loading")
             case true?:
                 Label("Two-factor authentication is on.", systemImage: "checkmark.shield")
                     .accessibilityIdentifier("totpState")
@@ -183,7 +183,7 @@ struct SecurityView: View {
     @ViewBuilder private var sessionsSection: some View {
         Section {
             switch model.sessions {
-            case .loading: ProgressView()
+            case .loading: ProgressView().accessibilityLabel("Loading")
             case .failed(let problem): ProblemRow(problem: problem)
             case .loaded(let sessions):
                 ForEach(sessions, id: \.id) { session in

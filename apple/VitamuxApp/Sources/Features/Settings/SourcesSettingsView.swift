@@ -249,7 +249,7 @@ struct SourcesSettingsView: View {
     @ViewBuilder private var credentialsSection: some View {
         Section {
             switch model.providers {
-            case .loading: ProgressView()
+            case .loading: ProgressView().accessibilityLabel("Loading")
             case .failed(let problem): ProblemRow(problem: problem)
             case .loaded(let providers) where providers.isEmpty:
                 Text("No connector here runs on an application of your own.").foregroundStyle(.secondary)
@@ -272,7 +272,7 @@ struct SourcesSettingsView: View {
     @ViewBuilder private var sidecarsSection: some View {
         Section {
             switch model.sidecars {
-            case .loading: ProgressView()
+            case .loading: ProgressView().accessibilityLabel("Loading")
             case .failed(let problem): ProblemRow(problem: problem)
             case .loaded(let sidecars) where sidecars.isEmpty:
                 Text("No sidecar is registered.").foregroundStyle(.secondary)
@@ -302,7 +302,7 @@ private struct OrderSection: View {
             if model.orderSaved { NoticeRow(text: "Saved.") }
             if let problem = model.orderProblem { ProblemRow(problem: problem) }
             switch model.order {
-            case .loading: ProgressView()
+            case .loading: ProgressView().accessibilityLabel("Loading")
             case .failed(let problem): ProblemRow(problem: problem)
             case .loaded(let order) where order.isEmpty:
                 Text("No sources connected yet.").foregroundStyle(.secondary)

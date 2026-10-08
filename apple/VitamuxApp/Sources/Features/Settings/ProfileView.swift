@@ -136,7 +136,7 @@ struct ProfileView: View {
             if let problem = model.problem { ProblemRow(problem: problem) }
             switch model.periods {
             case .loading:
-                ProgressView()
+                ProgressView().accessibilityLabel("Loading")
             case .failed(let problem):
                 ProblemRow(problem: problem)
             case .loaded(let periods) where periods.isEmpty:
@@ -168,7 +168,7 @@ struct ProfileView: View {
                 })
                 .accessibilityIdentifier("withingsToggle")
             } else if model.withingsProblem == nil {
-                ProgressView()
+                ProgressView().accessibilityLabel("Loading")
             }
             if model.withingsSaved { NoticeRow(text: "Saved.") }
             if let problem = model.withingsProblem { ProblemRow(problem: problem) }

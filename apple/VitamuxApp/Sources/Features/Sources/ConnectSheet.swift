@@ -171,7 +171,7 @@ private struct ProviderChoice: View {
                     Button(action: onNext) {
                         HStack {
                             Text(chosen.setupState == .needsAppCredentials ? "Set up \(chosen.name)" : "Continue to \(chosen.name)")
-                            if model.busy { Spacer(); ProgressView() }
+                            if model.busy { Spacer(); ProgressView().accessibilityLabel("Loading") }
                         }
                     }
                     .disabled(model.busy)
@@ -290,7 +290,7 @@ private struct SidecarCard: View {
                     .buttonStyle(.bordered)
                     .disabled(busy)
                     .accessibilityIdentifier("checkAgain-\(provider.code)")
-                if busy { ProgressView() }
+                if busy { ProgressView().accessibilityLabel("Loading") }
                 Text(checked).font(.footnote).foregroundStyle(.secondary).accessibilityIdentifier("checked-\(provider.code)")
             }
             if let problem { ProblemRow(problem: problem) }

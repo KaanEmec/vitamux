@@ -183,7 +183,7 @@ private struct IgnoredSection: View {
             Section {
                 switch model.ignored {
                 case .loading:
-                    ProgressView()
+                    ProgressView().accessibilityLabel("Loading")
                 case .failed(let problem):
                     ProblemView(problem: problem)
                 case .loaded(let items) where items.isEmpty:

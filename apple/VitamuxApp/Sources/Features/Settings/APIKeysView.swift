@@ -90,7 +90,7 @@ struct APIKeysView: View {
                 if let notice = model.notice { NoticeRow(text: notice) }
                 if let problem = model.problem { ProblemRow(problem: problem) }
                 switch model.keys {
-                case .loading: ProgressView()
+                case .loading: ProgressView().accessibilityLabel("Loading")
                 case .failed(let problem): ProblemRow(problem: problem)
                 case .loaded(let keys) where keys.isEmpty:
                     Text("No API keys yet.").foregroundStyle(.secondary)

@@ -147,7 +147,7 @@ struct RetentionView: View {
             }
             switch model.saved {
             case .loading:
-                ProgressView()
+                ProgressView().accessibilityLabel("Loading")
             case .failed(let problem):
                 ProblemView(problem: problem)
             case .loaded:

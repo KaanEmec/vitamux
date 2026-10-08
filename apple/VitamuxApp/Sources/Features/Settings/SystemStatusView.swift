@@ -11,13 +11,13 @@ struct SystemStatusView: View {
     var body: some View {
         List {
             switch model.versions {
-            case .loading: ProgressView()
+            case .loading: ProgressView().accessibilityLabel("Loading")
             case .loaded(let versions): VersionsSection(versions: versions, server: model.server, status: model.status.value)
             case .failed(let problem): ProblemView(problem: problem)
             }
             switch model.status {
             case .loading:
-                ProgressView()
+                ProgressView().accessibilityLabel("Loading")
             case .failed:
                 Label("System status is not available from this server yet.", systemImage: "info.circle")
                     .foregroundStyle(.secondary)

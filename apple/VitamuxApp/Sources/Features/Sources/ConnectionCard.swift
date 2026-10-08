@@ -82,7 +82,7 @@ struct ActionsRow: View {
                     Button("See streams") { state.open(.connection(id: connection.id, tab: "streams")) }
                         .accessibilityIdentifier("seeStreams-\(connection.provider)")
                 }
-                if actions.busy { ProgressView() }
+                if actions.busy { ProgressView().accessibilityLabel("Loading") }
             }
             .buttonStyle(.bordered)
             if reauth && compact {

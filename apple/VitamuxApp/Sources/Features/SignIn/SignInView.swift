@@ -161,7 +161,7 @@ private struct SubmitButton: View {
                     Task { await model.submit(to: state) }
                 } label: {
                     Group {
-                        if model.isBusy { ProgressView() } else { Text(title).fontWeight(.semibold) }
+                        if model.isBusy { ProgressView().accessibilityLabel("Loading") } else { Text(title).fontWeight(.semibold) }
                     }
                     .foregroundStyle(Color.onAccent)
                     .frame(maxWidth: .infinity, minHeight: 36)

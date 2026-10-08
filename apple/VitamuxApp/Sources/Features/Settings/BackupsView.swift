@@ -97,7 +97,7 @@ struct BackupsView: View {
             Section {
                 switch model.lastBackup {
                 case .loading:
-                    ProgressView()
+                    ProgressView().accessibilityLabel("Loading")
                 case .loaded(let date?):
                     Label("Last backup: \(Format.instant(date)) (\(Format.ago(date)))", systemImage: "checkmark.circle")
                         .accessibilityIdentifier("lastBackup")
@@ -173,7 +173,7 @@ private struct JobSection: View {
             switch job.status {
             case .queued, .running:
                 HStack {
-                    ProgressView()
+                    ProgressView().accessibilityLabel("Loading")
                     Text(job.status == .queued ? "Export queued…" : "Export running…")
                 }
                 .accessibilityElement(children: .combine)

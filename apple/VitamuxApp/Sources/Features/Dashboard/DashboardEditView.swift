@@ -60,7 +60,7 @@ struct DashboardEditView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if model.isSaving {
-                        ProgressView()
+                        ProgressView().accessibilityLabel("Loading")
                     } else {
                         Button("Save") { save() }
                             .accessibilityIdentifier("editSave")

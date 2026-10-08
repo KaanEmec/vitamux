@@ -37,7 +37,7 @@ struct WatchCard: View {
             }
             switch model.items {
             case .loading:
-                ProgressView().frame(maxWidth: .infinity)
+                ProgressView().accessibilityLabel("Loading").frame(maxWidth: .infinity)
             case .failed(let problem):
                 ProblemView(problem: problem)
             case .loaded(let items) where items.isEmpty:

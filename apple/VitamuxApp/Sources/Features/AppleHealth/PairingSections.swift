@@ -21,7 +21,7 @@ struct PairingSections: View {
                         Label("Sync Apple Health from this iPhone", systemImage: "heart.text.square")
                         if device.isPairing {
                             Spacer()
-                            ProgressView()
+                            ProgressView().accessibilityLabel("Loading")
                         }
                     }
                 }

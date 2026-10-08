@@ -96,7 +96,7 @@ struct AppWizardView: View {
                     Button("Save and check") { Task { await save() } }
                         .disabled(!canSave)
                         .accessibilityIdentifier("saveAppCredentials")
-                    if saving { ProgressView() }
+                    if saving { ProgressView().accessibilityLabel("Loading") }
                 }
                 .buttonStyle(.borderless)
             }
@@ -118,7 +118,7 @@ struct AppWizardView: View {
                 Button("Continue to \(provider.name)", action: onConnect)
                     .disabled(busy)
                     .accessibilityIdentifier("wizardConnect")
-                if busy { ProgressView() }
+                if busy { ProgressView().accessibilityLabel("Loading") }
             }
             .buttonStyle(.borderless)
         }

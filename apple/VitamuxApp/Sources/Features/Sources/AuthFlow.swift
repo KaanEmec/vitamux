@@ -211,7 +211,7 @@ struct AuthPromptView: View {
                     Button {
                         Task { await submit() }
                     } label: {
-                        if model.busy { ProgressView() } else { Text("Continue") }
+                        if model.busy { ProgressView().accessibilityLabel("Loading") } else { Text("Continue") }
                     }
                     .disabled(!model.isComplete || model.busy)
                     .accessibilityIdentifier("promptContinue")

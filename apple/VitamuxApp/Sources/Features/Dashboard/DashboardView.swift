@@ -196,7 +196,7 @@ private struct CardsSection: View {
 
     var body: some View {
         if case .loading = model.layout {
-            ProgressView().frame(maxWidth: .infinity, minHeight: 120)
+            ProgressView().accessibilityLabel("Loading").frame(maxWidth: .infinity, minHeight: 120)
         } else if model.isUnavailable {
             Text("Resolved values are not available yet.")
                 .foregroundStyle(.secondary)
@@ -207,7 +207,7 @@ private struct CardsSection: View {
             EmptyCards(title: "No cards on the dashboard", text: "Every card is hidden, or the layout is empty. Customize it to pin metrics.",
                        action: "Customize") { model.customize() }
         } else if !model.isReady {
-            ProgressView().frame(maxWidth: .infinity, minHeight: 120)
+            ProgressView().accessibilityLabel("Loading").frame(maxWidth: .infinity, minHeight: 120)
         } else if model.shown.isEmpty {
             EmptyCards(title: "No data yet", text: "Metrics appear here once a source provides them.", action: "Connect a source") {
                 state.open(.connections())

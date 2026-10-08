@@ -19,7 +19,7 @@ struct AllSourcesDayView: View {
         List {
             switch model.day {
             case .loading:
-                ProgressView().frame(maxWidth: .infinity)
+                ProgressView().accessibilityLabel("Loading").frame(maxWidth: .infinity)
             case .failed(let problem):
                 ProblemView(problem: problem)
             case .loaded(let day):
@@ -115,7 +115,7 @@ private struct DaySources: View {
         Section {
             switch model.sources {
             case .loading:
-                ProgressView().frame(maxWidth: .infinity)
+                ProgressView().accessibilityLabel("Loading").frame(maxWidth: .infinity)
             case .failed(let problem):
                 ProblemView(problem: problem)
             case .loaded(let sources):
@@ -193,7 +193,7 @@ private struct DayOverrides: View {
             if let problem = model.actionProblem { ProblemView(problem: problem) }
             switch model.overrides {
             case .loading:
-                ProgressView().frame(maxWidth: .infinity)
+                ProgressView().accessibilityLabel("Loading").frame(maxWidth: .infinity)
             case .failed(let problem):
                 ProblemView(problem: problem)
             case .loaded:

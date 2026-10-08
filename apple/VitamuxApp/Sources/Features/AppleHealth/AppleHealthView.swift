@@ -57,7 +57,7 @@ private struct PairedSections: View {
                         Label("Sync now", systemImage: "arrow.triangle.2.circlepath")
                         if device.isSyncing {
                             Spacer()
-                            ProgressView()
+                            ProgressView().accessibilityLabel("Loading")
                         }
                     }
                 }
@@ -190,7 +190,7 @@ private struct RevokedSection: View {
                         Label("Pair again", systemImage: "arrow.clockwise")
                         if device.isPairing {
                             Spacer()
-                            ProgressView()
+                            ProgressView().accessibilityLabel("Loading")
                         }
                     }
                 }
@@ -211,7 +211,7 @@ private struct ServerSection: View {
             Section {
                 switch model.server {
                 case .loading:
-                    ProgressView()
+                    ProgressView().accessibilityLabel("Loading")
                 case .failed(let problem):
                     ProblemView(problem: problem)
                 case .loaded(nil):

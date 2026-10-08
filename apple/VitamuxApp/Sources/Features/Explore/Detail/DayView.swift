@@ -43,7 +43,7 @@ private struct DayToolbar: View {
                 Text(model.step.label.prefix(1).uppercased() + model.step.label.dropFirst())
                     .font(.subheadline.weight(.semibold))
                     .accessibilityIdentifier("dayStep")
-                if model.loading { ProgressView().controlSize(.small) }
+                if model.loading { ProgressView().accessibilityLabel("Loading").controlSize(.small) }
                 Spacer()
                 ZoomButtons(model: model)
             }

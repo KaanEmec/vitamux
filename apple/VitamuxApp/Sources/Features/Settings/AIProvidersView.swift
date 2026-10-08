@@ -66,7 +66,7 @@ struct AIProvidersView: View {
             }
             switch model.settings {
             case .loading:
-                ProgressView()
+                ProgressView().accessibilityLabel("Loading")
             case .failed(let problem):
                 ProblemView(problem: problem)
             case .loaded:

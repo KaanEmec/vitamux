@@ -36,7 +36,7 @@ struct SignOutSheet: View {
                     Button(role: .destructive) {
                         Task { await signOut() }
                     } label: {
-                        if isBusy { ProgressView() } else { Text("Sign out") }
+                        if isBusy { ProgressView().accessibilityLabel("Loading") } else { Text("Sign out") }
                     }
                     .disabled(isBusy)
                     .accessibilityIdentifier("confirmSignOut")

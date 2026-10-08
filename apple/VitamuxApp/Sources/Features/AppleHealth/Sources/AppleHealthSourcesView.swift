@@ -208,7 +208,7 @@ private struct ChoiceRow: View {
                 .accessibilityIdentifier("choice-\(origin.bundleId)")
             Spacer()
             if saving {
-                ProgressView()
+                ProgressView().accessibilityLabel("Loading")
             } else if origin.explicit {
                 Button("Use default", action: useDefault)
                     .buttonStyle(.borderless)
