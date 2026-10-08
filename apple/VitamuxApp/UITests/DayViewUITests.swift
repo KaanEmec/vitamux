@@ -76,7 +76,7 @@ final class DayViewUITests: XCTestCase {
         if grabber.waitForExistence(timeout: Wait.ui) {
             let top = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.04))
             for _ in 0 ..< 3 where (grabber.value as? String) == "Half screen" {
-                grabber.press(forDuration: 0.2, thenDragTo: top)
+                grabber.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(forDuration: 0.2, thenDragTo: top)
             }
         } else {
             app.staticTexts["bucketExplanation"].swipeUp()
