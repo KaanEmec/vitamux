@@ -94,6 +94,16 @@ extension XCUIElement {
         tap()
     }
 
+    /// Taps until `shows` appears: a tap that lands while a list is still decelerating from a
+    /// scroll only stops the scroll (seen on hosted runners), so tap again when nothing opened.
+    func tapUntil(_ shows: XCUIElement, attempts: Int = 3, file: StaticString = #filePath, line: UInt = #line) {
+        for _ in 0 ..< attempts where !shows.exists {
+            tap()
+            if shows.waitForExistence(timeout: 5) { return }
+        }
+        XCTAssertTrue(shows.waitForExistence(timeout: Wait.ui), "\(shows) shows after tapping \(self)", file: file, line: line)
+    }
+
     /// Swipes the row left until `action` (a swipe action's button) shows; a swipe during a list's
     /// deceleration on a slow machine only stops the scroll.
     func revealAction(_ action: XCUIElement) {
