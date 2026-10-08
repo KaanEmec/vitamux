@@ -70,8 +70,17 @@ final class DayViewUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["bucketExplanation"].label.contains("readings"))
         // The readings follow the bucket's summary: at the half-height detent the list has not
         // laid their rows out (on a hosted runner the "Readings" header sits on the sheet's edge),
-        // so raise the sheet to full height first.
-        app.staticTexts["bucketExplanation"].swipeUp()
+        // so raise the sheet to full height first. A swipe on the list only scrolls it (or is
+        // dropped mid-animation); dragging the sheet's grabber moves the detent for certain.
+        let grabber = app.buttons["Sheet Grabber"]
+        if grabber.waitForExistence(timeout: Wait.ui) {
+            let top = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.04))
+            for _ in 0 ..< 3 where (grabber.value as? String) == "Half screen" {
+                grabber.press(forDuration: 0.2, thenDragTo: top)
+            }
+        } else {
+            app.staticTexts["bucketExplanation"].swipeUp()
+        }
         XCTAssertTrue(app.descendants(matching: .any)["reading"].firstMatch.waitForExistence(timeout: Wait.server), "raw zoom lists the readings with time, device and origin")
         app.buttons["closeBucket"].tap()
 
