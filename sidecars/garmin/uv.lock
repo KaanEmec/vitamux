@@ -262,16 +262,17 @@ wheels = [
 
 [[package]]
 name = "garminconnect"
-version = "0.3.17"
+version = "0.3.19"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "curl-cffi" },
     { name = "requests" },
+    { name = "tzdata", marker = "sys_platform == 'win32'" },
     { name = "ua-generator" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/32/4e/2758ce40ee00487a36154df4a3b1bfa6b7f3038954d49de3747718d853b4/garminconnect-0.3.17.tar.gz", hash = "sha256:f6b6dd282c950c394478cb5bcca506e1432e82037e27625d1456ef49c8f17ffe", size = 109120, upload-time = "2026-09-29T07:19:53.616Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d9/31/c6117a49df8d0e40afeaf651a56dd43f1cebde096000085515539f22ab03/garminconnect-0.3.19.tar.gz", hash = "sha256:bf9b10661637b3a78b860f1d3885a9100c52f90a6c76862d04401ab0285e497b", size = 166277, upload-time = "2026-10-16T11:18:42.567Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/25/a5/cf958eab4eaae4bb94852a3819f367074a4a19e489938ae3cb1efc32bd87/garminconnect-0.3.17-py3-none-any.whl", hash = "sha256:624d8c2468d865d286c9fb7ae8133633bb1d52a2b019c8beb5ff9ae10dd43264", size = 102734, upload-time = "2026-09-29T07:19:52.182Z" },
+    { url = "https://files.pythonhosted.org/packages/49/89/58796e09aa16439dab3857ff8a844d0e8d8ace5c6991564c936e982055c0/garminconnect-0.3.19-py3-none-any.whl", hash = "sha256:3479408049f39192e8e479600fbea5cae3b57b73d268075e2f8cdb82f852b6ae", size = 161160, upload-time = "2026-10-16T11:18:40.541Z" },
 ]
 
 [[package]]
@@ -308,6 +309,15 @@ wheels = [
 ]
 
 [[package]]
+name = "tzdata"
+version = "2026.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d9/68/f1b440335057bfce71b6e50a9d09445aa2ecbd08359a337976627b8409e7/tzdata-2026.5.tar.gz", hash = "sha256:8cc73c0a0bfca7dbfa59235d60b2eff82231dee33f53d206db1acd9173cfc0a7", size = 200404, upload-time = "2026-10-03T09:23:14.143Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/94/21/1e5995a1c920cce14e4bffae20c665ec10e7ed03ab25e006cd741092b718/tzdata-2026.5-py2.py3-none-any.whl", hash = "sha256:b683bd1b6659ddcd810ff02ad09ba821d4bf1065072805063eb35c49617905ac", size = 347996, upload-time = "2026-10-03T09:23:12.535Z" },
+]
+
+[[package]]
 name = "ua-generator"
 version = "2.1.6"
 source = { registry = "https://pypi.org/simple" }
@@ -334,4 +344,4 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "garminconnect", specifier = "==0.3.17" }]
+requires-dist = [{ name = "garminconnect", specifier = "==0.3.19" }]
