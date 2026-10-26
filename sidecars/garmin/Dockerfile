@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Sidecar image (docs/sidecars.md). Base images are pinned by multi-arch digest; Dependabot bumps them.
 # Run read-only: docker run --read-only --tmpfs /tmp --memory 256m ...
-FROM ghcr.io/astral-sh/uv:0.12.23@sha256:61d393e44e249f2e4b526b6c7ddcecce245946826e608e11c93ad4f5bba55b21 AS uv
+FROM ghcr.io/astral-sh/uv:0.13.5@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff AS uv
 
 FROM python:3.13-slim@sha256:3dd7cc108ec1493442514f5c2a871af6af0ec31d768ff6e378a93340c3b3db5f AS build
 COPY --from=uv /uv /bin/uv
