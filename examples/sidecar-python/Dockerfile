@@ -1,7 +1,7 @@
 # Example sidecar image: the standard library only, so nothing is installed. The base image is
 # pinned by multi-arch index digest; Dependabot bumps it weekly. By hand: look up the digest of
 # python:3.12-slim in the registry. Build from this directory: docker build -t vitamux-sidecar-example .
-FROM python:3.12-slim@sha256:dddfd7e07f9d15aeeca61529320492139d21cac7f0070c00609243e51e4e0016
+FROM python:3.15-slim@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 WORKDIR /app
 COPY sidecar.py .
