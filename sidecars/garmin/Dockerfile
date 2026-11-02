@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
 # Sidecar image (docs/sidecars.md). Base images are pinned by multi-arch digest; Dependabot bumps them.
 # Run read-only: docker run --read-only --tmpfs /tmp --memory 256m ...
-FROM ghcr.io/astral-sh/uv:0.12.23@sha256:61d393e44e249f2e4b526b6c7ddcecce245946826e608e11c93ad4f5bba55b21 AS uv
+FROM ghcr.io/astral-sh/uv:0.13.6@sha256:af22a52f5eafef3d78e551599d405c02df61919d18028f0cea8eda93bc9986d0 AS uv
 
-FROM python:3.13-slim@sha256:3dd7cc108ec1493442514f5c2a871af6af0ec31d768ff6e378a93340c3b3db5f AS build
+FROM python:3.15-slim@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913 AS build
 COPY --from=uv /uv /bin/uv
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
 WORKDIR /app
@@ -22,7 +22,7 @@ COPY tests ./tests
 COPY testdata ./testdata
 RUN .venv/bin/python -m unittest discover -s tests
 
-FROM python:3.13-slim@sha256:3dd7cc108ec1493442514f5c2a871af6af0ec31d768ff6e378a93340c3b3db5f
+FROM python:3.15-slim@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913
 LABEL org.opencontainers.image.title="vitamux-sidecar-garmin" \
       org.opencontainers.image.source="https://github.com/KaanEmec/vitamux" \
       org.opencontainers.image.licenses="MIT AND MPL-2.0"
