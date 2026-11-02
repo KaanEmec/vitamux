@@ -4,14 +4,14 @@
 # copies files, so multi-arch builds need no QEMU.
 # Base images are pinned by multi-arch index digest; Dependabot (.github/dependabot.yml) bumps
 # them weekly. By hand: docker buildx imagetools inspect node:24-alpine (Digest line).
-FROM --platform=$BUILDPLATFORM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS web
+FROM --platform=$BUILDPLATFORM node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS web
 WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-FROM --platform=$BUILDPLATFORM golang:1.27-alpine@sha256:8a5910f31396cd4d89662f56c68b3ae31d374308270a1c3bd96672ee5ed43414 AS go
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine@sha256:d200d2dd76b03a99b52651fd1325aff7dcd35422c35c01bac56571b0507f3deb AS go
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -35,7 +35,7 @@ RUN mkdir -p /out/data /out/secrets /out/backups
 # PostgreSQL 18 client for `vitamux backup|restore` (docs/operations/backup.md): Alpine's package
 # for the target architecture, installed into /pg without running its scripts. Only pg_dump,
 # pg_restore and the musl libraries they link (about 12 MB) reach the final image; no shell.
-FROM --platform=$BUILDPLATFORM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS pg
+FROM --platform=$BUILDPLATFORM alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a AS pg
 ARG TARGETARCH
 RUN set -eu; \
     case "$TARGETARCH" in amd64) arch=x86_64 ;; arm64) arch=aarch64 ;; *) echo "unsupported arch $TARGETARCH" >&2; exit 1 ;; esac; \
